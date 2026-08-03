@@ -1,0 +1,29 @@
+# Sanal ortam
+venv/
+env/
+backend/venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ortam değişkenleri
+.env
+.env.local
+backend/.env
+
+# IDE
+.vscode/
+.idea/
+
+# İşletim sistemi
+.DS_Store
+Thumbs.db
+
+# Log
+*.log
+
+# Node
+node_modules/
