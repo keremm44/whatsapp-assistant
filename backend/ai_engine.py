@@ -1,177 +1,367 @@
-from openai import OpenAI
-from dotenv import load_dotenv
-import os
+from __future__ import annotations
 
-# .env dosyasını oku
+import json
+import os
+from typing import Any
+
+from dotenv import load_dotenv
+from openai import OpenAI
+
+
 load_dotenv()
 
-# Groq client
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+if not GROQ_API_KEY:
+    raise RuntimeError("GROQ_API_KEY ortam değişkeni bulunamadı.")
+
 client = OpenAI(
-    api_key=os.getenv("GROQ_API_KEY"),
-    base_url="https://api.groq.com/openai/v1"
+    api_key=GROQ_API_KEY,
+    base_url="https://api.groq.com/openai/v1",
 )
 
 MODEL = "llama-3.3-70b-versatile"
 
-
-def sistem_promptu_olustur(store_name: str, store_link: str = None):
-    """Mağazaya özel sistem prompt hazırlar"""
-    
-    link_bilgisi = store_link if store_link else "[link henüz yok]"
-    
-    return f"""Sen bir WhatsApp asistanısın. Çalıştığın mağaza: {store_name}
-Mağaza türü: Kişiye özel kupa baskı
-
-MAĞAZA LİNKİ: {link_bilgisi}
-
-MAĞAZA NE YAPIYOR:
-- Kişiye özel kupa BASKISI yapıyor
-- Müşterinin gönderdiği görseli kupaya basıyor
-- Kişiye özel yazı ekleyebiliyor (örn: "En İyi Baba")
-- Kargo ile teslim ediyor
-
-MAĞAZA NE YAPMIYOR (BUNLARI ASLA VAAT ETME):
-- Görsel/tasarım OLUŞTURMUYOR (müşteri kendi görselini gönderiyor)
-- Görsel düzenleme yapmıyor
-- Fotoğraf çekmiyor
-- Grafik tasarım yapmıyor
-- Metin yazma, hikaye anlatma, şiir yazma yapmıyor
-- Danışmanlık vermiyor
-
-SENİN GÖREVİN:
-- Müşterilere nazik ve profesyonel şekilde cevap ver
-- Sadece mağazayla ilgili konularda konuş
-- Sipariş sürecine yardımcı ol
-- Kısa ve net cevaplar ver (max 2-3 cümle)
-
-KONUŞMA TARZI:
-- Doğal ve insancıl konuş
-- Doğru Türkçe kullan
-- Kısa cevaplar ver
-
-FİYAT SORULARI:
-- Fiyat söyleme
-- Şu cevabı ver: "Ürünlerimizi ve fiyatlarını mağazamızdan görüntüleyebilirsiniz: {link_bilgisi}"
-
-İNDİRİM/KUPON İSTEKLERİ:
-- İlk seferde: "Fiyatlarımız sabittir, indirim uygulanmamaktadır."
-- Israr ederse: "Size yardımcı olabileceğim başka bir konu var mı?"
-
-SİPARİŞ VERME AKIŞI:
-Müşteri "sipariş vermek istiyorum" derse:
-"Mağazamızdan sipariş verdiniz mi? Aldıysanız sipariş numaranızı ve kişiselleştirme için görselinizi alacağız. Almadıysanız mağazamızı ziyaret edebilirsiniz: {link_bilgisi}"
-
-Müşteri "almadım/hayır" derse:
-"Mağazamıza giderek ürünü inceleyebilir ve sipariş verebilirsiniz. Sipariş sonrası buraya dönüp sipariş numaranızı iletebilirsiniz. Link: {link_bilgisi}"
-
-Müşteri "aldım/evet" derse:
-"Harika! Sipariş numaranızı paylaşır mısınız?"
-
-Müşteri sipariş numarası verirse (örn: ETSY-12345):
-"Teşekkürler! Şimdi kupaya basılacak görselinizi gönderebilirsiniz."
-
-GÖRSEL İLE İLGİLİ SORULAR:
-- "Görsel oluşturur musun?" → "Hayır, görsel oluşturmuyoruz. Siz kendi görselinizi gönderirsiniz, biz kupaya basarız."
-- "Tasarım yapar mısınız?" → "Hayır, tasarım hizmeti vermiyoruz. Baskı için hazır görsel göndermeniz gerekiyor."
-- "Fotoğrafımı düzenler misiniz?" → "Düzenleme yapmıyoruz. Baskı için uygun kaliteli görsel göndermeniz gerekiyor."
-
-İADE/ŞİKAYET:
-"Yaşadığınız sorun için satıcımıza iletiyorum, en kısa sürede size dönüş yapacak."
-
-ALAKASIZ İSTEKLER (metin yaz, şiir, tavsiye, hava, spor, vs):
-"Bu konuda yardımcı olamıyorum. Sadece ürün, sipariş veya kargo konularında yardımcı oluyorum."
-
-ASLA YAPMA:
-- Fiyat söyleme
-- İndirim/kupon teklif etme
-- YALAN BİLGİ VERME (mağazanın yapmadığı bir şeyi vaat etme)
-- Görsel oluşturma vaadinde bulunma
-- Tasarım hizmeti vaadinde bulunma
-- Uzun cevaplar (max 3 cümle)
-- Politik/dini/kişisel konularda konuşma
-- Şaka, hikaye, şiir
-- Fiyat söyleme
-- Küfür veya hakarete karşılık verme (sadece "Bu tarz mesajlara cevap vermiyorum" de)
-
-Şimdi müşteriyle konuş."""
+CONFIDENCE_THRESHOLD = 0.80
 
 
-def cevap_uret(kullanici_mesaji: str, store_name: str, store_link: str = None):
-    """Kullanıcı mesajına cevap üretir"""
+VALID_INTENTS = {
+    "greeting",
+    "price_question",
+    "discount_request",
+    "shipping_time",
+    "shipping_company",
+    "international_shipping",
+    "microwave_question",
+    "dishwasher_question",
+    "material_question",
+    "size_question",
+    "order_intent",
+    "order_confirmation_yes",
+    "order_confirmation_no",
+    "return_request",
+    "complaint",
+    "image_question",
+    "design_request",
+    "custom_text_question",
+    "off_topic",
+    "unclear",
+}
+
+
+CLASSIFIER_PROMPT = """
+Sen bir WhatsApp mesajı niyet sınıflandırıcısısın.
+
+Görevin yalnızca mesajın kategorisini belirlemektir.
+Müşteriye cevap yazma.
+Bilgi uydurma.
+Sadece geçerli JSON döndür.
+
+Geçerli niyetler:
+
+- greeting
+- price_question
+- discount_request
+- shipping_time
+- shipping_company
+- international_shipping
+- microwave_question
+- dishwasher_question
+- material_question
+- size_question
+- order_intent
+- order_confirmation_yes
+- order_confirmation_no
+- return_request
+- complaint
+- image_question
+- design_request
+- custom_text_question
+- off_topic
+- unclear
+
+Dönüş formatı:
+
+{
+  "intent": "price_question",
+  "confidence": 0.95,
+  "alternatives": [
+    {
+      "intent": "unclear",
+      "confidence": 0.03
+    }
+  ],
+  "entities": {},
+  "reason": "Müşteri ürün fiyatını soruyor."
+}
+
+Kurallar:
+
+- confidence 0 ile 1 arasında olmalı.
+- Emin değilsen unclear seç.
+- Mesaj birden fazla anlam taşıyorsa en baskın niyeti seç.
+- "Evet", "aldım", "sipariş verdim" ifadeleri order_confirmation_yes.
+- "Hayır", "almadım", "henüz vermedim" ifadeleri order_confirmation_no.
+- Sipariş vermek isteyen mesajlar order_intent.
+- İade veya değişim talepleri return_request.
+- Hasarlı, kırık, yanlış gelen ürünler complaint.
+- Görsel gönderme veya görsel kalitesi soruları image_question.
+- Tasarım oluşturma/düzenleme istekleri design_request.
+"""
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
     try:
-        sistem_prompt = sistem_promptu_olustur(store_name, store_link)
-        
+        number = float(value)
+        return max(0.0, min(number, 1.0))
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_result(data: dict[str, Any]) -> dict[str, Any]:
+    intent = data.get("intent", "unclear")
+
+    if intent not in VALID_INTENTS:
+        intent = "unclear"
+
+    alternatives = data.get("alternatives")
+
+    if not isinstance(alternatives, list):
+        alternatives = []
+
+    normalized_alternatives = []
+
+    for item in alternatives[:3]:
+        if not isinstance(item, dict):
+            continue
+
+        alternative_intent = item.get("intent", "unclear")
+
+        if alternative_intent not in VALID_INTENTS:
+            alternative_intent = "unclear"
+
+        normalized_alternatives.append(
+            {
+                "intent": alternative_intent,
+                "confidence": _safe_float(
+                    item.get("confidence"),
+                    0.0,
+                ),
+            }
+        )
+
+    entities = data.get("entities")
+
+    if not isinstance(entities, dict):
+        entities = {}
+
+    return {
+        "durum": "başarılı",
+        "intent": intent,
+        "confidence": _safe_float(
+            data.get("confidence"),
+            0.0,
+        ),
+        "alternatives": normalized_alternatives,
+        "entities": entities,
+        "reason": str(data.get("reason", "")),
+        "fallback_used": False,
+    }
+
+
+def keyword_based_classify(message: str) -> dict[str, Any]:
+    """
+    AI kullanılamadığında yalnızca çok net kalıpları sınıflandırır.
+    Belirsiz mesajlar unclear döner.
+    """
+    normalized = " ".join(message.lower().strip().split())
+
+    exact_patterns = {
+        "greeting": {
+            "merhaba",
+            "selam",
+            "günaydın",
+            "iyi günler",
+            "iyi akşamlar",
+            "selamün aleyküm",
+            "selamun aleykum",
+        },
+        "price_question": {
+            "fiyat ne kadar",
+            "kaç lira",
+            "kaç para",
+            "fiyatı nedir",
+            "fiyat listesi",
+        },
+        "shipping_time": {
+            "kaç günde gelir",
+            "ne zaman gelir",
+            "ne zaman kargolanır",
+            "kargo ne zaman çıkar",
+        },
+        "order_intent": {
+            "sipariş vermek istiyorum",
+            "sipariş oluşturmak istiyorum",
+            "satın almak istiyorum",
+        },
+        "order_confirmation_yes": {
+            "evet",
+            "aldım",
+            "sipariş verdim",
+            "satın aldım",
+        },
+        "order_confirmation_no": {
+            "hayır",
+            "almadım",
+            "henüz almadım",
+            "sipariş vermedim",
+        },
+    }
+
+    for intent, patterns in exact_patterns.items():
+        if normalized in patterns:
+            return {
+                "durum": "başarılı",
+                "intent": intent,
+                "confidence": 0.90,
+                "alternatives": [],
+                "entities": {},
+                "reason": "Kesin fallback kalıbı eşleşti.",
+                "fallback_used": True,
+            }
+
+    return {
+        "durum": "başarılı",
+        "intent": "unclear",
+        "confidence": 0.0,
+        "alternatives": [],
+        "entities": {},
+        "reason": "Güvenilir fallback eşleşmesi bulunamadı.",
+        "fallback_used": True,
+    }
+
+
+def classify_intent(message: str) -> dict[str, Any]:
+    """
+    Müşteri mesajının niyetini sınıflandırır.
+    AI müşteriye cevap üretmez.
+    """
+    if not message or not message.strip():
+        return {
+            "durum": "başarılı",
+            "intent": "unclear",
+            "confidence": 0.0,
+            "alternatives": [],
+            "entities": {},
+            "reason": "Boş mesaj.",
+            "fallback_used": False,
+        }
+
+    try:
         response = client.chat.completions.create(
             model=MODEL,
             messages=[
-                {"role": "system", "content": sistem_prompt},
-                {"role": "user", "content": kullanici_mesaji}
+                {
+                    "role": "system",
+                    "content": CLASSIFIER_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": message.strip(),
+                },
             ],
-            temperature=0.3,
-            max_tokens=150
+            temperature=0,
+            max_tokens=250,
+            response_format={"type": "json_object"},
+            timeout=8,
         )
-        
-        cevap = response.choices[0].message.content
-        
-        return {
-            "durum": "başarılı",
-            "cevap": cevap,
-            "kullanılan_token": response.usage.total_tokens
-        }
-    except Exception as e:
-        return {
-            "durum": "hata",
-            "mesaj": str(e)
-        }
 
+        raw_content = response.choices[0].message.content
 
-def basit_test():
-    """Basit test"""
-    try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {"role": "user", "content": "Merhaba, sen kimsin? Kısa cevap ver."}
-            ],
-            temperature=0.7,
-            max_tokens=100
+        if not raw_content:
+            return keyword_based_classify(message)
+
+        parsed = json.loads(raw_content)
+
+        if not isinstance(parsed, dict):
+            return keyword_based_classify(message)
+
+        result = _normalize_result(parsed)
+        result["kullanılan_token"] = (
+            response.usage.total_tokens
+            if response.usage
+            else 0
         )
-        return {
-            "durum": "başarılı",
-            "cevap": response.choices[0].message.content
-        }
-    except Exception as e:
-        return {
-            "durum": "hata",
-            "mesaj": str(e)
-        }
+
+        return result
+
+    except Exception as exc:
+        fallback = keyword_based_classify(message)
+        fallback["ai_error"] = str(exc)
+        return fallback
 
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("YENİ SİSTEM PROMPT TESTİ")
-    print("=" * 60)
-    
-    test_mesajlari = [
+def intent_is_safe(result: dict[str, Any]) -> bool:
+    """
+    Sınıflandırma sonucunun otomatik işleme uygun olup olmadığını belirler.
+    """
+    if result.get("durum") != "başarılı":
+        return False
+
+    if result.get("intent") == "unclear":
+        return False
+
+    confidence = _safe_float(result.get("confidence"), 0.0)
+
+    if confidence < CONFIDENCE_THRESHOLD:
+        return False
+
+    alternatives = result.get("alternatives") or []
+
+    if alternatives:
+        second_confidence = _safe_float(
+            alternatives[0].get("confidence"),
+            0.0,
+        )
+
+        if confidence - second_confidence < 0.15:
+            return False
+
+    return True
+
+
+def run_classifier_test() -> None:
+    test_messages = [
         "Merhaba",
         "Kupanız ne kadar?",
         "İndirim yapar mısınız?",
-        "Yok abi ya biraz indirim yap",  # ısrar testi
-        "Bugün hava nasıl?",
+        "Kaç günde kargoya verirsiniz?",
+        "Mikrodalgaya girer mi?",
+        "Bulaşık makinesinde yıkanır mı?",
         "Sipariş vermek istiyorum",
-        "Aldım",
-        "ETSY-12345",
-        "İade etmek istiyorum, kupam kırıldı",
+        "Evet aldım",
+        "Hayır henüz almadım",
+        "Kupam kırık geldi",
+        "İade etmek istiyorum",
+        "Tasarım hazırlar mısınız?",
+        "Bugün hava nasıl?",
+        "Bir şey soracağım",
     ]
-    
-    for mesaj in test_mesajlari:
-        print(f"\n👤 Müşteri: {mesaj}")
-        sonuc = cevap_uret(
-            kullanici_mesaji=mesaj,
-            store_name="Ahmet Kupa Atölyesi",
-            store_link="https://etsy.com/shop/AhmetKupaAtolyesi"
-        )
-        if sonuc["durum"] == "başarılı":
-            print(f"🤖 AI: {sonuc['cevap']}")
-        else:
-            print(f"❌ Hata: {sonuc['mesaj']}")
+
+    print("=" * 70)
+    print("NİYET SINIFLANDIRICI TESTİ")
+    print("=" * 70)
+
+    for message in test_messages:
+        result = classify_intent(message)
+
+        print(f"\nMesaj: {message}")
+        print(f"Intent: {result.get('intent')}")
+        print(f"Confidence: {result.get('confidence')}")
+        print(f"Güvenli: {intent_is_safe(result)}")
+        print(f"Fallback: {result.get('fallback_used')}")
+        print(f"Sebep: {result.get('reason')}")
+
+
+if __name__ == "__main__":
+    run_classifier_test()

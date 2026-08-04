@@ -1,84 +1,110 @@
-from fastapi import FastAPI
-from dotenv import load_dotenv
+from __future__ import annotations
+
 import os
-from database import test_connection, create_seller, get_all_sellers, get_seller_by_id
-from chat_service import sohbet_isle
+
+from dotenv import load_dotenv
+from fastapi import FastAPI
 from pydantic import BaseModel
 
-# .env dosyasını oku
+from chat_service import sohbet_isle
+from database import (
+    create_seller,
+    get_all_sellers,
+    get_seller_by_id,
+    test_connection,
+)
+from protected_routes import router as protected_router
+
+
 load_dotenv()
 
-# Chat için veri modeli
+
 class ChatMesaj(BaseModel):
     seller_id: int
     whatsapp_number: str
-    mesaj: str
-    customer_name: str = None
+    mesaj: str = ""
+    customer_name: str | None = None
 
-# FastAPI uygulaması oluştur
-app = FastAPI(title="WhatsApp Asistan API")
+    provider: str = "internal"
+    provider_message_id: str | None = None
+
+    message_type: str = "text"
+    media_url: str | None = None
+
+
+app = FastAPI(
+    title="WhatsApp Asistan API",
+    version="0.3.0",
+)
+
+app.include_router(protected_router)
 
 
 @app.get("/")
 def ana_sayfa():
     return {
         "mesaj": "Sistem çalışıyor!",
-        "durum": "aktif"
+        "durum": "aktif",
+        "version": "0.3.0",
     }
 
 
 @app.get("/test")
 def test():
     return {
-        "supabase_url": os.getenv("SUPABASE_URL"),
+        "supabase_url_var_mi": bool(os.getenv("SUPABASE_URL")),
+        "supabase_key_var_mi": bool(
+            os.getenv("SUPABASE_SERVICE_KEY")
+        ),
         "groq_key_var_mi": bool(os.getenv("GROQ_API_KEY")),
-        "mesaj": "Ortam değişkenleri okundu"
+        "mesaj": "Ortam değişkenleri okundu",
     }
 
 
 @app.get("/db-test")
 def veritabani_testi():
-    """Supabase bağlantısını test eder"""
+    """Supabase bağlantısını test eder."""
     return test_connection()
 
 
 @app.post("/sellers/create")
 def yeni_satici_ekle():
-    """Test satıcısı ekler"""
+    """Geçici geliştirme endpointi: test satıcısı ekler."""
     return create_seller(
         name="Ahmet Yılmaz",
-        email="ahmet@kupaAtolyesi.com",
+        email="ahmet@kupaatolyesi.com",
         store_name="Ahmet Kupa Atölyesi",
-        phone="+905551234567"
+        phone="+905551234567",
     )
 
 
 @app.get("/sellers")
 def tum_saticilari_getir():
-    """Tüm satıcıları listeler"""
+    """Geçici geliştirme endpointi: tüm satıcıları listeler."""
     return get_all_sellers()
 
 
 @app.get("/sellers/{seller_id}")
 def satici_detay(seller_id: int):
-    """ID'ye göre satıcı getirir"""
+    """Geçici geliştirme endpointi: ID ile satıcı getirir."""
     return get_seller_by_id(seller_id)
+
 
 @app.post("/chat")
 def chat(data: ChatMesaj):
     """
-    Müşteri mesajını işler ve AI cevabı döner
-    
-    Kullanım:
-    - seller_id: Hangi satıcının müşterisi (Ahmet için 2)
-    - whatsapp_number: Müşteri telefon numarası
-    - mesaj: Müşterinin yazdığı mesaj
-    - customer_name: (opsiyonel) Müşteri adı
+    Müşteri mesajını işler.
+
+    provider_message_id gönderilirse aynı mesajın
+    ikinci kez işlenmesi engellenir.
     """
-    sonuc = sohbet_isle(
+    return sohbet_isle(
         seller_id=data.seller_id,
         whatsapp_number=data.whatsapp_number,
         kullanici_mesaji=data.mesaj,
-        customer_name=data.customer_name
+        customer_name=data.customer_name,
+        provider=data.provider,
+        provider_message_id=data.provider_message_id,
+        message_type=data.message_type,
+        media_url=data.media_url,
     )
-    return sonuc

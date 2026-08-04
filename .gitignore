@@ -27,3 +27,8 @@ Thumbs.db
 
 # Node
 node_modules/
+# Local backups
+*.zip
+
+# Python virtual environments
+backend/venv/
