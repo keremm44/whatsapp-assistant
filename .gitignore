@@ -1,34 +1,33 @@
-# Sanal ortam
-venv/
-env/
-backend/venv/
+# Environment
+.env
+.env.*
+!.env.example
 
-# Python cache
+# Python
+venv/
+.venv/
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
 
-# Ortam değişkenleri
-.env
-.env.local
-backend/.env
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+test_sonuclari.json
 
 # IDE
 .vscode/
 .idea/
 
-# İşletim sistemi
-.DS_Store
+# OS
 Thumbs.db
+.DS_Store
 
-# Log
-*.log
-
-# Node
-node_modules/
-# Local backups
+# Archives
 *.zip
 
-# Python virtual environments
-backend/venv/
+# Local backups
+_backup_before_restructure/
+_backup*/

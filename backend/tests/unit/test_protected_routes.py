@@ -118,6 +118,20 @@ def test_seller_onboarding() -> None:
     clear_dependencies()
 
 
+def test_onboarding_schema() -> None:
+    set_seller_dependencies()
+
+    response = client.get("/seller/onboarding/schema")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["version"] == "onboarding_v1"
+    assert body["total_steps"] == 10
+    assert body["steps"][0]["step_key"] == "business_info"
+
+    clear_dependencies()
+
+
 def test_start_onboarding_step() -> None:
     set_seller_dependencies()
 
@@ -158,7 +172,9 @@ def test_complete_onboarding_step() -> None:
             "/seller/onboarding/1/complete",
             json={
                 "step_data": {
-                    "business_name": "Test Mağaza",
+                    "name": "Test Satıcı",
+                    "email": "seller@example.com",
+                    "phone": "+905551234567",
                 }
             },
         )
@@ -169,9 +185,40 @@ def test_complete_onboarding_step() -> None:
         seller_id=42,
         step_order=1,
         step_data={
-            "business_name": "Test Mağaza",
+            "name": "Test Satıcı",
+            "email": "seller@example.com",
+            "phone": "+905551234567",
         },
     )
+
+    clear_dependencies()
+
+
+def test_onboarding_validation_error_returns_422() -> None:
+    set_seller_dependencies()
+
+    with patch(
+        "protected_routes.complete_onboarding_step",
+        return_value={
+            "durum": "doğrulama_hatası",
+            "mesaj": "Onboarding verisi doğrulanamadı.",
+            "errors": [
+                {
+                    "field": "email",
+                    "code": "value_error",
+                    "message": "Geçerli bir e-posta adresi girilmelidir.",
+                }
+            ],
+        },
+    ):
+        response = client.post(
+            "/seller/onboarding/1/complete",
+            json={"step_data": {}},
+        )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errors"][0]["field"] == "email"
 
     clear_dependencies()
 
@@ -265,17 +312,48 @@ def test_admin_activation_rejects_false() -> None:
     clear_dependencies()
 
 
+def test_complete_invite() -> None:
+    with patch(
+        "protected_routes.complete_invited_profile_from_access_token",
+        return_value={
+            "durum": "başarılı",
+            "profile": {
+                "id": 10,
+                "status": "active",
+                "seller_id": 42,
+            },
+        },
+    ) as mocked:
+        response = client.post(
+            "/auth/complete-invite",
+            headers={"Authorization": "Bearer invite-token"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["profile"]["status"] == "active"
+    mocked.assert_called_once_with("invite-token")
+
+
+def test_complete_invite_requires_token() -> None:
+    response = client.post("/auth/complete-invite")
+    assert response.status_code == 401
+
+
 def run_all_tests() -> None:
     tests = [
         test_auth_me,
         test_seller_me_uses_token_seller_id,
         test_seller_onboarding,
+        test_onboarding_schema,
         test_start_onboarding_step,
         test_complete_onboarding_step,
+        test_onboarding_validation_error_returns_422,
         test_locked_step_returns_409,
         test_admin_applications,
         test_admin_activation,
         test_admin_activation_rejects_false,
+        test_complete_invite,
+        test_complete_invite_requires_token,
     ]
 
     for test in tests:

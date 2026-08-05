@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Any
 
@@ -10,17 +11,36 @@ from openai import OpenAI
 
 load_dotenv()
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+logger = logging.getLogger(__name__)
 
-if not GROQ_API_KEY:
-    raise RuntimeError("GROQ_API_KEY ortam değişkeni bulunamadı.")
+_classifier_client: OpenAI | None = None
 
-client = OpenAI(
-    api_key=GROQ_API_KEY,
-    base_url="https://api.groq.com/openai/v1",
-)
+MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
-MODEL = "llama-3.3-70b-versatile"
+
+def get_classifier_client() -> OpenAI | None:
+    """Niyet sınıflandırıcı istemcisini ihtiyaç anında oluşturur."""
+    global _classifier_client
+
+    if _classifier_client is not None:
+        return _classifier_client
+
+    api_key = os.getenv("GROQ_API_KEY")
+
+    if not api_key:
+        return None
+
+    _classifier_client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.groq.com/openai/v1",
+    )
+    return _classifier_client
+
+
+def reset_classifier_client() -> None:
+    """Sınıflandırıcı istemci önbelleğini temizler."""
+    global _classifier_client
+    _classifier_client = None
 
 CONFIDENCE_THRESHOLD = 0.80
 
@@ -257,6 +277,13 @@ def classify_intent(message: str) -> dict[str, Any]:
             "fallback_used": False,
         }
 
+    client = get_classifier_client()
+
+    if client is None:
+        fallback = keyword_based_classify(message)
+        fallback["classifier_unavailable"] = True
+        return fallback
+
     try:
         response = client.chat.completions.create(
             model=MODEL,
@@ -295,9 +322,10 @@ def classify_intent(message: str) -> dict[str, Any]:
 
         return result
 
-    except Exception as exc:
+    except Exception:
+        logger.exception("Niyet sınıflandırıcı çağrısı başarısız oldu.")
         fallback = keyword_based_classify(message)
-        fallback["ai_error"] = str(exc)
+        fallback["classifier_unavailable"] = True
         return fallback
 
 

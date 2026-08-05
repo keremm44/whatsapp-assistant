@@ -20,6 +20,66 @@ SELLER_ID = 2
 RUN_ID = str(int(time.time()))
 
 
+ORIGINAL_SELLER_LIFECYCLE: dict[str, Any] | None = None
+
+
+def enable_test_seller_lifecycle() -> None:
+    """Entegrasyon testleri boyunca test satıcısını canlı duruma getirir."""
+    global ORIGINAL_SELLER_LIFECYCLE
+
+    supabase = get_supabase()
+
+    current = (
+        supabase.table("sellers")
+        .select(
+            "system_status,ai_enabled,onboarding_completed,"
+            "emergency_paused,emergency_paused_at,"
+            "emergency_pause_reason"
+        )
+        .eq("id", SELLER_ID)
+        .limit(1)
+        .execute()
+    )
+
+    assert current.data, f"Test satıcısı bulunamadı: {SELLER_ID}"
+
+    ORIGINAL_SELLER_LIFECYCLE = current.data[0]
+
+    result = (
+        supabase.table("sellers")
+        .update(
+            {
+                "system_status": "active",
+                "ai_enabled": True,
+                "onboarding_completed": True,
+                "emergency_paused": False,
+                "emergency_paused_at": None,
+                "emergency_pause_reason": None,
+            }
+        )
+        .eq("id", SELLER_ID)
+        .execute()
+    )
+
+    assert result.data
+
+
+def restore_test_seller_lifecycle() -> None:
+    """Test öncesindeki satıcı yaşam döngüsü alanlarını geri yükler."""
+    if ORIGINAL_SELLER_LIFECYCLE is None:
+        return
+
+    result = (
+        get_supabase()
+        .table("sellers")
+        .update(ORIGINAL_SELLER_LIFECYCLE)
+        .eq("id", SELLER_ID)
+        .execute()
+    )
+
+    assert result.data
+
+
 def print_result(
     title: str,
     result: Any,
@@ -474,15 +534,21 @@ def run_all_tests() -> None:
     print(f"RUN ID: {RUN_ID}")
     print("=" * 70)
 
-    test_template_responses()
-    test_duplicate_webhook()
-    test_full_order_flow()
-    test_unanswered_question()
-    test_violation_levels()
+    enable_test_seller_lifecycle()
 
-    print("\n" + "=" * 70)
-    print("TÜM CHAT SERVICE ENTEGRASYON TESTLERİ BAŞARILI")
-    print("=" * 70)
+    try:
+        test_template_responses()
+        test_duplicate_webhook()
+        test_full_order_flow()
+        test_unanswered_question()
+        test_violation_levels()
+
+        print("\n" + "=" * 70)
+        print("TÜM CHAT SERVICE ENTEGRASYON TESTLERİ BAŞARILI")
+        print("=" * 70)
+
+    finally:
+        restore_test_seller_lifecycle()
 
 
 if __name__ == "__main__":

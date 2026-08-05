@@ -12,6 +12,7 @@ from auth_service import (
     require_admin,
     require_seller,
     resolve_auth_context,
+    complete_invited_profile_from_access_token,
 )
 
 
@@ -222,6 +223,88 @@ def test_seller_id_is_profile_derived() -> None:
     assert resolved.seller_id == 77
 
 
+def test_complete_invited_profile_from_token() -> None:
+    with (
+        patch.object(
+            auth_service,
+            "verify_access_token",
+            return_value={
+                "durum": "başarılı",
+                "claims": {
+                    "sub": "66666666-6666-6666-6666-666666666666",
+                    "email": "invited@example.com",
+                },
+            },
+        ),
+        patch.object(
+            auth_service,
+            "get_user_profile_by_auth_user_id",
+            return_value={
+                "durum": "başarılı",
+                "profile": {
+                    "id": 6,
+                    "role": "seller",
+                    "status": "invited",
+                    "seller_id": 88,
+                },
+            },
+        ),
+        patch.object(
+            auth_service,
+            "activate_invited_profile",
+            return_value={
+                "durum": "başarılı",
+                "profile": {
+                    "id": 6,
+                    "status": "active",
+                    "seller_id": 88,
+                },
+            },
+        ) as mocked_activate,
+    ):
+        result = complete_invited_profile_from_access_token(
+            "invite-access-token"
+        )
+
+    assert result["durum"] == "başarılı"
+    mocked_activate.assert_called_once_with(
+        "66666666-6666-6666-6666-666666666666"
+    )
+
+
+def test_complete_invite_rejects_non_invited_profile() -> None:
+    with (
+        patch.object(
+            auth_service,
+            "verify_access_token",
+            return_value={
+                "durum": "başarılı",
+                "claims": {
+                    "sub": "77777777-7777-7777-7777-777777777777",
+                },
+            },
+        ),
+        patch.object(
+            auth_service,
+            "get_user_profile_by_auth_user_id",
+            return_value={
+                "durum": "başarılı",
+                "profile": {
+                    "id": 7,
+                    "role": "seller",
+                    "status": "suspended",
+                    "seller_id": 89,
+                },
+            },
+        ),
+    ):
+        result = complete_invited_profile_from_access_token(
+            "suspended-access-token"
+        )
+
+    assert result["durum"] == "reddedildi"
+
+
 def run_all_tests() -> None:
     tests = [
         test_token_extraction,
@@ -231,6 +314,8 @@ def run_all_tests() -> None:
         test_missing_profile_rejected,
         test_inactive_profile_rejected,
         test_seller_id_is_profile_derived,
+        test_complete_invited_profile_from_token,
+        test_complete_invite_rejects_non_invited_profile,
     ]
 
     for test in tests:

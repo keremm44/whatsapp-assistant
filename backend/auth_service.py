@@ -499,6 +499,73 @@ def activate_invited_profile(
     return result
 
 
+def complete_invited_profile_from_access_token(
+    access_token: str,
+) -> dict[str, Any]:
+    """
+    Davet bağlantısından oluşan geçerli Supabase oturumunu doğrular ve
+    yalnızca ilgili ``invited`` satıcı profilini aktif eder.
+
+    Satıcı kimliği veya profil kimliği istemciden alınmaz; token içindeki
+    ``sub`` değeri üzerinden çözülür.
+    """
+    verification = verify_access_token(access_token)
+
+    if verification.get("durum") != "başarılı":
+        return {
+            "durum": "geçersiz_token",
+            "mesaj": "Oturum geçersiz veya süresi dolmuş.",
+        }
+
+    claims = verification.get("claims") or {}
+    auth_user_id = str(claims.get("sub") or "").strip()
+
+    if not auth_user_id:
+        return {
+            "durum": "geçersiz_token",
+            "mesaj": "Token içinde kullanıcı kimliği bulunamadı.",
+        }
+
+    profile_result = get_user_profile_by_auth_user_id(auth_user_id)
+
+    if profile_result.get("durum") != "başarılı":
+        return profile_result
+
+    profile = profile_result["profile"]
+
+    if profile.get("role") != "seller":
+        return {
+            "durum": "reddedildi",
+            "mesaj": "Bu işlem yalnızca davetli satıcı hesabı içindir.",
+        }
+
+    if profile.get("seller_id") is None:
+        return {
+            "durum": "reddedildi",
+            "mesaj": "Satıcı profili bir işletmeyle bağlı değil.",
+        }
+
+    profile_status = str(profile.get("status") or "")
+
+    if profile_status == "active":
+        return {
+            "durum": "başarılı",
+            "profile": profile,
+            "zaten_aktif": True,
+        }
+
+    if profile_status != "invited":
+        return {
+            "durum": "reddedildi",
+            "mesaj": (
+                "Yalnızca davet bekleyen hesaplar tamamlanabilir. "
+                f"Mevcut durum: {profile_status or 'unknown'}"
+            ),
+        }
+
+    return activate_invited_profile(auth_user_id)
+
+
 def record_profile_login(
     profile_id: int,
 ) -> dict[str, Any]:

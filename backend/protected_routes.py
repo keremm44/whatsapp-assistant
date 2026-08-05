@@ -1,11 +1,22 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from fastapi.security import HTTPAuthorizationCredentials
+from pydantic import BaseModel
 
-from auth_service import AuthContext, get_current_auth_context, require_admin, require_seller
+from auth_service import (
+    AuthContext,
+    _extract_access_token,
+    bearer_scheme,
+    complete_invited_profile_from_access_token,
+    get_current_auth_context,
+    require_admin,
+    require_seller,
+)
+from onboarding_service import get_onboarding_schema
 from database import (
     activate_seller,
     complete_onboarding_step,
@@ -16,11 +27,13 @@ from database import (
 )
 
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(tags=["Protected API"])
 
 
 class OnboardingStepCompleteRequest(BaseModel):
-    step_data: dict[str, Any] = Field(default_factory=dict)
+    step_data: dict[str, Any]
 
 
 class SellerActivationRequest(BaseModel):
@@ -40,6 +53,15 @@ def _raise_from_database_result(
             detail=result.get("mesaj") or default_message,
         )
 
+    if durum == "doğrulama_hatası":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "message": result.get("mesaj") or default_message,
+                "errors": result.get("errors") or [],
+            },
+        )
+
     if durum in {
         "kilitli",
         "sıra_hatası",
@@ -51,9 +73,52 @@ def _raise_from_database_result(
             detail=result.get("mesaj") or default_message,
         )
 
+    logger.error(
+        "Veritabanı işlemi başarısız: durum=%r result=%r",
+        durum,
+        result,
+    )
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=result.get("mesaj") or default_message,
+        detail=default_message,
+    )
+
+
+@router.post("/auth/complete-invite")
+def complete_invite(
+    credentials: HTTPAuthorizationCredentials | None = Depends(
+        bearer_scheme
+    ),
+) -> dict[str, Any]:
+    """Geçerli davet oturumunu uygulama profilinde aktif eder."""
+    access_token = _extract_access_token(credentials)
+    result = complete_invited_profile_from_access_token(access_token)
+
+    if result.get("durum") == "başarılı":
+        return result
+
+    if result.get("durum") == "geçersiz_token":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=result.get("mesaj") or "Davet oturumu geçersiz.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if result.get("durum") == "bulunamadı":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=result.get("mesaj") or "Davetli profil bulunamadı.",
+        )
+
+    if result.get("durum") == "reddedildi":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=result.get("mesaj") or "Davet tamamlanamadı.",
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=result.get("mesaj") or "Davet tamamlanamadı.",
     )
 
 
@@ -99,6 +164,14 @@ def seller_me(
     }
 
 
+@router.get("/seller/onboarding/schema")
+def seller_onboarding_schema(
+    _: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Frontend için 10 adımın doğrulama sözleşmesini döndürür."""
+    return get_onboarding_schema()
+
+
 @router.get("/seller/onboarding")
 def seller_onboarding(
     context: AuthContext = Depends(require_seller),
@@ -123,7 +196,7 @@ def seller_onboarding_start(
     """Açık olan onboarding adımını başlatır."""
     if step_order < 1 or step_order > 10:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Onboarding adımı 1 ile 10 arasında olmalıdır.",
         )
 
@@ -150,7 +223,7 @@ def seller_onboarding_complete(
     """Mevcut adımı tamamlar ve sıradaki adımı açar."""
     if step_order < 1 or step_order > 10:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Onboarding adımı 1 ile 10 arasında olmalıdır.",
         )
 

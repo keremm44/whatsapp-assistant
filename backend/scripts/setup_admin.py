@@ -257,7 +257,8 @@ def main() -> None:
     print(f"Rol       : {profile_result['profile']['role']}")
     print(f"Durum     : {profile_result['profile']['status']}")
     print(
-        "\nŞimdi API çalışırken test_live_auth.py dosyasını çalıştır."
+        "\nŞimdi API çalışırken şu komutu çalıştır: "
+        "python -m tests.live.live_check_auth"
     )
 
 

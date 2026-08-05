@@ -9,6 +9,8 @@ import os
 import re
 import unicodedata
 
+from onboarding_service import prepare_onboarding_step
+
 
 # =====================================================
 # SUPABASE BAĞLANTISI
@@ -16,21 +18,37 @@ import unicodedata
 
 load_dotenv()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-
-if not SUPABASE_URL:
-    raise RuntimeError("SUPABASE_URL ortam değişkeni bulunamadı.")
-
-if not SUPABASE_KEY:
-    raise RuntimeError("SUPABASE_SERVICE_KEY ortam değişkeni bulunamadı.")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+_supabase_client: Client | None = None
 
 
 def get_supabase() -> Client:
-    """Supabase istemcisini döndürür."""
-    return supabase
+    """Supabase istemcisini ihtiyaç anında oluşturup döndürür.
+
+    Modül import edilirken bağlantı kurulmaz. Böylece unit testleri ve
+    dokümantasyon araçları gerçek ortam anahtarlarına ihtiyaç duymaz.
+    """
+    global _supabase_client
+
+    if _supabase_client is not None:
+        return _supabase_client
+
+    supabase_url = os.getenv("SUPABASE_URL")
+    service_key = os.getenv("SUPABASE_SERVICE_KEY")
+
+    if not supabase_url:
+        raise RuntimeError("SUPABASE_URL ortam değişkeni bulunamadı.")
+
+    if not service_key:
+        raise RuntimeError("SUPABASE_SERVICE_KEY ortam değişkeni bulunamadı.")
+
+    _supabase_client = create_client(supabase_url, service_key)
+    return _supabase_client
+
+
+def reset_supabase_client() -> None:
+    """Supabase istemci önbelleğini temizler."""
+    global _supabase_client
+    _supabase_client = None
 
 
 def utc_now() -> datetime:
@@ -46,12 +64,17 @@ def utc_iso() -> str:
 def test_connection() -> dict[str, Any]:
     """Supabase bağlantısını test eder."""
     try:
-        result = supabase.table("sellers").select("*").execute()
+        (
+            get_supabase()
+            .table("sellers")
+            .select("id")
+            .limit(1)
+            .execute()
+        )
 
         return {
             "durum": "başarılı",
-            "kayit_sayisi": len(result.data),
-            "veriler": result.data,
+            "bağlantı": True,
         }
 
     except Exception as exc:
@@ -87,7 +110,7 @@ def create_seller(
         if store_link:
             data["store_link"] = store_link
 
-        result = supabase.table("sellers").insert(data).execute()
+        result = get_supabase().table("sellers").insert(data).execute()
 
         return {
             "durum": "başarılı",
@@ -105,7 +128,7 @@ def get_all_sellers() -> dict[str, Any]:
     """Tüm satıcıları getirir."""
     try:
         result = (
-            supabase.table("sellers")
+            get_supabase().table("sellers")
             .select("*")
             .order("created_at", desc=True)
             .execute()
@@ -127,7 +150,7 @@ def get_seller_by_id(seller_id: int) -> dict[str, Any]:
     """Satıcıyı ID ile getirir."""
     try:
         result = (
-            supabase.table("sellers")
+            get_supabase().table("sellers")
             .select("*")
             .eq("id", seller_id)
             .limit(1)
@@ -161,7 +184,7 @@ def get_seller_product_info(seller_id: int) -> dict[str, Any]:
     """Satıcının güvenilir ürün bilgilerini getirir."""
     try:
         result = (
-            supabase.table("sellers")
+            get_supabase().table("sellers")
             .select("product_info")
             .eq("id", seller_id)
             .limit(1)
@@ -199,7 +222,7 @@ def get_or_create_customer(
     """Müşteriyi bulur; yoksa oluşturur."""
     try:
         result = (
-            supabase.table("customers")
+            get_supabase().table("customers")
             .select("*")
             .eq("seller_id", seller_id)
             .eq("whatsapp_number", whatsapp_number)
@@ -223,7 +246,7 @@ def get_or_create_customer(
         if name:
             data["name"] = name
 
-        result = supabase.table("customers").insert(data).execute()
+        result = get_supabase().table("customers").insert(data).execute()
 
         return {
             "durum": "yeni_oluşturuldu",
@@ -241,7 +264,7 @@ def get_customer_by_id(customer_id: int) -> dict[str, Any]:
     """Müşteriyi ID ile getirir."""
     try:
         result = (
-            supabase.table("customers")
+            get_supabase().table("customers")
             .select("*")
             .eq("id", customer_id)
             .limit(1)
@@ -278,7 +301,7 @@ def increment_customer_message_count(customer_id: int) -> dict[str, Any]:
         current_count = int(customer.get("total_messages") or 0)
 
         result = (
-            supabase.table("customers")
+            get_supabase().table("customers")
             .update(
                 {
                     "total_messages": current_count + 1,
@@ -319,7 +342,7 @@ def check_message_duplicate(
 
     try:
         result = (
-            supabase.table("messages")
+            get_supabase().table("messages")
             .select("*")
             .eq("provider", provider)
             .eq("provider_message_id", provider_message_id)
@@ -388,7 +411,7 @@ def save_message(
         if ai_confidence is not None:
             data["ai_confidence"] = ai_confidence
 
-        result = supabase.table("messages").insert(data).execute()
+        result = get_supabase().table("messages").insert(data).execute()
 
         if direction == "incoming":
             increment_customer_message_count(customer_id)
@@ -423,7 +446,7 @@ def get_customer_messages(
     """Müşterinin son mesajlarını getirir."""
     try:
         result = (
-            supabase.table("messages")
+            get_supabase().table("messages")
             .select("*")
             .eq("customer_id", customer_id)
             .order("created_at", desc=True)
@@ -474,7 +497,7 @@ def mute_customer(
         muted_until = utc_now() + timedelta(hours=hours)
 
         result = (
-            supabase.table("customers")
+            get_supabase().table("customers")
             .update(
                 {
                     "muted_until": muted_until.isoformat(),
@@ -501,7 +524,7 @@ def unmute_customer(customer_id: int) -> dict[str, Any]:
     """Müşterinin susturmasını kaldırır."""
     try:
         result = (
-            supabase.table("customers")
+            get_supabase().table("customers")
             .update({"muted_until": None})
             .eq("id", customer_id)
             .execute()
@@ -526,7 +549,7 @@ def block_customer(
     """Müşteriyi kalıcı olarak bloklar."""
     try:
         result = (
-            supabase.table("customers")
+            get_supabase().table("customers")
             .update(
                 {
                     "is_blocked": True,
@@ -555,7 +578,7 @@ def unblock_customer(customer_id: int) -> dict[str, Any]:
     """Müşterinin kalıcı bloğunu kaldırır."""
     try:
         result = (
-            supabase.table("customers")
+            get_supabase().table("customers")
             .update(
                 {
                     "is_blocked": False,
@@ -620,13 +643,13 @@ def record_violation(
             data["action_taken"] = action_taken
 
         result = (
-            supabase.table("customer_violations")
+            get_supabase().table("customer_violations")
             .insert(data)
             .execute()
         )
 
         (
-            supabase.table("customers")
+            get_supabase().table("customers")
             .update({"last_violation_at": utc_iso()})
             .eq("id", customer_id)
             .execute()
@@ -654,7 +677,7 @@ def count_recent_violations(
         start_date = utc_now() - timedelta(days=days)
 
         result = (
-            supabase.table("customer_violations")
+            get_supabase().table("customer_violations")
             .select("id", count="exact")
             .eq("seller_id", seller_id)
             .eq("customer_id", customer_id)
@@ -720,7 +743,7 @@ def _fetch_state_record(
     Böylece get_state ile transition_state arasında döngü oluşmaz.
     """
     result = (
-        supabase.table("conversation_states")
+        get_supabase().table("conversation_states")
         .select("*")
         .eq("seller_id", seller_id)
         .eq("customer_id", customer_id)
@@ -795,7 +818,7 @@ def get_state(
 
                     try:
                         (
-                            supabase.table("state_transitions")
+                            get_supabase().table("state_transitions")
                             .insert(transition_data)
                             .execute()
                         )
@@ -859,7 +882,7 @@ def set_state(
         }
 
         result = (
-            supabase.table("conversation_states")
+            get_supabase().table("conversation_states")
             .upsert(
                 data,
                 on_conflict="seller_id,customer_id",
@@ -951,7 +974,7 @@ def transition_state(
 
     try:
         transition_result = (
-            supabase.table("state_transitions")
+            get_supabase().table("state_transitions")
             .insert(transition_data)
             .execute()
         )
@@ -1044,7 +1067,7 @@ def create_seller_notification(
                 data[key] = value
 
         result = (
-            supabase.table("seller_notifications")
+            get_supabase().table("seller_notifications")
             .insert(data)
             .execute()
         )
@@ -1068,7 +1091,7 @@ def get_unread_notifications(
     """Satıcının okunmamış bildirimlerini getirir."""
     try:
         result = (
-            supabase.table("seller_notifications")
+            get_supabase().table("seller_notifications")
             .select("*")
             .eq("seller_id", seller_id)
             .eq("is_read", False)
@@ -1096,7 +1119,7 @@ def mark_notification_as_read(
     """Bildirimi okundu olarak işaretler."""
     try:
         result = (
-            supabase.table("seller_notifications")
+            get_supabase().table("seller_notifications")
             .update(
                 {
                     "is_read": True,
@@ -1155,7 +1178,7 @@ def save_unanswered_question(
 
     try:
         existing_result = (
-            supabase.table("unanswered_questions")
+            get_supabase().table("unanswered_questions")
             .select("*")
             .eq("seller_id", seller_id)
             .eq("normalized_question", normalized)
@@ -1182,7 +1205,7 @@ def save_unanswered_question(
                 update_data["suggested_field"] = suggested_field
 
             result = (
-                supabase.table("unanswered_questions")
+                get_supabase().table("unanswered_questions")
                 .update(update_data)
                 .eq("id", existing["id"])
                 .execute()
@@ -1211,7 +1234,7 @@ def save_unanswered_question(
             data["suggested_field"] = suggested_field
 
         result = (
-            supabase.table("unanswered_questions")
+            get_supabase().table("unanswered_questions")
             .insert(data)
             .execute()
         )
@@ -1236,7 +1259,7 @@ def get_active_rules(seller_id: int) -> dict[str, Any]:
     """Satıcının aktif kurallarını getirir."""
     try:
         result = (
-            supabase.table("rules")
+            get_supabase().table("rules")
             .select("*")
             .eq("seller_id", seller_id)
             .eq("is_active", True)
@@ -1260,7 +1283,7 @@ def increment_rule_hit_count(rule_id: int) -> dict[str, Any]:
     """Bir kuralın kullanım sayısını artırır."""
     try:
         current = (
-            supabase.table("rules")
+            get_supabase().table("rules")
             .select("hit_count")
             .eq("id", rule_id)
             .limit(1)
@@ -1276,7 +1299,7 @@ def increment_rule_hit_count(rule_id: int) -> dict[str, Any]:
         current_count = int(current.data[0].get("hit_count") or 0)
 
         result = (
-            supabase.table("rules")
+            get_supabase().table("rules")
             .update({"hit_count": current_count + 1})
             .eq("id", rule_id)
             .execute()
@@ -1348,7 +1371,7 @@ def create_seller_application(
             data["notes"] = notes.strip()
 
         result = (
-            supabase.table("seller_applications")
+            get_supabase().table("seller_applications")
             .insert(data)
             .execute()
         )
@@ -1381,7 +1404,7 @@ def get_seller_application_by_id(
     """Satıcı başvurusunu ID ile getirir."""
     try:
         result = (
-            supabase.table("seller_applications")
+            get_supabase().table("seller_applications")
             .select("*")
             .eq("id", application_id)
             .limit(1)
@@ -1420,7 +1443,7 @@ def get_seller_applications(
 
     try:
         query = (
-            supabase.table("seller_applications")
+            get_supabase().table("seller_applications")
             .select("*")
             .order("created_at", desc=True)
             .limit(limit)
@@ -1485,7 +1508,7 @@ def update_seller_application_status(
             update_data["rejected_at"] = utc_iso()
 
         result = (
-            supabase.table("seller_applications")
+            get_supabase().table("seller_applications")
             .update(update_data)
             .eq("id", application_id)
             .execute()
@@ -1572,7 +1595,7 @@ def create_user_profile(
         }
 
         result = (
-            supabase.table("user_profiles")
+            get_supabase().table("user_profiles")
             .insert(data)
             .execute()
         )
@@ -1595,7 +1618,7 @@ def get_user_profile_by_auth_user_id(
     """Kullanıcı profilini Supabase Auth UUID ile getirir."""
     try:
         result = (
-            supabase.table("user_profiles")
+            get_supabase().table("user_profiles")
             .select("*")
             .eq("auth_user_id", auth_user_id)
             .limit(1)
@@ -1633,7 +1656,7 @@ def update_user_profile_status(
 
     try:
         result = (
-            supabase.table("user_profiles")
+            get_supabase().table("user_profiles")
             .update({"status": status})
             .eq("id", profile_id)
             .execute()
@@ -1674,7 +1697,7 @@ def initialize_onboarding(
 ) -> dict[str, Any]:
     """Satıcı için 10 zorunlu onboarding adımını oluşturur."""
     try:
-        supabase.rpc(
+        get_supabase().rpc(
             "initialize_seller_onboarding",
             {
                 "target_seller_id": seller_id,
@@ -1696,7 +1719,7 @@ def get_onboarding_steps(
     """Satıcının onboarding adımlarını getirir."""
     try:
         result = (
-            supabase.table("seller_onboarding_steps")
+            get_supabase().table("seller_onboarding_steps")
             .select("*")
             .eq("seller_id", seller_id)
             .order("step_order")
@@ -1756,7 +1779,7 @@ def start_onboarding_step(
     """Açık onboarding adımını in_progress durumuna getirir."""
     try:
         current_result = (
-            supabase.table("seller_onboarding_steps")
+            get_supabase().table("seller_onboarding_steps")
             .select("*")
             .eq("seller_id", seller_id)
             .eq("step_order", step_order)
@@ -1785,7 +1808,7 @@ def start_onboarding_step(
             }
 
         result = (
-            supabase.table("seller_onboarding_steps")
+            get_supabase().table("seller_onboarding_steps")
             .update(
                 {
                     "status": "in_progress",
@@ -1815,10 +1838,20 @@ def save_onboarding_step_data(
     step_order: int,
     step_data: dict[str, Any],
 ) -> dict[str, Any]:
-    """Onboarding adımının form verisini kaydeder."""
+    """
+    Onboarding adımının taslak form verisini doğrulayıp kaydeder.
+
+    Bu fonksiyon adımı tamamlamaz ve hedef işletme tablolarına uygulamaz.
+    Tamamlama işlemi complete_onboarding_step() içindeki atomik RPC ile yapılır.
+    """
+    prepared = prepare_onboarding_step(step_order, step_data)
+
+    if prepared.get("durum") != "başarılı":
+        return prepared
+
     try:
         current_result = (
-            supabase.table("seller_onboarding_steps")
+            get_supabase().table("seller_onboarding_steps")
             .select("*")
             .eq("seller_id", seller_id)
             .eq("step_order", step_order)
@@ -1841,10 +1874,10 @@ def save_onboarding_step_data(
             }
 
         result = (
-            supabase.table("seller_onboarding_steps")
+            get_supabase().table("seller_onboarding_steps")
             .update(
                 {
-                    "step_data": step_data,
+                    "step_data": prepared["normalized_step_data"],
                     "status": (
                         "completed"
                         if current["status"] == "completed"
@@ -1877,9 +1910,10 @@ def complete_onboarding_step(
     step_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
-    Mevcut onboarding adımını tamamlar ve sıradaki adımı açar.
+    Mevcut onboarding adımını doğrular, gerçek tablolara uygular ve tamamlar.
 
-    Adım atlama kontrolü hem Python hem veritabanı tarafında yapılır.
+    Veri uygulama, adımı tamamlama ve sıradaki adımı açma işlemleri
+    PostgreSQL tarafındaki tek bir transaction/RPC içinde yapılır.
     """
     try:
         seller_result = get_seller_by_id(seller_id)
@@ -1903,7 +1937,7 @@ def complete_onboarding_step(
             }
 
         step_result = (
-            supabase.table("seller_onboarding_steps")
+            get_supabase().table("seller_onboarding_steps")
             .select("*")
             .eq("seller_id", seller_id)
             .eq("step_order", step_order)
@@ -1925,25 +1959,69 @@ def complete_onboarding_step(
                 "mesaj": "Bu onboarding adımı henüz açık değil.",
             }
 
-        if step_data is not None:
-            data_result = save_onboarding_step_data(
-                seller_id=seller_id,
-                step_order=step_order,
-                step_data=step_data,
-            )
+        prepared = prepare_onboarding_step(step_order, step_data)
 
-            if data_result.get("durum") != "başarılı":
-                return data_result
+        if prepared.get("durum") != "başarılı":
+            return prepared
 
-        supabase.rpc(
-            "unlock_next_onboarding_step",
+        get_supabase().rpc(
+            "complete_seller_onboarding_step",
             {
                 "target_seller_id": seller_id,
                 "completed_step_order": step_order,
+                "normalized_step_data": prepared[
+                    "normalized_step_data"
+                ],
+                "seller_patch": prepared["seller_patch"],
+                "product_info_patch": prepared[
+                    "product_info_patch"
+                ],
+                "rules_payload": prepared["rules_payload"],
             },
         ).execute()
 
-        return get_onboarding_status(seller_id)
+        onboarding_result = get_onboarding_status(seller_id)
+
+        if onboarding_result.get("durum") != "başarılı":
+            return onboarding_result
+
+        onboarding_result["completed_step"] = {
+            "step_order": step_order,
+            "step_key": prepared["step_key"],
+        }
+
+        if step_order != 10:
+            return onboarding_result
+
+        refreshed_seller_result = get_seller_by_id(seller_id)
+
+        if refreshed_seller_result.get("durum") != "başarılı":
+            return refreshed_seller_result
+
+        refreshed_seller = refreshed_seller_result["satıcı"]
+
+        should_auto_activate = (
+            refreshed_seller.get("account_type") == "standard"
+            and not bool(
+                refreshed_seller.get("activation_requires_admin")
+            )
+            and bool(refreshed_seller.get("onboarding_completed"))
+        )
+
+        if not should_auto_activate:
+            return onboarding_result
+
+        activation_result = activate_seller(
+            seller_id=seller_id,
+            activated_by_admin=False,
+        )
+
+        if activation_result.get("durum") != "başarılı":
+            return activation_result
+
+        onboarding_result["automatic_activation"] = True
+        onboarding_result["seller"] = activation_result["seller"]
+        return onboarding_result
 
     except Exception as exc:
         return {
@@ -1968,11 +2046,8 @@ def configure_founder_beta(
         }
 
     try:
-        start = utc_now()
-        end = start + timedelta(days=beta_days)
-
         result = (
-            supabase.table("sellers")
+            get_supabase().table("sellers")
             .update(
                 {
                     "account_type": "founder_beta",
@@ -1980,8 +2055,9 @@ def configure_founder_beta(
                     "payment_required": False,
                     "special_pricing": True,
                     "activation_requires_admin": True,
-                    "beta_started_at": start.isoformat(),
-                    "beta_ends_at": end.isoformat(),
+                    "beta_duration_days": beta_days,
+                    "beta_started_at": None,
+                    "beta_ends_at": None,
                     "ai_enabled": False,
                 }
             )
@@ -2037,28 +2113,46 @@ def activate_seller(
             }
 
         account_type = seller.get("account_type")
+        activated_at = seller.get("activated_at") or utc_iso()
+        update_data: dict[str, Any] = {
+            "status": "active",
+            "activated_at": activated_at,
+            "ai_enabled": True,
+            "emergency_paused": False,
+            "emergency_paused_at": None,
+            "emergency_pause_reason": None,
+        }
 
         if account_type == "founder_beta":
             next_status = "beta_active"
+            beta_started_at = seller.get("beta_started_at")
+            beta_ends_at = seller.get("beta_ends_at")
+
+            if not beta_started_at or not beta_ends_at:
+                beta_start = utc_now()
+                beta_days = int(
+                    seller.get("beta_duration_days") or 30
+                )
+                beta_end = beta_start + timedelta(days=beta_days)
+                update_data["beta_started_at"] = beta_start.isoformat()
+                update_data["beta_ends_at"] = beta_end.isoformat()
         else:
             next_status = "active"
 
+        update_data["system_status"] = next_status
+
         result = (
-            supabase.table("sellers")
-            .update(
-                {
-                    "system_status": next_status,
-                    "status": "active",
-                    "activated_at": utc_iso(),
-                    "ai_enabled": True,
-                    "emergency_paused": False,
-                    "emergency_paused_at": None,
-                    "emergency_pause_reason": None,
-                }
-            )
+            get_supabase().table("sellers")
+            .update(update_data)
             .eq("id", seller_id)
             .execute()
         )
+
+        if not result.data:
+            return {
+                "durum": "bulunamadı",
+                "mesaj": "Satıcı aktifleştirilemedi veya bulunamadı.",
+            }
 
         return {
             "durum": "başarılı",
@@ -2079,7 +2173,7 @@ def pause_seller_ai(
     """Satıcının otomatik AI cevaplarını acil durumda durdurur."""
     try:
         result = (
-            supabase.table("sellers")
+            get_supabase().table("sellers")
             .update(
                 {
                     "ai_enabled": False,
@@ -2132,7 +2226,7 @@ def resume_seller_ai(
             }
 
         result = (
-            supabase.table("sellers")
+            get_supabase().table("sellers")
             .update(
                 {
                     "ai_enabled": True,

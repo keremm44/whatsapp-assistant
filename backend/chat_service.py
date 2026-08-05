@@ -54,6 +54,19 @@ DISCOUNT_RESPONSE = "Fiyatlarımız sabittir, indirim uygulanmamaktadır."
 GREETING_RESPONSE = "Merhaba, size nasıl yardımcı olabilirim?"
 
 
+ACTIVE_SELLER_STATUSES = {
+    "active",
+    "beta_active",
+}
+
+SELLER_LIFECYCLE_REASONS = {
+    "emergency_paused": "Asistan satıcı tarafından acil olarak durduruldu.",
+    "ai_disabled": "Asistan bu işletme için etkin değil.",
+    "onboarding_incomplete": "İşletme kurulumu henüz tamamlanmadı.",
+    "inactive_status": "İşletme hesabı şu anda canlı kullanıma açık değil.",
+}
+
+
 # =====================================================
 # KÜFÜR / SALDIRI FİLTRESİ
 # =====================================================
@@ -907,6 +920,49 @@ def safe_template_response(
 
 
 # =====================================================
+# SATICI YAŞAM DÖNGÜSÜ KONTROLÜ
+# =====================================================
+
+def seller_lifecycle_block(
+    seller: dict[str, Any],
+) -> tuple[str, str] | None:
+    """
+    Satıcının otomatik cevap vermeye uygun olup olmadığını kontrol eder.
+
+    Dönüş:
+    - None: otomatik cevap verilebilir.
+    - (reason_code, reason_text): mesaj kaydedilir ancak cevap üretilmez.
+    """
+    if bool(seller.get("emergency_paused")):
+        return (
+            "emergency_paused",
+            SELLER_LIFECYCLE_REASONS["emergency_paused"],
+        )
+
+    if seller.get("ai_enabled") is not True:
+        return (
+            "ai_disabled",
+            SELLER_LIFECYCLE_REASONS["ai_disabled"],
+        )
+
+    if seller.get("onboarding_completed") is not True:
+        return (
+            "onboarding_incomplete",
+            SELLER_LIFECYCLE_REASONS["onboarding_incomplete"],
+        )
+
+    system_status = str(seller.get("system_status") or "").strip()
+
+    if system_status not in ACTIVE_SELLER_STATUSES:
+        return (
+            "inactive_status",
+            SELLER_LIFECYCLE_REASONS["inactive_status"],
+        )
+
+    return None
+
+
+# =====================================================
 # ANA SOHBET FONKSİYONU
 # =====================================================
 
@@ -1012,7 +1068,22 @@ def sohbet_isle(
     incoming_message = incoming_result["message"]
     incoming_message_id = incoming_message["id"]
 
-    # 5. Uygunsuz içerik kontrolü
+    # 5. Satıcı yaşam döngüsü kontrolü
+    lifecycle_block = seller_lifecycle_block(seller)
+
+    if lifecycle_block:
+        reason_code, reason_text = lifecycle_block
+
+        return {
+            "durum": "asistan_pasif",
+            "cevap": None,
+            "sebep": reason_text,
+            "reason_code": reason_code,
+            "customer_id": customer_id,
+            "incoming_message_id": incoming_message_id,
+        }
+
+    # 6. Uygunsuz içerik kontrolü
     violation = uygunsuz_icerik_bul(kullanici_mesaji or "")
 
     if violation:
@@ -1024,7 +1095,7 @@ def sohbet_isle(
             severity=violation["severity"],
         )
 
-    # 6. Aktif state
+    # 7. Aktif state
     state_result = get_state(
         seller_id=seller_id,
         customer_id=customer_id,
@@ -1049,7 +1120,7 @@ def sohbet_isle(
     if state_response:
         return state_response
 
-    # 7. Niyet sınıflandırma
+    # 8. Niyet sınıflandırma
     classification = classify_intent(kullanici_mesaji or "")
 
     if not intent_is_safe(classification):
@@ -1065,7 +1136,7 @@ def sohbet_isle(
     intent = classification["intent"]
     confidence = classification.get("confidence")
 
-    # 8. Sipariş başlangıcı
+    # 9. Sipariş başlangıcı
     if intent == "order_intent":
         transition_state(
             seller_id=seller_id,
@@ -1098,7 +1169,7 @@ def sohbet_isle(
             reason="bağlam_dışı_sipariş_onayı",
         )
 
-    # 9. Satıcı kuralları
+    # 10. Satıcı kuralları
     rules_result = get_active_rules(seller_id)
     rules = rules_result.get("kurallar", [])
 
@@ -1118,7 +1189,7 @@ def sohbet_isle(
             ai_confidence=1.0,
         )
 
-    # 10. Ürün bilgileri
+    # 11. Ürün bilgileri
     product_response, suggested_field = product_info_response(
         intent=intent,
         product_info=product_info,
@@ -1133,7 +1204,7 @@ def sohbet_isle(
             ai_confidence=confidence,
         )
 
-    # 11. Güvenli hazır şablon
+    # 12. Güvenli hazır şablon
     template_response = safe_template_response(
         intent=intent,
         store_link=store_link,
@@ -1148,7 +1219,7 @@ def sohbet_isle(
             ai_confidence=confidence,
         )
 
-    # 12. İade ve şikâyet satıcıya
+    # 13. İade ve şikâyet satıcıya
     if intent in {
         "return_request",
         "complaint",
@@ -1193,7 +1264,7 @@ def sohbet_isle(
             ai_confidence=confidence,
         )
 
-    # 13. Bilgi yoksa satıcıya aktar
+    # 14. Bilgi yoksa satıcıya aktar
     return escalate_question(
         seller_id=seller_id,
         customer_id=customer_id,
