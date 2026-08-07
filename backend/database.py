@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, TypedDict
 
 from dotenv import load_dotenv
 from supabase import Client, create_client
@@ -702,6 +702,460 @@ def count_recent_violations(
 
 
 # =====================================================
+# CONVERSATION CONTROL — KALICI KONTROL DURUMU
+# =====================================================
+
+CONTROL_STATE_ASSISTANT_ACTIVE = "ASSISTANT_ACTIVE"
+CONTROL_STATE_SELLER_TAKEN_OVER = "SELLER_TAKEN_OVER"
+CONTROL_STATE_RETURN_REVIEW = "RETURN_REVIEW"
+CONTROL_STATE_ASSISTANT_PAUSED = "ASSISTANT_PAUSED"
+
+VALID_CONTROL_STATES = {
+    CONTROL_STATE_ASSISTANT_ACTIVE,
+    CONTROL_STATE_SELLER_TAKEN_OVER,
+    CONTROL_STATE_RETURN_REVIEW,
+    CONTROL_STATE_ASSISTANT_PAUSED,
+}
+
+CONTROL_REASON_CODE_MAX_LENGTH = 64
+CONTROL_REASON_NOTE_MAX_LENGTH = 500
+_CONTROL_REASON_CODE_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+class ConversationControlSummary(TypedDict):
+    """Dış katmanlara döndürülen kararlı konuşma kontrol özeti."""
+
+    state: str
+    changed_at: str
+    changed_by_profile_id: int | None
+    reason_code: str | None
+    reason_note: str | None
+    resume_after_message_id: int | None
+    version: int
+
+
+def _is_positive_int(value: Any) -> bool:
+    """bool değerlerini kimlik olarak kabul etmeden pozitif int doğrular."""
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def _validate_conversation_identity(
+    seller_id: int,
+    customer_id: int,
+) -> dict[str, Any] | None:
+    if not _is_positive_int(seller_id) or not _is_positive_int(customer_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id ve customer_id pozitif tam sayı olmalıdır.",
+        }
+
+    return None
+
+
+def _validate_optional_positive_id(
+    value: int | None,
+    field_name: str,
+) -> dict[str, Any] | None:
+    if value is not None and not _is_positive_int(value):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": f"{field_name} pozitif tam sayı olmalıdır.",
+        }
+
+    return None
+
+
+def _validate_control_reason(
+    reason_code: str,
+    reason_note: str | None,
+) -> dict[str, Any] | None:
+    if (
+        not isinstance(reason_code, str)
+        or not reason_code
+        or len(reason_code) > CONTROL_REASON_CODE_MAX_LENGTH
+        or _CONTROL_REASON_CODE_PATTERN.fullmatch(reason_code) is None
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": (
+                "reason_code küçük harf/rakam/alt çizgi içeren geçerli "
+                "bir kod olmalıdır."
+            ),
+        }
+
+    if reason_note is not None:
+        if not isinstance(reason_note, str):
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": "reason_note metin olmalıdır.",
+            }
+
+        if len(reason_note) > CONTROL_REASON_NOTE_MAX_LENGTH:
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": (
+                    "reason_note en fazla "
+                    f"{CONTROL_REASON_NOTE_MAX_LENGTH} karakter olabilir."
+                ),
+            }
+
+    return None
+
+
+def _build_conversation_control_summary(
+    record: Any,
+) -> ConversationControlSummary | None:
+    """DB/RPC kaydını kontrollü ve kararlı dış dönüş modeline çevirir."""
+    if not isinstance(record, dict):
+        return None
+
+    state = record.get("control_state")
+    version = record.get("control_version")
+    changed_at = record.get("control_changed_at")
+    changed_by_profile_id = record.get("control_changed_by_profile_id")
+    reason_code = record.get("control_reason_code")
+    reason_note = record.get("control_reason_note")
+    resume_after_message_id = record.get("resume_after_message_id")
+
+    if (
+        state not in VALID_CONTROL_STATES
+        or not _is_positive_int(version)
+        or not isinstance(changed_at, str)
+        or not changed_at
+        or (
+            changed_by_profile_id is not None
+            and not _is_positive_int(changed_by_profile_id)
+        )
+        or (
+            resume_after_message_id is not None
+            and not _is_positive_int(resume_after_message_id)
+        )
+        or (
+            reason_code is not None
+            and (
+                not isinstance(reason_code, str)
+                or len(reason_code) > CONTROL_REASON_CODE_MAX_LENGTH
+                or _CONTROL_REASON_CODE_PATTERN.fullmatch(reason_code) is None
+            )
+        )
+        or (
+            reason_note is not None
+            and (
+                not isinstance(reason_note, str)
+                or len(reason_note) > CONTROL_REASON_NOTE_MAX_LENGTH
+            )
+        )
+    ):
+        return None
+
+    return {
+        "state": state,
+        "changed_at": changed_at,
+        "changed_by_profile_id": changed_by_profile_id,
+        "reason_code": reason_code,
+        "reason_note": reason_note,
+        "resume_after_message_id": resume_after_message_id,
+        "version": version,
+    }
+
+
+def _extract_rpc_payload(data: Any) -> dict[str, Any] | None:
+    """Supabase sürümlerindeki dict/tek elemanlı liste farkını normalize eder."""
+    if isinstance(data, dict):
+        return data
+
+    if (
+        isinstance(data, list)
+        and len(data) == 1
+        and isinstance(data[0], dict)
+    ):
+        return data[0]
+
+    return None
+
+
+def _conversation_control_rpc_response(data: Any) -> dict[str, Any]:
+    payload = _extract_rpc_payload(data)
+
+    if payload is None:
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma kontrol işlemi geçersiz yanıt döndürdü.",
+        }
+
+    status = payload.get("status")
+
+    if status == "not_found":
+        return {
+            "durum": "bulunamadı",
+            "mesaj": "Konuşma kontrol kaydı bulunamadı.",
+        }
+
+    if status == "forbidden":
+        return {
+            "durum": "reddedildi",
+            "mesaj": "Konuşma kontrol işlemi bu tenant için geçersiz.",
+        }
+
+    control = _build_conversation_control_summary(payload.get("control"))
+
+    if status == "conflict":
+        response: dict[str, Any] = {
+            "durum": "çakışma",
+            "mesaj": "Konuşma kontrol kaydı başka bir işlemle değişti.",
+        }
+        if control is not None:
+            response["control"] = control
+        return response
+
+    if status != "success" or control is None:
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma kontrol işlemi geçersiz yanıt döndürdü.",
+        }
+
+    response = {
+        "durum": "başarılı",
+        "changed": payload.get("changed") is True,
+        "control": control,
+    }
+
+    transition_id = payload.get("transition_id")
+    if _is_positive_int(transition_id):
+        response["transition_id"] = transition_id
+
+    return response
+
+
+def get_conversation_control(
+    seller_id: int,
+    customer_id: int,
+) -> dict[str, Any]:
+    """Konuşma kontrolünü seller ve customer birlikte scope ederek okur."""
+    validation_error = _validate_conversation_identity(
+        seller_id,
+        customer_id,
+    )
+    if validation_error:
+        return validation_error
+
+    try:
+        result = (
+            get_supabase().table("conversation_states")
+            .select(
+                "control_state,control_changed_at,"
+                "control_changed_by_profile_id,control_reason_code,"
+                "control_reason_note,resume_after_message_id,"
+                "control_version"
+            )
+            .eq("seller_id", seller_id)
+            .eq("customer_id", customer_id)
+            .limit(1)
+            .execute()
+        )
+
+        if not result.data:
+            return {
+                "durum": "bulunamadı",
+                "mesaj": "Konuşma kontrol kaydı bulunamadı.",
+            }
+
+        control = _build_conversation_control_summary(result.data[0])
+        if control is None:
+            return {
+                "durum": "hata",
+                "mesaj": "Konuşma kontrol kaydı geçersiz.",
+            }
+
+        return {
+            "durum": "başarılı",
+            "control": control,
+        }
+
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma kontrol kaydı okunamadı.",
+        }
+
+
+def get_conversation_control_history(
+    seller_id: int,
+    customer_id: int,
+    limit: int = 20,
+) -> dict[str, Any]:
+    """Tenant kapsamındaki kontrol audit kayıtlarını en yeniden eskiye okur."""
+    validation_error = _validate_conversation_identity(seller_id, customer_id)
+    if validation_error:
+        return validation_error
+    if not _is_positive_int(limit) or limit > 100:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "limit 1 ile 100 arasında olmalıdır.",
+        }
+
+    try:
+        result = (
+            get_supabase().table("conversation_control_transitions")
+            .select(
+                "id,from_control_state,to_control_state,reason_code,"
+                "reason_note,changed_by_profile_id,trigger_message_id,"
+                "new_resume_after_message_id,previous_version,new_version,"
+                "created_at"
+            )
+            .eq("seller_id", seller_id)
+            .eq("customer_id", customer_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma kontrol geçmişi okunamadı.",
+        }
+
+    history: list[dict[str, Any]] = []
+    for record in result.data or []:
+        if not isinstance(record, dict):
+            return {
+                "durum": "hata",
+                "mesaj": "Konuşma kontrol geçmişi geçersiz.",
+            }
+        history.append(
+            {
+                "id": record.get("id"),
+                "from_state": record.get("from_control_state"),
+                "to_state": record.get("to_control_state"),
+                "reason_code": record.get("reason_code"),
+                "reason_note": record.get("reason_note"),
+                "changed_by_profile_id": record.get("changed_by_profile_id"),
+                "trigger_message_id": record.get("trigger_message_id"),
+                "resume_after_message_id": record.get(
+                    "new_resume_after_message_id"
+                ),
+                "previous_version": record.get("previous_version"),
+                "new_version": record.get("new_version"),
+                "created_at": record.get("created_at"),
+            }
+        )
+
+    return {"durum": "başarılı", "history": history}
+
+
+def transition_conversation_control(
+    seller_id: int,
+    customer_id: int,
+    to_control_state: str,
+    reason_code: str,
+    reason_note: str | None = None,
+    changed_by_profile_id: int | None = None,
+    trigger_message_id: int | None = None,
+    resume_after_message_id: int | None = None,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """Kontrol değişikliği ile audit kaydını tek atomik RPC'de uygular."""
+    validation_error = _validate_conversation_identity(
+        seller_id,
+        customer_id,
+    )
+    if validation_error:
+        return validation_error
+
+    if to_control_state not in VALID_CONTROL_STATES:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": f"Geçersiz kontrol durumu: {to_control_state}",
+        }
+
+    validation_error = _validate_control_reason(reason_code, reason_note)
+    if validation_error:
+        return validation_error
+
+    for value, field_name in (
+        (changed_by_profile_id, "changed_by_profile_id"),
+        (trigger_message_id, "trigger_message_id"),
+        (resume_after_message_id, "resume_after_message_id"),
+        (expected_version, "expected_version"),
+    ):
+        validation_error = _validate_optional_positive_id(value, field_name)
+        if validation_error:
+            return validation_error
+
+    try:
+        result = get_supabase().rpc(
+            "transition_conversation_control",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "target_control_state": to_control_state,
+                "transition_reason_code": reason_code,
+                "transition_reason_note": reason_note,
+                "actor_profile_id": changed_by_profile_id,
+                "transition_trigger_message_id": trigger_message_id,
+                "target_resume_after_message_id": resume_after_message_id,
+                "expected_control_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma kontrol işlemi tamamlanamadı.",
+        }
+
+    return _conversation_control_rpc_response(result.data)
+
+
+def resume_conversation_assistant(
+    seller_id: int,
+    customer_id: int,
+    reason_code: str = "manual_resume",
+    reason_note: str | None = None,
+    changed_by_profile_id: int | None = None,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """Asistanı, son incoming mesaj cursor'ını atomik alarak geri açar."""
+    validation_error = _validate_conversation_identity(
+        seller_id,
+        customer_id,
+    )
+    if validation_error:
+        return validation_error
+
+    validation_error = _validate_control_reason(reason_code, reason_note)
+    if validation_error:
+        return validation_error
+
+    for value, field_name in (
+        (changed_by_profile_id, "changed_by_profile_id"),
+        (expected_version, "expected_version"),
+    ):
+        validation_error = _validate_optional_positive_id(value, field_name)
+        if validation_error:
+            return validation_error
+
+    try:
+        result = get_supabase().rpc(
+            "resume_conversation_assistant",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "transition_reason_code": reason_code,
+                "transition_reason_note": reason_note,
+                "actor_profile_id": changed_by_profile_id,
+                "expected_control_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma kontrol işlemi tamamlanamadı.",
+        }
+
+    return _conversation_control_rpc_response(result.data)
+
+
+# =====================================================
 # CONVERSATION STATE — DURUM MAKİNESİ
 # =====================================================
 
@@ -711,6 +1165,7 @@ VALID_STATES = {
     "AWAITING_ORDER_NUMBER",
     "AWAITING_IMAGE",
     "AWAITING_CUSTOM_TEXT",
+    "AWAITING_ORDER_FIELD",
     "AWAITING_SELLER",
 }
 
@@ -720,6 +1175,7 @@ STATE_TYPES = {
     "AWAITING_ORDER_NUMBER": "soft_lock",
     "AWAITING_IMAGE": "soft_lock",
     "AWAITING_CUSTOM_TEXT": "soft_lock",
+    "AWAITING_ORDER_FIELD": "soft_lock",
     "AWAITING_SELLER": "informational",
 }
 
@@ -1249,6 +1705,463 @@ def save_unanswered_question(
             "durum": "hata",
             "mesaj": str(exc),
         }
+
+
+# =====================================================
+# UNANSWERED QUESTION LIFECYCLE — 017 DOMAIN
+# =====================================================
+
+UNANSWERED_STATUS_OPEN = "OPEN"
+UNANSWERED_STATUS_ANSWERED = "ANSWERED"
+UNANSWERED_STATUS_DISMISSED = "DISMISSED"
+
+VALID_UNANSWERED_STATUSES = {
+    UNANSWERED_STATUS_OPEN,
+    UNANSWERED_STATUS_ANSWERED,
+    UNANSWERED_STATUS_DISMISSED,
+}
+
+
+def _unanswered_rpc_response(data: Any) -> dict[str, Any]:
+    """017 unanswered RPC yanıtını güvenli domain sonucuna normalize eder."""
+    payload = _extract_rpc_payload(data)
+
+    if payload is None:
+        return {
+            "durum": "hata",
+            "mesaj": "Cevaplanamayan soru işlemi geçersiz yanıt döndürdü.",
+        }
+
+    rpc_status = payload.get("status")
+
+    if rpc_status == "not_found":
+        return {
+            "durum": "bulunamadı",
+            "mesaj": "Cevaplanamayan soru kaydı bulunamadı.",
+        }
+
+    if rpc_status == "conflict":
+        response: dict[str, Any] = {
+            "durum": "çakışma",
+            "mesaj": payload.get("message")
+            or "Cevaplanamayan soru başka bir işlemle değişti.",
+        }
+        if payload.get("group") is not None:
+            response["group"] = payload["group"]
+        if payload.get("current_version") is not None:
+            response["current_version"] = payload["current_version"]
+        return response
+
+    if rpc_status == "answered":
+        group = payload.get("group")
+        if not isinstance(group, dict):
+            return {
+                "durum": "hata",
+                "mesaj": "Kayıtlı seller cevabı doğrulanamadı.",
+            }
+        return {
+            "durum": "cevap_mevcut",
+            "group": group,
+            "idempotent": payload.get("idempotent") is True,
+            "created": False,
+            "notification_created": False,
+        }
+
+    if rpc_status == "error":
+        return {
+            "durum": "hata",
+            "mesaj": payload.get("message")
+            or "Cevaplanamayan soru işlemi tamamlanamadı.",
+        }
+
+    if rpc_status != "success":
+        return {
+            "durum": "hata",
+            "mesaj": "Cevaplanamayan soru işlemi geçersiz yanıt döndürdü.",
+        }
+
+    response = {"durum": "başarılı"}
+
+    for key in ("group", "occurrence"):
+        if payload.get(key) is not None:
+            response[key] = payload[key]
+
+    for key in ("changed", "created", "idempotent", "notification_created"):
+        if payload.get(key) is not None:
+            response[key] = payload[key] is True
+
+    if payload.get("current_version") is not None:
+        response["current_version"] = payload["current_version"]
+
+    return response
+
+
+def record_unanswered_question_occurrence(
+    seller_id: int,
+    customer_id: int,
+    source_message_id: int,
+    question_text: str,
+    normalized_question: str,
+    *,
+    category: str = "unclear",
+    suggested_field: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Yeni incoming unanswered occurrence'ı atomik/idempotent kaydeder."""
+    if (
+        not _is_positive_int(seller_id)
+        or not _is_positive_int(customer_id)
+        or not _is_positive_int(source_message_id)
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id, customer_id ve source_message_id pozitif tam sayı olmalıdır.",
+        }
+
+    question_text = question_text.strip()
+    normalized_question = normalized_question.strip()
+    category = category.strip() or "unclear"
+    suggested_field = suggested_field.strip() if suggested_field else None
+
+    if not question_text or len(question_text) > 4000:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "question_text 1 ile 4000 karakter arasında olmalıdır.",
+        }
+
+    if not normalized_question or len(normalized_question) > 4000:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "normalized_question 1 ile 4000 karakter arasında olmalıdır.",
+        }
+
+    if len(category) > 50:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "category en fazla 50 karakter olabilir.",
+        }
+
+    if suggested_field is not None and len(suggested_field) > 150:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "suggested_field en fazla 150 karakter olabilir.",
+        }
+
+    if metadata is not None and not isinstance(metadata, dict):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "metadata nesne olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "record_unanswered_question_occurrence",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "source_message_id": source_message_id,
+                "question_text_value": question_text,
+                "normalized_question_value": normalized_question,
+                "category_value": category,
+                "suggested_field_value": suggested_field,
+                "metadata_value": metadata or {},
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Cevaplanamayan soru kaydedilemedi.",
+        }
+
+    return _unanswered_rpc_response(result.data)
+
+
+def get_answered_unanswered_question(
+    seller_id: int,
+    normalized_question: str,
+) -> dict[str, Any]:
+    """Exact-normalized ANSWERED seller bilgisini getirir."""
+    if not _is_positive_int(seller_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id pozitif tam sayı olmalıdır.",
+        }
+
+    normalized_question = normalized_question.strip()
+    if not normalized_question or len(normalized_question) > 4000:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "normalized_question geçersiz.",
+        }
+
+    try:
+        result = (
+            get_supabase().table("unanswered_question_groups")
+            .select("*")
+            .eq("seller_id", seller_id)
+            .eq("normalized_question", normalized_question)
+            .eq("status", UNANSWERED_STATUS_ANSWERED)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Kayıtlı seller cevabı okunamadı.",
+        }
+
+    group = result.data[0] if result.data else None
+    if group is not None:
+        answer = group.get("answer_text")
+        if not isinstance(answer, str) or not answer.strip():
+            return {
+                "durum": "hata",
+                "mesaj": "Kayıtlı seller cevabı geçersiz.",
+            }
+
+    return {"durum": "başarılı", "group": group}
+
+
+def get_unanswered_question_group_by_id(
+    seller_id: int,
+    group_id: int,
+) -> dict[str, Any]:
+    """Unanswered group'u tenant scope'unda okur."""
+    if not _is_positive_int(seller_id) or not _is_positive_int(group_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id ve group_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = (
+            get_supabase().table("unanswered_question_groups")
+            .select("*")
+            .eq("seller_id", seller_id)
+            .eq("id", group_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Cevaplanamayan soru okunamadı.",
+        }
+
+    if not result.data:
+        return {
+            "durum": "bulunamadı",
+            "mesaj": "Cevaplanamayan soru bulunamadı.",
+        }
+
+    return {"durum": "başarılı", "group": result.data[0]}
+
+
+def get_unanswered_question_group_detail(
+    seller_id: int,
+    group_id: int,
+    *,
+    occurrence_limit: int = 50,
+) -> dict[str, Any]:
+    """Group ve güvenli occurrence metadata'sını tenant scope'unda döndürür."""
+    if not _is_positive_int(occurrence_limit) or occurrence_limit > 100:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "occurrence_limit 1 ile 100 arasında olmalıdır.",
+        }
+
+    group_result = get_unanswered_question_group_by_id(seller_id, group_id)
+    if group_result.get("durum") != "başarılı":
+        return group_result
+
+    try:
+        occurrence_result = (
+            get_supabase().table("unanswered_question_occurrences")
+            .select(
+                "id,seller_id,group_id,customer_id,message_id,question_text,"
+                "category,suggested_field,metadata,occurred_at"
+            )
+            .eq("seller_id", seller_id)
+            .eq("group_id", group_id)
+            .order("occurred_at", desc=True)
+            .order("id", desc=True)
+            .limit(occurrence_limit)
+            .execute()
+        )
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Cevaplanamayan soru detayları okunamadı.",
+        }
+
+    return {
+        "durum": "başarılı",
+        "group": group_result["group"],
+        "occurrences": occurrence_result.data,
+    }
+
+
+def list_unanswered_question_groups(
+    seller_id: int,
+    *,
+    view: str = "all",
+    limit: int = 20,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Seller unanswered group listesini tenant scope'unda döndürür."""
+    if not _is_positive_int(seller_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id pozitif tam sayı olmalıdır.",
+        }
+
+    view_status = {
+        "action_required": UNANSWERED_STATUS_OPEN,
+        "answered": UNANSWERED_STATUS_ANSWERED,
+        "dismissed": UNANSWERED_STATUS_DISMISSED,
+        "all": None,
+    }
+
+    if view not in view_status:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "view değeri geçersiz.",
+        }
+
+    if not _is_positive_int(limit) or limit > 100:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "limit 1 ile 100 arasında olmalıdır.",
+        }
+
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "offset negatif olmayan tam sayı olmalıdır.",
+        }
+
+    try:
+        query = (
+            get_supabase().table("unanswered_question_groups")
+            .select("*")
+            .eq("seller_id", seller_id)
+            .order("last_seen_at", desc=True)
+            .order("id", desc=True)
+            .range(offset, offset + limit - 1)
+        )
+
+        status_value = view_status[view]
+        if status_value is not None:
+            query = query.eq("status", status_value)
+
+        result = query.execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Cevaplanamayan sorular okunamadı.",
+        }
+
+    return {
+        "durum": "başarılı",
+        "toplam": len(result.data),
+        "groups": result.data,
+    }
+
+
+def set_unanswered_question_answer(
+    seller_id: int,
+    group_id: int,
+    actor_profile_id: int,
+    expected_version: int,
+    answer_text: str,
+) -> dict[str, Any]:
+    """Seller cevabını optimistic concurrency ile kaydeder."""
+    if (
+        not _is_positive_int(seller_id)
+        or not _is_positive_int(group_id)
+        or not _is_positive_int(actor_profile_id)
+        or not _is_positive_int(expected_version)
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "Kimlikler ve expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    answer_text = answer_text.strip()
+    if not answer_text or len(answer_text) > 4000:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "answer_text 1 ile 4000 karakter arasında olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "set_unanswered_question_answer",
+            {
+                "target_seller_id": seller_id,
+                "target_group_id": group_id,
+                "actor_profile_id": actor_profile_id,
+                "expected_version": expected_version,
+                "answer_text_value": answer_text,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Seller cevabı kaydedilemedi.",
+        }
+
+    return _unanswered_rpc_response(result.data)
+
+
+def dismiss_unanswered_question_group(
+    seller_id: int,
+    group_id: int,
+    actor_profile_id: int,
+    expected_version: int,
+    *,
+    note: str | None = None,
+) -> dict[str, Any]:
+    """OPEN unanswered group'u seller görev listesinden dismiss eder."""
+    if (
+        not _is_positive_int(seller_id)
+        or not _is_positive_int(group_id)
+        or not _is_positive_int(actor_profile_id)
+        or not _is_positive_int(expected_version)
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "Kimlikler ve expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    if note is not None:
+        note = note.strip()
+        if not note:
+            note = None
+        elif len(note) > 1000:
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": "note en fazla 1000 karakter olabilir.",
+            }
+
+    try:
+        result = get_supabase().rpc(
+            "dismiss_unanswered_question_group",
+            {
+                "target_seller_id": seller_id,
+                "target_group_id": group_id,
+                "actor_profile_id": actor_profile_id,
+                "expected_version": expected_version,
+                "dismiss_note_value": note,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Cevaplanamayan soru dismiss edilemedi.",
+        }
+
+    return _unanswered_rpc_response(result.data)
 
 
 # =====================================================
@@ -2248,6 +3161,1713 @@ def resume_seller_ai(
         return {
             "durum": "hata",
             "mesaj": str(exc),
+        }
+
+
+# =====================================================
+# ORDER DOMAIN — KALICI SİPARİŞ SİSTEMİ
+# =====================================================
+
+ORDER_STATUS_COLLECTING = "COLLECTING"
+ORDER_STATUS_COMPLETE = "COMPLETE"
+ORDER_STATUS_SELLER_REVIEW_REQUIRED = "SELLER_REVIEW_REQUIRED"
+
+VALID_ORDER_STATUSES = {
+    ORDER_STATUS_COLLECTING,
+    ORDER_STATUS_COMPLETE,
+    ORDER_STATUS_SELLER_REVIEW_REQUIRED,
+}
+
+ORDER_FIELD_TYPES = {
+    "short_text",
+    "long_text",
+    "number",
+    "single_choice",
+    "multi_choice",
+    "boolean",
+    "image",
+}
+
+ORDER_DISPLAY_STATUS = {
+    ORDER_STATUS_COLLECTING: "Bilgi toplanıyor",
+    ORDER_STATUS_COMPLETE: "Bilgiler tamamlandı",
+    ORDER_STATUS_SELLER_REVIEW_REQUIRED: "Satıcı incelemesi gerekiyor",
+}
+
+
+def _is_positive_int(value: Any) -> bool:
+    """bool değerlerini kimlik olarak kabul etmeden pozitif int doğrular."""
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def _extract_rpc_payload(data: Any) -> dict[str, Any] | None:
+    """Supabase sürümlerindeki dict/tek elemanlı liste farkını normalize eder."""
+    if isinstance(data, dict):
+        return data
+
+    if (
+        isinstance(data, list)
+        and len(data) == 1
+        and isinstance(data[0], dict)
+    ):
+        return data[0]
+
+    return None
+
+
+def _order_rpc_response(data: Any) -> dict[str, Any]:
+    """Order RPC yanıtını güvenli domain sonucuna çevirir."""
+    payload = _extract_rpc_payload(data)
+
+    if payload is None:
+        return {
+            "durum": "hata",
+            "mesaj": "Sipariş işlemi geçersiz yanıt döndürdü.",
+        }
+
+    status = payload.get("status")
+
+    if status == "not_found":
+        return {
+            "durum": "bulunamadı",
+            "mesaj": "Sipariş bulunamadı.",
+        }
+
+    if status == "forbidden":
+        return {
+            "durum": "reddedildi",
+            "mesaj": "Sipariş işlemi bu tenant için geçersiz.",
+        }
+
+    if status == "conflict":
+        response: dict[str, Any] = {
+            "durum": "çakışma",
+            "mesaj": payload.get("message") or "Sipariş kaydı değişti.",
+        }
+        if payload.get("order"):
+            response["order"] = payload["order"]
+        return response
+
+    if status == "order_product_change_requires_review":
+        response: dict[str, Any] = {
+            "durum": "ürün_değişikliği_inceleme_gerekli",
+            "mesaj": (
+                "Değer toplanmaya başlanmış siparişte ürün değişikliği "
+                "satıcı incelemesi gerektirir."
+            ),
+        }
+        if payload.get("order"):
+            response["order"] = payload["order"]
+        return response
+
+    if status == "error":
+        return {
+            "durum": "hata",
+            "mesaj": payload.get("message") or "Sipariş işlemi tamamlanamadı.",
+        }
+
+    if status != "success" or not payload.get("order"):
+        return {
+            "durum": "hata",
+            "mesaj": "Sipariş işlemi geçersiz yanıt döndürdü.",
+        }
+
+    response = {
+        "durum": "başarılı",
+        "order": payload["order"],
+    }
+
+    if payload.get("changed") is not None:
+        response["changed"] = payload["changed"] is True
+
+    if payload.get("created") is not None:
+        response["created"] = payload["created"] is True
+
+    if payload.get("completed") is not None:
+        response["completed"] = payload["completed"] is True
+
+    if payload.get("idempotent") is not None:
+        response["idempotent"] = payload["idempotent"] is True
+
+    if payload.get("snapshot_count") is not None:
+        response["snapshot_count"] = payload["snapshot_count"]
+
+    if payload.get("race_resolved") is not None:
+        response["race_resolved"] = payload["race_resolved"] is True
+
+    return response
+
+
+def get_or_create_active_order(
+    seller_id: int,
+    customer_id: int,
+    source_message_id: int,
+) -> dict[str, Any]:
+    """
+    Aktif siparişi atomik olarak getirir veya oluşturur.
+
+    Aynı seller + customer konuşmasında en fazla bir aktif sipariş
+    bulunur. Aynı kaynak mesajdan ikinci sipariş oluşmaz.
+    """
+    if not _is_positive_int(seller_id) or not _is_positive_int(customer_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id ve customer_id pozitif tam sayı olmalıdır.",
+        }
+
+    if not _is_positive_int(source_message_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "source_message_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "get_or_create_active_order",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "source_message_id": source_message_id,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Aktif sipariş işlemi tamamlanamadı.",
+        }
+
+    return _order_rpc_response(result.data)
+
+
+def initialize_order_collection(
+    seller_id: int,
+    customer_id: int,
+    source_message_id: int,
+) -> dict[str, Any]:
+    """
+    Sipariş toplama başlangıcını atomik olarak hazırlar.
+
+    Yeni siparişte müşteri telefon snapshot'ı ve aktif mağaza-geneli
+    dinamik alan snapshot'ları PostgreSQL RPC içinde sabitlenir.
+    """
+    if not _is_positive_int(seller_id) or not _is_positive_int(customer_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id ve customer_id pozitif tam sayı olmalıdır.",
+        }
+
+    if not _is_positive_int(source_message_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "source_message_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "initialize_order_collection",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "source_message_id": source_message_id,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Sipariş toplama başlangıcı tamamlanamadı.",
+        }
+
+    return _order_rpc_response(result.data)
+
+
+def set_order_product_and_snapshot_fields(
+    seller_id: int,
+    customer_id: int,
+    order_id: int,
+    product_id: int,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """
+    Ürünü doğrular ve aktif alan tanımlarını siparişe snapshot olarak sabitler.
+    """
+    if not _is_positive_int(order_id) or not _is_positive_int(product_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "order_id ve product_id pozitif tam sayı olmalıdır.",
+        }
+
+    if expected_version is not None and not _is_positive_int(expected_version):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "set_order_product_and_snapshot_fields",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "target_order_id": order_id,
+                "target_product_id": product_id,
+                "expected_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Ürün ve alan snapshot işlemi tamamlanamadı.",
+        }
+
+    return _order_rpc_response(result.data)
+
+
+def record_order_field_value(
+    seller_id: int,
+    customer_id: int,
+    order_id: int,
+    field_snapshot_id: int,
+    value: Any,
+    source_message_id: int,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """
+    Sipariş alan değerini atomik ve idempotent biçimde kaydeder.
+    """
+    if not _is_positive_int(field_snapshot_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "field_snapshot_id pozitif tam sayı olmalıdır.",
+        }
+
+    if expected_version is not None and not _is_positive_int(expected_version):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "record_order_field_value",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "target_order_id": order_id,
+                "target_field_snapshot_id": field_snapshot_id,
+                "value_jsonb": value,
+                "source_message_id": source_message_id,
+                "expected_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Sipariş alan değeri kaydedilemedi.",
+        }
+
+    return _order_rpc_response(result.data)
+
+
+def update_order_core(
+    seller_id: int,
+    customer_id: int,
+    order_id: int,
+    external_order_number: str | None = None,
+    customer_phone_snapshot: str | None = None,
+    customer_note: str | None = None,
+    image_message_id: int | None = None,
+    custom_text: str | None = None,
+    clear_custom_text: bool = False,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """
+    Core sipariş alanlarını idempotent biçimde günceller.
+    """
+    if expected_version is not None and not _is_positive_int(expected_version):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "update_order_core",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "target_order_id": order_id,
+                "new_external_order_number": external_order_number,
+                "new_customer_phone_snapshot": customer_phone_snapshot,
+                "new_customer_note": customer_note,
+                "new_image_message_id": image_message_id,
+                "new_custom_text": custom_text,
+                "clear_custom_text": clear_custom_text,
+                "expected_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Sipariş core alanları güncellenemedi.",
+        }
+
+    return _order_rpc_response(result.data)
+
+
+def update_order_core_from_message(
+    seller_id: int,
+    customer_id: int,
+    order_id: int,
+    source_message_id: int,
+    external_order_number: str | None = None,
+    customer_phone_snapshot: str | None = None,
+    customer_note: str | None = None,
+    image_message_id: int | None = None,
+    custom_text: str | None = None,
+    clear_custom_text: bool = False,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """
+    Core sipariş alanlarını kaynak incoming mesajla ilişkilendirerek günceller.
+
+    Bu wrapper chat collection mutasyonlarında tenant scope ve source-message
+    idempotency sağlayan 015 RPC'sini kullanır.
+    """
+    if (
+        not _is_positive_int(seller_id)
+        or not _is_positive_int(customer_id)
+        or not _is_positive_int(order_id)
+        or not _is_positive_int(source_message_id)
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": (
+                "seller_id, customer_id, order_id ve source_message_id "
+                "pozitif tam sayı olmalıdır."
+            ),
+        }
+
+    if image_message_id is not None and not _is_positive_int(image_message_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "image_message_id pozitif tam sayı olmalıdır.",
+        }
+
+    if expected_version is not None and not _is_positive_int(expected_version):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "update_order_core_from_message",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "target_order_id": order_id,
+                "source_message_id": source_message_id,
+                "new_external_order_number": external_order_number,
+                "new_customer_phone_snapshot": customer_phone_snapshot,
+                "new_customer_note": customer_note,
+                "new_image_message_id": image_message_id,
+                "new_custom_text": custom_text,
+                "clear_custom_text": clear_custom_text,
+                "expected_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Sipariş core alanları kaynak mesajla güncellenemedi.",
+        }
+
+    return _order_rpc_response(result.data)
+
+
+def flag_order_review(
+    seller_id: int,
+    customer_id: int,
+    order_id: int,
+    review_code: str,
+    review_note: str | None = None,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """
+    Siparişi satıcı incelemesine bırakır. Conversation control'ü değiştirmez.
+    """
+    if expected_version is not None and not _is_positive_int(expected_version):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "flag_order_review",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "target_order_id": order_id,
+                "review_code": review_code,
+                "review_note": review_note,
+                "expected_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Sipariş inceleme durumuna alınamadı.",
+        }
+
+    return _order_rpc_response(result.data)
+
+
+def get_order_by_id(
+    seller_id: int,
+    order_id: int,
+) -> dict[str, Any]:
+    """Siparişi tenant scope'unda okur."""
+    if not _is_positive_int(order_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "order_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = (
+            get_supabase().table("orders")
+            .select("*")
+            .eq("id", order_id)
+            .eq("seller_id", seller_id)
+            .limit(1)
+            .execute()
+        )
+
+        if not result.data:
+            return {
+                "durum": "bulunamadı",
+                "mesaj": "Sipariş bulunamadı.",
+            }
+
+        return {
+            "durum": "başarılı",
+            "order": result.data[0],
+        }
+
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Sipariş okunamadı.",
+        }
+
+
+def get_order_detail(
+    seller_id: int,
+    order_id: int,
+) -> dict[str, Any]:
+    """
+    Sipariş detayını snapshot alanları ve değerleriyle birlikte okur.
+    """
+    order_result = get_order_by_id(seller_id, order_id)
+
+    if order_result.get("durum") != "başarılı":
+        return order_result
+
+    order = order_result["order"]
+
+    try:
+        snapshots_result = (
+            get_supabase().table("order_field_snapshots")
+            .select("*")
+            .eq("order_id", order_id)
+            .order("sort_order_snapshot")
+            .execute()
+        )
+
+        snapshots = snapshots_result.data or []
+
+        values_result = (
+            get_supabase().table("order_field_values")
+            .select("*")
+            .eq("order_id", order_id)
+            .execute()
+        )
+
+        values_by_snapshot: dict[int, dict[str, Any]] = {}
+
+        for value_row in values_result.data or []:
+            snapshot_id = value_row.get("field_snapshot_id")
+
+            if _is_positive_int(snapshot_id):
+                values_by_snapshot[snapshot_id] = value_row
+
+        fields: list[dict[str, Any]] = []
+
+        for snapshot in snapshots:
+            snapshot_id = snapshot.get("id")
+            value_row = values_by_snapshot.get(snapshot_id)
+
+            fields.append(
+                {
+                    "id": snapshot_id,
+                    "source_definition_id": snapshot.get(
+                        "source_definition_id"
+                    ),
+                    "definition_version": snapshot.get(
+                        "definition_version"
+                    ),
+                    "field_key": snapshot.get("field_key"),
+                    "label": snapshot.get("label_snapshot"),
+                    "field_type": snapshot.get("field_type_snapshot"),
+                    "is_required": snapshot.get("is_required_snapshot"),
+                    "sort_order": snapshot.get("sort_order_snapshot"),
+                    "options": snapshot.get("options_snapshot") or [],
+                    "validation_config": snapshot.get(
+                        "validation_snapshot"
+                    ) or {},
+                    "value": (
+                        value_row.get("value")
+                        if value_row is not None
+                        else None
+                    ),
+                    "source_message_id": (
+                        value_row.get("source_message_id")
+                        if value_row is not None
+                        else None
+                    ),
+                    "completed": value_row is not None,
+                }
+            )
+
+        return {
+            "durum": "başarılı",
+            "order": order,
+            "fields": fields,
+        }
+
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Sipariş detayı okunamadı.",
+        }
+
+
+def list_orders(
+    seller_id: int,
+    *,
+    view: str = "all",
+    status: str | None = None,
+    product_id: int | None = None,
+    image_missing: bool | None = None,
+    customer_id: int | None = None,
+    external_order_number: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """
+    Satıcının siparişlerini tenant scope'unda listeler.
+
+    view:
+      - action_required: SELLER_REVIEW_REQUIRED
+      - collecting: COLLECTING
+      - all: tümü
+    """
+    if view not in {"action_required", "collecting", "all"}:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "view değeri geçersiz.",
+        }
+
+    if limit < 1 or limit > 100:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "limit 1 ile 100 arasında olmalıdır.",
+        }
+
+    if offset < 0:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "offset negatif olamaz.",
+        }
+
+    try:
+        query = (
+            get_supabase().table("orders")
+            .select("*")
+            .eq("seller_id", seller_id)
+            .order("updated_at", desc=True)
+            .range(offset, offset + limit - 1)
+        )
+
+        if view == "action_required":
+            query = query.eq("status", ORDER_STATUS_SELLER_REVIEW_REQUIRED)
+        elif view == "collecting":
+            query = query.eq("status", ORDER_STATUS_COLLECTING)
+
+        if status is not None:
+            if status not in VALID_ORDER_STATUSES:
+                return {
+                    "durum": "doğrulama_hatası",
+                    "mesaj": f"Geçersiz sipariş durumu: {status}",
+                }
+            query = query.eq("status", status)
+
+        if product_id is not None:
+            query = query.eq("product_id", product_id)
+
+        if image_missing is not None:
+            if image_missing:
+                query = query.is_("image_message_id", "null")
+            else:
+                query = query.not_.is_("image_message_id", "null")
+
+        if customer_id is not None:
+            query = query.eq("customer_id", customer_id)
+
+        if external_order_number:
+            query = query.eq("external_order_number", external_order_number)
+
+        result = query.execute()
+
+        return {
+            "durum": "başarılı",
+            "toplam": len(result.data),
+            "orders": result.data,
+        }
+
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Siparişler okunamadı.",
+        }
+
+
+# =====================================================
+# ORDER FIELD DEFINITIONS — DİNAMİK ALAN TANIMLARI
+# =====================================================
+
+def get_order_field_definitions(
+    seller_id: int,
+    *,
+    product_id: int | None = None,
+    include_inactive: bool = False,
+) -> dict[str, Any]:
+    """Satıcının dinamik alan tanımlarını listeler."""
+    try:
+        query = (
+            get_supabase().table("order_field_definitions")
+            .select("*")
+            .eq("seller_id", seller_id)
+            .order("sort_order")
+            .order("id")
+        )
+
+        if product_id is not None:
+            query = query.eq("product_id", product_id)
+
+        if not include_inactive:
+            query = query.eq("is_active", True)
+
+        result = query.execute()
+
+        return {
+            "durum": "başarılı",
+            "toplam": len(result.data),
+            "definitions": result.data,
+        }
+
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Alan tanımları okunamadı.",
+        }
+
+
+def create_order_field_definition(
+    seller_id: int,
+    *,
+    field_key: str,
+    label: str,
+    field_type: str,
+    is_required: bool,
+    sort_order: int,
+    product_id: int | None = None,
+    options: list[dict[str, Any]] | None = None,
+    validation_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Yeni dinamik alan tanımı oluşturur."""
+    if field_type not in ORDER_FIELD_TYPES:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": f"Geçersiz alan tipi: {field_type}",
+        }
+
+    if sort_order < 0:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "sort_order negatif olamaz.",
+        }
+
+    try:
+        data: dict[str, Any] = {
+            "seller_id": seller_id,
+            "field_key": field_key,
+            "label": label,
+            "field_type": field_type,
+            "is_required": is_required,
+            "is_active": True,
+            "sort_order": sort_order,
+            "options": options or [],
+            "validation_config": validation_config or {},
+        }
+
+        if product_id is not None:
+            data["product_id"] = product_id
+
+        result = (
+            get_supabase().table("order_field_definitions")
+            .insert(data)
+            .execute()
+        )
+
+        return {
+            "durum": "başarılı",
+            "definition": result.data[0],
+        }
+
+    except Exception as exc:
+        error_text = str(exc)
+
+        if "duplicate key" in error_text.lower() or "23505" in error_text:
+            return {
+                "durum": "çakışma",
+                "mesaj": "Bu alan anahtarı bu satıcı için zaten kullanılıyor.",
+            }
+
+        return {
+            "durum": "hata",
+            "mesaj": "Alan tanımı oluşturulamadı.",
+        }
+
+
+def update_order_field_definition(
+    seller_id: int,
+    field_id: int,
+    *,
+    expected_version: int,
+    label: str | None = None,
+    is_required: bool | None = None,
+    is_active: bool | None = None,
+    sort_order: int | None = None,
+) -> dict[str, Any]:
+    """
+    Dinamik alan tanımını optimistic concurrency ile günceller.
+
+    field_key ve field_type değiştirilemez.
+    """
+    if not _is_positive_int(field_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "field_id pozitif tam sayı olmalıdır.",
+        }
+
+    if not _is_positive_int(expected_version):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        current_result = (
+            get_supabase().table("order_field_definitions")
+            .select("*")
+            .eq("id", field_id)
+            .eq("seller_id", seller_id)
+            .limit(1)
+            .execute()
+        )
+
+        if not current_result.data:
+            return {
+                "durum": "bulunamadı",
+                "mesaj": "Alan tanımı bulunamadı.",
+            }
+
+        current = current_result.data[0]
+
+        if int(current.get("version") or 0) != expected_version:
+            return {
+                "durum": "çakışma",
+                "mesaj": "Alan tanımı başka bir işlemle değişti.",
+                "definition": current,
+            }
+
+        update_data: dict[str, Any] = {
+            "version": expected_version + 1,
+            "updated_at": utc_iso(),
+        }
+
+        if label is not None:
+            update_data["label"] = label
+
+        if is_required is not None:
+            update_data["is_required"] = is_required
+
+        if is_active is not None:
+            update_data["is_active"] = is_active
+
+        if sort_order is not None:
+            if sort_order < 0:
+                return {
+                    "durum": "doğrulama_hatası",
+                    "mesaj": "sort_order negatif olamaz.",
+                }
+            update_data["sort_order"] = sort_order
+
+        result = (
+            get_supabase().table("order_field_definitions")
+            .update(update_data)
+            .eq("id", field_id)
+            .eq("seller_id", seller_id)
+            .eq("version", expected_version)
+            .execute()
+        )
+
+        if not result.data:
+            return {
+                "durum": "çakışma",
+                "mesaj": "Alan tanımı başka bir işlemle değişti.",
+            }
+
+        return {
+            "durum": "başarılı",
+            "definition": result.data[0],
+        }
+
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Alan tanımı güncellenemedi.",
+        }
+
+
+def get_order_field_definition_by_id(
+    seller_id: int,
+    field_id: int,
+) -> dict[str, Any]:
+    """Alan tanımını tenant scope'unda okur."""
+    if not _is_positive_int(field_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "field_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = (
+            get_supabase().table("order_field_definitions")
+            .select("*")
+            .eq("id", field_id)
+            .eq("seller_id", seller_id)
+            .limit(1)
+            .execute()
+        )
+
+        if not result.data:
+            return {
+                "durum": "bulunamadı",
+                "mesaj": "Alan tanımı bulunamadı.",
+            }
+
+        return {
+            "durum": "başarılı",
+            "definition": result.data[0],
+        }
+
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Alan tanımı okunamadı.",
+        }
+
+
+def get_product_by_id(
+    seller_id: int,
+    product_id: int,
+) -> dict[str, Any]:
+    """Ürünü tenant scope'unda okur."""
+    if not _is_positive_int(product_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "product_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = (
+            get_supabase().table("products")
+            .select("*")
+            .eq("id", product_id)
+            .eq("seller_id", seller_id)
+            .limit(1)
+            .execute()
+        )
+
+        if not result.data:
+            return {
+                "durum": "bulunamadı",
+                "mesaj": "Ürün bulunamadı.",
+            }
+
+        return {
+            "durum": "başarılı",
+            "product": result.data[0],
+        }
+
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Ürün okunamadı.",
+        }
+
+
+# =====================================================
+# RETURN / ISSUE DOMAIN — KALICI İADE VE SORUN TALEPLERİ
+# =====================================================
+
+RETURN_ISSUE_TYPES = {
+    "RETURN_REQUEST",
+    "DAMAGED_ITEM",
+    "WRONG_ITEM",
+    "PRINT_OR_PERSONALIZATION_ISSUE",
+    "DELIVERY_ISSUE",
+    "OTHER_ORDER_ISSUE",
+}
+
+RETURN_ISSUE_STATUS_COLLECTING = "COLLECTING"
+RETURN_ISSUE_STATUS_SELLER_REVIEW_REQUIRED = "SELLER_REVIEW_REQUIRED"
+RETURN_ISSUE_STATUS_HANDLED = "HANDLED"
+
+VALID_RETURN_ISSUE_STATUSES = {
+    RETURN_ISSUE_STATUS_COLLECTING,
+    RETURN_ISSUE_STATUS_SELLER_REVIEW_REQUIRED,
+    RETURN_ISSUE_STATUS_HANDLED,
+}
+
+RETURN_IMAGE_REQUIREMENTS = {
+    "REQUIRED",
+    "OPTIONAL",
+    "NOT_REQUESTED",
+}
+
+
+def _return_issue_rpc_response(data: Any) -> dict[str, Any]:
+    """Return/issue RPC yanıtını güvenli domain sonucuna normalize eder."""
+    payload = _extract_rpc_payload(data)
+
+    if payload is None:
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun işlemi geçersiz yanıt döndürdü.",
+        }
+
+    status = payload.get("status")
+
+    if status == "not_found":
+        return {
+            "durum": "bulunamadı",
+            "mesaj": "İade/sorun talebi bulunamadı.",
+        }
+
+    if status == "forbidden":
+        return {
+            "durum": "reddedildi",
+            "mesaj": "İade/sorun işlemi bu tenant için geçersiz.",
+        }
+
+    if status == "conflict":
+        response: dict[str, Any] = {
+            "durum": "çakışma",
+            "mesaj": payload.get("message") or "İade/sorun talebi değişti.",
+        }
+        if payload.get("request") is not None:
+            response["request"] = payload["request"]
+        if payload.get("setting") is not None:
+            response["setting"] = payload["setting"]
+        if payload.get("current_version") is not None:
+            response["current_version"] = payload["current_version"]
+        return response
+
+    if status == "not_ready":
+        response = {
+            "durum": "hazır_değil",
+            "mesaj": payload.get("message") or "Talep satıcı incelemesine hazır değil.",
+        }
+        if payload.get("request") is not None:
+            response["request"] = payload["request"]
+        return response
+
+    if status == "error":
+        return {
+            "durum": "hata",
+            "mesaj": payload.get("message") or "İade/sorun işlemi tamamlanamadı.",
+        }
+
+    if status != "success":
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun işlemi geçersiz yanıt döndürdü.",
+        }
+
+    response = {"durum": "başarılı"}
+
+    for key in ("request", "evidence", "setting"):
+        if payload.get(key) is not None:
+            response[key] = payload[key]
+
+    for key in (
+        "changed",
+        "created",
+        "idempotent",
+        "race_resolved",
+        "notification_created",
+    ):
+        if payload.get(key) is not None:
+            response[key] = payload[key] is True
+
+    if payload.get("current_version") is not None:
+        response["current_version"] = payload["current_version"]
+
+    return response
+
+
+def create_or_get_return_issue_request(
+    seller_id: int,
+    customer_id: int,
+    source_message_id: int,
+    issue_type: str,
+    *,
+    initial_reason_text: str | None = None,
+    order_id: int | None = None,
+    external_order_number: str | None = None,
+) -> dict[str, Any]:
+    """Açık iade/sorun talebini atomik ve idempotent biçimde oluşturur/getirir."""
+    if (
+        not _is_positive_int(seller_id)
+        or not _is_positive_int(customer_id)
+        or not _is_positive_int(source_message_id)
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id, customer_id ve source_message_id pozitif tam sayı olmalıdır.",
+        }
+
+    if issue_type not in RETURN_ISSUE_TYPES:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": f"Geçersiz iade/sorun tipi: {issue_type}",
+        }
+
+    if order_id is not None and not _is_positive_int(order_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "order_id pozitif tam sayı olmalıdır.",
+        }
+
+    if initial_reason_text is not None:
+        normalized_reason = initial_reason_text.strip()
+        if not normalized_reason or len(normalized_reason) > 2000:
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": "initial_reason_text 1 ile 2000 karakter arasında olmalıdır.",
+            }
+        initial_reason_text = normalized_reason
+
+    if external_order_number is not None:
+        normalized_number = external_order_number.strip()
+        if not normalized_number or len(normalized_number) > 100:
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": "external_order_number 1 ile 100 karakter arasında olmalıdır.",
+            }
+        external_order_number = normalized_number
+
+    try:
+        result = get_supabase().rpc(
+            "create_or_get_return_issue_request",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "source_message_id": source_message_id,
+                "target_issue_type": issue_type,
+                "initial_reason_text": initial_reason_text,
+                "target_order_id": order_id,
+                "external_order_number_text": external_order_number,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun talebi oluşturulamadı.",
+        }
+
+    return _return_issue_rpc_response(result.data)
+
+
+def update_return_issue_request_from_message(
+    seller_id: int,
+    customer_id: int,
+    request_id: int,
+    source_message_id: int,
+    *,
+    external_order_number: str | None = None,
+    reason_text: str | None = None,
+    order_id: int | None = None,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """Chat'ten toplanan request bilgilerini incoming source message ile günceller."""
+    if (
+        not _is_positive_int(seller_id)
+        or not _is_positive_int(customer_id)
+        or not _is_positive_int(request_id)
+        or not _is_positive_int(source_message_id)
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": (
+                "seller_id, customer_id, request_id ve source_message_id "
+                "pozitif tam sayı olmalıdır."
+            ),
+        }
+
+    if order_id is not None and not _is_positive_int(order_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "order_id pozitif tam sayı olmalıdır.",
+        }
+
+    if expected_version is not None and not _is_positive_int(expected_version):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    if external_order_number is not None:
+        external_order_number = external_order_number.strip()
+        if not external_order_number or len(external_order_number) > 100:
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": "external_order_number 1 ile 100 karakter arasında olmalıdır.",
+            }
+
+    if reason_text is not None:
+        reason_text = reason_text.strip()
+        if not reason_text or len(reason_text) > 2000:
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": "reason_text 1 ile 2000 karakter arasında olmalıdır.",
+            }
+
+    if external_order_number is None and reason_text is None and order_id is None:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "Güncellenecek talep bilgisi yok.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "update_return_issue_request_from_message",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "target_request_id": request_id,
+                "source_message_id": source_message_id,
+                "new_external_order_number": external_order_number,
+                "new_reason_text": reason_text,
+                "target_order_id": order_id,
+                "expected_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun talebi güncellenemedi.",
+        }
+
+    return _return_issue_rpc_response(result.data)
+
+
+def add_return_issue_request_evidence(
+    seller_id: int,
+    customer_id: int,
+    request_id: int,
+    source_message_id: int,
+    *,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """Incoming image message'ı güvenli request evidence olarak ekler."""
+    if (
+        not _is_positive_int(seller_id)
+        or not _is_positive_int(customer_id)
+        or not _is_positive_int(request_id)
+        or not _is_positive_int(source_message_id)
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": (
+                "seller_id, customer_id, request_id ve source_message_id "
+                "pozitif tam sayı olmalıdır."
+            ),
+        }
+
+    if expected_version is not None and not _is_positive_int(expected_version):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "add_return_issue_request_evidence",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "target_request_id": request_id,
+                "source_message_id": source_message_id,
+                "expected_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun evidence kaydedilemedi.",
+        }
+
+    return _return_issue_rpc_response(result.data)
+
+
+def mark_return_issue_review_required(
+    seller_id: int,
+    customer_id: int,
+    request_id: int,
+    *,
+    force_review: bool = False,
+    review_reason_code: str | None = None,
+    review_note: str | None = None,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """Talebi seller review durumuna atomik/idempotent biçimde geçirir."""
+    if (
+        not _is_positive_int(seller_id)
+        or not _is_positive_int(customer_id)
+        or not _is_positive_int(request_id)
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id, customer_id ve request_id pozitif tam sayı olmalıdır.",
+        }
+
+    if not isinstance(force_review, bool):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "force_review boolean olmalıdır.",
+        }
+
+    if expected_version is not None and not _is_positive_int(expected_version):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    if review_reason_code is not None:
+        review_reason_code = review_reason_code.strip()
+        if not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", review_reason_code):
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": "review_reason_code geçersiz.",
+            }
+
+    if force_review and review_reason_code is None:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "force_review için review_reason_code gereklidir.",
+        }
+
+    if review_note is not None:
+        review_note = review_note.strip()
+        if not review_note or len(review_note) > 500:
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": "review_note 1 ile 500 karakter arasında olmalıdır.",
+            }
+
+    try:
+        result = get_supabase().rpc(
+            "mark_return_issue_review_required",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "target_request_id": request_id,
+                "force_review": force_review,
+                "review_code": review_reason_code,
+                "review_note_text": review_note,
+                "expected_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun talebi seller review durumuna alınamadı.",
+        }
+
+    return _return_issue_rpc_response(result.data)
+
+
+def mark_return_issue_handled(
+    seller_id: int,
+    request_id: int,
+    actor_profile_id: int,
+    expected_version: int,
+    *,
+    seller_note: str | None = None,
+) -> dict[str, Any]:
+    """Seller'ın talebi operasyonel olarak ele aldığını kaydeder; control state'i değiştirmez."""
+    if (
+        not _is_positive_int(seller_id)
+        or not _is_positive_int(request_id)
+        or not _is_positive_int(actor_profile_id)
+        or not _is_positive_int(expected_version)
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": (
+                "seller_id, request_id, actor_profile_id ve expected_version "
+                "pozitif tam sayı olmalıdır."
+            ),
+        }
+
+    if seller_note is not None:
+        seller_note = seller_note.strip()
+        if not seller_note or len(seller_note) > 2000:
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": "seller_note 1 ile 2000 karakter arasında olmalıdır.",
+            }
+
+    try:
+        result = get_supabase().rpc(
+            "mark_return_issue_handled",
+            {
+                "target_seller_id": seller_id,
+                "target_request_id": request_id,
+                "actor_profile_id": actor_profile_id,
+                "expected_version": expected_version,
+                "seller_note_text": seller_note,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun talebi handled olarak işaretlenemedi.",
+        }
+
+    return _return_issue_rpc_response(result.data)
+
+
+def update_return_issue_type_setting(
+    seller_id: int,
+    issue_type: str,
+    image_requirement: str,
+    expected_version: int,
+) -> dict[str, Any]:
+    """Seller issue-type görsel gereksinimini optimistic concurrency ile günceller."""
+    if not _is_positive_int(seller_id) or not _is_positive_int(expected_version):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id ve expected_version pozitif tam sayı olmalıdır.",
+        }
+
+    if issue_type not in RETURN_ISSUE_TYPES:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": f"Geçersiz iade/sorun tipi: {issue_type}",
+        }
+
+    if image_requirement not in RETURN_IMAGE_REQUIREMENTS:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": f"Geçersiz image requirement: {image_requirement}",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "update_return_issue_type_setting",
+            {
+                "target_seller_id": seller_id,
+                "target_issue_type": issue_type,
+                "new_image_requirement": image_requirement,
+                "expected_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun ayarı güncellenemedi.",
+        }
+
+    return _return_issue_rpc_response(result.data)
+
+
+def get_active_return_issue_request(
+    seller_id: int,
+    customer_id: int,
+) -> dict[str, Any]:
+    """Konuşmadaki açık return/issue request'i tenant scope'unda getirir."""
+    if not _is_positive_int(seller_id) or not _is_positive_int(customer_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id ve customer_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = (
+            get_supabase().table("return_issue_requests")
+            .select("*")
+            .eq("seller_id", seller_id)
+            .eq("customer_id", customer_id)
+            .in_(
+                "status",
+                [
+                    RETURN_ISSUE_STATUS_COLLECTING,
+                    RETURN_ISSUE_STATUS_SELLER_REVIEW_REQUIRED,
+                ],
+            )
+            .order("id")
+            .limit(1)
+            .execute()
+        )
+
+        return {
+            "durum": "başarılı",
+            "request": result.data[0] if result.data else None,
+        }
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Açık iade/sorun talebi okunamadı.",
+        }
+
+
+def get_return_issue_request_by_id(
+    seller_id: int,
+    request_id: int,
+) -> dict[str, Any]:
+    """Return/issue request'i tenant scope'unda okur."""
+    if not _is_positive_int(seller_id) or not _is_positive_int(request_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id ve request_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = (
+            get_supabase().table("return_issue_requests")
+            .select("*")
+            .eq("id", request_id)
+            .eq("seller_id", seller_id)
+            .limit(1)
+            .execute()
+        )
+
+        if not result.data:
+            return {
+                "durum": "bulunamadı",
+                "mesaj": "İade/sorun talebi bulunamadı.",
+            }
+
+        return {
+            "durum": "başarılı",
+            "request": result.data[0],
+        }
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun talebi okunamadı.",
+        }
+
+
+def get_return_issue_request_detail(
+    seller_id: int,
+    request_id: int,
+) -> dict[str, Any]:
+    """Request + güvenli evidence referanslarını tenant scope'unda döndürür."""
+    request_result = get_return_issue_request_by_id(seller_id, request_id)
+    if request_result.get("durum") != "başarılı":
+        return request_result
+
+    request_row = request_result["request"]
+
+    try:
+        evidence_result = (
+            get_supabase().table("return_issue_request_evidence")
+            .select("id,seller_id,request_id,message_id,created_at")
+            .eq("seller_id", seller_id)
+            .eq("request_id", request_id)
+            .order("created_at")
+            .order("id")
+            .execute()
+        )
+
+        customer_result = (
+            get_supabase().table("customers")
+            .select("id,seller_id,whatsapp_number,name")
+            .eq("id", request_row["customer_id"])
+            .eq("seller_id", seller_id)
+            .limit(1)
+            .execute()
+        )
+
+        order_row = None
+        if request_row.get("order_id") is not None:
+            order_result = (
+                get_supabase().table("orders")
+                .select(
+                    "id,seller_id,customer_id,external_order_number,"
+                    "product_name_snapshot,status,version"
+                )
+                .eq("id", request_row["order_id"])
+                .eq("seller_id", seller_id)
+                .limit(1)
+                .execute()
+            )
+            order_row = order_result.data[0] if order_result.data else None
+
+        return {
+            "durum": "başarılı",
+            "request": request_row,
+            "customer": customer_result.data[0] if customer_result.data else None,
+            "order": order_row,
+            "evidence": evidence_result.data,
+        }
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun talebi detayı okunamadı.",
+        }
+
+
+def list_return_issue_requests(
+    seller_id: int,
+    *,
+    view: str = "all",
+    customer_id: int | None = None,
+    issue_type: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Seller return/issue taleplerini tenant scope'unda listeler."""
+    if not _is_positive_int(seller_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id pozitif tam sayı olmalıdır.",
+        }
+
+    view_status = {
+        "action_required": RETURN_ISSUE_STATUS_SELLER_REVIEW_REQUIRED,
+        "collecting": RETURN_ISSUE_STATUS_COLLECTING,
+        "handled": RETURN_ISSUE_STATUS_HANDLED,
+        "all": None,
+    }
+
+    if view not in view_status:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "view değeri geçersiz.",
+        }
+
+    if not _is_positive_int(limit) or limit > 100:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "limit 1 ile 100 arasında olmalıdır.",
+        }
+
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "offset negatif olmayan tam sayı olmalıdır.",
+        }
+
+    if customer_id is not None and not _is_positive_int(customer_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "customer_id pozitif tam sayı olmalıdır.",
+        }
+
+    if issue_type is not None and issue_type not in RETURN_ISSUE_TYPES:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": f"Geçersiz iade/sorun tipi: {issue_type}",
+        }
+
+    try:
+        query = (
+            get_supabase().table("return_issue_requests")
+            .select("*")
+            .eq("seller_id", seller_id)
+            .order("updated_at", desc=True)
+            .order("id", desc=True)
+            .range(offset, offset + limit - 1)
+        )
+
+        if view_status[view] is not None:
+            query = query.eq("status", view_status[view])
+
+        if customer_id is not None:
+            query = query.eq("customer_id", customer_id)
+
+        if issue_type is not None:
+            query = query.eq("issue_type", issue_type)
+
+        result = query.execute()
+
+        return {
+            "durum": "başarılı",
+            "toplam": len(result.data),
+            "requests": result.data,
+        }
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun talepleri okunamadı.",
+        }
+
+
+def get_return_issue_type_settings(
+    seller_id: int,
+) -> dict[str, Any]:
+    """Seller için DB'de materialize edilmiş return/issue ayarlarını döndürür."""
+    if not _is_positive_int(seller_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = (
+            get_supabase().table("return_issue_type_settings")
+            .select("*")
+            .eq("seller_id", seller_id)
+            .order("issue_type")
+            .execute()
+        )
+
+        return {
+            "durum": "başarılı",
+            "settings": result.data,
+        }
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "İade/sorun ayarları okunamadı.",
         }
 
 

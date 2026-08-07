@@ -184,7 +184,7 @@ class ProductInfoStep(StrictStepModel):
 
     min_quantity: int = Field(ge=1, le=100000)
     max_quantity: int | None = Field(default=None, ge=1, le=100000)
-    image_required: bool
+    image_required: Literal[True]
     custom_text_required: bool
 
     microwave_safe: bool | None

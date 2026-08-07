@@ -108,6 +108,16 @@ def test_product_info_builds_nested_patch() -> None:
     assert product_patch["usage"]["microwave_safe"] is None
 
 
+
+def test_product_info_rejects_optional_main_order_image() -> None:
+    payload = valid_step_data(3)
+    payload["image_required"] = False
+
+    result = prepare_onboarding_step(3, payload)
+
+    assert result["durum"] == "doğrulama_hatası"
+    assert any(error["field"] == "image_required" for error in result["errors"])
+
 def test_shipping_range_is_validated() -> None:
     payload = valid_step_data(4)
     payload["processing_days_min"] = 5
