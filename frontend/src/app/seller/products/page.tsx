@@ -3,7 +3,6 @@ import Link from "next/link";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
-import { Surface } from "@/components/shared/surface";
 
 /**
  * Ürünler — macro page only. Sub-page of Asistan Ayarları.
@@ -20,16 +19,17 @@ export default function SellerProductsPage() {
         </Link>
       </div>
       <PageHeader
+        caption="Asistan Ayarları"
         title="Ürünler"
         description="Asistanın müşterilere ürünleriniz hakkında verebileceği bilgileri yönetin."
       />
-      <div className="mt-6">
-        <Surface>
-          <EmptyState
-            title="Ürünler burada listelenecek"
-            description="Asistan için tanımladığınız ürünler burada görünecek."
-          />
-        </Surface>
+      <div className="mt-8">
+        <EmptyState
+          variant="compact"
+          caption="Ürünler"
+          title="Ürünler burada listelenecek"
+          description="Asistan için tanımladığınız ürünler burada görünecek."
+        />
       </div>
     </PageContainer>
   );

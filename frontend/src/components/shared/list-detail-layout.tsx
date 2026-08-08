@@ -11,11 +11,18 @@ import { cn } from "@/lib/utils/cn";
  * the detail region is hidden by default because the detail lives in a
  * separate route (e.g. /seller/conversations/[customerId]). Consumers
  * that need the detail on mobile can opt in via `showDetailOnMobile`.
+ *
+ * The list and detail regions can carry different surface treatments
+ * (e.g. `listSurface="chrome"` vs `detailSurface="surface"`) so the
+ * list reads as a navigation/list region and the detail reads as the
+ * actual working area. By default both use the primary working surface.
  */
 export function ListDetailLayout({
   list,
   detail,
-  listWidthClassName = "lg:w-[360px] xl:w-[380px]",
+  listWidthClassName = "lg:w-[400px] xl:w-[420px]",
+  listSurface,
+  detailSurface,
   showDetailOnMobile = false,
   className,
 }: {
@@ -23,6 +30,10 @@ export function ListDetailLayout({
   detail: React.ReactNode;
   /** Tailwind class controlling the list column width on lg+ viewports. */
   listWidthClassName?: string;
+  /** Optional wrapper element for the list region. */
+  listSurface?: React.ReactNode;
+  /** Optional wrapper element for the detail region. */
+  detailSurface?: React.ReactNode;
   className?: string;
   /**
    * Whether to show the detail region on mobile. Defaults to false.
@@ -35,25 +46,25 @@ export function ListDetailLayout({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 lg:flex-row lg:items-start",
+        "flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-6",
         className,
       )}
     >
       <div
         className={cn(
-          "lg:shrink-0 lg:border-r lg:border-border lg:pr-4",
+          "lg:shrink-0 lg:pr-1",
           listWidthClassName,
         )}
       >
-        {list}
+        {listSurface ? listSurface : list}
       </div>
       <div
         className={cn(
-          "min-w-0 flex-1 lg:pl-2",
+          "min-w-0 flex-1",
           showDetailOnMobile ? "block" : "hidden lg:block",
         )}
       >
-        {detail}
+        {detailSurface ? detailSurface : detail}
       </div>
     </div>
   );

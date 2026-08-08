@@ -24,7 +24,7 @@ export const designTokens = {
     text: {
       primary: "#24302E",
       secondary: "#5C6966",
-      muted: "#7C8683",
+      muted: "#626D6A",
       inverse: "#FFFFFF",
     },
 
@@ -102,6 +102,8 @@ export const designTokens = {
     none: "none",
     1: "0 1px 2px rgba(36, 48, 46, 0.04), 0 1px 1px rgba(36, 48, 46, 0.03)",
     2: "0 8px 24px rgba(36, 48, 46, 0.08)",
+    surface:
+      "0 1px 2px rgba(36, 48, 46, 0.04), 0 1px 0 rgba(36, 48, 46, 0.02)",
     focus: "0 0 0 2px var(--color-primary)",
   },
 

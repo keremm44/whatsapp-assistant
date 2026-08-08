@@ -6,36 +6,47 @@ import { Surface } from "@/components/shared/surface";
 /**
  * Konuşmalar — desktop: list + detail. Mobile: list only.
  *
- * On mobile the detail region is intentionally hidden because the
- * detail lives behind /seller/conversations/[customerId], which is
- * introduced in a later step. The default `showDetailOnMobile` value
- * matches the approved mobile behavior.
+ * Surface differentiation:
+ *   - List column uses a chrome-toned surface (navigation/list region).
+ *   - Detail column uses the primary working surface (the actual work area).
+ *
+ * Both columns keep their persistent Surface because they represent
+ * persistent workflow panes. Empty states are calm and structural, not
+ * giant placeholders.
  */
 export default function SellerConversationsPage() {
   return (
-    <PageContainer className="py-8 sm:py-10">
+    <PageContainer size="wide" className="py-8 sm:py-10">
       <PageHeader
+        caption="İşler"
         title="Konuşmalar"
         description="WhatsApp konuşmalarını ve mevcut kontrol durumlarını burada inceleyebilirsiniz."
       />
 
-      <div className="mt-6">
+      <div className="mt-8">
         <ListDetailLayout
           list={
-            <Surface>
-              <div className="flex min-h-[280px] flex-col items-center justify-center gap-1 px-6 py-12 text-center">
-                <p className="text-sm font-medium text-foreground">
-                  Konuşmalar burada listelenecek
+            <Surface className="bg-chrome">
+              <div className="px-4 pt-4">
+                <p className="text-[13px] font-medium text-primary">
+                  Konuşma listesi
                 </p>
-                <p className="max-w-md text-sm text-muted-foreground">
-                  Müşteri konuşmaları burada görünecek.
+              </div>
+              <div className="px-4 pb-6 pt-3">
+                <p className="text-sm text-muted-foreground">
+                  Konuşmalar burada listelenecek.
                 </p>
               </div>
             </Surface>
           }
           detail={
             <Surface>
-              <div className="flex min-h-[280px] flex-col items-center justify-center gap-1 px-6 py-12 text-center">
+              <div className="px-5 pt-5">
+                <p className="text-[13px] font-medium text-primary">
+                  Mesaj geçmişi
+                </p>
+              </div>
+              <div className="flex min-h-[280px] flex-col items-start justify-center gap-2 px-5 py-10">
                 <p className="text-sm font-medium text-foreground">
                   Bir konuşma seçin
                 </p>

@@ -11,26 +11,25 @@ import { SellerIcon } from "@/components/seller/shell/icon-map";
 /**
  * Asistan Ayarları — navigation hub.
  *
- * In this macro pass the page contains two quiet navigation surfaces
- * (Ürünler, Kurallar). It is also the active parent for /seller/products
- * and /seller/rules in the sidebar.
+ * The two navigation rows genuinely are navigation cards and therefore
+ * earn bounded surfaces. They are not placeholders.
  */
 export default function SellerAssistantSettingsPage() {
   return (
     <PageContainer className="py-8 sm:py-10">
       <PageHeader
+        caption="Asistan"
         title="Asistan Ayarları"
         description="Asistanın müşterilere yardımcı olurken kullanabileceği bilgileri yönetin."
       />
 
-      <ul className="mt-6 flex flex-col gap-3">
+      <ul className="mt-8 flex flex-col gap-3">
         {assistantSubRoutes.map((entry) => (
           <li key={entry.href}>
             <Link
               href={entry.href}
               className={cn(
-                "block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                "rounded-md",
+                "block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               )}
             >
               <Surface className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-surface-2">

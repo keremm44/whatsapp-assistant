@@ -13,15 +13,18 @@ import { SellerIcon } from "./icon-map";
 /**
  * Fixed-width desktop sidebar.
  *
- * 240px wide, warm chrome surface (`#FAF8F3`), 1px right border, no shadow.
+ * 240px wide, warm chrome surface, 1px right border, no shadow.
  *
- * The active row uses:
- *   - 2px petrol indicator on the left edge (integrated, not a sidebar)
- *   - petrol-tinted background
- *   - petrol text and icon
+ * Brand area: a short petrol hairline sits to the left of the
+ * wordmark, giving the brand row a quiet micro-architecture without
+ * inventing a logo or mark.
  *
- * Inactive hover uses a subtle warm surface-2 wash that is always weaker
- * than the active state.
+ * Group separation is achieved with generous spacing and a warm
+ * hairline above each section header.
+ *
+ * Active row: 2px petrol indicator on the left edge, petrol-muted
+ * background, petrol text + icon, font-medium. The 2px indicator is
+ * integrated into the row, not a sidebar stripe.
  */
 export function SellerSidebar() {
   const pathname = usePathname();
@@ -31,7 +34,11 @@ export function SellerSidebar() {
       aria-label="Satıcı paneli gezinme menüsü"
       className="hidden h-screen w-[240px] shrink-0 flex-col border-r border-border bg-chrome lg:sticky lg:top-0 lg:flex"
     >
-      <div className="flex h-16 items-center border-b border-border px-5">
+      <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
+        <span
+          aria-hidden="true"
+          className="block h-[20px] w-[2px] rounded-full bg-primary"
+        />
         <Link
           href="/seller"
           className="font-heading text-[15px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
@@ -39,10 +46,16 @@ export function SellerSidebar() {
           WhatsApp Asistan
         </Link>
       </div>
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <ul className="flex flex-col gap-6">
-          {sellerNavigation.map((section) => (
-            <li key={section.title}>
+      <nav className="flex-1 overflow-y-auto px-3 py-5">
+        <ul className="flex flex-col gap-7">
+          {sellerNavigation.map((section, index) => (
+            <li
+              key={section.title}
+              className={cn(
+                index > 0 &&
+                  "border-t border-divider pt-5",
+              )}
+            >
               <p className="px-3 pb-2 text-xs font-medium text-muted-foreground">
                 {section.title}
               </p>

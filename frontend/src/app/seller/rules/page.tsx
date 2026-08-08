@@ -3,7 +3,6 @@ import Link from "next/link";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
-import { Surface } from "@/components/shared/surface";
 
 /**
  * Kurallar — macro page only. Sub-page of Asistan Ayarları.
@@ -20,16 +19,17 @@ export default function SellerRulesPage() {
         </Link>
       </div>
       <PageHeader
+        caption="Asistan Ayarları"
         title="Kurallar"
         description="Asistanın müşterilerle konuşurken kullanacağı satıcı tanımlı kuralları yönetin."
       />
-      <div className="mt-6">
-        <Surface>
-          <EmptyState
-            title="Kurallar burada listelenecek"
-            description="Asistan için tanımladığınız kurallar burada görünecek."
-          />
-        </Surface>
+      <div className="mt-8">
+        <EmptyState
+          variant="compact"
+          caption="Kurallar"
+          title="Kurallar burada listelenecek"
+          description="Asistan için tanımladığınız kurallar burada görünecek."
+        />
       </div>
     </PageContainer>
   );

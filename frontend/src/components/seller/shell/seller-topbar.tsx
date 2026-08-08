@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -21,16 +20,13 @@ import { SellerIcon } from "./icon-map";
 /**
  * Minimal topbar.
  *
- * 64px tall, warm chrome surface (`#FAF8F3`), 1px bottom border.
- * The left side shows a neutral "Mağaza" placeholder until real
- * seller/store identity is wired by a later auth step.
+ * 64px tall, warm chrome surface, 1px bottom border. The left side
+ * shows a neutral "Mağaza" placeholder until real seller/store
+ * identity is wired by a later auth step. The right side offers a
+ * single safe navigation target: /seller/settings.
  *
- * The right side offers a single safe navigation target: /seller/settings.
- * No notification bell, no global search, no assistant switch — those
- * arrive with the real contracts.
- *
- * The tablet navigation trigger is visible ONLY between the `md` and
- * `lg` breakpoints so it does not duplicate the mobile bottom nav.
+ * No notification bell, no global search, no assistant switch, no
+ * fake avatar — those arrive with the real contracts.
  */
 export function SellerTopbar() {
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -38,25 +34,19 @@ export function SellerTopbar() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-chrome px-4 sm:px-6">
       <div className="flex items-center gap-2">
-        {/* Tablet menu trigger (visible only between md and lg). On desktop
-            the sidebar is always present; on mobile the bottom navigation
-            takes over. */}
         <TabletNavSheet open={menuOpen} onOpenChange={setMenuOpen} />
         <p className="font-heading text-base font-semibold text-foreground">
           Mağaza
         </p>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/seller/settings">Ayarlar</Link>
-        </Button>
-        <div
-          aria-hidden="true"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface-2 text-xs font-medium text-muted-foreground"
+      <div className="flex items-center gap-3">
+        <Link
+          href="/seller/settings"
+          className="text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
         >
-          M
-        </div>
+          Ayarlar
+        </Link>
       </div>
     </header>
   );
@@ -97,9 +87,9 @@ const TabletNavSheet = ({
 };
 
 /**
- * Sidebar-style nav list, used inside the tablet menu Sheet. Renders the
- * same three sections as the desktop sidebar and highlights the current
- * destination using the shared active-route helper.
+ * Sidebar-style nav list, used inside the tablet menu Sheet. Renders
+ * the same three sections as the desktop sidebar and highlights the
+ * current destination using the shared active-route helper.
  */
 function SidebarNavList({
   pathname,
@@ -112,9 +102,12 @@ function SidebarNavList({
 }) {
   return (
     <nav aria-label="Satıcı paneli gezinme menüsü" className={className}>
-      <ul className="flex flex-col gap-4">
-        {sellerNavigation.map((section) => (
-          <li key={section.title}>
+      <ul className="flex flex-col gap-5">
+        {sellerNavigation.map((section, index) => (
+          <li
+            key={section.title}
+            className={cn(index > 0 && "border-t border-divider pt-4")}
+          >
             <p className="px-3 pb-1 text-xs font-medium text-muted-foreground">
               {section.title}
             </p>
