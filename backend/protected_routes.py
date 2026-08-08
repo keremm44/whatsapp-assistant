@@ -57,6 +57,33 @@ from unanswered_question_service import (
     present_group_summary,
     set_seller_answer,
 )
+from seller_panel_service import (
+    get_conversation_detail as get_seller_panel_conversation_detail,
+    list_conversations as list_seller_panel_conversations,
+    list_dashboard_tasks as list_seller_panel_dashboard_tasks,
+)
+from seller_invitation_service import (
+    AdminSellerInvitationRequest,
+    invite_seller_from_application,
+)
+from seller_settings_service import (
+    SellerRuleCreateRequest,
+    SellerRuleUpdateRequest,
+    SellerSettingsUpdateRequest,
+    create_rule as create_seller_rule,
+    deactivate_rule as deactivate_seller_rule,
+    get_settings as get_seller_settings,
+    list_rules as list_seller_rules,
+    update_rule as update_seller_rule,
+    update_settings as update_seller_settings,
+)
+from seller_product_service import (
+    SellerProductCreateRequest,
+    SellerProductUpdateRequest,
+    create_product as create_seller_product,
+    list_products as list_seller_products,
+    update_product as update_seller_product,
+)
 from database import (
     ORDER_DISPLAY_STATUS,
     ORDER_STATUS_COLLECTING,
@@ -99,6 +126,51 @@ def _raise_from_control_service(result: dict[str, Any]) -> None:
     kind = result.get("kind")
     status_code = {
         "not_found": status.HTTP_404_NOT_FOUND,
+        "conflict": status.HTTP_409_CONFLICT,
+        "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
+    }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
+    raise HTTPException(status_code=status_code, detail=result["error"])
+
+
+
+def _raise_from_seller_panel_service(result: dict[str, Any]) -> None:
+    kind = result.get("kind")
+    status_code = {
+        "not_found": status.HTTP_404_NOT_FOUND,
+        "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
+        "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
+    }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
+    raise HTTPException(status_code=status_code, detail=result["error"])
+
+
+def _raise_from_seller_invitation_service(result: dict[str, Any]) -> None:
+    kind = result.get("kind")
+    status_code = {
+        "not_found": status.HTTP_404_NOT_FOUND,
+        "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
+        "conflict": status.HTTP_409_CONFLICT,
+        "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
+        "partial_failure": status.HTTP_503_SERVICE_UNAVAILABLE,
+    }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
+    raise HTTPException(status_code=status_code, detail=result["error"])
+
+
+def _raise_from_seller_settings_service(result: dict[str, Any]) -> None:
+    kind = result.get("kind")
+    status_code = {
+        "not_found": status.HTTP_404_NOT_FOUND,
+        "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
+        "conflict": status.HTTP_409_CONFLICT,
+        "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
+    }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
+    raise HTTPException(status_code=status_code, detail=result["error"])
+
+
+def _raise_from_seller_product_service(result: dict[str, Any]) -> None:
+    kind = result.get("kind")
+    status_code = {
+        "not_found": status.HTTP_404_NOT_FOUND,
+        "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
         "conflict": status.HTTP_409_CONFLICT,
         "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
     }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
@@ -242,6 +314,128 @@ def seller_me(
     }
 
 
+@router.get("/seller/settings")
+def seller_settings(
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller'ın panelden değiştirebildiği güvenli işletme/ürün ayarlarını döndürür."""
+    result = get_seller_settings(context.seller_id)
+    if result.get("ok") is not True:
+        _raise_from_seller_settings_service(result)
+    return {"settings": result["settings"]}
+
+
+@router.patch("/seller/settings")
+def seller_update_settings(
+    body: SellerSettingsUpdateRequest,
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller ayarlarını optimistic concurrency ile günceller."""
+    result = update_seller_settings(context.seller_id, body)
+    if result.get("ok") is not True:
+        _raise_from_seller_settings_service(result)
+    return {"settings": result["settings"]}
+
+
+@router.get("/seller/rules")
+def seller_rules(
+    active: bool | None = Query(default=None),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller'ın hazır yanıt kurallarını listeler."""
+    result = list_seller_rules(context.seller_id, active=active)
+    if result.get("ok") is not True:
+        _raise_from_seller_settings_service(result)
+    return {"rules": result["rules"]}
+
+
+@router.post("/seller/rules", status_code=status.HTTP_201_CREATED)
+def seller_create_rule(
+    body: SellerRuleCreateRequest,
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Gelecek müşteri mesajlarında kullanılabilecek yeni hazır yanıt kuralı oluşturur."""
+    result = create_seller_rule(context.seller_id, body)
+    if result.get("ok") is not True:
+        _raise_from_seller_settings_service(result)
+    return {"rule": result["rule"]}
+
+
+@router.patch("/seller/rules/{rule_id}")
+def seller_update_rule(
+    rule_id: PositiveInt,
+    body: SellerRuleUpdateRequest,
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller rule'ını tenant scope + version kontrolüyle günceller."""
+    result = update_seller_rule(context.seller_id, rule_id, body)
+    if result.get("ok") is not True:
+        _raise_from_seller_settings_service(result)
+    return {"rule": result["rule"]}
+
+
+@router.delete("/seller/rules/{rule_id}")
+def seller_delete_rule(
+    rule_id: PositiveInt,
+    expected_version: PositiveInt = Query(...),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Rule geçmişini koruyarak kuralı yalnız gelecekteki cevaplar için devre dışı bırakır."""
+    result = deactivate_seller_rule(context.seller_id, rule_id, expected_version)
+    if result.get("ok") is not True:
+        _raise_from_seller_settings_service(result)
+    return {
+        "changed": result.get("changed") is True,
+        "rule": result["rule"],
+    }
+
+
+@router.get("/seller/products")
+def seller_products(
+    include_inactive: bool = Query(default=False),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller'ın ürünlerini listeler; varsayılan olarak pasif ürünleri gizler."""
+    result = list_seller_products(
+        context.seller_id,
+        include_inactive=include_inactive,
+    )
+    if result.get("ok") is not True:
+        _raise_from_seller_product_service(result)
+    return {"products": result["products"], "total": result["total"]}
+
+
+@router.post("/seller/products", status_code=status.HTTP_201_CREATED)
+def seller_create_product(
+    body: SellerProductCreateRequest,
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller için yeni ürün oluşturur."""
+    result = create_seller_product(context.seller_id, body)
+    if result.get("ok") is not True:
+        _raise_from_seller_product_service(result)
+    return {
+        "changed": result.get("changed") is True,
+        "product": result["product"],
+    }
+
+
+@router.patch("/seller/products/{product_id}")
+def seller_update_product(
+    product_id: PositiveInt,
+    body: SellerProductUpdateRequest,
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Ürünü version kontrolüyle günceller veya is_active=false ile devre dışı bırakır."""
+    result = update_seller_product(context.seller_id, product_id, body)
+    if result.get("ok") is not True:
+        _raise_from_seller_product_service(result)
+    return {
+        "changed": result.get("changed") is True,
+        "product": result["product"],
+    }
+
+
 @router.get("/seller/onboarding/schema")
 def seller_onboarding_schema(
     _: AuthContext = Depends(require_seller),
@@ -320,6 +514,69 @@ def seller_onboarding_complete(
     return result
 
 
+@router.get("/seller/conversations")
+def seller_conversations(
+    attention_only: bool = Query(default=False),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller'ın konuşmalarını panel read modelinde listeler."""
+    result = list_seller_panel_conversations(
+        context.seller_id,
+        attention_only=attention_only,
+        limit=limit,
+        offset=offset,
+    )
+    if not result.get("ok"):
+        _raise_from_seller_panel_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/seller/conversations/{customer_id}")
+def seller_conversation_detail(
+    customer_id: PositiveInt,
+    message_limit: int = Query(default=50, ge=1, le=100),
+    before_message_id: int | None = Query(default=None, ge=1),
+    control_history_limit: int = Query(default=20, ge=1, le=100),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Tek konuşmanın mesaj ve aktif iş bağlamını tenant scope'unda döndürür."""
+    result = get_seller_panel_conversation_detail(
+        context.seller_id,
+        customer_id,
+        message_limit=message_limit,
+        before_message_id=before_message_id,
+        control_history_limit=control_history_limit,
+    )
+    if not result.get("ok"):
+        _raise_from_seller_panel_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/seller/dashboard/tasks")
+def seller_dashboard_tasks(
+    task_type: str | None = Query(
+        default=None,
+        alias="type",
+        pattern="^(return_review|order_review|unanswered_question)$",
+    ),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Bugün ilgilenmeniz gerekenler iş kuyruğunu döndürür."""
+    result = list_seller_panel_dashboard_tasks(
+        context.seller_id,
+        task_type=task_type,
+        limit=limit,
+        offset=offset,
+    )
+    if not result.get("ok"):
+        _raise_from_seller_panel_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
 @router.get("/seller/conversations/{customer_id}/control")
 def seller_conversation_control(
     customer_id: PositiveInt,
@@ -388,6 +645,19 @@ def admin_applications(
         )
 
     return result
+
+
+@router.post("/admin/applications/{application_id}/invite")
+def admin_invite_seller_application(
+    application_id: PositiveInt,
+    body: AdminSellerInvitationRequest,
+    _: AuthContext = Depends(require_admin),
+) -> dict[str, Any]:
+    """Başvuruyu seller hesabına çevirir ve Supabase Auth daveti gönderir."""
+    result = invite_seller_from_application(application_id, body)
+    if not result.get("ok"):
+        _raise_from_seller_invitation_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
 
 
 @router.post("/admin/sellers/{seller_id}/activate")

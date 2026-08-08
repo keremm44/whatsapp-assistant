@@ -74,7 +74,7 @@ def _map_database_error(
 
 
 def normalize_question(question: str) -> str:
-    """Exact grouping için anlam uydurmayan deterministic normalization."""
+    """Yerel deterministic önizleme; canonical group identity DB tarafındadır."""
     if not isinstance(question, str):
         return ""
 
@@ -120,20 +120,14 @@ def record_question(
             kind="validation",
         )
 
-    normalized = normalize_question(question_text)
-    if not normalized:
-        return _error(
-            "unanswered_question_validation_error",
-            "Soru normalize edilemedi.",
-            kind="validation",
-        )
-
+    # Group identity normalization'ı yalnız PostgreSQL yapar. Böylece
+    # legacy backfill, yeni occurrence ve saved-answer lookup tek canonical
+    # algoritmayı paylaşır.
     result = record_unanswered_question_occurrence(
         seller_id=seller_id,
         customer_id=customer_id,
         source_message_id=source_message_id,
         question_text=question_text,
-        normalized_question=normalized,
         category=category,
         suggested_field=suggested_field,
         metadata={"reason": reason},
@@ -186,11 +180,14 @@ def find_saved_answer(
             kind="validation",
         )
 
-    normalized = normalize_question(question_text)
-    if not normalized:
+    question_text = (question_text or "").strip()
+    if not question_text or len(question_text) > MAX_QUESTION_LENGTH:
         return {"durum": "başarılı", "matched": False, "group": None}
 
-    result = get_answered_unanswered_question(seller_id, normalized)
+    # Identity/eşleşme normalization'ı PostgreSQL tarafında canonicaldır.
+    # Böylece record, legacy backfill ve future-answer lookup aynı algoritmayı
+    # kullanır; Python Unicode davranışı match sonucunu belirlemez.
+    result = get_answered_unanswered_question(seller_id, question_text)
     if result.get("durum") != "başarılı":
         return _map_database_error(
             result,

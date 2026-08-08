@@ -17,6 +17,7 @@ from database import (
     test_connection,
 )
 from protected_routes import router as protected_router
+from public_routes import router as public_router
 from settings import AppSettings, get_settings
 
 
@@ -62,6 +63,7 @@ if settings.cors_origins:
         allow_headers=["*"],
     )
 
+app.include_router(public_router)
 app.include_router(protected_router)
 
 

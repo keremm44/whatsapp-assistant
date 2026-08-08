@@ -195,6 +195,48 @@ def test_migration_017_is_backend_only_and_records_version() -> None:
     assert "'add_unanswered_question_lifecycle'" in content
 
 
+def test_migration_017_reconciles_only_legacy_unanswered_awaiting_seller_states() -> None:
+    content = MIGRATION_PATH.read_text(encoding="utf-8")
+    assert "legacy_unanswered_state_reconciliation" in content
+    assert "cs.current_state = 'AWAITING_SELLER'" in content
+    assert "cs.state_data ? 'question_id'" in content
+    assert "uq.seller_id = cs.seller_id" in content
+    assert "uq.customer_id IS NULL OR uq.customer_id = cs.customer_id" in content
+    assert "current_state = 'NORMAL'" in content
+    assert "state_type = 'no_lock'" in content
+    assert "state_data = '{}'::jsonb" in content
+
+
+def test_migration_017_saved_answer_lookup_is_db_authoritative() -> None:
+    content = MIGRATION_PATH.read_text(encoding="utf-8")
+    block = content.split(
+        "CREATE OR REPLACE FUNCTION public.get_answered_unanswered_question",
+        1,
+    )[1].split(
+        "CREATE OR REPLACE FUNCTION public.record_unanswered_question_occurrence",
+        1,
+    )[0]
+    assert "question_text_value TEXT" in block
+    assert "public._normalize_unanswered_question_text" in block
+    assert "normalized_question = normalized_question_clean" in block
+    assert "status = 'ANSWERED'" in block
+    assert "GRANT EXECUTE ON FUNCTION public.get_answered_unanswered_question" in content
+
+
+def test_migration_017_record_rpc_does_not_accept_client_normalized_identity() -> None:
+    content = MIGRATION_PATH.read_text(encoding="utf-8")
+    block = content.split(
+        "CREATE OR REPLACE FUNCTION public.record_unanswered_question_occurrence",
+        1,
+    )[1].split(
+        "CREATE OR REPLACE FUNCTION public.set_unanswered_question_answer",
+        1,
+    )[0]
+    signature = block.split(")", 1)[0]
+    assert "normalized_question_value" not in signature
+    assert "public._normalize_unanswered_question_text(question_text_clean)" in block
+
+
 # =====================================================
 # WRAPPERS
 # =====================================================
@@ -221,7 +263,6 @@ def test_record_occurrence_rpc_payload(monkeypatch: pytest.MonkeyPatch) -> None:
         22,
         101,
         "  Soru?  ",
-        "soru",
         category="unclear",
         suggested_field="product.care",
         metadata={"reason": "test"},
@@ -237,7 +278,6 @@ def test_record_occurrence_rpc_payload(monkeypatch: pytest.MonkeyPatch) -> None:
                 "target_customer_id": 22,
                 "source_message_id": 101,
                 "question_text_value": "Soru?",
-                "normalized_question_value": "soru",
                 "category_value": "unclear",
                 "suggested_field_value": "product.care",
                 "metadata_value": {"reason": "test"},
@@ -262,7 +302,7 @@ def test_record_occurrence_maps_answered_race(monkeypatch: pytest.MonkeyPatch) -
         ),
     )
     result = database.record_unanswered_question_occurrence(
-        11, 22, 101, "Soru?", "soru"
+        11, 22, 101, "Soru?"
     )
     assert result["durum"] == "cevap_mevcut"
     assert result["group"]["answer_text"] == "Evet."
@@ -271,33 +311,44 @@ def test_record_occurrence_maps_answered_race(monkeypatch: pytest.MonkeyPatch) -
 @pytest.mark.parametrize("bad", [0, -1, True, "1"])
 def test_record_occurrence_rejects_invalid_ids(bad: Any) -> None:
     result = database.record_unanswered_question_occurrence(
-        bad, 22, 101, "Soru?", "soru"
+        bad, 22, 101, "Soru?"
     )
     assert result["durum"] == "doğrulama_hatası"
 
 
-def test_answer_lookup_scopes_seller_normalized_and_answered(
+def test_answer_lookup_delegates_raw_question_to_db_authoritative_rpc(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     fake = install_fake(
         monkeypatch,
         FakeSupabase(
-            table_data={
-                "unanswered_question_groups": [
-                    group_record(
+            rpc_data={
+                "get_answered_unanswered_question": {
+                    "status": "success",
+                    "group": group_record(
                         status=database.UNANSWERED_STATUS_ANSWERED,
                         answer="Evet.",
-                    )
-                ]
+                    ),
+                }
             }
         ),
     )
-    result = database.get_answered_unanswered_question(11, "soru")
+    result = database.get_answered_unanswered_question(
+        11,
+        "  Bulaşık makinesinde yıkanır mı?  ",
+    )
     assert result["durum"] == "başarılı"
-    query = fake.queries[0][1]
-    assert ("seller_id", 11) in query.filters
-    assert ("normalized_question", "soru") in query.filters
-    assert ("status", "ANSWERED") in query.filters
+    assert result["group"]["answer_text"] == "Evet."
+    assert fake.queries == []
+    assert fake.rpc_calls == [
+        (
+            "get_answered_unanswered_question",
+            {
+                "target_seller_id": 11,
+                "question_text_value": "Bulaşık makinesinde yıkanır mı?",
+            },
+        )
+    ]
 
 
 def test_group_detail_tenant_scopes_occurrences(monkeypatch: pytest.MonkeyPatch) -> None:

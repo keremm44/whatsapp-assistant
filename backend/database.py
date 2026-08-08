@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, TypedDict
+from uuid import UUID
 
 from dotenv import load_dotenv
 from supabase import Client, create_client
@@ -1801,7 +1802,6 @@ def record_unanswered_question_occurrence(
     customer_id: int,
     source_message_id: int,
     question_text: str,
-    normalized_question: str,
     *,
     category: str = "unclear",
     suggested_field: str | None = None,
@@ -1819,7 +1819,6 @@ def record_unanswered_question_occurrence(
         }
 
     question_text = question_text.strip()
-    normalized_question = normalized_question.strip()
     category = category.strip() or "unclear"
     suggested_field = suggested_field.strip() if suggested_field else None
 
@@ -1827,12 +1826,6 @@ def record_unanswered_question_occurrence(
         return {
             "durum": "doğrulama_hatası",
             "mesaj": "question_text 1 ile 4000 karakter arasında olmalıdır.",
-        }
-
-    if not normalized_question or len(normalized_question) > 4000:
-        return {
-            "durum": "doğrulama_hatası",
-            "mesaj": "normalized_question 1 ile 4000 karakter arasında olmalıdır.",
         }
 
     if len(category) > 50:
@@ -1861,7 +1854,6 @@ def record_unanswered_question_occurrence(
                 "target_customer_id": customer_id,
                 "source_message_id": source_message_id,
                 "question_text_value": question_text,
-                "normalized_question_value": normalized_question,
                 "category_value": category,
                 "suggested_field_value": suggested_field,
                 "metadata_value": metadata or {},
@@ -1878,41 +1870,43 @@ def record_unanswered_question_occurrence(
 
 def get_answered_unanswered_question(
     seller_id: int,
-    normalized_question: str,
+    question_text: str,
 ) -> dict[str, Any]:
-    """Exact-normalized ANSWERED seller bilgisini getirir."""
+    """Raw soruyu DB-authoritative normalization ile ANSWERED group'a eşler."""
     if not _is_positive_int(seller_id):
         return {
             "durum": "doğrulama_hatası",
             "mesaj": "seller_id pozitif tam sayı olmalıdır.",
         }
 
-    normalized_question = normalized_question.strip()
-    if not normalized_question or len(normalized_question) > 4000:
+    question_text = question_text.strip()
+    if not question_text or len(question_text) > 4000:
         return {
             "durum": "doğrulama_hatası",
-            "mesaj": "normalized_question geçersiz.",
+            "mesaj": "question_text geçersiz.",
         }
 
     try:
-        result = (
-            get_supabase().table("unanswered_question_groups")
-            .select("*")
-            .eq("seller_id", seller_id)
-            .eq("normalized_question", normalized_question)
-            .eq("status", UNANSWERED_STATUS_ANSWERED)
-            .limit(1)
-            .execute()
-        )
+        result = get_supabase().rpc(
+            "get_answered_unanswered_question",
+            {
+                "target_seller_id": seller_id,
+                "question_text_value": question_text,
+            },
+        ).execute()
     except Exception:
         return {
             "durum": "hata",
             "mesaj": "Kayıtlı seller cevabı okunamadı.",
         }
 
-    group = result.data[0] if result.data else None
+    mapped = _unanswered_rpc_response(result.data)
+    if mapped.get("durum") != "başarılı":
+        return mapped
+
+    group = mapped.get("group")
     if group is not None:
-        answer = group.get("answer_text")
+        answer = group.get("answer_text") if isinstance(group, dict) else None
         if not isinstance(answer, str) or not answer.strip():
             return {
                 "durum": "hata",
@@ -2231,6 +2225,304 @@ def increment_rule_hit_count(rule_id: int) -> dict[str, Any]:
 
 
 
+SELLER_SETTINGS_SELECT = (
+    "id,name,phone,store_name,store_link,product_info,settings_version,updated_at"
+)
+SELLER_RULE_SELECT = (
+    "id,created_at,seller_id,trigger_text,response_text,category,is_active,"
+    "hit_count,version,updated_at"
+)
+
+
+def get_seller_settings_record(seller_id: int) -> dict[str, Any]:
+    """Seller panelindeki güvenli ayar alanlarını getirir."""
+    try:
+        result = (
+            get_supabase().table("sellers")
+            .select(SELLER_SETTINGS_SELECT)
+            .eq("id", seller_id)
+            .limit(1)
+            .execute()
+        )
+        if not result.data:
+            return {"durum": "bulunamadı", "mesaj": "Satıcı bulunamadı."}
+        return {"durum": "başarılı", "seller": result.data[0]}
+    except Exception as exc:
+        return {"durum": "hata", "mesaj": str(exc)}
+
+
+def update_seller_settings_record(
+    seller_id: int,
+    expected_version: int,
+    *,
+    seller_patch: dict[str, Any],
+    product_info: dict[str, Any],
+) -> dict[str, Any]:
+    """Seller ayarlarını settings_version ile atomik günceller."""
+    payload = dict(seller_patch)
+    payload["product_info"] = product_info
+    payload["settings_version"] = expected_version + 1
+
+    try:
+        result = (
+            get_supabase().table("sellers")
+            .update(payload)
+            .eq("id", seller_id)
+            .eq("settings_version", expected_version)
+            .execute()
+        )
+        if result.data:
+            return {"durum": "başarılı", "seller": result.data[0]}
+
+        current = get_seller_settings_record(seller_id)
+        if current.get("durum") == "bulunamadı":
+            return current
+        return {
+            "durum": "conflict",
+            "mesaj": "Ayarlar başka bir işlem tarafından değiştirildi.",
+        }
+    except Exception as exc:
+        return {"durum": "hata", "mesaj": str(exc)}
+
+
+def _seller_rule_rpc_response(data: Any) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        return {"durum": "hata", "mesaj": "Kural RPC cevabı geçersiz."}
+    rpc_status = data.get("status")
+    if rpc_status == "success":
+        result: dict[str, Any] = {"durum": "başarılı"}
+        for key in ("rules", "rule", "changed"):
+            if key in data:
+                result[key] = data[key]
+        return result
+    if rpc_status == "not_found":
+        return {"durum": "bulunamadı", "mesaj": "Kural veya satıcı bulunamadı."}
+    if rpc_status == "conflict":
+        return {
+            "durum": "conflict",
+            "mesaj": "Kural başka bir işlem tarafından değiştirildi.",
+            "current_version": data.get("current_version"),
+        }
+    if rpc_status == "error":
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": data.get("message") or "Kural bilgileri geçersiz.",
+        }
+    return {"durum": "hata", "mesaj": "Kural RPC işlemi tamamlanamadı."}
+
+
+def list_seller_rule_records(
+    seller_id: int,
+    *,
+    active: bool | None = None,
+) -> dict[str, Any]:
+    """Seller'ın kurallarını production RPC kontratı üzerinden listeler."""
+    try:
+        result = get_supabase().rpc(
+            "get_seller_rules",
+            {
+                "target_seller_id": seller_id,
+                "include_inactive": active is not True,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Kurallar getirilemedi.", "rules": []}
+
+    mapped = _seller_rule_rpc_response(result.data)
+    if mapped.get("durum") == "başarılı" and active is False:
+        mapped["rules"] = [
+            row for row in mapped.get("rules") or [] if row.get("is_active") is False
+        ]
+    return mapped
+
+
+def get_seller_rule_record(seller_id: int, rule_id: int) -> dict[str, Any]:
+    """Rule ID'yi seller-scoped read RPC sonucu içinden bulur."""
+    result = list_seller_rule_records(seller_id, active=None)
+    if result.get("durum") != "başarılı":
+        return result
+    for row in result.get("rules") or []:
+        if int(row.get("id") or 0) == rule_id:
+            return {"durum": "başarılı", "rule": row}
+    return {"durum": "bulunamadı", "mesaj": "Kural bulunamadı."}
+
+
+def create_seller_rule_record(
+    seller_id: int,
+    *,
+    trigger_text: str,
+    response_text: str,
+    category: str,
+    is_active: bool,
+) -> dict[str, Any]:
+    """Seller için aktif hazır yanıt kuralı oluşturur."""
+    if is_active is not True:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "Yeni kural aktif olarak oluşturulmalıdır.",
+        }
+    try:
+        result = get_supabase().rpc(
+            "create_seller_rule",
+            {
+                "target_seller_id": seller_id,
+                "trigger_text_value": trigger_text,
+                "response_text_value": response_text,
+                "category_value": category,
+            },
+        ).execute()
+    except Exception as exc:
+        text = str(exc).lower()
+        if "23505" in text or "duplicate key" in text:
+            return {"durum": "duplicate", "mesaj": "Aktif kural zaten bulunuyor."}
+        return {"durum": "hata", "mesaj": "Kural oluşturulamadı."}
+    return _seller_rule_rpc_response(result.data)
+
+
+def update_seller_rule_record(
+    seller_id: int,
+    rule_id: int,
+    expected_version: int,
+    *,
+    patch: dict[str, Any],
+) -> dict[str, Any]:
+    """Seller rule'ını tenant scope + version RPC kontratıyla günceller."""
+    allowed = {"trigger_text", "response_text", "category", "is_active"}
+    payload = {key: value for key, value in patch.items() if key in allowed}
+    try:
+        result = get_supabase().rpc(
+            "update_seller_rule",
+            {
+                "target_seller_id": seller_id,
+                "target_rule_id": rule_id,
+                "expected_version": expected_version,
+                "trigger_text_value": payload.get("trigger_text"),
+                "response_text_value": payload.get("response_text"),
+                "category_value": payload.get("category"),
+                "is_active_value": payload.get("is_active"),
+            },
+        ).execute()
+    except Exception as exc:
+        text = str(exc).lower()
+        if "23505" in text or "duplicate key" in text:
+            return {"durum": "duplicate", "mesaj": "Aktif kural zaten bulunuyor."}
+        return {"durum": "hata", "mesaj": "Kural güncellenemedi."}
+    return _seller_rule_rpc_response(result.data)
+
+
+def deactivate_seller_rule_record(
+    seller_id: int,
+    rule_id: int,
+    expected_version: int,
+) -> dict[str, Any]:
+    """Rule geçmişini koruyarak production soft-delete RPC'sini çağırır."""
+    try:
+        result = get_supabase().rpc(
+            "delete_seller_rule",
+            {
+                "target_seller_id": seller_id,
+                "target_rule_id": rule_id,
+                "expected_version": expected_version,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Kural devre dışı bırakılamadı."}
+    return _seller_rule_rpc_response(result.data)
+
+
+# =====================================================
+# PRODUCTS — SELLER PANEL PRODUCT CRUD
+# =====================================================
+
+
+def _seller_product_rpc_response(data: Any) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        return {"durum": "hata", "mesaj": "Ürün RPC cevabı geçersiz."}
+
+    rpc_status = data.get("status")
+    if rpc_status == "success":
+        result: dict[str, Any] = {"durum": "başarılı"}
+        for key in ("products", "product", "total", "changed"):
+            if key in data:
+                result[key] = data[key]
+        return result
+    if rpc_status == "not_found":
+        return {"durum": "bulunamadı", "mesaj": "Ürün veya satıcı bulunamadı."}
+    if rpc_status == "conflict":
+        return {
+            "durum": "conflict",
+            "mesaj": "Ürün başka bir işlem tarafından değiştirildi.",
+            "reason": data.get("reason"),
+            "current_version": data.get("current_version"),
+        }
+    if rpc_status == "error":
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": data.get("message") or "Ürün bilgileri geçersiz.",
+        }
+    return {"durum": "hata", "mesaj": "Ürün RPC işlemi tamamlanamadı."}
+
+
+def list_seller_product_records(
+    seller_id: int,
+    *,
+    include_inactive: bool = False,
+) -> dict[str, Any]:
+    """Seller'ın ürünlerini tenant-scoped RPC üzerinden listeler."""
+    try:
+        result = get_supabase().rpc(
+            "get_seller_products",
+            {
+                "target_seller_id": seller_id,
+                "include_inactive": include_inactive,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Ürünler getirilemedi."}
+    return _seller_product_rpc_response(result.data)
+
+
+def create_seller_product_record(
+    seller_id: int,
+    *,
+    name: str,
+) -> dict[str, Any]:
+    """Seller için ürün oluşturur; duplicate adı DB kontratı engeller."""
+    try:
+        result = get_supabase().rpc(
+            "create_seller_product",
+            {"target_seller_id": seller_id, "name_value": name},
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Ürün oluşturulamadı."}
+    return _seller_product_rpc_response(result.data)
+
+
+def update_seller_product_record(
+    seller_id: int,
+    product_id: int,
+    expected_version: int,
+    *,
+    name: str | None,
+    is_active: bool | None,
+) -> dict[str, Any]:
+    """Ürünü seller scope + optimistic concurrency ile günceller/devre dışı bırakır."""
+    try:
+        result = get_supabase().rpc(
+            "update_seller_product",
+            {
+                "target_seller_id": seller_id,
+                "target_product_id": product_id,
+                "expected_version": expected_version,
+                "name_value": name,
+                "is_active_value": is_active,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Ürün güncellenemedi."}
+    return _seller_product_rpc_response(result.data)
+
+
 # =====================================================
 # SELLER APPLICATIONS — SATICI BAŞVURULARI
 # =====================================================
@@ -2246,48 +2538,70 @@ VALID_APPLICATION_STATUSES = {
 
 def create_seller_application(
     full_name: str,
-    email: str,
+    email: str | None,
     phone: str,
     store_name: str,
     store_link: str | None = None,
     notes: str | None = None,
+    product_category: str | None = None,
 ) -> dict[str, Any]:
-    """Yeni satıcı başvurusu oluşturur."""
-    normalized_email = email.strip().lower()
+    """Yeni satıcı başvurusu oluşturur.
+
+    Public akış WhatsApp-first olduğu için e-posta opsiyoneldir. Bu helper
+    service_role istemcisi üzerinden çalışır; public istemciye doğrudan açılmaz.
+    """
+    normalized_name = full_name.strip()
+    normalized_email = email.strip().lower() if email and email.strip() else None
     normalized_phone = phone.strip()
+    normalized_store_name = store_name.strip()
+    normalized_store_link = store_link.strip() if store_link and store_link.strip() else None
+    normalized_notes = notes.strip() if notes and notes.strip() else None
+    normalized_category = (
+        product_category.strip()
+        if product_category and product_category.strip()
+        else None
+    )
 
-    if not full_name.strip():
-        return {"durum": "hata", "mesaj": "Ad soyad zorunludur."}
-
-    if not normalized_email:
-        return {"durum": "hata", "mesaj": "E-posta zorunludur."}
+    if not normalized_name:
+        return {"durum": "doğrulama_hatası", "mesaj": "Ad soyad zorunludur."}
 
     if not normalized_phone:
-        return {"durum": "hata", "mesaj": "Telefon zorunludur."}
+        return {"durum": "doğrulama_hatası", "mesaj": "Telefon zorunludur."}
 
-    if not store_name.strip():
-        return {"durum": "hata", "mesaj": "Mağaza adı zorunludur."}
+    if not normalized_store_name:
+        return {"durum": "doğrulama_hatası", "mesaj": "Mağaza adı zorunludur."}
 
     try:
         data: dict[str, Any] = {
-            "full_name": full_name.strip(),
-            "email": normalized_email,
+            "full_name": normalized_name,
             "phone": normalized_phone,
-            "store_name": store_name.strip(),
+            "store_name": normalized_store_name,
             "status": "pending",
         }
 
-        if store_link and store_link.strip():
-            data["store_link"] = store_link.strip()
+        if normalized_email is not None:
+            data["email"] = normalized_email
 
-        if notes and notes.strip():
-            data["notes"] = notes.strip()
+        if normalized_store_link is not None:
+            data["store_link"] = normalized_store_link
+
+        if normalized_notes is not None:
+            data["notes"] = normalized_notes
+
+        if normalized_category is not None:
+            data["product_category"] = normalized_category
 
         result = (
             get_supabase().table("seller_applications")
             .insert(data)
             .execute()
         )
+
+        if not result.data:
+            return {
+                "durum": "hata",
+                "mesaj": "Başvuru kaydı oluşturulamadı.",
+            }
 
         return {
             "durum": "başarılı",
@@ -2300,9 +2614,7 @@ def create_seller_application(
         if "duplicate key" in error_text.lower() or "23505" in error_text:
             return {
                 "durum": "duplicate",
-                "mesaj": (
-                    "Bu e-posta adresiyle açık bir başvuru zaten bulunuyor."
-                ),
+                "mesaj": "Açık bir başvuru zaten bulunuyor.",
             }
 
         return {
@@ -2445,6 +2757,107 @@ def update_seller_application_status(
         }
 
 
+def finalize_seller_invitation_from_application(
+    application_id: int,
+    auth_user_id: str,
+    invite_email: str,
+    admin_note: str | None = None,
+) -> dict[str, Any]:
+    """
+    Auth daveti oluşturulduktan sonra seller/profile/onboarding/application
+    kayıtlarını tek PostgreSQL RPC transaction'ında finalize eder.
+    """
+    if (
+        not isinstance(application_id, int)
+        or isinstance(application_id, bool)
+        or application_id < 1
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "application_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        normalized_auth_user_id = str(UUID(str(auth_user_id).strip()))
+    except (TypeError, ValueError, AttributeError):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "auth_user_id geçerli UUID olmalıdır.",
+        }
+
+    normalized_email = invite_email.strip().lower()
+    if not normalized_email:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "invite_email zorunludur.",
+        }
+
+    normalized_admin_note = None
+    if admin_note is not None:
+        normalized_admin_note = admin_note.strip() or None
+
+    try:
+        result = get_supabase().rpc(
+            "finalize_seller_invitation_from_application",
+            {
+                "target_application_id": application_id,
+                "target_auth_user_id": normalized_auth_user_id,
+                "invite_email": normalized_email,
+                "admin_note_value": normalized_admin_note,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Seller davet kaydı finalize edilemedi.",
+        }
+
+    payload = _extract_rpc_payload(result.data)
+    if payload is None:
+        return {
+            "durum": "hata",
+            "mesaj": "Seller davet RPC yanıtı geçersiz.",
+        }
+
+    status_value = payload.get("status")
+    if status_value == "not_found":
+        return {
+            "durum": "bulunamadı",
+            "mesaj": "Başvuru bulunamadı.",
+        }
+    if status_value == "conflict":
+        return {
+            "durum": "çakışma",
+            "mesaj": payload.get("message") or "Başvuru davet işlemiyle çakıştı.",
+        }
+    if status_value == "error":
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": payload.get("message") or "Davet bilgileri geçersiz.",
+        }
+    if status_value not in {"success", "already_invited"}:
+        return {
+            "durum": "hata",
+            "mesaj": "Seller davet RPC yanıtı geçersiz.",
+        }
+
+    application = payload.get("application")
+    seller = payload.get("seller")
+    profile = payload.get("profile")
+    if not all(isinstance(item, dict) for item in (application, seller, profile)):
+        return {
+            "durum": "hata",
+            "mesaj": "Seller davet RPC yanıtı eksik.",
+        }
+
+    return {
+        "durum": "zaten_davet_edildi" if status_value == "already_invited" else "başarılı",
+        "application": application,
+        "seller": seller,
+        "profile": profile,
+    }
+
+
 # =====================================================
 # USER PROFILES — GİRİŞ YAPAN KULLANICILAR
 # =====================================================
@@ -2553,6 +2966,48 @@ def get_user_profile_by_auth_user_id(
         return {
             "durum": "hata",
             "mesaj": str(exc),
+        }
+
+
+def get_user_profile_by_seller_id(
+    seller_id: int,
+) -> dict[str, Any]:
+    """Seller sahibinin user_profile kaydını getirir."""
+    if (
+        not isinstance(seller_id, int)
+        or isinstance(seller_id, bool)
+        or seller_id < 1
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = (
+            get_supabase().table("user_profiles")
+            .select("*")
+            .eq("seller_id", seller_id)
+            .eq("role", "seller")
+            .limit(1)
+            .execute()
+        )
+
+        if not result.data:
+            return {
+                "durum": "bulunamadı",
+                "mesaj": "Seller kullanıcı profili bulunamadı.",
+            }
+
+        return {
+            "durum": "başarılı",
+            "profile": result.data[0],
+        }
+
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Seller kullanıcı profili okunamadı.",
         }
 
 
@@ -4870,6 +5325,286 @@ def get_return_issue_type_settings(
             "mesaj": "İade/sorun ayarları okunamadı.",
         }
 
+
+# =====================================================
+# SELLER PANEL READ MODELS — CONVERSATIONS / DASHBOARD
+# =====================================================
+
+SELLER_DASHBOARD_TASK_TYPES = {
+    "return_review",
+    "order_review",
+    "unanswered_question",
+}
+
+
+def _seller_panel_rpc_payload(data: Any) -> dict[str, Any] | None:
+    """Seller-panel read RPC JSONB yanıtını normalize eder."""
+    return _extract_rpc_payload(data)
+
+
+def get_seller_conversation_list(
+    seller_id: int,
+    *,
+    limit: int = 20,
+    offset: int = 0,
+    attention_only: bool = False,
+) -> dict[str, Any]:
+    """Seller conversation read model listesini tenant scope'unda döndürür."""
+    if not _is_positive_int(seller_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id pozitif tam sayı olmalıdır.",
+        }
+
+    if not _is_positive_int(limit) or limit > 100:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "limit 1 ile 100 arasında olmalıdır.",
+        }
+
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "offset negatif olmayan tam sayı olmalıdır.",
+        }
+
+    if not isinstance(attention_only, bool):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "attention_only boolean olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "get_seller_conversation_list",
+            {
+                "target_seller_id": seller_id,
+                "result_limit": limit,
+                "result_offset": offset,
+                "attention_only": attention_only,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma listesi okunamadı.",
+        }
+
+    payload = _seller_panel_rpc_payload(result.data)
+    if payload is None:
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma listesi geçersiz yanıt döndürdü.",
+        }
+
+    if payload.get("status") == "error":
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": (
+                payload.get("message")
+                or "Konuşma listesi parametreleri geçersiz."
+            ),
+        }
+
+    conversations = payload.get("conversations")
+    total = payload.get("total")
+    if payload.get("status") != "success" or not isinstance(conversations, list):
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma listesi geçersiz yanıt döndürdü.",
+        }
+    if not isinstance(total, int) or isinstance(total, bool) or total < 0:
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma listesi toplam değeri geçersiz.",
+        }
+
+    return {
+        "durum": "başarılı",
+        "toplam": total,
+        "conversations": conversations,
+    }
+
+
+def get_seller_conversation_detail_read_model(
+    seller_id: int,
+    customer_id: int,
+    *,
+    message_limit: int = 50,
+    before_message_id: int | None = None,
+    control_history_limit: int = 20,
+) -> dict[str, Any]:
+    """Tek konuşmanın panel read modelini tenant scope'unda döndürür."""
+    if not _is_positive_int(seller_id) or not _is_positive_int(customer_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id ve customer_id pozitif tam sayı olmalıdır.",
+        }
+
+    if not _is_positive_int(message_limit) or message_limit > 100:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "message_limit 1 ile 100 arasında olmalıdır.",
+        }
+
+    if (
+        before_message_id is not None
+        and not _is_positive_int(before_message_id)
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "before_message_id pozitif tam sayı olmalıdır.",
+        }
+
+    if (
+        not _is_positive_int(control_history_limit)
+        or control_history_limit > 100
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "control_history_limit 1 ile 100 arasında olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "get_seller_conversation_detail",
+            {
+                "target_seller_id": seller_id,
+                "target_customer_id": customer_id,
+                "message_limit": message_limit,
+                "before_message_id": before_message_id,
+                "control_history_limit": control_history_limit,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma detayı okunamadı.",
+        }
+
+    payload = _seller_panel_rpc_payload(result.data)
+    if payload is None:
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma detayı geçersiz yanıt döndürdü.",
+        }
+
+    status_value = payload.get("status")
+    if status_value == "not_found":
+        return {
+            "durum": "bulunamadı",
+            "mesaj": "Konuşma bulunamadı.",
+        }
+    if status_value == "error":
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": (
+                payload.get("message")
+                or "Konuşma detayı parametreleri geçersiz."
+            ),
+        }
+    if status_value != "success" or not isinstance(payload.get("customer"), dict):
+        return {
+            "durum": "hata",
+            "mesaj": "Konuşma detayı geçersiz yanıt döndürdü.",
+        }
+
+    return {
+        "durum": "başarılı",
+        "customer": payload["customer"],
+        "conversation_state": payload.get("conversation_state"),
+        "control": payload.get("control"),
+        "messages": payload.get("messages") or [],
+        "message_page": payload.get("message_page") or {},
+        "control_history": payload.get("control_history") or [],
+        "active_order": payload.get("active_order"),
+        "active_return_issue": payload.get("active_return_issue"),
+        "open_unanswered": payload.get("open_unanswered") or [],
+    }
+
+
+def get_seller_dashboard_task_list(
+    seller_id: int,
+    *,
+    task_type: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Bugün ilgilenmeniz gerekenler read modelini tenant scope'unda döndürür."""
+    if not _is_positive_int(seller_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id pozitif tam sayı olmalıdır.",
+        }
+
+    if task_type is not None and task_type not in SELLER_DASHBOARD_TASK_TYPES:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "task_type değeri geçersiz.",
+        }
+
+    if not _is_positive_int(limit) or limit > 100:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "limit 1 ile 100 arasında olmalıdır.",
+        }
+
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "offset negatif olmayan tam sayı olmalıdır.",
+        }
+
+    try:
+        result = get_supabase().rpc(
+            "get_seller_dashboard_tasks",
+            {
+                "target_seller_id": seller_id,
+                "task_type_value": task_type,
+                "result_limit": limit,
+                "result_offset": offset,
+            },
+        ).execute()
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Dashboard görevleri okunamadı.",
+        }
+
+    payload = _seller_panel_rpc_payload(result.data)
+    if payload is None:
+        return {
+            "durum": "hata",
+            "mesaj": "Dashboard görevleri geçersiz yanıt döndürdü.",
+        }
+
+    if payload.get("status") == "error":
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": (
+                payload.get("message")
+                or "Dashboard görev parametreleri geçersiz."
+            ),
+        }
+
+    tasks = payload.get("tasks")
+    total = payload.get("total")
+    if payload.get("status") != "success" or not isinstance(tasks, list):
+        return {
+            "durum": "hata",
+            "mesaj": "Dashboard görevleri geçersiz yanıt döndürdü.",
+        }
+    if not isinstance(total, int) or isinstance(total, bool) or total < 0:
+        return {
+            "durum": "hata",
+            "mesaj": "Dashboard görev toplamı geçersiz.",
+        }
+
+    return {
+        "durum": "başarılı",
+        "toplam": total,
+        "tasks": tasks,
+    }
 
 # =====================================================
 # TEST

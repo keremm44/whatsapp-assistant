@@ -373,6 +373,114 @@ def create_admin_profile(
     )
 
 
+def create_seller_invite_auth_user(
+    email: str,
+    full_name: str,
+    *,
+    application_id: int | None = None,
+    redirect_to: str | None = None,
+) -> dict[str, Any]:
+    """
+    Seller başvurusu için yalnız Supabase Auth davet kullanıcısını oluşturur.
+
+    Seller/profile DB kayıtları burada oluşturulmaz; admin invitation service
+    bunları ayrı atomik RPC ile finalize eder.
+    """
+    normalized_email = email.strip().lower()
+    normalized_name = full_name.strip()
+
+    if not normalized_email:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "E-posta zorunludur.",
+        }
+    if not normalized_name:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "Ad soyad zorunludur.",
+        }
+    if application_id is not None and (
+        not isinstance(application_id, int)
+        or isinstance(application_id, bool)
+        or application_id < 1
+    ):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "application_id pozitif tam sayı olmalıdır.",
+        }
+
+    metadata: dict[str, Any] = {
+        "full_name": normalized_name,
+        "app_role": "seller",
+    }
+    if application_id is not None:
+        metadata["application_id"] = application_id
+
+    options: dict[str, Any] = {"data": metadata}
+    if redirect_to:
+        options["redirect_to"] = redirect_to.strip()
+
+    try:
+        response = get_supabase().auth.admin.invite_user_by_email(
+            normalized_email,
+            options,
+        )
+        auth_user = _extract_auth_user(response)
+        auth_user_id = str(auth_user.get("id") or "").strip()
+
+        if not auth_user_id:
+            return {
+                "durum": "hata",
+                "mesaj": "Auth daveti oluşturuldu ancak kullanıcı kimliği alınamadı.",
+            }
+
+        return {
+            "durum": "başarılı",
+            "auth_user_id": auth_user_id,
+        }
+
+    except Exception as exc:
+        message = str(exc)
+        lowered = message.lower()
+        if any(
+            marker in lowered
+            for marker in (
+                "already been registered",
+                "already registered",
+                "user already exists",
+                "email_exists",
+            )
+        ):
+            return {
+                "durum": "çakışma",
+                "mesaj": "Bu e-posta için Auth kullanıcısı zaten mevcut.",
+            }
+
+        return {
+            "durum": "hata",
+            "mesaj": "Supabase Auth daveti oluşturulamadı.",
+        }
+
+
+def delete_invited_auth_user(auth_user_id: str) -> dict[str, Any]:
+    """Başarısız provisioning sonrası yeni oluşturulan Auth kullanıcısını temizler."""
+    normalized_id = str(auth_user_id or "").strip()
+    if not normalized_id:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "auth_user_id zorunludur.",
+        }
+
+    try:
+        get_supabase().auth.admin.delete_user(normalized_id)
+        return {"durum": "başarılı"}
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Auth kullanıcısı temizlenemedi.",
+        }
+
+
 def invite_seller_account(
     seller_id: int,
     email: str,

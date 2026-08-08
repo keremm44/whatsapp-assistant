@@ -38,7 +38,7 @@ def test_normalization_does_not_semantically_merge_different_phrasing() -> None:
     )
 
 
-def test_record_question_passes_normalized_value(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_record_question_leaves_group_identity_normalization_to_database(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[dict[str, Any]] = []
 
     def fake_record(**kwargs: Any) -> dict[str, Any]:
@@ -60,7 +60,8 @@ def test_record_question_passes_normalized_value(monkeypatch: pytest.MonkeyPatch
         reason="kayıtlı_cevap_bulunamadı",
     )
     assert result["durum"] == "başarılı"
-    assert calls[0]["normalized_question"] == "bulaşık makinesinde yıkanır mı"
+    assert "normalized_question" not in calls[0]
+    assert calls[0]["question_text"] == "Bulaşık makinesinde yıkanır mı?"
     assert calls[0]["metadata"] == {"reason": "kayıtlı_cevap_bulunamadı"}
 
 
@@ -91,15 +92,15 @@ def test_record_question_maps_database_failure(monkeypatch: pytest.MonkeyPatch) 
 def test_find_saved_answer_exact_match(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[int, str]] = []
 
-    def fake_get(seller_id: int, normalized: str) -> dict[str, Any]:
-        calls.append((seller_id, normalized))
+    def fake_get(seller_id: int, question_text: str) -> dict[str, Any]:
+        calls.append((seller_id, question_text))
         return {"durum": "başarılı", "group": answered_group("Evet, uygundur.")}
 
     monkeypatch.setattr(service, "get_answered_unanswered_question", fake_get)
     result = service.find_saved_answer(11, "Bulaşık makinesinde yıkanır mı?")
     assert result["matched"] is True
     assert result["answer"] == "Evet, uygundur."
-    assert calls == [(11, "bulaşık makinesinde yıkanır mı")]
+    assert calls == [(11, "Bulaşık makinesinde yıkanır mı?")]
 
 
 def test_find_saved_answer_none_is_not_match(monkeypatch: pytest.MonkeyPatch) -> None:

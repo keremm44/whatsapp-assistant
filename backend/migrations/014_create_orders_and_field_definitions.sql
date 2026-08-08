@@ -78,25 +78,16 @@ CREATE TABLE IF NOT EXISTS public.orders (
         ON UPDATE CASCADE
         ON DELETE CASCADE,
 
-    -- Ürün referansı (ürün kataloğu geldiğinde doldurulabilir).
     product_id BIGINT
         REFERENCES public.products(id)
         ON UPDATE CASCADE
         ON DELETE SET NULL,
 
     product_name_snapshot VARCHAR(200),
-
-    -- Platform sipariş numarası. Küresel benzersizliği varsayılmaz.
     external_order_number VARCHAR(100),
-
-    -- Sipariş oluşturulduğu sıradaki iletişim telefonu snapshot'ı.
     customer_phone_snapshot VARCHAR(32),
-
     customer_note VARCHAR(2000),
 
-    -- Legacy core akışından kalıcılaştırılan görsel ve özel metin.
-    -- Görsel, messages tablosuna güvenli referansla tutulur;
-    -- binary içerik kopyalanmaz.
     image_message_id BIGINT
         REFERENCES public.messages(id)
         ON UPDATE CASCADE
@@ -104,13 +95,10 @@ CREATE TABLE IF NOT EXISTS public.orders (
 
     custom_text VARCHAR(1000),
 
-    -- Internal durum: COLLECTING / COMPLETE / SELLER_REVIEW_REQUIRED
     status TEXT NOT NULL DEFAULT 'COLLECTING',
-
     review_reason_code VARCHAR(64),
     review_reason_note VARCHAR(500),
 
-    -- Kaynak ve son mesaj izlenebilirliği.
     created_from_message_id BIGINT NOT NULL
         REFERENCES public.messages(id)
         ON UPDATE CASCADE
@@ -150,8 +138,194 @@ CREATE TABLE IF NOT EXISTS public.orders (
         CHECK (
             external_order_number IS NULL OR
             char_length(external_order_number) BETWEEN 1 AND 100
+        ),
+
+    CONSTRAINT orders_custom_text_length_check
+        CHECK (
+            custom_text IS NULL OR
+            char_length(custom_text) <= 1000
         )
 );
+
+-- Migration boyunca legacy/new order INSERT yarışını kapat. Apply maintenance
+-- penceresinde yapılacak olsa da DB seviyesinde de preflight sonucu sabitlenir.
+LOCK TABLE public.orders IN ACCESS EXCLUSIVE MODE;
+
+-- ------------------------------------------------------------
+-- 1A. 000-012 legacy orders tablosunu upgrade-safe reconcile et
+--
+-- Canlı 000-012 şemada orders zaten vardır ve şu legacy alanları
+-- taşır: order_number, image_url, image_status, notes, confirmed_at.
+-- CREATE TABLE IF NOT EXISTS mevcut tabloya canonical kolonları
+-- eklemediği için bu bölüm bilinçli olarak ALTER TABLE kullanır.
+--
+-- Güvenlik politikası:
+--   - Legacy orders tablosunda veri varsa tahmini dönüşüm YAPMA.
+--   - Mevcut production preflight'ta legacy orders satır sayısı 0'dır.
+--   - Apply anına kadar legacy kayıt oluşursa migration fail-fast olur.
+--   - DROP TABLE / veri silme yoktur; legacy kolonlar şimdilik korunur.
+-- ------------------------------------------------------------
+
+DO $$
+DECLARE
+    has_legacy_order_number BOOLEAN;
+BEGIN
+    SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'orders'
+          AND column_name = 'order_number'
+    )
+    INTO has_legacy_order_number;
+
+    IF has_legacy_order_number
+       AND EXISTS (SELECT 1 FROM public.orders LIMIT 1) THEN
+        RAISE EXCEPTION USING
+            MESSAGE = '014 legacy orders reconciliation requires an empty legacy orders table; migration aborted without data conversion.';
+    END IF;
+END;
+$$;
+
+ALTER TABLE public.orders
+    ADD COLUMN IF NOT EXISTS product_id BIGINT,
+    ADD COLUMN IF NOT EXISTS product_name_snapshot VARCHAR(200),
+    ADD COLUMN IF NOT EXISTS external_order_number VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS customer_phone_snapshot VARCHAR(32),
+    ADD COLUMN IF NOT EXISTS customer_note VARCHAR(2000),
+    ADD COLUMN IF NOT EXISTS image_message_id BIGINT,
+    ADD COLUMN IF NOT EXISTS review_reason_code VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS review_reason_note VARCHAR(500),
+    ADD COLUMN IF NOT EXISTS created_from_message_id BIGINT,
+    ADD COLUMN IF NOT EXISTS last_source_message_id BIGINT,
+    ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+
+-- Legacy kolonlar varsa veriyi kaybetmeden canonical alanlara taşı.
+-- Production preflight'ta tablo boş olduğu için bu UPDATE'ler no-op'tur,
+-- fakat aynı migration fresh/legacy development ortamlarında da güvenlidir.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'orders'
+          AND column_name = 'order_number'
+    ) THEN
+        UPDATE public.orders
+        SET external_order_number = COALESCE(
+            external_order_number,
+            NULLIF(BTRIM(order_number), '')
+        )
+        WHERE external_order_number IS NULL;
+
+        -- Yeni akış order numarasını ilk INSERT'te henüz bilmez.
+        ALTER TABLE public.orders
+            ALTER COLUMN order_number DROP NOT NULL;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'orders'
+          AND column_name = 'notes'
+    ) THEN
+        UPDATE public.orders
+        SET customer_note = COALESCE(
+            customer_note,
+            NULLIF(BTRIM(notes), '')
+        )
+        WHERE customer_note IS NULL;
+    END IF;
+END;
+$$;
+
+ALTER TABLE public.orders
+    ALTER COLUMN status SET DEFAULT 'COLLECTING',
+    ALTER COLUMN status SET NOT NULL,
+    ALTER COLUMN version SET DEFAULT 1,
+    ALTER COLUMN version SET NOT NULL,
+    ALTER COLUMN updated_at SET DEFAULT NOW(),
+    ALTER COLUMN updated_at SET NOT NULL,
+    ALTER COLUMN created_from_message_id SET NOT NULL;
+
+-- Existing 000-012 FK davranışını canonical cascade/restrict modeline getir.
+ALTER TABLE public.orders
+    DROP CONSTRAINT IF EXISTS orders_seller_id_fkey,
+    DROP CONSTRAINT IF EXISTS orders_customer_id_fkey,
+    DROP CONSTRAINT IF EXISTS orders_product_id_fkey,
+    DROP CONSTRAINT IF EXISTS orders_image_message_id_fkey,
+    DROP CONSTRAINT IF EXISTS orders_created_from_message_id_fkey,
+    DROP CONSTRAINT IF EXISTS orders_last_source_message_id_fkey;
+
+ALTER TABLE public.orders
+    ADD CONSTRAINT orders_seller_id_fkey
+        FOREIGN KEY (seller_id)
+        REFERENCES public.sellers(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    ADD CONSTRAINT orders_customer_id_fkey
+        FOREIGN KEY (customer_id)
+        REFERENCES public.customers(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    ADD CONSTRAINT orders_product_id_fkey
+        FOREIGN KEY (product_id)
+        REFERENCES public.products(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+    ADD CONSTRAINT orders_image_message_id_fkey
+        FOREIGN KEY (image_message_id)
+        REFERENCES public.messages(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+    ADD CONSTRAINT orders_created_from_message_id_fkey
+        FOREIGN KEY (created_from_message_id)
+        REFERENCES public.messages(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+    ADD CONSTRAINT orders_last_source_message_id_fkey
+        FOREIGN KEY (last_source_message_id)
+        REFERENCES public.messages(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL;
+
+ALTER TABLE public.orders
+    DROP CONSTRAINT IF EXISTS orders_status_check,
+    DROP CONSTRAINT IF EXISTS orders_version_check,
+    DROP CONSTRAINT IF EXISTS orders_review_reason_code_check,
+    DROP CONSTRAINT IF EXISTS orders_external_order_number_length_check,
+    DROP CONSTRAINT IF EXISTS orders_custom_text_length_check;
+
+ALTER TABLE public.orders
+    ADD CONSTRAINT orders_status_check
+        CHECK (
+            status IN (
+                'COLLECTING',
+                'COMPLETE',
+                'SELLER_REVIEW_REQUIRED'
+            )
+        ),
+    ADD CONSTRAINT orders_version_check
+        CHECK (version > 0),
+    ADD CONSTRAINT orders_review_reason_code_check
+        CHECK (
+            review_reason_code IS NULL OR
+            review_reason_code ~ '^[a-z][a-z0-9_]{0,63}$'
+        ),
+    ADD CONSTRAINT orders_external_order_number_length_check
+        CHECK (
+            external_order_number IS NULL OR
+            char_length(external_order_number) BETWEEN 1 AND 100
+        ),
+    ADD CONSTRAINT orders_custom_text_length_check
+        CHECK (
+            custom_text IS NULL OR
+            char_length(custom_text) <= 1000
+        );
 
 -- Tek aktif bilgi toplama siparişi.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_orders_one_active_per_conversation
@@ -386,7 +560,7 @@ ON public.order_field_values(order_id, field_snapshot_id);
 -- ------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public._order_presenter(
-    p_order public.orders%ROWTYPE
+    p_order public.orders
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -811,10 +985,10 @@ BEGIN
     -- önce yazıldıysa ikinci yan etki üretme.
     SELECT *
     INTO existing_row
-    FROM public.order_field_values
-    WHERE order_id = target_order_id
-      AND field_snapshot_id = target_field_snapshot_id
-      AND source_message_id = source_message_id;
+    FROM public.order_field_values AS existing_value
+    WHERE existing_value.order_id = target_order_id
+      AND existing_value.field_snapshot_id = target_field_snapshot_id
+      AND existing_value.source_message_id = record_order_field_value.source_message_id;
 
     IF FOUND THEN
         RETURN jsonb_build_object(
@@ -1365,7 +1539,7 @@ INSERT INTO public.schema_migrations (
 VALUES (
     '014',
     'create_orders_and_field_definitions',
-    'orders_and_dynamic_fields_v1',
+    'orders_and_dynamic_fields_v2_upgrade_safe',
     CURRENT_USER
 )
 ON CONFLICT (version) DO NOTHING;

@@ -1394,7 +1394,7 @@ def process_active_state(
                 )
 
             # Legacy state_data uyumluluğu: yeni siparişlerde kullanılmaz.
-            transition_state(
+            transition_result = transition_state(
                 seller_id=seller_id,
                 customer_id=customer_id,
                 to_state="AWAITING_IMAGE",
@@ -1403,6 +1403,14 @@ def process_active_state(
                 state_data={"order_number": order_number},
                 expires_in_hours=24,
             )
+
+            if transition_result.get("durum") != "başarılı":
+                return _order_flow_error(
+                    customer_id=customer_id,
+                    incoming_message_id=source_message_id,
+                    reason_code="order_flow_transition_failed",
+                    message="Eski sipariş akışı görsel adımına güvenli biçimde ilerletilemedi.",
+                )
 
             return outgoing_response(
                 seller_id=seller_id,
@@ -1468,7 +1476,7 @@ def process_active_state(
                 "image_url": media_url,
             }
 
-            transition_state(
+            transition_result = transition_state(
                 seller_id=seller_id,
                 customer_id=customer_id,
                 to_state="AWAITING_CUSTOM_TEXT",
@@ -1477,6 +1485,14 @@ def process_active_state(
                 state_data=next_state_data,
                 expires_in_hours=24,
             )
+
+            if transition_result.get("durum") != "başarılı":
+                return _order_flow_error(
+                    customer_id=customer_id,
+                    incoming_message_id=source_message_id,
+                    reason_code="order_flow_transition_failed",
+                    message="Eski sipariş akışı özel metin adımına güvenli biçimde ilerletilemedi.",
+                )
 
             return outgoing_response(
                 seller_id=seller_id,
@@ -2117,7 +2133,7 @@ def sohbet_isle(
 
     # 11. Sipariş başlangıcı
     if intent == "order_intent":
-        transition_state(
+        transition_result = transition_state(
             seller_id=seller_id,
             customer_id=customer_id,
             to_state="AWAITING_ORDER_CONFIRMATION",
@@ -2125,6 +2141,14 @@ def sohbet_isle(
             trigger_message_id=incoming_message_id,
             expires_in_hours=24,
         )
+
+        if transition_result.get("durum") != "başarılı":
+            return _order_flow_error(
+                customer_id=customer_id,
+                incoming_message_id=incoming_message_id,
+                reason_code="order_flow_transition_failed",
+                message="Sipariş akışı güvenli biçimde başlatılamadı.",
+            )
 
         return outgoing_response(
             seller_id=seller_id,

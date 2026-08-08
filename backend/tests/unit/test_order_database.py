@@ -269,6 +269,30 @@ def test_migration_does_not_touch_conversation_control() -> None:
     assert "transition_conversation_control" not in content
 
 
+def test_migration_reconciles_existing_legacy_orders_without_drop() -> None:
+    content = MIGRATION_PATH.read_text(encoding="utf-8")
+
+    assert "LOCK TABLE public.orders IN ACCESS EXCLUSIVE MODE" in content
+    assert "legacy orders reconciliation requires an empty legacy orders table" in content
+    assert "ADD COLUMN IF NOT EXISTS external_order_number VARCHAR(100)" in content
+    assert "ADD COLUMN IF NOT EXISTS created_from_message_id BIGINT" in content
+    assert "ALTER COLUMN order_number DROP NOT NULL" in content
+    assert "ALTER COLUMN status SET DEFAULT 'COLLECTING'" in content
+    assert "ALTER COLUMN created_from_message_id SET NOT NULL" in content
+    assert "DROP TABLE public.orders" not in content
+
+
+def test_migration_rebuilds_legacy_order_fks_with_canonical_delete_behavior() -> None:
+    content = MIGRATION_PATH.read_text(encoding="utf-8")
+
+    assert "DROP CONSTRAINT IF EXISTS orders_seller_id_fkey" in content
+    assert "ADD CONSTRAINT orders_seller_id_fkey" in content
+    assert "ADD CONSTRAINT orders_customer_id_fkey" in content
+    assert "ADD CONSTRAINT orders_created_from_message_id_fkey" in content
+    assert "ON DELETE RESTRICT" in content
+    assert "ON DELETE CASCADE" in content
+
+
 # =====================================================
 # RPC YANIT NORMALİZASYONU
 # =====================================================

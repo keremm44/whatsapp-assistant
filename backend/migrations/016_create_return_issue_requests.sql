@@ -279,7 +279,7 @@ ON public.return_issue_type_settings(seller_id, issue_type);
 -- ------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public._return_issue_request_presenter(
-    p_request public.return_issue_requests%ROWTYPE
+    p_request public.return_issue_requests
 )
 RETURNS JSONB
 LANGUAGE sql

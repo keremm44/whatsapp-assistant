@@ -294,7 +294,81 @@ ORDER BY uq.seller_id, uq.source_message_id, uq.last_asked_at DESC, uq.id DESC
 ON CONFLICT (seller_id, message_id) WHERE message_id IS NOT NULL DO NOTHING;
 
 -- ------------------------------------------------------------
--- 5. Tek OPEN group için tek seller notification
+-- 5. Legacy AWAITING_SELLER state reconciliation
+--
+-- 008 dönemi unknown-question akışı bazı konuşmaları AWAITING_SELLER
+-- durumunda bırakıyordu. Yeni unanswered domaininde unknown soru konuşmayı
+-- kilitlemez; yalnız seller work item oluşturur. Yalnız state_data içindeki
+-- question_id gerçekten aynı seller/customer'a ait legacy unanswered kaydını
+-- gösteriyorsa state NORMAL'a alınır. Seller takeover semantiği uydurulmaz.
+-- ------------------------------------------------------------
+
+WITH legacy_unanswered_states AS (
+    SELECT
+        cs.id AS conversation_state_id,
+        cs.seller_id,
+        cs.customer_id,
+        uq.id AS question_id,
+        uq.source_message_id
+    FROM public.conversation_states cs
+    JOIN public.unanswered_questions uq
+      ON uq.id = CASE
+            WHEN jsonb_typeof(cs.state_data) = 'object'
+             AND cs.state_data ? 'question_id'
+             AND (cs.state_data ->> 'question_id') ~ '^[0-9]+$'
+                THEN (cs.state_data ->> 'question_id')::BIGINT
+            ELSE NULL
+        END
+     AND uq.seller_id = cs.seller_id
+     AND (uq.customer_id IS NULL OR uq.customer_id = cs.customer_id)
+    WHERE cs.current_state = 'AWAITING_SELLER'
+)
+INSERT INTO public.state_transitions (
+    seller_id,
+    customer_id,
+    from_state,
+    to_state,
+    trigger_message_id,
+    reason_code,
+    metadata,
+    created_at
+)
+SELECT
+    legacy.seller_id,
+    legacy.customer_id,
+    'AWAITING_SELLER',
+    'NORMAL',
+    legacy.source_message_id,
+    'system',
+    jsonb_build_object(
+        'migration', '017',
+        'reason', 'legacy_unanswered_state_reconciliation',
+        'legacy_question_id', legacy.question_id
+    ),
+    NOW()
+FROM legacy_unanswered_states legacy;
+
+UPDATE public.conversation_states cs
+SET
+    current_state = 'NORMAL',
+    state_type = 'no_lock',
+    state_data = '{}'::jsonb,
+    expires_at = NULL,
+    updated_at = NOW()
+FROM public.unanswered_questions uq
+WHERE cs.current_state = 'AWAITING_SELLER'
+  AND uq.id = CASE
+        WHEN jsonb_typeof(cs.state_data) = 'object'
+         AND cs.state_data ? 'question_id'
+         AND (cs.state_data ->> 'question_id') ~ '^[0-9]+$'
+            THEN (cs.state_data ->> 'question_id')::BIGINT
+        ELSE NULL
+      END
+  AND uq.seller_id = cs.seller_id
+  AND (uq.customer_id IS NULL OR uq.customer_id = cs.customer_id);
+
+-- ------------------------------------------------------------
+-- 6. Tek OPEN group için tek seller notification
 -- ------------------------------------------------------------
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_seller_notifications_unanswered_group
@@ -309,11 +383,11 @@ WHERE type = 'unanswered_question'
   AND related_entity_id IS NOT NULL;
 
 -- ------------------------------------------------------------
--- 6. Presenter
+-- 7. Presenter
 -- ------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public._unanswered_question_group_presenter(
-    p_group public.unanswered_question_groups%ROWTYPE
+    p_group public.unanswered_question_groups
 )
 RETURNS JSONB
 LANGUAGE sql
@@ -341,7 +415,64 @@ AS $$
 $$;
 
 -- ------------------------------------------------------------
--- 7. record_unanswered_question_occurrence
+-- 8. DB-authoritative saved-answer lookup
+--
+-- Hem backfill/record hem lookup aynı PostgreSQL normalization helper'ını
+-- kullanır. Python tarafındaki Unicode normalization yalnız input validation
+-- için kalabilir; group identity veya saved-answer eşleşmesini belirlemez.
+-- ------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.get_answered_unanswered_question(
+    target_seller_id BIGINT,
+    question_text_value TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+    group_row public.unanswered_question_groups%ROWTYPE;
+    question_text_clean TEXT := NULLIF(BTRIM(question_text_value), '');
+    normalized_question_clean TEXT;
+BEGIN
+    IF target_seller_id IS NULL OR target_seller_id <= 0 THEN
+        RETURN jsonb_build_object('status', 'error', 'message', 'Geçersiz seller kimliği.');
+    END IF;
+
+    IF question_text_clean IS NULL OR char_length(question_text_clean) > 4000 THEN
+        RETURN jsonb_build_object('status', 'success', 'group', NULL);
+    END IF;
+
+    normalized_question_clean := public._normalize_unanswered_question_text(
+        question_text_clean
+    );
+
+    IF normalized_question_clean IS NULL OR normalized_question_clean = '' THEN
+        RETURN jsonb_build_object('status', 'success', 'group', NULL);
+    END IF;
+
+    SELECT *
+    INTO group_row
+    FROM public.unanswered_question_groups
+    WHERE seller_id = target_seller_id
+      AND normalized_question = normalized_question_clean
+      AND status = 'ANSWERED'
+    ORDER BY id
+    LIMIT 1;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('status', 'success', 'group', NULL);
+    END IF;
+
+    RETURN jsonb_build_object(
+        'status', 'success',
+        'group', public._unanswered_question_group_presenter(group_row)
+    );
+END;
+$$;
+
+-- ------------------------------------------------------------
+-- 9. record_unanswered_question_occurrence
 --
 -- - incoming message seller/customer scope doğrulanır
 -- - seller + normalized soru advisory lock
@@ -355,7 +486,6 @@ CREATE OR REPLACE FUNCTION public.record_unanswered_question_occurrence(
     target_customer_id BIGINT,
     source_message_id BIGINT,
     question_text_value TEXT,
-    normalized_question_value TEXT,
     category_value TEXT DEFAULT 'unclear',
     suggested_field_value TEXT DEFAULT NULL,
     metadata_value JSONB DEFAULT '{}'::jsonb
@@ -366,7 +496,7 @@ AS $$
 DECLARE
     group_row public.unanswered_question_groups%ROWTYPE;
     occurrence_row public.unanswered_question_occurrences%ROWTYPE;
-    normalized_question_clean TEXT := NULLIF(BTRIM(normalized_question_value), '');
+    normalized_question_clean TEXT;
     question_text_clean TEXT := NULLIF(BTRIM(question_text_value), '');
     category_clean TEXT := COALESCE(NULLIF(BTRIM(category_value), ''), 'unclear');
     suggested_field_clean TEXT := NULLIF(BTRIM(suggested_field_value), '');
@@ -587,7 +717,7 @@ END;
 $$;
 
 -- ------------------------------------------------------------
--- 8. Seller cevabı
+-- 10. Seller cevabı
 --
 -- Bu RPC yalnız domain kaydını günceller. public.messages veya conversation
 -- tablolarına yazmaz; geçmiş müşterilere outgoing gönderemez.
@@ -676,7 +806,7 @@ END;
 $$;
 
 -- ------------------------------------------------------------
--- 9. Seller dismiss
+-- 11. Seller dismiss
 -- ------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.dismiss_unanswered_question_group(
@@ -772,7 +902,7 @@ END;
 $$;
 
 -- ------------------------------------------------------------
--- 10. Backend-only erişim
+-- 12. Backend-only erişim
 -- ------------------------------------------------------------
 
 ALTER TABLE public.unanswered_question_groups ENABLE ROW LEVEL SECURITY;
@@ -805,11 +935,20 @@ GRANT EXECUTE ON FUNCTION public._unanswered_question_group_presenter(
     public.unanswered_question_groups
 ) TO service_role;
 
+REVOKE EXECUTE ON FUNCTION public.get_answered_unanswered_question(
+    BIGINT, TEXT
+)
+FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_answered_unanswered_question(
+    BIGINT, TEXT
+)
+TO service_role;
+
 REVOKE EXECUTE ON FUNCTION public.record_unanswered_question_occurrence(
-    BIGINT, BIGINT, BIGINT, TEXT, TEXT, TEXT, TEXT, JSONB
+    BIGINT, BIGINT, BIGINT, TEXT, TEXT, TEXT, JSONB
 ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_unanswered_question_occurrence(
-    BIGINT, BIGINT, BIGINT, TEXT, TEXT, TEXT, TEXT, JSONB
+    BIGINT, BIGINT, BIGINT, TEXT, TEXT, TEXT, JSONB
 ) TO service_role;
 
 REVOKE EXECUTE ON FUNCTION public.set_unanswered_question_answer(
@@ -827,7 +966,7 @@ GRANT EXECUTE ON FUNCTION public.dismiss_unanswered_question_group(
 ) TO service_role;
 
 -- ------------------------------------------------------------
--- 11. Migration kaydı
+-- 13. Migration kaydı
 -- ------------------------------------------------------------
 
 INSERT INTO public.schema_migrations (
@@ -839,7 +978,7 @@ INSERT INTO public.schema_migrations (
 VALUES (
     '017',
     'add_unanswered_question_lifecycle',
-    'unanswered_question_lifecycle_v1',
+    'unanswered_question_lifecycle_v2_reconciled',
     CURRENT_USER
 )
 ON CONFLICT (version) DO NOTHING;

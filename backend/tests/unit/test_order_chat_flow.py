@@ -736,3 +736,71 @@ def test_legacy_custom_text_state_can_finish_without_touching_order_domain(monke
     assert harness.order_core_calls == []
     assert harness.flow_state["current_state"] == "NORMAL"
     assert len(harness.notifications) == 1
+
+
+def test_order_intent_transition_failure_sends_no_question(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = ChatHarness().install(monkeypatch)
+    harness.classification_result = classification("order_intent")
+
+    def fail_transition(**kwargs: Any) -> dict[str, Any]:
+        harness.flow_transitions.append(kwargs)
+        return {"durum": "hata", "mesaj": "db unavailable"}
+
+    monkeypatch.setattr(chat_service, "transition_state", fail_transition)
+
+    result = harness.send("Sipariş vermek istiyorum")
+
+    assert result["durum"] == "hata"
+    assert result["reason_code"] == "order_flow_transition_failed"
+    assert result["cevap"] is None
+    assert harness.flow_transitions[0]["to_state"] == "AWAITING_ORDER_CONFIRMATION"
+    assert [message["direction"] for message in harness.saved_messages] == ["incoming"]
+
+
+def test_legacy_order_number_transition_failure_sends_no_followup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = ChatHarness().install(monkeypatch)
+    harness.flow_state = {"current_state": "AWAITING_ORDER_NUMBER", "state_data": {}}
+
+    def fail_transition(**kwargs: Any) -> dict[str, Any]:
+        harness.flow_transitions.append(kwargs)
+        return {"durum": "hata"}
+
+    monkeypatch.setattr(chat_service, "transition_state", fail_transition)
+
+    result = harness.send("ETSY-12345")
+
+    assert result["durum"] == "hata"
+    assert result["reason_code"] == "order_flow_transition_failed"
+    assert result["cevap"] is None
+    assert [message["direction"] for message in harness.saved_messages] == ["incoming"]
+
+
+def test_legacy_image_transition_failure_sends_no_followup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = ChatHarness().install(monkeypatch)
+    harness.flow_state = {
+        "current_state": "AWAITING_IMAGE",
+        "state_data": {"order_number": "ETSY-12345"},
+    }
+
+    def fail_transition(**kwargs: Any) -> dict[str, Any]:
+        harness.flow_transitions.append(kwargs)
+        return {"durum": "hata"}
+
+    monkeypatch.setattr(chat_service, "transition_state", fail_transition)
+
+    result = harness.send(
+        "",
+        message_type="image",
+        media_url="https://example.com/image.jpg",
+    )
+
+    assert result["durum"] == "hata"
+    assert result["reason_code"] == "order_flow_transition_failed"
+    assert result["cevap"] is None
+    assert [message["direction"] for message in harness.saved_messages] == ["incoming"]
