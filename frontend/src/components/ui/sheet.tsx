@@ -7,9 +7,13 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Sheet — right-side contextual drawer.
- * Used for conversation details, return/request details, and other
- * secondary surfaces. Avoids the heavy three-column CRM layout.
+ * Sheet — contextual drawer.
+ *
+ * Supports three sides: right (default), left, and bottom. The right
+ * side is the canonical contextual drawer used in the seller panel for
+ * conversation/return/request details. The left side is used for the
+ * tablet navigation menu. The bottom side is used by the mobile bottom
+ * navigation "more" menus.
  */
 
 const Sheet = DialogPrimitive.Root;
@@ -32,10 +36,21 @@ const SheetOverlay = React.forwardRef<
 ));
 SheetOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
+type SheetSide = "right" | "left" | "bottom";
+
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
-  side?: "right" | "left";
+  side?: SheetSide;
 }
+
+const sideStyles: Record<SheetSide, string> = {
+  right:
+    "inset-y-0 right-0 h-full w-full max-w-md border-l border-border data-[state=open]:animate-slide-in-right",
+  left:
+    "inset-y-0 left-0 h-full w-full max-w-md border-r border-border data-[state=open]:animate-slide-in-left",
+  bottom:
+    "inset-x-0 bottom-0 w-full max-h-[85vh] border-t border-border rounded-t-md data-[state=open]:animate-slide-in-bottom",
+};
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
@@ -46,10 +61,8 @@ const SheetContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-30 top-0 h-full w-full max-w-md border-l border-border bg-surface p-6 shadow-2",
-        "focus-visible:outline-none",
-        side === "right" ? "right-0" : "left-0 border-l-0 border-r",
-        "data-[state=open]:animate-slide-in-right",
+        "fixed z-30 bg-surface p-6 shadow-2 focus-visible:outline-none",
+        sideStyles[side],
         className,
       )}
       {...props}
@@ -108,4 +121,5 @@ export {
   SheetHeader,
   SheetTitle,
   SheetDescription,
+  type SheetSide,
 };

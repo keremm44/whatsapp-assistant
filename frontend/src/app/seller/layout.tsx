@@ -1,12 +1,15 @@
+import { SellerShell } from "@/components/seller/shell/seller-shell";
+
 /**
- * Seller panel layout. In the foundation step this is just a quiet
- * surface. The fixed 240px sidebar + 64px top bar shell is wired in the
- * app-shell step.
+ * Seller panel layout. Wraps every /seller/* page in the macro shell.
+ * Route protection is intentionally not implemented in this step — it
+ * arrives once the Supabase auth foundation is wired to a real session
+ * inspection in a later step.
  */
 export default function SellerLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="min-h-screen bg-background">{children}</div>;
+  return <SellerShell>{children}</SellerShell>;
 }

@@ -96,10 +96,20 @@ const config: Config = {
           from: { transform: "translateX(100%)" },
           to: { transform: "translateX(0)" },
         },
+        "slide-in-left": {
+          from: { transform: "translateX(-100%)" },
+          to: { transform: "translateX(0)" },
+        },
+        "slide-in-bottom": {
+          from: { transform: "translateY(100%)" },
+          to: { transform: "translateY(0)" },
+        },
       },
       animation: {
         "fade-in": "fade-in var(--dur-base) var(--ease-standard)",
         "slide-in-right": "slide-in-right var(--dur-base) var(--ease-standard)",
+        "slide-in-left": "slide-in-left var(--dur-base) var(--ease-standard)",
+        "slide-in-bottom": "slide-in-bottom var(--dur-base) var(--ease-standard)",
       },
     },
   },
