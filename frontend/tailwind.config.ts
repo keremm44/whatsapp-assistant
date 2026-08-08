@@ -24,6 +24,7 @@ const config: Config = {
     extend: {
       colors: {
         background: "var(--color-background)",
+        chrome: "var(--color-chrome)",
         foreground: "var(--color-foreground)",
         surface: "var(--color-surface)",
         "surface-2": "var(--color-surface-2)",
@@ -85,6 +86,7 @@ const config: Config = {
         none: "var(--shadow-none)",
         1: "var(--shadow-1)",
         2: "var(--shadow-2)",
+        surface: "var(--shadow-surface)",
         focus: "var(--shadow-focus)",
       },
       keyframes: {

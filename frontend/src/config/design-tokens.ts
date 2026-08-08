@@ -4,15 +4,22 @@
  * These constants are referenced from tailwind.config.ts (via CSS variables
  * declared in src/app/globals.css). Do not duplicate hex values in components:
  * use Tailwind classes mapped to these tokens instead.
+ *
+ * Surface hierarchy (four visible levels, top to bottom):
+ *   1. background       — main warm cream canvas
+ *   2. chrome           — persistent shell surfaces (sidebar, topbar, mobile nav)
+ *   3. surface          — primary working surface (content, lists, cards)
+ *   4. surface-2        — secondary low-emphasis surface
  */
 
 export const designTokens = {
   color: {
-    background: "#F6F4EF", // linen
-    surface: "#FFFFFF",
-    surface2: "#EEF2EF",
-    border: "#D9E0DC",
-    divider: "#ECE7DF",
+    background: "#F3EFE7", // linen cream
+    chrome: "#FAF8F3", // warm broken-white for persistent app chrome
+    surface: "#FFFDF9", // near-white working surface
+    surface2: "#ECE8DF", // secondary low-emphasis surface
+    border: "#D8D2C8", // slightly warmer border
+    divider: "#E4DED4", // quieter warmer divider
 
     text: {
       primary: "#24302E",
@@ -25,7 +32,7 @@ export const designTokens = {
       DEFAULT: "#245B57", // petrol
       hover: "#1C4845",
       active: "#153634",
-      muted: "#E7F0EE", // primary light
+      muted: "#DFECE9", // visibly petrol-tinted but not saturated
       foreground: "#FFFFFF",
     },
 

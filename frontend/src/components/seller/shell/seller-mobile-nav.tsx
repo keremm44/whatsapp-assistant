@@ -27,10 +27,8 @@ import { SellerIcon } from "./icon-map";
  * Genel, Konuşmalar, İşler, Diğer. "İşler" and "Diğer" open a Sheet
  * rather than navigating to a single URL.
  *
- * Active state is communicated with text weight + icon weight, not color
- * alone. The active-parent logic lives in
- * `lib/routes/active-route.ts` so it stays consistent with the desktop
- * sidebar and the tablet Sheet.
+ * Uses the warm chrome surface so the navigation belongs to the same
+ * shell system as the desktop sidebar and topbar.
  */
 export function SellerMobileNav() {
   const pathname = usePathname();
@@ -39,7 +37,7 @@ export function SellerMobileNav() {
   return (
     <nav
       aria-label="Alt gezinme"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface md:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-chrome md:hidden"
     >
       <ul className="grid grid-cols-4">
         {mobileBottomNav.map((item) => (
@@ -80,7 +78,7 @@ const MobileNavLink = ({
       isActive
         ? "font-semibold text-primary"
         : "text-muted-foreground hover:text-foreground",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
     )}
   >
     <SellerIcon
@@ -113,7 +111,7 @@ const MobileSheetTrigger = ({
           active
             ? "font-semibold text-primary"
             : "text-muted-foreground hover:text-foreground",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
         )}
       >
         <SellerIcon
@@ -123,7 +121,10 @@ const MobileSheetTrigger = ({
         />
         <span>{item.label}</span>
       </SheetTrigger>
-      <SheetContent side="bottom" className="max-h-[80vh] rounded-t-md">
+      <SheetContent
+        side="bottom"
+        className="max-h-[80vh] rounded-t-md bg-chrome"
+      >
         <SheetHeader>
           <SheetTitle>{item.label}</SheetTitle>
         </SheetHeader>
@@ -137,13 +138,19 @@ const MobileSheetTrigger = ({
                   onClick={() => setOpen(false)}
                   aria-current={entryActive ? "page" : undefined}
                   className={cn(
-                    "flex h-12 min-h-[44px] items-center gap-3 rounded-md px-3 text-sm transition-colors",
+                    "relative flex h-12 min-h-[44px] items-center gap-3 rounded-md pl-4 pr-3 text-sm transition-colors",
                     entryActive
                       ? "bg-primary-muted font-medium text-primary"
                       : "text-foreground hover:bg-surface-2",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
                   )}
                 >
+                  {entryActive ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-y-2 left-0 w-[2px] rounded-full bg-primary"
+                    />
+                  ) : null}
                   <SellerIcon
                     name={entry.icon}
                     className={

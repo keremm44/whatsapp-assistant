@@ -21,9 +21,9 @@ import { SellerIcon } from "./icon-map";
 /**
  * Minimal topbar.
  *
- * 64px tall, white surface, 1px bottom border. The left side shows a
- * neutral "Mağaza" placeholder until real seller/store identity is wired
- * by a later auth step.
+ * 64px tall, warm chrome surface (`#FAF8F3`), 1px bottom border.
+ * The left side shows a neutral "Mağaza" placeholder until real
+ * seller/store identity is wired by a later auth step.
  *
  * The right side offers a single safe navigation target: /seller/settings.
  * No notification bell, no global search, no assistant switch — those
@@ -36,15 +36,12 @@ export function SellerTopbar() {
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-surface px-4 sm:px-6">
+    <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-chrome px-4 sm:px-6">
       <div className="flex items-center gap-2">
         {/* Tablet menu trigger (visible only between md and lg). On desktop
             the sidebar is always present; on mobile the bottom navigation
             takes over. */}
-        <TabletNavSheet
-          open={menuOpen}
-          onOpenChange={setMenuOpen}
-        />
+        <TabletNavSheet open={menuOpen} onOpenChange={setMenuOpen} />
         <p className="font-heading text-base font-semibold text-foreground">
           Mağaza
         </p>
@@ -80,12 +77,12 @@ const TabletNavSheet = ({
         aria-label="Menüyü aç"
         className={cn(
           "hidden h-11 w-11 items-center justify-center rounded-md text-foreground hover:bg-surface-2 md:inline-flex lg:hidden",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
         )}
       >
         <SellerIcon name="Menu" size={22} />
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] sm:max-w-sm">
+      <SheetContent side="left" className="w-[280px] bg-chrome sm:max-w-sm">
         <SheetHeader>
           <SheetTitle>Menü</SheetTitle>
         </SheetHeader>
@@ -118,7 +115,7 @@ function SidebarNavList({
       <ul className="flex flex-col gap-4">
         {sellerNavigation.map((section) => (
           <li key={section.title}>
-            <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+            <p className="px-3 pb-1 text-xs font-medium text-muted-foreground">
               {section.title}
             </p>
             <ul className="flex flex-col gap-0.5">
@@ -131,13 +128,19 @@ function SidebarNavList({
                       onClick={onNavigate}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
-                        "flex h-11 items-center gap-3 rounded-md px-3 text-sm transition-colors",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+                        "relative flex h-11 items-center gap-3 rounded-md pl-4 pr-3 text-sm transition-colors",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
                         isActive
                           ? "bg-primary-muted font-medium text-primary"
                           : "text-foreground hover:bg-surface-2",
                       )}
                     >
+                      {isActive ? (
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-y-2 left-0 w-[2px] rounded-full bg-primary"
+                        />
+                      ) : null}
                       <SellerIcon
                         name={item.icon}
                         className={
