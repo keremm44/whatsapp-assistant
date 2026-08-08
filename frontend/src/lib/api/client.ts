@@ -61,20 +61,45 @@ const buildUrl = (path: string): string => {
   return `${env.apiBaseUrl}${normalizedPath}`;
 };
 
-const extractErrorMessage = async (response: Response): Promise<string> => {
-  const fallback = `İstek başarısız oldu (${response.status}).`;
-  try {
-    const data = (await response.json()) as ApiErrorBody;
-    if (typeof data.message === "string" && data.message.length > 0) {
-      return data.message;
-    }
-    if (typeof data.detail === "string" && data.detail.length > 0) {
-      return data.detail;
-    }
-    return fallback;
-  } catch {
+const fallbackMessage = (status: number): string =>
+  `İstek başarısız oldu (${status}).`;
+
+/**
+ * Derive a human-readable message from an already-parsed error body.
+ * Supports FastAPI-style shapes:
+ *   { message: "..." }
+ *   { code: "...", message: "..." }
+ *   { detail: "..." }            (string only — non-string detail falls back)
+ *   { detail: { message: "..." } }  (FastAPI sometimes nests)
+ */
+const messageFromBody = (body: unknown, status: number): string => {
+  const fallback = fallbackMessage(status);
+  if (typeof body !== "object" || body === null) {
     return fallback;
   }
+
+  const record = body as Record<string, unknown>;
+
+  if (typeof record.message === "string" && record.message.length > 0) {
+    return record.message;
+  }
+
+  if (typeof record.detail === "string" && record.detail.length > 0) {
+    return record.detail;
+  }
+
+  if (
+    typeof record.detail === "object" &&
+    record.detail !== null &&
+    typeof (record.detail as Record<string, unknown>).message === "string"
+  ) {
+    const nested = (record.detail as Record<string, unknown>).message;
+    if (typeof nested === "string" && nested.length > 0) {
+      return nested;
+    }
+  }
+
+  return fallback;
 };
 
 /**
@@ -108,10 +133,10 @@ export async function apiFetch<TResponse = unknown>(
   const response = await fetch(buildUrl(path), requestInit);
 
   if (!response.ok) {
-    const body: unknown = await response
-      .json()
-      .catch(() => ({}));
-    const message = await extractErrorMessage(response);
+    // Parse the error body exactly once. A Response body can only be consumed
+    // once; reading it twice would silently lose FastAPI's real message.
+    const body: unknown = await response.json().catch(() => ({}));
+    const message = messageFromBody(body, response.status);
     throw new ApiError(message, response.status, body);
   }
 
