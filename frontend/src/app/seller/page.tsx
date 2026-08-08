@@ -8,7 +8,8 @@ import { Surface } from "@/components/shared/surface";
  *
  * In this macro pass the page establishes the visual rhythm: header,
  * "Önce bunlar", "Bugün bakılabilecekler", and a low-emphasis
- * "Günün özeti" region. No business data is rendered.
+ * "Günün özeti" region. The placeholders describe the structural
+ * destination, not a live state.
  */
 export default function SellerOverviewPage() {
   return (
@@ -27,7 +28,7 @@ export default function SellerOverviewPage() {
           />
           <Surface className="min-h-[160px]">
             <div className="flex min-h-[160px] items-center justify-center px-6 py-10 text-center text-sm text-muted-foreground">
-              Şu anda sizi bekleyen acil bir konu yok.
+              Öncelikli işler burada listelenecek.
             </div>
           </Surface>
         </section>
@@ -52,7 +53,7 @@ export default function SellerOverviewPage() {
           />
           <Surface className="min-h-[96px]">
             <div className="flex min-h-[96px] items-center justify-center px-6 py-8 text-center text-sm text-muted-foreground">
-              Günün özeti burada görünecek.
+              Gerçek veriler bağlandığında günün özeti burada görünecek.
             </div>
           </Surface>
         </section>

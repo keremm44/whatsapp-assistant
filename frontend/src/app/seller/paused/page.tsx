@@ -1,4 +1,3 @@
-import { EmptyState } from "@/components/shared/empty-state";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
 import { Surface } from "@/components/shared/surface";
@@ -12,10 +11,14 @@ export default function SellerPausedPage() {
       />
       <div className="mt-6">
         <Surface>
-          <EmptyState
-            title="Yanıtı durdurulan konuşma yok"
-            description="Asistan şu anda tüm konuşmalara yanıt veriyor."
-          />
+          <div className="flex min-h-[240px] flex-col items-center justify-center gap-1 px-6 py-12 text-center">
+            <p className="text-sm font-medium text-foreground">
+              Yanıtı durdurulan konuşmalar burada listelenecek
+            </p>
+            <p className="max-w-md text-sm text-muted-foreground">
+              Asistanın yanıt vermediği konuşmalar burada görünecek.
+            </p>
+          </div>
         </Surface>
       </div>
     </PageContainer>

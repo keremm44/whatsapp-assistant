@@ -3,6 +3,7 @@ import {
   Box,
   HelpCircle,
   LayoutDashboard,
+  Menu,
   MessagesSquare,
   Package,
   PauseCircle,
@@ -17,6 +18,9 @@ import {
  * Controlled, explicit icon mapping. We deliberately do NOT dynamically
  * import from the lucide-react package based on arbitrary strings — that
  * pattern has caused bundle bloat in the past and is harder to audit.
+ *
+ * `Menu` is reserved for the tablet navigation trigger and is intentionally
+ * NOT used as a sidebar destination icon.
  */
 export const SELLER_ICON_MAP = {
   LayoutDashboard,
@@ -29,6 +33,7 @@ export const SELLER_ICON_MAP = {
   Box,
   ScrollText,
   Settings,
+  Menu,
 } as const satisfies Record<string, LucideIcon>;
 
 export type SellerIconName = keyof typeof SELLER_ICON_MAP;
@@ -40,7 +45,7 @@ export const SellerIcon = ({
 }: {
   name: SellerIconName;
   className?: string;
-  size?: 16 | 18 | 20 | 24;
+  size?: 16 | 18 | 20 | 22 | 24;
 }) => {
   const Icon = SELLER_ICON_MAP[name];
   return <Icon className={className} size={size} strokeWidth={1.75} aria-hidden="true" />;

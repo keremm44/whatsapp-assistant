@@ -4,15 +4,19 @@ import { cn } from "@/lib/utils/cn";
 
 /**
  * Two-region layout used by /seller/conversations: a fixed-width list
- * column on the left and a flexible detail column on the right. The
- * mobile pass collapses this to a single column.
+ * column on the left and a flexible detail column on the right.
  *
- * This is NOT a permanent three-column CRM layout.
+ * On desktop (>= lg) the two regions sit side by side. On tablet the
+ * same column structure is preserved but with a smaller gap. On mobile,
+ * the detail region is hidden by default because the detail lives in a
+ * separate route (e.g. /seller/conversations/[customerId]). Consumers
+ * that need the detail on mobile can opt in via `showDetailOnMobile`.
  */
 export function ListDetailLayout({
   list,
   detail,
   listWidthClassName = "lg:w-[360px] xl:w-[380px]",
+  showDetailOnMobile = false,
   className,
 }: {
   list: React.ReactNode;
@@ -20,6 +24,13 @@ export function ListDetailLayout({
   /** Tailwind class controlling the list column width on lg+ viewports. */
   listWidthClassName?: string;
   className?: string;
+  /**
+   * Whether to show the detail region on mobile. Defaults to false.
+   * The approved mobile behavior for the conversations macro is to
+   * show only the list region; the detail region is reached via a
+   * separate route introduced in a later step.
+   */
+  showDetailOnMobile?: boolean;
 }) {
   return (
     <div
@@ -36,7 +47,14 @@ export function ListDetailLayout({
       >
         {list}
       </div>
-      <div className="min-w-0 flex-1 lg:pl-2">{detail}</div>
+      <div
+        className={cn(
+          "min-w-0 flex-1 lg:pl-2",
+          showDetailOnMobile ? "block" : "hidden lg:block",
+        )}
+      >
+        {detail}
+      </div>
     </div>
   );
 }

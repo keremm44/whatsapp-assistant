@@ -12,6 +12,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { mobileBottomNav, type MobileNavItem } from "@/config/navigation";
+import {
+  activeMobileParent,
+  type MobileParent,
+} from "@/lib/routes/active-route";
 import { cn } from "@/lib/utils/cn";
 
 import { SellerIcon } from "./icon-map";
@@ -24,10 +28,13 @@ import { SellerIcon } from "./icon-map";
  * rather than navigating to a single URL.
  *
  * Active state is communicated with text weight + icon weight, not color
- * alone.
+ * alone. The active-parent logic lives in
+ * `lib/routes/active-route.ts` so it stays consistent with the desktop
+ * sidebar and the tablet Sheet.
  */
 export function SellerMobileNav() {
   const pathname = usePathname();
+  const active = activeMobileParent(pathname);
 
   return (
     <nav
@@ -40,10 +47,14 @@ export function SellerMobileNav() {
             {item.href ? (
               <MobileNavLink
                 item={item}
-                isActive={isMobileActive(pathname, item.href)}
+                isActive={active === item.label}
               />
             ) : (
-              <MobileSheetTrigger item={item} pathname={pathname} />
+              <MobileSheetTrigger
+                item={item}
+                active={active === item.label}
+                pathname={pathname}
+              />
             )}
           </li>
         ))}
@@ -83,16 +94,15 @@ const MobileNavLink = ({
 
 const MobileSheetTrigger = ({
   item,
+  active,
   pathname,
 }: {
   item: MobileNavItem;
+  active: boolean;
   pathname: string | null;
 }) => {
   const [open, setOpen] = React.useState(false);
   const sheetEntries = item.sheet ?? [];
-  const isActive = sheetEntries.some((entry) =>
-    isMobileActive(pathname, entry.href),
-  );
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -100,7 +110,7 @@ const MobileSheetTrigger = ({
         aria-label={`${item.label} menüsünü aç`}
         className={cn(
           "flex h-14 min-h-[44px] flex-col items-center justify-center gap-1 text-xs transition-colors",
-          isActive
+          active
             ? "font-semibold text-primary"
             : "text-muted-foreground hover:text-foreground",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
@@ -109,7 +119,7 @@ const MobileSheetTrigger = ({
         <SellerIcon
           name={item.icon}
           size={20}
-          className={isActive ? "text-primary" : "text-muted-foreground"}
+          className={active ? "text-primary" : "text-muted-foreground"}
         />
         <span>{item.label}</span>
       </SheetTrigger>
@@ -119,7 +129,7 @@ const MobileSheetTrigger = ({
         </SheetHeader>
         <ul className="mt-2 flex flex-col">
           {sheetEntries.map((entry) => {
-            const entryActive = isMobileActive(pathname, entry.href);
+            const entryActive = isEntryActive(pathname, entry.href);
             return (
               <li key={entry.href}>
                 <Link
@@ -151,13 +161,13 @@ const MobileSheetTrigger = ({
   );
 };
 
-const isMobileActive = (
+const isEntryActive = (
   pathname: string | null,
   href: string,
 ): boolean => {
   if (!pathname) return false;
-  if (href === "/seller") {
-    return pathname === "/seller";
-  }
+  if (href === "/seller") return pathname === "/seller";
   return pathname === href || pathname.startsWith(`${href}/`);
 };
+
+export type { MobileParent };

@@ -4,8 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { assistantSubRoutes, sellerNavigation } from "@/config/navigation";
+import { sellerNavigation } from "@/config/navigation";
 import { cn } from "@/lib/utils/cn";
+import { isSellerItemActive } from "@/lib/routes/active-route";
 
 import { SellerIcon } from "./icon-map";
 
@@ -18,7 +19,7 @@ import { SellerIcon } from "./icon-map";
  *
  * Routes that are not promoted to sidebar items (e.g. /seller/products
  * and /seller/rules under "Asistan Ayarları") still light up their
- * declared `childOf` parent so the navigation hierarchy stays coherent.
+ * declared parent so the navigation hierarchy stays coherent.
  */
 export function SellerSidebar() {
   const pathname = usePathname();
@@ -45,7 +46,7 @@ export function SellerSidebar() {
               </p>
               <ul className="flex flex-col gap-0.5">
                 {section.items.map((item) => {
-                  const isActive = isItemActive(pathname, item.href);
+                  const isActive = isSellerItemActive(pathname, item.href);
                   return (
                     <li key={item.href}>
                       <Link
@@ -80,23 +81,3 @@ export function SellerSidebar() {
     </aside>
   );
 }
-
-/**
- * An item is active if the current path matches it directly OR if any
- * declared sub-route (e.g. /seller/products → /seller/assistant-settings)
- * is the current path.
- */
-const isItemActive = (pathname: string | null, href: string): boolean => {
-  if (!pathname) return false;
-  if (pathnameMatches(pathname, href)) return true;
-  return assistantSubRoutes.some(
-    (sub) => sub.childOf === href && pathnameMatches(pathname, sub.href),
-  );
-};
-
-const pathnameMatches = (pathname: string, href: string): boolean => {
-  if (href === "/seller") {
-    return pathname === "/seller";
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
-};
