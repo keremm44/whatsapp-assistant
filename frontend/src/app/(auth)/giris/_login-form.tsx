@@ -25,11 +25,13 @@ import { cn } from "@/lib/utils/cn";
  *   3. On backend success, redirect by role:
  *        seller -> /seller
  *        admin  -> /admin
- *   4. On backend rejection, sign the Supabase session out so the
- *      local cookie state does not remain inconsistent, and surface a
- *      calm message.
- *   5. On Supabase rejection or network error, surface a calm message
- *      without signing anything out.
+ *   4. On a definitive backend access rejection (401/403/404 from
+ *      /auth/me), sign the Supabase session out and surface a calm
+ *      "Bu hesap henüz kullanıma hazır değil." message.
+ *   5. On a transient backend failure (network, 5xx, parse, unknown)
+ *      OR on a Supabase rejection, leave the Supabase session intact
+ *      and surface a calm retry message. The user can simply try
+ *      again without re-entering credentials.
  *
  * The form never navigates until the backend has authorized the
  * session. The Supabase session alone is not enough.
@@ -120,13 +122,20 @@ export function LoginForm() {
       } catch (backendError) {
         if (controller.signal.aborted) return;
         const classified = classifyBackendRejection(backendError);
-        // Backend refused the application access. Tear down the Supabase
-        // session so the browser cookie state does not stay inconsistent.
-        try {
-          await supabase.auth.signOut();
-        } catch {
-          // signOut errors are not user-visible; we already have a
-          // classified message ready to display.
+
+        // The Supabase session is only torn down when the backend
+        // definitively rejected the application access (401/403/404
+        // on /auth/me). Transient failures (network, 5xx, parse,
+        // unknown) leave the session intact so the seller does not
+        // have to re-authenticate just because the backend was
+        // temporarily unreachable.
+        if (classified.category === "access_rejected") {
+          try {
+            await supabase.auth.signOut();
+          } catch {
+            // signOut errors are not user-visible; we already have a
+            // classified message ready to display.
+          }
         }
         setErrorMessage(classified.message);
       }
