@@ -17,28 +17,40 @@ import { cn } from "@/lib/utils/cn";
 /**
  * Invite completion form.
  *
- * Two-stage orchestration:
+ * Two-stage orchestration, with a hard one-way boundary after Stage 1:
  *
  *   Stage 1: Password creation
  *     - Validate locally (length >= 8, match).
  *     - supabase.auth.updateUser({ password }).
- *     - On success, move to Stage 2.
+ *     - The result has two observable outcomes:
+ *         (a) updateUser errored -> password NOT saved -> stay on the
+ *             password form with an inline error.
+ *         (b) updateUser succeeded -> password IS saved -> the form
+ *             must NEVER call updateUser again. The component tracks
+ *             this with a one-way `passwordSaved` flag.
+ *     - The token resolution is decoupled from the password update
+ *       success: a missing token after a successful update is NOT
+ *       treated as a password update failure. It is handled in Stage 2
+ *       (transient retry if the session recovers, permanent failure
+ *       if the session is truly gone).
  *
  *   Stage 2: Backend activation
- *     - Read the current Supabase session access token (we never
- *       assume updateUser() returns a fresh token).
+ *     - Resolve the current Supabase session access token.
  *     - POST /auth/complete-invite with that token.
- *       Errors here are classified distinctly:
+ *       Errors are classified distinctly:
  *           401 -> permanent expired
  *           404 -> permanent mismatch
  *           409 -> permanent not_completable
  *           5xx / network -> transient
  *     - On complete-invite success, GET /auth/me to confirm the final
  *       application identity.
- *       Errors here are classified as:
- *           401 / 403 / 404 -> permanent application access failure
- *           5xx / network -> transient
- *           parsed contract violation -> permanent generic
+ *       Errors are classified as:
+ *           401 / 403 / 404 (Http) -> permanent application access
+ *           5xx / network           -> transient
+ *           parsed contract error   -> permanent application access
+ *             (the backend returned a 2xx response but the shape
+ *              violated the agreed contract; this is not a transient
+ *              failure and must not be retried)
  *     - On confirmation, verify the final shape
  *       (role === "seller" && status === "active" && sellerId !== null)
  *       before navigating to /seller.
@@ -48,23 +60,33 @@ import { cn } from "@/lib/utils/cn";
  * every error into a single permanent/transient flag.
  *
  * Edge case — Stage 1 succeeded, Stage 2 transiently failed:
- *   The component tracks an internal "activation_retry" state. While
- *   in that state, the password form is hidden and a "Tekrar dene"
- *   button retries only Stage 2 (complete-invite + /auth/me). The
- *   password is NEVER sent a second time, because it is already
- *   saved in Supabase.
+ *   The component transitions to an internal "activation_retry" state.
+ *   While in that state, the password form is hidden and a "Tekrar
+ *   dene" button retries only Stage 2 (complete-invite + /auth/me).
+ *   The password is NEVER sent a second time, because it is already
+ *   saved in Supabase. The "password saved" notice stays visible.
  *
  * Session policy:
- *   - On transient failures (network / 5xx / parse), the Supabase
- *     session is preserved so the seller can retry.
+ *   - On transient failures (network / 5xx), the Supabase session is
+ *     preserved so the seller can retry.
  *   - On permanent failures (401 / 404 / 409 / contract violation),
  *     the Supabase session is torn down so the seller does not
  *     re-enter the flow against a stale session.
+ *   - The "password saved" boundary is one-way: once Stage 1 succeeds,
+ *     the password form is permanently gone from this view and
+ *     `updateUser({ password })` is never called again.
  */
 
 const MIN_PASSWORD_LENGTH = 8;
 
 type SubmitStage = "password_form" | "activating" | "activation_retry";
+
+/**
+ * One-way boolean: true once `supabase.auth.updateUser({ password })`
+ * has returned successfully. The form is rendered only while this is
+ * false. The form MUST never call updateUser a second time.
+ */
+type PasswordSaved = boolean;
 
 const FRIENDLY_TRANSIENT =
   "Hesabınızın son adımı şu anda tamamlanamadı. Tekrar deneyebilirsiniz.";
@@ -79,11 +101,14 @@ const PERMANENT_INVITE_MESSAGES = {
 type PermanentInviteKind = keyof typeof PERMANENT_INVITE_MESSAGES;
 
 type CompleteInviteClassification =
-  | { category: "permanent"; kind: Exclude<PermanentInviteKind, "application_access"> }
+  | {
+      category: "permanent";
+      kind: Exclude<PermanentInviteKind, "application_access">;
+    }
   | { category: "transient" };
 
 type AuthMeClassification =
-  | { category: "permanent"; kind: "application_access" | "invalid_contract" }
+  | { category: "permanent"; kind: "application_access" }
   | { category: "transient" };
 
 /**
@@ -116,14 +141,15 @@ const classifyCompleteInviteError = (
 
 /**
  * Classify an /auth/me error after a successful complete-invite.
- *   401 / 403 / 404 -> permanent application access failure
- *   5xx -> transient
- *   network / parse / unknown -> transient
- *   (parsed contract violation is detected by the caller, not here.)
+ *   Http 401 / 403 / 404         -> permanent application access
+ *   Http 5xx                     -> transient
+ *   network / fetch failure      -> transient
+ *   parsed contract violation     -> permanent application access
+ *     (the backend returned a 2xx but the shape did not match the
+ *      agreed /auth/me contract — this is not transient and must not
+ *      be retried in a loop).
  */
-const classifyAuthMeError = (
-  error: unknown,
-): AuthMeClassification => {
+const classifyAuthMeError = (error: unknown): AuthMeClassification => {
   if (error instanceof ApiError) {
     if (
       error.status === 401 ||
@@ -136,7 +162,41 @@ const classifyAuthMeError = (
       return { category: "transient" };
     }
   }
+  if (isAuthMeContractError(error)) {
+    return { category: "permanent", kind: "application_access" };
+  }
   return { category: "transient" };
+};
+
+/**
+ * Detect the parser-level contract errors raised by `lib/auth/me.ts`.
+ * These are NOT network failures: the HTTP request completed and the
+ * backend returned a 2xx response, but the body did not match the
+ * agreed /auth/me contract. They must never drive a transient retry
+ * loop.
+ */
+const isAuthMeContractError = (error: unknown): boolean => {
+  if (typeof error !== "object" || error === null) return false;
+  const message = (error as { message?: unknown }).message;
+  if (typeof message !== "string") return false;
+  return message.startsWith("auth_me_invalid_");
+};
+
+/**
+ * Heuristic network / fetch error detection, mirroring the rule
+ * used elsewhere in the auth flow. Kept local so this module does
+ * not depend on lib/auth/errors.ts internals.
+ */
+const isFetchNetworkError = (error: unknown): boolean => {
+  if (typeof error !== "object" || error === null) return false;
+  if ((error as { name?: unknown }).name === "AbortError") return false;
+  if (error instanceof TypeError) {
+    return /fetch|network|connection/i.test(error.message);
+  }
+  if (error instanceof ApiError) {
+    return error.status === 0;
+  }
+  return false;
 };
 
 export function InviteCompletionForm({
@@ -146,6 +206,16 @@ export function InviteCompletionForm({
 }) {
   const router = useRouter();
   const [stage, setStage] = React.useState<SubmitStage>("password_form");
+  /**
+   * One-way switch. Flips to true the moment updateUser returns
+   * without error. While true:
+   *   - the password form is not rendered,
+   *   - the retry path will not call updateUser again,
+   *   - the activation_retry state shows the "password saved" notice.
+   * The flag is NEVER reset to false during the component's lifetime.
+   */
+  const [passwordSaved, setPasswordSaved] =
+    React.useState<PasswordSaved>(false);
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
@@ -191,11 +261,6 @@ export function InviteCompletionForm({
     return ok;
   };
 
-  /**
-   * Resolve the current Supabase session access token. Returns null
-   * if the session is missing or invalid (which is itself a permanent
-   * invite state, not a transient retry).
-   */
   const resolveAccessToken = async (): Promise<string | null> => {
     const supabase = createSupabaseBrowserClient();
     const { data, error } = await supabase.auth.getSession();
@@ -203,12 +268,6 @@ export function InviteCompletionForm({
     return data.session.access_token ?? null;
   };
 
-  /**
-   * Tear down the Supabase session on permanent failure so the
-   * user cannot re-enter the flow against a stale session.
-   * signOut errors are intentionally swallowed: the user-facing
-   * message has already been resolved by the caller.
-   */
   const signOutQuietly = async () => {
     const supabase = createSupabaseBrowserClient();
     try {
@@ -220,35 +279,37 @@ export function InviteCompletionForm({
 
   /**
    * Run Stage 1: supabase.auth.updateUser({ password }).
-   * On success, returns the resolved access token. Returns null on
-   * any failure or abort (the user stays on the form).
+   * Returns:
+   *   { saved: true }  -> updateUser succeeded. Password is in
+   *                       Supabase. Do NOT call updateUser again.
+   *   { saved: false } -> updateUser errored OR was aborted. Password
+   *                       is NOT in Supabase. The caller keeps the
+   *                       user on the password form.
    */
   const runPasswordUpdate = async (
     controller: AbortController,
-  ): Promise<string | null> => {
+  ): Promise<{ saved: boolean }> => {
     const supabase = createSupabaseBrowserClient();
     const { error } = await supabase.auth.updateUser({ password });
-    if (controller.signal.aborted) return null;
+    if (controller.signal.aborted) return { saved: false };
 
     if (error) {
       setPasswordError(
         "Şifre güncellenemedi. Lütfen tekrar deneyin veya farklı bir şifre deneyin.",
       );
-      return null;
+      return { saved: false };
     }
 
-    return resolveAccessToken();
+    return { saved: true };
   };
 
   /**
    * Run Stage 2 step A: complete-invite.
-   * Returns one of:
    *   { ok: true }
-   *   { ok: false; transient: true }   -> 5xx / network / unknown
-   *   { ok: false; transient: false; permanent: <kind> }
-   *     -> 401 expired, 404 mismatch, 409 not_completable
-   * 401/404/409 also tear down the Supabase session (permanent
-   * invite rejection). Transients preserve the session.
+   *   { ok: false; transient: true }                            -> 5xx / network
+   *   { ok: false; transient: false; permanent: <kind> }        -> 401/404/409
+   * 401/404/409 also tear down the Supabase session. Transients
+   * preserve the session.
    */
   const runCompleteInvite = async (
     controller: AbortController,
@@ -263,6 +324,9 @@ export function InviteCompletionForm({
       return { ok: true };
     } catch (error) {
       if (controller.signal.aborted) return { ok: false, transient: true };
+      if (isFetchNetworkError(error)) {
+        return { ok: false, transient: true };
+      }
       const classified = classifyCompleteInviteError(error);
       if (classified.category === "permanent") {
         await signOutQuietly();
@@ -278,10 +342,17 @@ export function InviteCompletionForm({
 
   /**
    * Run Stage 2 step B: /auth/me final identity check.
-   * Returns one of:
    *   { ok: true }
    *   { ok: false; transient: true }
    *   { ok: false; transient: false; permanent: <kind> }
+   * The permanent branch covers:
+   *   - Http 401 / 403 / 404
+   *   - parsed contract violation (auth_me_invalid_*) from
+   *     lib/auth/me.ts. The backend returned a 2xx but the body did
+   *     not match the agreed /auth/me contract. This is not a
+   *     transient failure and must not be retried in a loop.
+   *   - final identity check failure
+   *     (role !== "seller" || status !== "active" || sellerId === null)
    */
   const runFinalIdentityCheck = async (
     controller: AbortController,
@@ -296,6 +367,9 @@ export function InviteCompletionForm({
       me = await fetchAuthMe(accessToken, { signal: controller.signal });
     } catch (error) {
       if (controller.signal.aborted) return { ok: false, transient: true };
+      if (isFetchNetworkError(error)) {
+        return { ok: false, transient: true };
+      }
       const classified = classifyAuthMeError(error);
       if (classified.category === "permanent") {
         await signOutQuietly();
@@ -326,7 +400,12 @@ export function InviteCompletionForm({
 
   const goToPermanentInviteFailure = (kind: PermanentInviteKind) => {
     setPermanentMessage(PERMANENT_INVITE_MESSAGES[kind]);
-    setStage("password_form");
+    // If the password is already saved we keep the activation_retry
+    // shell (no password form) but with the permanent message rendered.
+    // If the password is NOT yet saved, we can fall back to the
+    // password form. This branch only triggers before passwordSaved
+    // in practice (the submit path); it remains correct in both.
+    setStage("activation_retry");
   };
 
   const goToTransientRetry = () => {
@@ -334,9 +413,63 @@ export function InviteCompletionForm({
     setStage("activation_retry");
   };
 
+  /**
+   * Begin Stage 2 given a saved password. Tries to resolve the access
+   * token and run the activation chain. If the token is missing but
+   * the session is recoverable, the caller stays in activation_retry
+   * (a "Tekrar dene" will re-resolve the token on the next click). If
+   * the session is truly gone, we treat it as a permanent expired
+   * failure.
+   */
+  const runStage2 = async (
+    controller: AbortController,
+  ): Promise<void> => {
+    const token = await resolveAccessToken();
+    if (controller.signal.aborted) return;
+
+    if (!token) {
+      // No session at all -> the invite has expired. Permanent.
+      await signOutQuietly();
+      goToPermanentInviteFailure("expired");
+      return;
+    }
+
+    const invite = await runCompleteInvite(controller, token);
+    if (controller.signal.aborted) return;
+
+    if (!invite.ok) {
+      if (invite.transient) {
+        goToTransientRetry();
+      } else {
+        goToPermanentInviteFailure(invite.permanent);
+      }
+      return;
+    }
+
+    const identity = await runFinalIdentityCheck(controller, token);
+    if (controller.signal.aborted) return;
+
+    if (!identity.ok) {
+      if (identity.transient) {
+        goToTransientRetry();
+      } else {
+        goToPermanentInviteFailure(identity.permanent);
+      }
+      return;
+    }
+
+    router.replace("/seller");
+  };
+
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSubmitting) return;
+    if (passwordSaved) {
+      // Defense in depth: if the password is already saved, the
+      // password form should not even be rendered, but a stray
+      // submit (e.g. enter key) is treated as a no-op.
+      return;
+    }
     setActivationError(null);
 
     if (!validatePasswords()) return;
@@ -345,9 +478,12 @@ export function InviteCompletionForm({
     inflightRef.current = controller;
     setIsSubmitting(true);
 
-    const token = await runPasswordUpdate(controller);
+    const result = await runPasswordUpdate(controller);
     if (controller.signal.aborted) return;
-    if (!token) {
+
+    if (!result.saved) {
+      // Password update failed; the user stays on the form. The
+      // password form MUST remain rendered.
       setIsSubmitting(false);
       if (inflightRef.current === controller) {
         inflightRef.current = null;
@@ -355,45 +491,29 @@ export function InviteCompletionForm({
       return;
     }
 
+    // Password is now saved in Supabase. Lock the password form away
+    // and never call updateUser again from any path.
+    setPasswordSaved(true);
     setStage("activating");
 
-    const invite = await runCompleteInvite(controller, token);
-    if (controller.signal.aborted) return;
+    await runStage2(controller);
 
-    if (!invite.ok) {
-      if (invite.transient) {
-        goToTransientRetry();
-      } else {
-        goToPermanentInviteFailure(invite.permanent);
-      }
+    if (!controller.signal.aborted) {
       setIsSubmitting(false);
       if (inflightRef.current === controller) {
         inflightRef.current = null;
       }
-      return;
     }
-
-    const identity = await runFinalIdentityCheck(controller, token);
-    if (controller.signal.aborted) return;
-
-    if (!identity.ok) {
-      if (identity.transient) {
-        goToTransientRetry();
-      } else {
-        goToPermanentInviteFailure(identity.permanent);
-      }
-      setIsSubmitting(false);
-      if (inflightRef.current === controller) {
-        inflightRef.current = null;
-      }
-      return;
-    }
-
-    router.replace("/seller");
   };
 
   const retry = async () => {
     if (isSubmitting) return;
+    if (!passwordSaved) {
+      // A retry only makes sense after the password is saved. The UI
+      // never shows the retry button in the password_form state, but
+      // we guard here as well.
+      return;
+    }
     setActivationError(null);
     setPermanentMessage(null);
 
@@ -402,54 +522,19 @@ export function InviteCompletionForm({
     setIsSubmitting(true);
     setStage("activating");
 
-    const token = await resolveAccessToken();
-    if (controller.signal.aborted) return;
-    if (!token) {
-      // No session -> the invite has expired. Permanent, not transient.
-      await signOutQuietly();
-      goToPermanentInviteFailure("expired");
+    await runStage2(controller);
+
+    if (!controller.signal.aborted) {
       setIsSubmitting(false);
       if (inflightRef.current === controller) {
         inflightRef.current = null;
       }
-      return;
     }
-
-    const invite = await runCompleteInvite(controller, token);
-    if (controller.signal.aborted) return;
-
-    if (!invite.ok) {
-      if (invite.transient) {
-        goToTransientRetry();
-      } else {
-        goToPermanentInviteFailure(invite.permanent);
-      }
-      setIsSubmitting(false);
-      if (inflightRef.current === controller) {
-        inflightRef.current = null;
-      }
-      return;
-    }
-
-    const identity = await runFinalIdentityCheck(controller, token);
-    if (controller.signal.aborted) return;
-
-    if (!identity.ok) {
-      if (identity.transient) {
-        goToTransientRetry();
-      } else {
-        goToPermanentInviteFailure(identity.permanent);
-      }
-      setIsSubmitting(false);
-      if (inflightRef.current === controller) {
-        inflightRef.current = null;
-      }
-      return;
-    }
-
-    router.replace("/seller");
   };
 
+  // Permanent failure has the highest visual priority: it does NOT
+  // render the password form (it cannot be reset), it does NOT show
+  // a retry button, and the user is told to request a new invite.
   if (permanentMessage) {
     return (
       <div
@@ -465,40 +550,68 @@ export function InviteCompletionForm({
     );
   }
 
-  if (stage === "activation_retry") {
-    return (
-      <div className="space-y-4">
-        <div
-          role="alert"
-          aria-live="polite"
-          className="rounded-md border border-warning/30 bg-warning-muted px-3 py-3 text-sm text-foreground"
-        >
-          <p className="font-medium text-foreground">Şifreniz kaydedildi.</p>
-          <p className="mt-1 text-muted-foreground">
-            {activationError ?? FRIENDLY_TRANSIENT}
-          </p>
+  // Password is saved -> the password form is gone. The user sees
+  // either a transient retry affordance or the activating state.
+  if (passwordSaved) {
+    if (stage === "activation_retry") {
+      return (
+        <div className="space-y-4">
+          <div
+            role="alert"
+            aria-live="polite"
+            className="rounded-md border border-warning/30 bg-warning-muted px-3 py-3 text-sm text-foreground"
+          >
+            <p className="font-medium text-foreground">Şifreniz kaydedildi.</p>
+            <p className="mt-1 text-muted-foreground">
+              {activationError ?? FRIENDLY_TRANSIENT}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="w-full"
+            onClick={retry}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <span className="inline-flex items-center gap-2">
+                <Spinner size={16} label="Tekrar deneniyor" />
+                <span>Hesap hazırlanıyor…</span>
+              </span>
+            ) : (
+              "Tekrar dene"
+            )}
+          </Button>
         </div>
-        <Button
-          type="button"
-          variant="primary"
-          size="lg"
-          className="w-full"
-          onClick={retry}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <span className="inline-flex items-center gap-2">
-              <Spinner size={16} label="Tekrar deneniyor" />
-              <span>Hesap hazırlanıyor…</span>
-            </span>
-          ) : (
-            "Tekrar dene"
-          )}
+      );
+    }
+
+    // passwordSaved && stage === "activating"
+    return (
+      <div
+        className="space-y-4"
+        role="status"
+        aria-busy={isSubmitting}
+        aria-live="polite"
+      >
+        <p className="text-sm font-medium text-foreground">
+          Şifreniz kaydedildi.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Hesabınızın son adımı tamamlanıyor.
+        </p>
+        <Button type="button" variant="primary" size="lg" className="w-full" disabled>
+          <span className="inline-flex items-center gap-2">
+            <Spinner size={16} label="Hesap hazırlanıyor" />
+            <span>Hesap hazırlanıyor…</span>
+          </span>
         </Button>
       </div>
     );
   }
 
+  // passwordSaved === false -> the password form is rendered.
   return (
     <form onSubmit={submit} noValidate aria-busy={isSubmitting} className="space-y-5">
       <div className="space-y-1.5">
