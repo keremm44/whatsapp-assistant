@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -65,7 +66,7 @@ export function SellerSidebar() {
                   return (
                     <li key={item.href}>
                       <Link
-                        href={item.href}
+                        href={item.href as Route}
                         aria-current={isActive ? "page" : undefined}
                         className={cn(
                           "relative flex h-11 items-center gap-3 rounded-md pl-4 pr-3 text-sm transition-colors",

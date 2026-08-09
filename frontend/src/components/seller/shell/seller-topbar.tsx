@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -117,7 +118,7 @@ function SidebarNavList({
                 return (
                   <li key={item.href}>
                     <Link
-                      href={item.href}
+                      href={item.href as Route}
                       onClick={onNavigate}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(

@@ -7,9 +7,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [],
   },
-  experimental: {
-    typedRoutes: false,
-  },
+  typedRoutes: true,
 };
 
 export default nextConfig;

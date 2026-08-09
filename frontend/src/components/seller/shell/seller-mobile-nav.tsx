@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -71,7 +72,7 @@ const MobileNavLink = ({
   isActive: boolean;
 }) => (
   <Link
-    href={item.href ?? "#"}
+    href={(item.href ?? "#") as Route}
     aria-current={isActive ? "page" : undefined}
     className={cn(
       "flex h-14 min-h-[44px] flex-col items-center justify-center gap-1 text-xs transition-colors",
@@ -134,7 +135,7 @@ const MobileSheetTrigger = ({
             return (
               <li key={entry.href}>
                 <Link
-                  href={entry.href}
+                  href={entry.href as Route}
                   onClick={() => setOpen(false)}
                   aria-current={entryActive ? "page" : undefined}
                   className={cn(

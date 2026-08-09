@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import Link from "next/link";
 
 import { PageContainer } from "@/components/shared/page-container";
@@ -27,7 +28,7 @@ export default function SellerAssistantSettingsPage() {
         {assistantSubRoutes.map((entry) => (
           <li key={entry.href}>
             <Link
-              href={entry.href}
+              href={entry.href as Route}
               className={cn(
                 "block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               )}
