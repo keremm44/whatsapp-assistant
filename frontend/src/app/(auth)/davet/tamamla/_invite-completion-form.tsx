@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/client";
-import { fetchAuthMe } from "@/lib/auth/me";
 import { completeInvite } from "@/lib/auth/invite";
+import { fetchAuthMe } from "@/lib/auth/me";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
 
@@ -25,22 +25,41 @@ import { cn } from "@/lib/utils/cn";
  *     - On success, move to Stage 2.
  *
  *   Stage 2: Backend activation
- *     - Get the live Supabase session access token (we never assume
- *       updateUser() returns a fresh token; we read getSession()).
+ *     - Read the current Supabase session access token (we never
+ *       assume updateUser() returns a fresh token).
  *     - POST /auth/complete-invite with that token.
- *     - On success, GET /auth/me to confirm role=seller and status=active.
- *     - On confirmation, router.replace("/seller").
+ *       Errors here are classified distinctly:
+ *           401 -> permanent expired
+ *           404 -> permanent mismatch
+ *           409 -> permanent not_completable
+ *           5xx / network -> transient
+ *     - On complete-invite success, GET /auth/me to confirm the final
+ *       application identity.
+ *       Errors here are classified as:
+ *           401 / 403 / 404 -> permanent application access failure
+ *           5xx / network -> transient
+ *           parsed contract violation -> permanent generic
+ *     - On confirmation, verify the final shape
+ *       (role === "seller" && status === "active" && sellerId !== null)
+ *       before navigating to /seller.
+ *
+ * The two backend operations live in their own try/catch blocks so
+ * each one reports its own status to the UI, instead of collapsing
+ * every error into a single permanent/transient flag.
  *
  * Edge case — Stage 1 succeeded, Stage 2 transiently failed:
- *   The component tracks an internal "activation_retry" state. While in
- *   that state, the password form is hidden and a "Tekrar dene" button
- *   retries only Stage 2 (completeInvite + /auth/me). The password is
- *   NEVER sent a second time, because it is already saved in Supabase.
+ *   The component tracks an internal "activation_retry" state. While
+ *   in that state, the password form is hidden and a "Tekrar dene"
+ *   button retries only Stage 2 (complete-invite + /auth/me). The
+ *   password is NEVER sent a second time, because it is already
+ *   saved in Supabase.
  *
- * Edge case — Stage 2 returned 401/403/404/409 (permanent):
- *   The component shows a permanent-invite failure state and (for 401)
- *   signs the Supabase session out. The user is told to contact their
- *   admin for a new invite. The form does not re-show the password.
+ * Session policy:
+ *   - On transient failures (network / 5xx / parse), the Supabase
+ *     session is preserved so the seller can retry.
+ *   - On permanent failures (401 / 404 / 409 / contract violation),
+ *     the Supabase session is torn down so the seller does not
+ *     re-enter the flow against a stale session.
  */
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -52,18 +71,32 @@ const FRIENDLY_TRANSIENT =
 
 const PERMANENT_INVITE_MESSAGES = {
   expired: "Bu davet bağlantısı artık geçerli görünmüyor.",
-  mismatch:
-    "Bu davet hesabınızla eşleştirilemedi.",
-  not_completable:
-    "Bu davet artık tamamlanabilir durumda görünmüyor.",
+  mismatch: "Bu davet hesabınızla eşleştirilemedi.",
+  not_completable: "Bu davet artık tamamlanabilir durumda görünmüyor.",
+  application_access: "Bu hesap henüz kullanıma hazır değil.",
 } as const;
 
 type PermanentInviteKind = keyof typeof PERMANENT_INVITE_MESSAGES;
 
-const classifyCompleteInviteError = (error: unknown): {
-  category: "permanent" | "transient";
-  kind: PermanentInviteKind | null;
-} => {
+type CompleteInviteClassification =
+  | { category: "permanent"; kind: Exclude<PermanentInviteKind, "application_access"> }
+  | { category: "transient" };
+
+type AuthMeClassification =
+  | { category: "permanent"; kind: "application_access" | "invalid_contract" }
+  | { category: "transient" };
+
+/**
+ * Classify a complete-invite error.
+ *   401 -> permanent expired
+ *   404 -> permanent mismatch
+ *   409 -> permanent not_completable
+ *   5xx -> transient
+ *   network / parse / unknown -> transient
+ */
+const classifyCompleteInviteError = (
+  error: unknown,
+): CompleteInviteClassification => {
   if (error instanceof ApiError) {
     if (error.status === 401) {
       return { category: "permanent", kind: "expired" };
@@ -75,11 +108,35 @@ const classifyCompleteInviteError = (error: unknown): {
       return { category: "permanent", kind: "not_completable" };
     }
     if (error.status >= 500) {
-      return { category: "transient", kind: null };
+      return { category: "transient" };
     }
   }
-  // Network / parse / unknown. Treat as transient.
-  return { category: "transient", kind: null };
+  return { category: "transient" };
+};
+
+/**
+ * Classify an /auth/me error after a successful complete-invite.
+ *   401 / 403 / 404 -> permanent application access failure
+ *   5xx -> transient
+ *   network / parse / unknown -> transient
+ *   (parsed contract violation is detected by the caller, not here.)
+ */
+const classifyAuthMeError = (
+  error: unknown,
+): AuthMeClassification => {
+  if (error instanceof ApiError) {
+    if (
+      error.status === 401 ||
+      error.status === 403 ||
+      error.status === 404
+    ) {
+      return { category: "permanent", kind: "application_access" };
+    }
+    if (error.status >= 500) {
+      return { category: "transient" };
+    }
+  }
+  return { category: "transient" };
 };
 
 export function InviteCompletionForm({
@@ -135,93 +192,146 @@ export function InviteCompletionForm({
   };
 
   /**
+   * Resolve the current Supabase session access token. Returns null
+   * if the session is missing or invalid (which is itself a permanent
+   * invite state, not a transient retry).
+   */
+  const resolveAccessToken = async (): Promise<string | null> => {
+    const supabase = createSupabaseBrowserClient();
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session) return null;
+    return data.session.access_token ?? null;
+  };
+
+  /**
+   * Tear down the Supabase session on permanent failure so the
+   * user cannot re-enter the flow against a stale session.
+   * signOut errors are intentionally swallowed: the user-facing
+   * message has already been resolved by the caller.
+   */
+  const signOutQuietly = async () => {
+    const supabase = createSupabaseBrowserClient();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // signOut errors are not user-visible.
+    }
+  };
+
+  /**
    * Run Stage 1: supabase.auth.updateUser({ password }).
-   * On success, returns the freshly-resolved access token. Returns
-   * null on any failure or abort.
+   * On success, returns the resolved access token. Returns null on
+   * any failure or abort (the user stays on the form).
    */
   const runPasswordUpdate = async (
     controller: AbortController,
   ): Promise<string | null> => {
     const supabase = createSupabaseBrowserClient();
-    const { data, error } = await supabase.auth.updateUser({ password });
-
+    const { error } = await supabase.auth.updateUser({ password });
     if (controller.signal.aborted) return null;
 
-    if (error || !data.user) {
-      // Password update failure (Supabase server-side validation,
-      // network, etc). Keep the user on the form. No signOut.
+    if (error) {
       setPasswordError(
         "Şifre güncellenemedi. Lütfen tekrar deneyin veya farklı bir şifre deneyin.",
       );
       return null;
     }
 
-    // updateUser may not return a new access token. Resolve the
-    // current session explicitly so we have a known-good token for
-    // the backend call.
-    const { data: sessionData, error: sessionError } =
-      await supabase.auth.getSession();
-
-    if (controller.signal.aborted) return null;
-    if (sessionError || !sessionData.session) {
-      setPasswordError(
-        "Oturum doğrulanamadı. Lütfen sayfayı yenileyip tekrar deneyin.",
-      );
-      return null;
-    }
-
-    const token = sessionData.session.access_token;
-    if (!token) {
-      setPasswordError(
-        "Oturum doğrulanamadı. Lütfen sayfayı yenileyip tekrar deneyin.",
-      );
-      return null;
-    }
-    return token;
+    return resolveAccessToken();
   };
 
   /**
-   * Run Stage 2: completeInvite + fetchAuthMe.
-   * Returns true on success (role=seller verified). On transient
-   * failure, returns false and stays in activation_retry. On
-   * permanent failure, returns false and the caller will switch
-   * to the permanent-invite view.
+   * Run Stage 2 step A: complete-invite.
+   * Returns one of:
+   *   { ok: true }
+   *   { ok: false; transient: true }   -> 5xx / network / unknown
+   *   { ok: false; transient: false; permanent: <kind> }
+   *     -> 401 expired, 404 mismatch, 409 not_completable
+   * 401/404/409 also tear down the Supabase session (permanent
+   * invite rejection). Transients preserve the session.
    */
-  const runActivation = async (
+  const runCompleteInvite = async (
     controller: AbortController,
     accessToken: string,
-  ): Promise<{ ok: true } | { ok: false; permanent: boolean }> => {
+  ): Promise<
+    | { ok: true }
+    | { ok: false; transient: true }
+    | { ok: false; transient: false; permanent: PermanentInviteKind }
+  > => {
     try {
       await completeInvite(accessToken, { signal: controller.signal });
-      if (controller.signal.aborted) return { ok: false, permanent: false };
-
-      const me = await fetchAuthMe(accessToken, {
-        signal: controller.signal,
-      });
-      if (controller.signal.aborted) return { ok: false, permanent: false };
-
-      if (me.role !== "seller" || me.status !== "active") {
-        // Backend accepted completion but final identity is not a
-        // seller-active account. Treat as permanent business-state
-        // failure; do not loop.
-        return { ok: false, permanent: true };
-      }
       return { ok: true };
     } catch (error) {
-      if (controller.signal.aborted) return { ok: false, permanent: false };
-
-      // Distinguish `/auth/me` transient failure after a successful
-      // completion from a completion error. We can't perfectly
-      // separate them here because both end up in this catch, but
-      // the policy is: a transient anywhere in the chain is a
-      // transient; a permanent 401/404/409 in completeInvite is
-      // permanent. /auth/me never returns 4xx for a "permanent"
-      // case the user can fix — at worst it returns 5xx.
-      if (error instanceof ApiError && (error.status === 401 || error.status === 404 || error.status === 409)) {
-        return { ok: false, permanent: true };
+      if (controller.signal.aborted) return { ok: false, transient: true };
+      const classified = classifyCompleteInviteError(error);
+      if (classified.category === "permanent") {
+        await signOutQuietly();
+        return {
+          ok: false,
+          transient: false,
+          permanent: classified.kind,
+        };
       }
-      return { ok: false, permanent: false };
+      return { ok: false, transient: true };
     }
+  };
+
+  /**
+   * Run Stage 2 step B: /auth/me final identity check.
+   * Returns one of:
+   *   { ok: true }
+   *   { ok: false; transient: true }
+   *   { ok: false; transient: false; permanent: <kind> }
+   */
+  const runFinalIdentityCheck = async (
+    controller: AbortController,
+    accessToken: string,
+  ): Promise<
+    | { ok: true }
+    | { ok: false; transient: true }
+    | { ok: false; transient: false; permanent: PermanentInviteKind }
+  > => {
+    let me;
+    try {
+      me = await fetchAuthMe(accessToken, { signal: controller.signal });
+    } catch (error) {
+      if (controller.signal.aborted) return { ok: false, transient: true };
+      const classified = classifyAuthMeError(error);
+      if (classified.category === "permanent") {
+        await signOutQuietly();
+        return {
+          ok: false,
+          transient: false,
+          permanent: "application_access",
+        };
+      }
+      return { ok: false, transient: true };
+    }
+    if (controller.signal.aborted) return { ok: false, transient: true };
+
+    if (
+      me.role !== "seller" ||
+      me.status !== "active" ||
+      me.sellerId === null
+    ) {
+      await signOutQuietly();
+      return {
+        ok: false,
+        transient: false,
+        permanent: "application_access",
+      };
+    }
+    return { ok: true };
+  };
+
+  const goToPermanentInviteFailure = (kind: PermanentInviteKind) => {
+    setPermanentMessage(PERMANENT_INVITE_MESSAGES[kind]);
+    setStage("password_form");
+  };
+
+  const goToTransientRetry = () => {
+    setActivationError(FRIENDLY_TRANSIENT);
+    setStage("activation_retry");
   };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -235,12 +345,9 @@ export function InviteCompletionForm({
     inflightRef.current = controller;
     setIsSubmitting(true);
 
-    const supabase = createSupabaseBrowserClient();
-
     const token = await runPasswordUpdate(controller);
     if (controller.signal.aborted) return;
     if (!token) {
-      // Password update failed; the user stays on the form.
       setIsSubmitting(false);
       if (inflightRef.current === controller) {
         inflightRef.current = null;
@@ -250,37 +357,39 @@ export function InviteCompletionForm({
 
     setStage("activating");
 
-    const result = await runActivation(controller, token);
+    const invite = await runCompleteInvite(controller, token);
     if (controller.signal.aborted) return;
 
-    if (result.ok) {
-      router.replace("/seller");
+    if (!invite.ok) {
+      if (invite.transient) {
+        goToTransientRetry();
+      } else {
+        goToPermanentInviteFailure(invite.permanent);
+      }
+      setIsSubmitting(false);
+      if (inflightRef.current === controller) {
+        inflightRef.current = null;
+      }
       return;
     }
 
-    if (result.permanent) {
-      // 401 here is "the invite session is no longer valid". Clean
-      // up the Supabase session so the user cannot re-enter the
-      // flow against a stale session. We do this only on permanent
-      // authorization rejection, not on transient failures.
-      try {
-        await supabase.auth.signOut();
-      } catch {
-        // signOut errors are not user-visible.
+    const identity = await runFinalIdentityCheck(controller, token);
+    if (controller.signal.aborted) return;
+
+    if (!identity.ok) {
+      if (identity.transient) {
+        goToTransientRetry();
+      } else {
+        goToPermanentInviteFailure(identity.permanent);
       }
-      setPermanentMessage(
-        PERMANENT_INVITE_MESSAGES.not_completable,
-      );
-      setStage("password_form");
-    } else {
-      setActivationError(FRIENDLY_TRANSIENT);
-      setStage("activation_retry");
+      setIsSubmitting(false);
+      if (inflightRef.current === controller) {
+        inflightRef.current = null;
+      }
+      return;
     }
 
-    setIsSubmitting(false);
-    if (inflightRef.current === controller) {
-      inflightRef.current = null;
-    }
+    router.replace("/seller");
   };
 
   const retry = async () => {
@@ -293,33 +402,12 @@ export function InviteCompletionForm({
     setIsSubmitting(true);
     setStage("activating");
 
-    const supabase = createSupabaseBrowserClient();
-    const { data: sessionData, error: sessionError } =
-      await supabase.auth.getSession();
+    const token = await resolveAccessToken();
     if (controller.signal.aborted) return;
-    if (sessionError || !sessionData.session) {
-      setPermanentMessage(PERMANENT_INVITE_MESSAGES.expired);
-      try {
-        await supabase.auth.signOut();
-      } catch {
-        // signOut errors are not user-visible.
-      }
-      setStage("password_form");
-      setIsSubmitting(false);
-      if (inflightRef.current === controller) {
-        inflightRef.current = null;
-      }
-      return;
-    }
-    const token = sessionData.session.access_token;
     if (!token) {
-      setPermanentMessage(PERMANENT_INVITE_MESSAGES.expired);
-      try {
-        await supabase.auth.signOut();
-      } catch {
-        // signOut errors are not user-visible.
-      }
-      setStage("password_form");
+      // No session -> the invite has expired. Permanent, not transient.
+      await signOutQuietly();
+      goToPermanentInviteFailure("expired");
       setIsSubmitting(false);
       if (inflightRef.current === controller) {
         inflightRef.current = null;
@@ -327,32 +415,39 @@ export function InviteCompletionForm({
       return;
     }
 
-    const result = await runActivation(controller, token);
+    const invite = await runCompleteInvite(controller, token);
     if (controller.signal.aborted) return;
 
-    if (result.ok) {
-      router.replace("/seller");
+    if (!invite.ok) {
+      if (invite.transient) {
+        goToTransientRetry();
+      } else {
+        goToPermanentInviteFailure(invite.permanent);
+      }
+      setIsSubmitting(false);
+      if (inflightRef.current === controller) {
+        inflightRef.current = null;
+      }
       return;
     }
-    if (result.permanent) {
-      try {
-        await supabase.auth.signOut();
-      } catch {
-        // signOut errors are not user-visible.
+
+    const identity = await runFinalIdentityCheck(controller, token);
+    if (controller.signal.aborted) return;
+
+    if (!identity.ok) {
+      if (identity.transient) {
+        goToTransientRetry();
+      } else {
+        goToPermanentInviteFailure(identity.permanent);
       }
-      setPermanentMessage(
-        PERMANENT_INVITE_MESSAGES.not_completable,
-      );
-      setStage("password_form");
-    } else {
-      setActivationError(FRIENDLY_TRANSIENT);
-      setStage("activation_retry");
+      setIsSubmitting(false);
+      if (inflightRef.current === controller) {
+        inflightRef.current = null;
+      }
+      return;
     }
 
-    setIsSubmitting(false);
-    if (inflightRef.current === controller) {
-      inflightRef.current = null;
-    }
+    router.replace("/seller");
   };
 
   if (permanentMessage) {
@@ -545,6 +640,3 @@ export function InviteCompletionForm({
     </form>
   );
 }
-
-// Exported for unit-style sanity only; not part of the public API.
-export const _internal = { classifyCompleteInviteError, MIN_PASSWORD_LENGTH };

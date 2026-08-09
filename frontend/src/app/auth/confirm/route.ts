@@ -22,17 +22,24 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * The route handler runs only on the server. The Supabase server client
  * is the only session/token source — no browser Supabase client is
  * used here.
+ *
+ * Redirects are built as same-origin URLs derived from the incoming
+ * request, NOT from any environment variable. This keeps the callback
+ * safe even if `NEXT_PUBLIC_SITE_URL` is missing, and avoids any
+ * dependency on env at this boundary.
  */
 
 const INVITE_COMPLETE_PATH = "/davet/tamamla";
 
-const buildRedirect = (path: string): NextResponse => {
-  // The completion page lives at /(auth)/davet/tamamla, which is a
-  // real route; redirecting from /auth/confirm (outside the (auth)
-  // group) is safe.
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "";
-  const target = `${origin}${path}`;
-  return NextResponse.redirect(target);
+const buildRedirect = (
+  request: NextRequest,
+  path: string,
+): NextResponse => {
+  // `new URL(path, request.url)` resolves the path against the
+  // incoming request's origin. This always yields a same-origin URL
+  // and never reads from process.env, so the callback is safe in
+  // every environment configuration.
+  return NextResponse.redirect(new URL(path, request.url));
 };
 
 export const GET = async (request: NextRequest) => {
@@ -40,7 +47,7 @@ export const GET = async (request: NextRequest) => {
   const type = request.nextUrl.searchParams.get("type");
 
   if (!tokenHash || type !== "invite") {
-    return buildRedirect(`${INVITE_COMPLETE_PATH}?status=invalid`);
+    return buildRedirect(request, `${INVITE_COMPLETE_PATH}?status=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -50,8 +57,8 @@ export const GET = async (request: NextRequest) => {
   });
 
   if (error) {
-    return buildRedirect(`${INVITE_COMPLETE_PATH}?status=invalid`);
+    return buildRedirect(request, `${INVITE_COMPLETE_PATH}?status=invalid`);
   }
 
-  return buildRedirect(INVITE_COMPLETE_PATH);
+  return buildRedirect(request, INVITE_COMPLETE_PATH);
 };
