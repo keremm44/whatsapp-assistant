@@ -2,6 +2,7 @@ export { Button, buttonVariants } from "./button";
 export { Input, type InputProps } from "./input";
 export { Label } from "./label";
 export { Separator } from "./separator";
+export { Spinner } from "./spinner";
 export {
   Sheet,
   SheetTrigger,
