@@ -82,13 +82,13 @@
   --color-primary-foreground: #ffffff;
   --color-primary-foreground-rgb: 255 255 255;
 
-  /* Accent (clay) */
-  --color-accent: #c86b4a;
-  --color-accent-rgb: 200 107 74;
-  --color-accent-dark: #9b4d35;
-  --color-accent-dark-rgb: 155 77 53;
-  --color-accent-muted: #f4e7e0;
-  --color-accent-muted-rgb: 244 231 224;
+  /* Accent (terracotta — warm secondary brand family) */
+  --color-accent: #9a4f3a;
+  --color-accent-rgb: 154 79 58;
+  --color-accent-dark: #7e3f2f;
+  --color-accent-dark-rgb: 126 63 47;
+  --color-accent-muted: #eed8cf;
+  --color-accent-muted-rgb: 238 216 207;
   --color-accent-foreground: #ffffff;
   --color-accent-foreground-rgb: 255 255 255;
 

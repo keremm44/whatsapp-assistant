@@ -62,9 +62,16 @@ export const designTokens = {
     },
 
     accent: {
-      DEFAULT: color("#C86B4A", "clay"),
-      dark: color("#9B4D35"),
-      muted: color("#F4E7E0"),
+      // Terracotta — the warm secondary brand family. Used as
+      // the second visible brand color alongside petrol. The
+      // DEFAULT value is the dark terracotta itself (not a
+      // pale tint) so it can read as a real character color
+      // when used at full opacity (e.g. task type rails, brand
+      // micro-details, sidebar account surface). The muted
+      // tone is a desaturated tint for soft backgrounds.
+      DEFAULT: color("#9A4F3A", "terracotta"),
+      dark: color("#7E3F2F", "terracotta dark"),
+      muted: color("#EED8CF", "terracotta soft"),
       foreground: color("#FFFFFF"),
     },
 
@@ -75,6 +82,12 @@ export const designTokens = {
       infoMuted: color("#E2EAF3"),
       warning: color("#9A6517"),
       warningMuted: color("#F3ECDC"),
+      // The `review` state stays distinct from the terracotta
+      // brand family: it is the semantic warning hue used for
+      // return-issue item state and is not a brand color. The
+      // return task type's TYPE rail in the dashboard reads as
+      // a brand character color and is driven by the
+      // `accent` family above, not by this `review` state.
       review: color("#8B5140"),
       reviewMuted: color("#F1E6E0"),
       destructive: color("#B14444"),

@@ -105,11 +105,18 @@ const BrandMark = () => (
       href="/seller"
       className="group flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
     >
-      <span
-        aria-hidden="true"
-        className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground"
-      >
-        <SellerIcon name="Store" size={18} strokeWidth={1.7} />
+      {/*
+       * Brand mark. The petrol square is the dominant brand
+       * surface; the small terracotta corner square is a
+       * restrained second brand character. Together they
+       * form the product's silent logo: petrol on the left,
+       * warm on the right.
+       */}
+      <span className="flex items-center" aria-hidden="true">
+        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <SellerIcon name="Store" size={18} strokeWidth={1.7} />
+        </span>
+        <span className="-ml-1.5 h-9 w-3 rounded-md rounded-l-none bg-accent" />
       </span>
       <span className="flex flex-col leading-tight">
         <span className="font-heading text-[15px] font-semibold text-foreground">
@@ -121,10 +128,10 @@ const BrandMark = () => (
       </span>
     </Link>
     {/*
-     * Brand hairline. Petrol is the control color; clay is the
-     * small warm signature. The two segments are deliberately
-     * thin and short so the detail reads as decorative brand
-     * identity, not as a status indicator or notification.
+     * Brand hairline. Petrol is the control color; terracotta
+     * is the small warm signature. The two segments are
+     * deliberately thin and short so the detail reads as
+     * decorative brand identity, not as a status indicator.
      */}
     <span aria-hidden="true" className="mt-4 flex items-center gap-1">
       <span className="block h-px w-7 bg-primary" />
@@ -177,15 +184,22 @@ const NavRow = ({
 };
 
 const BottomRail = () => {
+  /*
+   * Account / settings region. The terracotta-soft surface
+   * is the second visible brand color in the product. It
+   * sits at the bottom of the sidebar as a quiet
+   * "this is your workspace" surface, balancing the
+   * petrol brand mark at the top.
+   */
   return (
-    <div className="border-t border-divider bg-surface-2 px-4 py-4">
+    <div className="border-t border-border bg-accent-muted/70 px-4 py-4">
       <Link
         href="/seller/settings"
-        className="flex items-center gap-3 rounded-md px-1 py-1 text-sm text-foreground/80 transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
+        className="flex items-center gap-3 rounded-md px-1 py-1 text-sm text-foreground/80 transition-colors hover:bg-surface/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-accent-muted"
       >
         <span
           aria-hidden="true"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-muted text-[12px] font-semibold text-primary"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-[12px] font-semibold text-accent-foreground"
         >
           M
         </span>

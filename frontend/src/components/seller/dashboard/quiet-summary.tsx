@@ -47,23 +47,23 @@ export function QuietSummary({
     return (
       <section
         aria-labelledby="dashboard-quiet-summary"
-        className="relative overflow-hidden rounded-md border border-border bg-chrome"
+        className="relative overflow-hidden rounded-md border border-accent/25 bg-accent-muted/60"
       >
         <span
           aria-hidden="true"
-          className="absolute inset-x-0 top-0 h-px bg-primary"
+          className="absolute inset-x-0 top-0 h-px bg-accent"
         />
         <div className="p-4 sm:p-5">
           <h3
             id="dashboard-quiet-summary"
-            className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary"
+            className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent-dark"
           >
             Özet
           </h3>
           <dl className="mt-3 space-y-2">
             <Row label="Önce bakılacaklar" value={high} />
             <Row label="Vakit varsa" value={normal} />
-            <div className="my-1.5 h-px bg-divider" aria-hidden="true" />
+            <div className="my-1.5 h-px bg-accent/15" aria-hidden="true" />
             <Row label="Toplam" value={total} emphasize />
           </dl>
         </div>
