@@ -15,6 +15,13 @@ import { cn } from "@/lib/utils/cn";
  * The "Tekrar dene" button re-runs the server layout, which re-runs
  * the resolver.
  *
+ * The retry handler uses `React.useTransition()` so the button's
+ * pending state is automatically reset when `router.refresh()`
+ * completes (or when the new render finishes streaming). This means
+ * a second retry attempt is always possible — if the resolver still
+ * returns `unavailable` after a refresh, the button is re-enabled
+ * rather than stuck in a permanent "retrying" state.
+ *
  * The component lives in src/components/auth because both the seller
  * and admin layouts consume it. It is a Client Component because it
  * needs `useRouter()` to call `router.refresh()`.
@@ -33,11 +40,33 @@ export function AccessUnavailable({
 }) {
   const router = useRouter();
   const [isRetrying, setIsRetrying] = React.useState(false);
+  const [isPending, startTransition] = React.useTransition();
 
   const onRetry = () => {
+    // Guard against a double-click starting two refreshes in
+    // flight. The button is also disabled while either flag is
+    // true.
+    if (isRetrying || isPending) return;
     setIsRetrying(true);
-    router.refresh();
+    startTransition(() => {
+      router.refresh();
+    });
   };
+
+  // When the transition settles (success or error), clear the
+  // manual flag. We intentionally do NOT use `isPending` to drive
+  // the button's disabled state by itself, because the transition
+  // may complete before the new render decides whether the user
+  // is still "unavailable" — clearing the local flag on settle
+  // gives the user a clean retry even if the next render keeps
+  // them in the unavailable state.
+  React.useEffect(() => {
+    if (!isPending) {
+      setIsRetrying(false);
+    }
+  }, [isPending]);
+
+  const disabled = isRetrying || isPending;
 
   const label = contextLabel ?? "Panel";
 
@@ -62,7 +91,7 @@ export function AccessUnavailable({
         size="md"
         className="mt-2"
         onClick={onRetry}
-        disabled={isRetrying}
+        disabled={disabled}
       >
         Tekrar dene
       </Button>

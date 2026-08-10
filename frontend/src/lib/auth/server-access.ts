@@ -27,11 +27,6 @@
 
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import {
-  AuthRetryableFetchError,
-  isAuthError,
-  isAuthSessionMissingError,
-} from "@supabase/auth-js";
 
 import { ApiError } from "@/lib/api/client";
 import { fetchAuthMe, type AuthMe } from "@/lib/auth/me";
@@ -60,39 +55,149 @@ const SELLER_PATH: Route = "/seller";
 const ADMIN_PATH: Route = "/admin";
 
 /**
- * Heuristic detection of Supabase "service is currently unreachable"
- * errors. We treat these as `unavailable`, not `unauthenticated`, so
- * the user does not get silently logged out during a transient
- * Supabase outage.
+ * Minimal shape-based view of a Supabase auth error.
+ *
+ * We deliberately do NOT import `@supabase/auth-js` here. That
+ * package is a transitive dependency of `@supabase/supabase-js` and
+ * is not declared as a direct dependency of this frontend. The
+ * error shape we need is small and stable (`name`, `status`, `code`,
+ * and a private `__isAuthError` brand on the base AuthError class).
+ *
+ * Inspection of these fields lets us classify:
+ *   - definite invalid session  -> unauthenticated
+ *   - definite service outage   -> unavailable
+ *   - anything else             -> unavailable (conservative)
+ *
+ * The `@supabase/auth-js` 2.x source confirms every AuthError
+ * subclass is a normal Error with `name`, `status`, and `code`. The
+ * base class also brands itself with a non-enumerable
+ * `__isAuthError = true` we use here to distinguish auth errors
+ * from arbitrary thrown values.
  */
-const isSupabaseUnavailableError = (error: unknown): boolean => {
-  if (isAuthError(error) && error instanceof AuthRetryableFetchError) {
-    return true;
-  }
-  if (typeof error === "object" && error !== null) {
-    const name = (error as { name?: unknown }).name;
-    if (name === "AbortError") return false;
-    if (error instanceof TypeError) {
-      // fetch failures surface as TypeError("Failed to fetch") or similar.
-      return /fetch|network|connection|timeout/i.test(error.message);
-    }
-  }
-  return false;
+type SupabaseAuthErrorShape = {
+  name?: unknown;
+  status?: unknown;
+  code?: unknown;
+  __isAuthError?: unknown;
+  message?: unknown;
 };
 
-/**
- * Heuristic detection of the parser-level contract errors raised by
- * `lib/auth/me.ts`. These are NOT network failures: the HTTP request
- * completed, the backend returned 2xx, but the body did not match
- * the agreed /auth/me contract. We treat them as `unavailable` so
- * the user is not pushed to /giris over a backend/frontend contract
- * mismatch.
- */
-const isAuthMeContractError = (error: unknown): boolean => {
+const isAuthError = (error: unknown): error is SupabaseAuthErrorShape => {
   if (typeof error !== "object" || error === null) return false;
-  const message = (error as { message?: unknown }).message;
-  if (typeof message !== "string") return false;
-  return message.startsWith("auth_me_invalid_");
+  // Match `@supabase/auth-js`'s own `isAuthError`: check for the
+  // presence of the `__isAuthError` brand on the object. We use
+  // the `in` operator to be tolerant of non-enumerable assignment
+  // and to also catch instances where the field is set on the
+  // prototype chain.
+  return "__isAuthError" in (error as Record<string, unknown>);
+};
+
+const errorName = (error: SupabaseAuthErrorShape): string =>
+  typeof error.name === "string" ? error.name : "";
+
+const errorCode = (error: SupabaseAuthErrorShape): string | null =>
+  typeof error.code === "string" && error.code.length > 0
+    ? error.code
+    : null;
+
+const errorStatus = (error: SupabaseAuthErrorShape): number | null =>
+  typeof error.status === "number" && Number.isFinite(error.status)
+    ? error.status
+    : null;
+
+/**
+ * Supabase error names that mean "there is no (usable) session for
+ * this request". All map to `unauthenticated`.
+ */
+const SUPABASE_SESSION_MISSING_NAMES = new Set<string>([
+  "AuthSessionMissingError",
+  "AuthInvalidTokenResponseError",
+  "AuthInvalidJwtError",
+  "AuthInvalidCredentialsError",
+  "AuthPKCECodeVerifierMissingError",
+]);
+
+/**
+ * Supabase error names / codes that mean "Supabase itself is
+ * currently unreachable / retryable". All map to `unavailable`.
+ */
+const SUPABASE_RETRYABLE_NAMES = new Set<string>([
+  "AuthRetryableFetchError",
+  "AuthRefreshDiscardedError",
+]);
+
+/**
+ * Result of classifying a single Supabase error. We never throw from
+ * inside the resolver's classification step; we always return one of
+ * the three known categories or `unavailable` as a conservative
+ * default.
+ */
+type SupabaseErrorClass = "unauthenticated" | "unavailable";
+
+/**
+ * Classify a Supabase error WITHOUT relying on the undeclared
+ * `@supabase/auth-js` package. We only inspect the documented
+ * public error shape (name, status, code, message).
+ *
+ * Conservative default: if we cannot prove the error is an
+ * "invalid session" error, we treat it as `unavailable`. The
+ * resolver MUST NOT classify a transient network error as
+ * `unauthenticated` — otherwise the user gets silently signed
+ * out during a Supabase outage.
+ */
+const classifySupabaseAuthError = (error: unknown): SupabaseErrorClass => {
+  if (!isAuthError(error)) {
+    // Non-auth Supabase errors (e.g. network TypeError) and any
+    // unbranded thrown value fall through to "unavailable".
+    if (error instanceof TypeError) {
+      if (/fetch|network|connection|timeout/i.test(error.message)) {
+        return "unavailable";
+      }
+    }
+    return "unavailable";
+  }
+
+  const name = errorName(error);
+  const status = errorStatus(error);
+  const code = errorCode(error);
+
+  if (SUPABASE_SESSION_MISSING_NAMES.has(name)) {
+    return "unauthenticated";
+  }
+
+  if (SUPABASE_RETRYABLE_NAMES.has(name)) {
+    return "unavailable";
+  }
+
+  // AuthApiError carries an HTTP status. 401/403 from GoTrue on
+  // getUser() means the cookie's session token is rejected ->
+  // unauthenticated. Any other HTTP status (5xx in particular) is
+  // treated as a Supabase availability problem, not a user error.
+  if (name === "AuthApiError") {
+    if (status === 401 || status === 403) {
+      return "unauthenticated";
+    }
+    if (status !== null && status >= 500) {
+      return "unavailable";
+    }
+  }
+
+  // For names we did not explicitly whitelist, fall back to the
+  // conservative default. Even `error.name === "AuthError"` (the
+  // generic base) is treated as "we could not prove a missing
+  // session" -> unavailable. This is the point.
+  //
+  // Exceptions are explicit known codes from AuthApiError-style
+  // responses that the GoTrue server uses to signal an
+  // unrecoverable invalid grant.
+  if (code === "invalid_grant" || code === "invalid_token") {
+    return "unauthenticated";
+  }
+  if (typeof code === "string" && code.startsWith("refresh_token_")) {
+    return "unauthenticated";
+  }
+
+  return "unavailable";
 };
 
 /**
@@ -115,6 +220,46 @@ const isFetchNetworkError = (error: unknown): boolean => {
 };
 
 /**
+ * Heuristic detection of the parser-level contract errors raised by
+ * `lib/auth/me.ts`. These are NOT network failures: the HTTP request
+ * completed, the backend returned 2xx, but the body did not match
+ * the agreed /auth/me contract. We treat them as `unavailable` so
+ * the user is not pushed to /giris over a backend/frontend contract
+ * mismatch.
+ */
+const isAuthMeContractError = (error: unknown): boolean => {
+  if (typeof error !== "object" || error === null) return false;
+  const message = (error as { message?: unknown }).message;
+  if (typeof message !== "string") return false;
+  return message.startsWith("auth_me_invalid_");
+};
+
+/**
+ * Classify the resolved `error` field of `supabase.auth.getUser()`.
+ * Returns:
+ *   "unauthenticated"  when the error definitively means the
+ *                       session is missing or rejected.
+ *   "unavailable"       for any other failure (network, 5xx,
+ *                       unknown error shape, etc.).
+ *
+ * `getUser()` resolves (not throws) when GoTrue rejects the
+ * session. Throws are reserved for hard network / SDK failures.
+ */
+const classifyGetUserError = (error: unknown): SupabaseErrorClass => {
+  if (isAuthError(error)) {
+    return classifySupabaseAuthError(error);
+  }
+  // Unbranded error from getUser(). This is rare; in practice
+  // getUser() always returns an AuthError or throws.
+  if (error instanceof TypeError) {
+    if (/fetch|network|connection|timeout/i.test(error.message)) {
+      return "unavailable";
+    }
+  }
+  return "unavailable";
+};
+
+/**
  * Resolve the current user's application access state. Used by the
  * seller and admin server layouts, and reused by the login page
  * (in 3A.3.2) and the logout flow (in 3A.3.3).
@@ -122,7 +267,10 @@ const isFetchNetworkError = (error: unknown): boolean => {
  * The resolver:
  *   1. Verifies a Supabase user via `auth.getUser()`. Cookie-only
  *      state is not trusted; a verified user from the GoTrue server
- *      is required.
+ *      is required. The `result.error` field is always inspected
+ *      explicitly — a successful `result.data.user` being null is
+ *      not enough to conclude the session is invalid; an explicit
+ *      auth error is required.
  *   2. Resolves the current access token via `auth.getSession()`.
  *   3. Calls `GET /auth/me` with the token, with `cache: "no-store"`
  *      so the per-user authorization response is never shared.
@@ -138,42 +286,52 @@ const isFetchNetworkError = (error: unknown): boolean => {
 export const resolveServerAccess = async (): Promise<ServerAccess> => {
   const supabase = await createSupabaseServerClient();
 
-  let user;
+  // Step 1: verify the Supabase user.
+  //
+  // getUser() normally RESOLVES with `{ data: { user: ... }, error }`
+  // — a rejected session is reported via `error`, not via throw.
+  // We must inspect `error` explicitly; treating `data.user === null`
+  // as the only signal would misclassify a Supabase outage as
+  // "unauthenticated" and trigger a signOut / redirect we never want.
+  let getUserResult: Awaited<
+    ReturnType<Awaited<ReturnType<typeof createSupabaseServerClient>>["auth"]["getUser"]>
+  >;
   try {
-    const result = await supabase.auth.getUser();
-    user = result.data.user;
-  } catch (error) {
-    if (isSupabaseUnavailableError(error)) {
-      return { state: "unavailable" };
-    }
-    if (isAuthSessionMissingError(error)) {
+    getUserResult = await supabase.auth.getUser();
+  } catch {
+    // Real thrown exception from the SDK (network, abort, etc.).
+    // Be conservative: this is almost never an "invalid session"
+    // case — it is a Supabase availability problem.
+    return { state: "unavailable" };
+  }
+
+  const { data, error: getUserError } = getUserResult;
+
+  if (getUserError) {
+    const kind = classifyGetUserError(getUserError);
+    if (kind === "unauthenticated") {
       return { state: "unauthenticated" };
-    }
-    if (isAuthError(error)) {
-      // Any other auth error: be conservative and surface as
-      // unavailable rather than forcing a logout.
-      return { state: "unavailable" };
     }
     return { state: "unavailable" };
   }
 
-  if (!user) {
+  if (!data || !data.user) {
+    // No error and no user: there is genuinely no session.
     return { state: "unauthenticated" };
   }
 
+  // Step 2: read the access token from the live session.
   let accessToken: string | null = null;
   try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+    if (sessionError) {
       // We already verified the user above, so a session lookup
       // failure here is a real edge case. Treat as unavailable.
       return { state: "unavailable" };
     }
-    accessToken = data.session?.access_token ?? null;
-  } catch (error) {
-    if (isSupabaseUnavailableError(error)) {
-      return { state: "unavailable" };
-    }
+    accessToken = sessionData.session?.access_token ?? null;
+  } catch {
     return { state: "unavailable" };
   }
 
@@ -184,7 +342,8 @@ export const resolveServerAccess = async (): Promise<ServerAccess> => {
     return { state: "unavailable" };
   }
 
-  let me;
+  // Step 3: ask the backend for the application role / status.
+  let me: AuthMe;
   try {
     me = await fetchAuthMe(accessToken, { cache: "no-store" });
   } catch (error) {
