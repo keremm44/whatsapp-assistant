@@ -160,9 +160,19 @@
  * gives the UI its tactile, workshop-material feel.
  */
 .seller-theme {
-  /* Surfaces — warm charcoal, layered */
-  --color-background: #1b2220;
-  --color-background-rgb: 27 34 32;
+  /* Surfaces — warm charcoal, layered.
+   * The workspace background is now one step deeper
+   * (#161C1A) than the previous (#1B2220) so the raised
+   * card surface (#232C29) reads with a touch more
+   * separation. The chrome / sidebar / topbar (#121816)
+   * stays exactly where it was, so the L-shaped chrome
+   * shell still reads as the deepest surface and the
+   * workspace sits one step above it. Border, divider,
+   * and raised-surface tokens are unchanged so every
+   * existing card, panel, and rail keeps the same
+   * colour it had before. */
+  --color-background: #161c1a;
+  --color-background-rgb: 22 28 26;
   --color-chrome: #121816;
   --color-chrome-rgb: 18 24 22;
   --color-surface: #232c29;
