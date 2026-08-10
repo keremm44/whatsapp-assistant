@@ -50,12 +50,28 @@ export function LogoutButton() {
   }, []);
 
   const onClick = async () => {
-    if (isSubmitting) return;
+    // Duplicate-click guard. `isSubmitting` is the React-visible
+    // state (drives `disabled`); `inflightRef.current` is a
+    // synchronous ref read on the very first instruction of the
+    // handler, so a fast second click that fires before React
+    // re-renders with `isSubmitting === true` still no-ops. This
+    // is the only way to make double execution impossible, since
+    // state updates from a click handler are not committed before
+    // the next event tick.
+    if (isSubmitting || inflightRef.current) return;
     setErrorMessage(null);
 
     const controller = new AbortController();
     inflightRef.current = controller;
     setIsSubmitting(true);
+
+    // Tracks whether we entered the navigation path. On success
+    // the component is about to unmount and we deliberately leave
+    // `isSubmitting === true` and `inflightRef.current` set so the
+    // control stays disabled until the route actually changes.
+    // Only the failure path resets the state machine back to
+    // `idle` (so the user can retry).
+    let didNavigate = false;
 
     try {
       const supabase = createSupabaseBrowserClient();
@@ -72,10 +88,11 @@ export function LogoutButton() {
       }
 
       // signOut() resolved without error. The Supabase browser
-      // client has cleared its cookies. Navigate to the login
-      // page and refresh the RSC payload so any stale server
-      // render is invalidated. The component will unmount on
-      // navigation; the finally block's setState is harmless.
+      // client has cleared its cookies. Mark the success path so
+      // the finally block leaves the control disabled. The
+      // component is expected to unmount on the navigation that
+      // follows.
+      didNavigate = true;
       router.replace("/giris");
       router.refresh();
     } catch {
@@ -86,13 +103,16 @@ export function LogoutButton() {
         "Çıkış şu anda tamamlanamadı. Lütfen tekrar deneyin.",
       );
     } finally {
-      if (inflightRef.current === controller) {
-        inflightRef.current = null;
+      if (!didNavigate) {
+        // Failure path (or abort). Reset the state machine so the
+        // user can click the button again. On the success path we
+        // intentionally skip this so the control stays disabled
+        // while the navigation is in flight.
+        if (inflightRef.current === controller) {
+          inflightRef.current = null;
+        }
+        setIsSubmitting(false);
       }
-      // Always re-enable. On the success path the component is
-      // about to unmount and this state change is a no-op; on
-      // the error path it is the whole point of this finally.
-      setIsSubmitting(false);
     }
   };
 
