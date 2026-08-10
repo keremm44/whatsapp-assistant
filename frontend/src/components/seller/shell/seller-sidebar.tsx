@@ -120,10 +120,16 @@ const BrandMark = () => (
         </span>
       </span>
     </Link>
-    <span
-      aria-hidden="true"
-      className="mt-4 block h-px w-7 bg-primary"
-    />
+    {/*
+     * Brand hairline. Petrol is the control color; clay is the
+     * small warm signature. The two segments are deliberately
+     * thin and short so the detail reads as decorative brand
+     * identity, not as a status indicator or notification.
+     */}
+    <span aria-hidden="true" className="mt-4 flex items-center gap-1">
+      <span className="block h-px w-7 bg-primary" />
+      <span className="block h-px w-2 bg-accent" />
+    </span>
   </div>
 );
 

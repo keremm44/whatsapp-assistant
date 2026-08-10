@@ -56,10 +56,17 @@ export function DashboardHeader({
             {description}
           </p>
         ) : null}
-        <span
-          aria-hidden="true"
-          className="mt-1 block h-px w-9 bg-primary"
-        />
+        {/*
+         * Brand hairline. Mirrors the sidebar's wordmark
+         * hairline: a petrol segment plus a short clay
+         * segment. Petrol stays the dominant control
+         * colour; clay is the small warm signature that
+         * ties the page header to the sidebar identity.
+         */}
+        <span aria-hidden="true" className="mt-1 flex items-center gap-1">
+          <span className="block h-px w-9 bg-primary" />
+          <span className="block h-px w-2 bg-accent" />
+        </span>
       </div>
       {total > 0 ? <CountBadge total={total} /> : null}
     </div>
