@@ -43,6 +43,21 @@ export type SellerBusinessIdentity = {
 };
 
 /**
+ * Backend-supported `system_status` values, mirrored from
+ * `chk_sellers_system_status`. The parser will reject any value
+ * outside this set with a `seller_me_invalid_access_system_status_value`
+ * contract error.
+ */
+export type SellerSystemStatus =
+  | "onboarding"
+  | "admin_review_pending"
+  | "automatic_validation"
+  | "beta_active"
+  | "active"
+  | "suspended"
+  | "cancelled";
+
+/**
  * The `access` object the backend attaches to `/seller/me`. The
  * seller shell does not render any of these today, but the frontend
  * reads them so a future surface (settings, dashboard tasks) can
@@ -52,7 +67,7 @@ export type SellerAccess = {
   role: "seller" | "admin";
   sellerId: number;
   onboardingCompleted: boolean;
-  systemStatus: string;
+  systemStatus: SellerSystemStatus;
   aiEnabled: boolean;
 };
 
@@ -69,8 +84,30 @@ export type SellerMe = {
  */
 const SELLER_ME_CONTRACT_PREFIX = "seller_me_invalid_";
 
+/**
+ * Backend-supported `system_status` values. Mirrored from the
+ * `chk_sellers_system_status` check constraint in
+ * `migrations/009_seller_access_and_applications.sql`. The frontend
+ * never invents additional values; an unknown system_status is
+ * a contract error and the bootstrap returns `unavailable`.
+ */
+const VALID_SYSTEM_STATUSES: ReadonlySet<string> = new Set([
+  "onboarding",
+  "admin_review_pending",
+  "automatic_validation",
+  "beta_active",
+  "active",
+  "suspended",
+  "cancelled",
+]);
+
 const isSellerAccessRole = (value: unknown): value is "seller" | "admin" =>
   value === "seller" || value === "admin";
+
+const isSellerSystemStatus = (
+  value: unknown,
+): value is SellerSystemStatus =>
+  typeof value === "string" && VALID_SYSTEM_STATUSES.has(value);
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -124,23 +161,41 @@ const parseSellerAccess = (raw: unknown): SellerAccess => {
     throw new Error(`${SELLER_ME_CONTRACT_PREFIX}access_seller_id`);
   }
 
-  const onboardingCompleted =
-    typeof raw.onboarding_completed === "boolean"
-      ? raw.onboarding_completed
-      : false;
+  // The `access` block is the backend's authoritative projection of
+  // the seller's business + access state. The frontend never
+  // invents values when the backend contract is silent. If a
+  // field is missing, malformed, or holds a value outside the
+  // supported set, the entire /seller/me response is treated as
+  // a contract violation — the bootstrap layer maps that to
+  // `state: "unavailable"`.
+  //
+  // We do NOT default missing booleans to `false` or missing
+  // status strings to `"unknown"`. Frontend-only defaults would
+  // silently turn a backend contract regression into a
+  // falsely-healthy seller shell, which is exactly what the
+  // bootstrap layer's recoverable-unavailable surface is meant
+  // to prevent.
+  if (typeof raw.onboarding_completed !== "boolean") {
+    throw new Error(`${SELLER_ME_CONTRACT_PREFIX}access_onboarding_completed`);
+  }
 
-  const systemStatus =
-    typeof raw.system_status === "string" ? raw.system_status : "unknown";
+  if (typeof raw.system_status !== "string") {
+    throw new Error(`${SELLER_ME_CONTRACT_PREFIX}access_system_status_type`);
+  }
+  if (!isSellerSystemStatus(raw.system_status)) {
+    throw new Error(`${SELLER_ME_CONTRACT_PREFIX}access_system_status_value`);
+  }
 
-  const aiEnabled =
-    typeof raw.ai_enabled === "boolean" ? raw.ai_enabled : false;
+  if (typeof raw.ai_enabled !== "boolean") {
+    throw new Error(`${SELLER_ME_CONTRACT_PREFIX}access_ai_enabled`);
+  }
 
   return {
     role,
     sellerId,
-    onboardingCompleted,
-    systemStatus,
-    aiEnabled,
+    onboardingCompleted: raw.onboarding_completed,
+    systemStatus: raw.system_status,
+    aiEnabled: raw.ai_enabled,
   };
 };
 
