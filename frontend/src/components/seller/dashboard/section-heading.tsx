@@ -7,31 +7,33 @@ import { cn } from "@/lib/utils/cn";
  *
  * Visual character:
  *
- *   - The H2 sits to the right of a short vertical
- *     terracotta rail. The rail is 2px wide, ~22-24px
- *     tall, and lives on the same baseline as the H2.
- *     It is decorative brand architecture — NOT a
+ *   - The H2 sits next to a thin coloured rail. The rail
+ *     colour is the section's brand character:
+ *       - default ("primary") -> petrol rail, the
+ *         control colour, used for the "Önce bunlar"
+ *         primary work section
+ *       - "accent" -> terracotta rail, the warm
+ *         secondary colour, used for the "Bugün
+ *         bakılabilecekler" supporting section
+ *     The rail is decorative brand architecture, NOT a
  *     status, priority, return, or unread indicator.
  *
- *   - The rail and the H2 are followed by a quiet
- *     description and a brand motif (long petrol +
- *     shorter terracotta) under the H2. The motif is the
- *     same one the page header uses, scaled smaller for
- *     section-level framing.
- *
- *   - The component is intentionally section-agnostic. It
- *     is used by the high-priority column, the
- *     normal-priority column, and the right-hand
- *     secondary panel so every work section in the
- *     workspace shares the same brand header language.
+ *   - The optional `motif` adds a single brand motif
+ *     (long primary + shorter accent) below the
+ *     description. The motif is the same shape the
+ *     page header uses, scaled smaller. By default the
+ *     motif is OFF; the supporting section turns it
+ *     ON so the two sections deliberately differ in
+ *     weight rather than every section repeating the
+ *     same micro-line.
  */
 export function SectionHeading({
   id,
   title,
   count,
   description,
-  railTone = "accent",
-  motif = true,
+  railTone = "primary",
+  motif = false,
   className,
 }: {
   id: string;
@@ -39,14 +41,16 @@ export function SectionHeading({
   count?: number;
   description?: string;
   /**
-   * The decorative vertical rail's colour family. Defaults
-   * to `accent` (terracotta) so the dashboard's work
-   * sections all carry the warm signature. We never use
-   * this rail to imply status, priority, return state, or
-   * unread state.
+   * Decorative rail colour. `primary` (petrol) for the
+   * primary work section; `accent` (terracotta) for the
+   * supporting section. Never used to imply a state.
    */
-  railTone?: "accent" | "primary";
-  /** When true, the petrol + terracotta brand motif renders below the description. */
+  railTone?: "primary" | "accent";
+  /**
+   * Whether the brand motif renders below the description.
+   * Off by default so the page header is the only place
+   * the full motif appears.
+   */
   motif?: boolean;
   className?: string;
 }) {

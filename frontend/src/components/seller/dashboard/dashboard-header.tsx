@@ -11,13 +11,15 @@ import { ListChecks } from "lucide-react";
  *     family as the sidebar brand mark. The right side
  *     carries the factual count badge.
  *
- *   - Page identity. The caption "Genel Bakış" is rendered
- *     in terracotta — the warm secondary brand colour —
- *     so the centre of the dashboard receives the
- *     terracotta cue at the very top of the page. The
- *     caption is uppercase, tracking-wide, 11px, on the
- *     same family as the sidebar's section labels so the
- *     shell and the page still feel like one product.
+ *   - Page identity. The caption "Genel Bakış" is petrol,
+ *     uppercase, tracking-wide — the same family as the
+ *     sidebar's section labels so the page header and
+ *     the shell feel like parts of the same product. The
+ *     warm secondary character (terracotta) enters the
+ *     header through the brand motif below the H1, not
+ *     through the caption — this keeps the page identity
+ *     control-coloured and lets the motif carry the
+ *     warm signature.
  *
  *   - The H1 is in Manrope and is followed by a brand
  *     motif: a long petrol stroke + a shorter but visibly
@@ -57,7 +59,7 @@ export function DashboardHeader({
   return (
     <div className="flex flex-col gap-6 pb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
       <div className="space-y-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
           {caption}
         </p>
         <h1 className="font-heading text-[30px] font-medium leading-[1.1] text-foreground sm:text-[34px]">

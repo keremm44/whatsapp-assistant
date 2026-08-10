@@ -225,6 +225,8 @@ function NormalOnlyLayout({
           title="Bugün bakılabilecekler"
           count={normalTasks.length}
           description="Vakit varsa ilerleyebileceğiniz konular."
+          railTone="accent"
+          motif
         />
         <ul
           role="list"
@@ -309,22 +311,17 @@ function SecondaryPanel({
     >
       {/*
        * The chrome panel that hosts the secondary list.
-       * A thin petrol top hairline is the original framing;
-       * a small terracotta corner accent sits in the
-       * top-left and connects this panel to the page
-       * header's brand motif (long petrol + shorter
-       * terracotta). The corner accent is decorative
-       * brand architecture, not a status indicator.
+       * A thin petrol top hairline is the only framing
+       * accent. The terracotta cue for this section
+       * comes from the section heading rail (above) and
+       * from the QuietSummary side panel below, so the
+       * panel itself stays neutral.
        */}
       <span
         aria-hidden="true"
         className="absolute inset-x-0 top-0 h-px bg-primary"
       />
-      <span
-        aria-hidden="true"
-        className="absolute left-0 top-0 h-3 w-3 border-l-2 border-t-2 border-accent"
-      />
-      <header className="flex items-baseline gap-2 px-4 pb-2 pt-5 sm:px-5">
+      <header className="flex items-baseline gap-2 px-4 pb-2 pt-4 sm:px-5 sm:pt-5">
         <h2
           id={id}
           className="font-heading text-[15px] font-semibold text-foreground sm:text-base"
