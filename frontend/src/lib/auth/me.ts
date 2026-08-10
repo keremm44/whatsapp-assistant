@@ -58,12 +58,25 @@ const parseAuthMe = (raw: unknown): AuthMe => {
   };
 };
 
+export type FetchAuthMeOptions = {
+  signal?: AbortSignal;
+  /**
+   * Optional `RequestInit.cache` value. Authorization responses are
+   * user-specific and must never be served from a shared cache.
+   * Server-side callers (route guards) should pass
+   * `cache: "no-store"` explicitly. The default of "no-store" inside
+   * this helper preserves that contract.
+   */
+  cache?: RequestCache;
+};
+
 export const fetchAuthMe = async (
   accessToken: string,
-  options?: { signal?: AbortSignal },
+  options?: FetchAuthMeOptions,
 ): Promise<AuthMe> => {
   const raw = await apiFetchWithAccessToken<unknown>("/auth/me", accessToken, {
     signal: options?.signal,
+    cache: options?.cache ?? "no-store",
   });
   return parseAuthMe(raw);
 };
