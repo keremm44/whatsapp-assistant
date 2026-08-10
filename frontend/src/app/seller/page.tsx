@@ -1,31 +1,32 @@
-import type { Route } from "next";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import * as React from "react";
 
 import { AccessUnavailable } from "@/components/auth/access-unavailable";
-import { EmptyState } from "@/components/shared/empty-state";
+import { DashboardHeader } from "@/components/seller/dashboard/dashboard-header";
+import { DashboardLayout } from "@/components/seller/dashboard/dashboard-layout";
+import { EmptyAttention } from "@/components/seller/dashboard/empty-attention";
+import { PriorityCard } from "@/components/seller/dashboard/priority-card";
+import { QuietSummary } from "@/components/seller/dashboard/quiet-summary";
+import { SecondaryRow } from "@/components/seller/dashboard/secondary-row";
 import { PageContainer } from "@/components/shared/page-container";
-import { PageHeader } from "@/components/shared/page-header";
-import { SectionHeader } from "@/components/shared/section-header";
-import { Surface } from "@/components/shared/surface";
 
 import { resolveDashboardTasksFromSession } from "@/lib/seller/dashboard-tasks-server";
-import type { DashboardTask, DashboardTaskType } from "@/lib/seller/dashboard-tasks";
+import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
 
 /**
- * Genel Bakış — satıcının günlük dikkat merkezi.
+ * Seller dashboard — the seller's daily attention surface.
  *
  * Server Component. The page resolves the seller's action queue
  * server-side from `GET /seller/dashboard/tasks` using the same
- * Supabase session the auth foundation and seller bootstrap just
- * validated. There is no client hydration, no skeleton, and no
- * secondary fetch.
+ * Supabase session the auth foundation and seller bootstrap
+ * just validated. There is no client hydration, no skeleton, and
+ * no secondary fetch. The data layer (`resolveDashboardTasksFromSession`,
+ * `lib/seller/dashboard-tasks.ts`) is unchanged.
  *
- * Information architecture:
+ * Information architecture (preserved from the previous step):
  *
- *   The backend explicitly exposes a user-facing priority
- *   categorization on each task: `priority: "high" | "normal"`.
- *   The SQL read model defines the fixed mapping:
+ *   The backend exposes a user-facing priority categorization on
+ *   each task: `priority: "high" | "normal"`. The SQL read model
+ *   defines the fixed mapping:
  *
  *     return_review       -> high
  *     order_review        -> high
@@ -36,51 +37,58 @@ import type { DashboardTask, DashboardTaskType } from "@/lib/seller/dashboard-ta
  *     "Önce bunlar"            <- priority === "high"
  *     "Bugün bakılabilecekler"  <- priority === "normal"
  *
- *   Tasks within each section are rendered in the order returned
- *   by the backend (`priority_rank ASC, updated_at DESC,
- *   related_entity_id DESC`). The frontend never re-sorts.
+ *   Tasks within each section keep the backend's order; the
+ *   frontend never re-sorts.
  *
- *   Visual character (this step):
+ * Visual character (this step):
  *
- *   - Each section is a single working surface (Surface, white
- *     canvas) holding comparable task rows. We deliberately do
- *     NOT wrap each task in its own card. The card-per-task
- *     pattern reads as a "CRM stack" and dilutes the queue
- *     feeling.
- *   - The "high" section is signalled by a thin petrol hairline
- *     under its header and a subtle petrol caption. The "normal"
- *     section has no extra color. Priority is communicated by
- *     position and by the header's micro-architecture, not by
- *     painting the entire section.
- *   - Each row carries a small type pill (color-coded by backend
- *     `type` only — not by `priority` — so the pill is a stable
- *     category label rather than an "urgency" widget).
- *   - The CTA is a quiet secondary button with a right-arrow
- *     affordance. It is never the heaviest element on the row.
- *   - Below both sections sits a very low-emphasis summary line
- *     that uses only the backend-provided `toplam` aggregate. It
- *     is omitted entirely when `toplam === 0` to avoid noise.
- *   - The "Günün özeti" placeholder label is dropped — the line
- *     itself is self-explanatory in this layout, and the
- *     explicit label was adding visual weight without adding
- *     information.
+ *   - Two-column desktop composition. The high-priority column
+ *     on the left holds the cards the seller is supposed to
+ *     act on first; the secondary column on the right holds a
+ *     compact list of "bugün bakılabilecekler" rows and a
+ *     quiet summary panel. The composition is deliberately
+ *     NOT a three-column CRM.
+ *
+ *   - The high-priority column uses individual cards. Each card
+ *     has an icon field keyed to the backend task TYPE (not
+ *     the priority), so the card reads as a category anchor,
+ *     not as an urgency widget. We do not paint the whole
+ *     column in petrol; the petrol cue is contained to the
+ *     category glyph and the page header hairline.
+ *
+ *   - The secondary column is a compact, low-density list. The
+ *     whole row is a Link; the chevron appears only on
+ *     hover/focus, so the rows stay calm at rest.
+ *
+ *   - The factual count badge in the header is the
+ *     backend-provided `toplam` aggregate, rendered as
+ *     "İlgilenmeniz gereken N konu" so the user can see at a
+ *     glance how many items the action queue contains. The
+ *     badge is rendered as a piece of page furniture, not as
+ *     a KPI tile. When the queue is empty the badge is
+ *     omitted. The badge is deliberately not labeled "Bugün"
+ *     because the backend does not provide a "today"
+ *     aggregate — `toplam` is the current queue size, not a
+ *     daily total.
+ *
+ *   - Mobile (< lg) collapses to a single column. The
+ *     high-priority cards stack first, then the secondary
+ *     list, then the summary panel.
+ *
+ *   - Empty state is its own surface (`EmptyAttention`). It
+ *     reads as a quiet, well-deserved pause — not a placeholder.
+ *
+ *   - Error state is delegated to `AccessUnavailable` exactly
+ *     as before. The retry semantics, the no-signOut contract,
+ *     and the failure copy are unchanged.
  */
 export default async function SellerOverviewPage() {
   const bootstrap = await resolveDashboardTasksFromSession();
 
   if (bootstrap.state !== "ready") {
-    // Page-content failure. The seller shell (and therefore auth +
-    // bootstrap) has already passed; the dashboard data fetch is
-    // the only thing that failed. We do NOT invalidate the
-    // session. We render a calm recoverable surface scoped to
-    // this page using the existing AccessUnavailable language.
     return (
       <PageContainer className="py-8 sm:py-10">
-        <PageHeader
-          caption="Genel Bakış"
-          title="Bugün ilgilenmeniz gerekenler"
-          description="Satıcı müdahalesi isteyen konular burada öncelik sırasıyla görünecek."
-        />
+        <DashboardHeader total={0} />
         <div className="mt-8">
           <AccessUnavailable compact contextLabel="İş listesi" />
         </div>
@@ -99,261 +107,131 @@ export default async function SellerOverviewPage() {
 
   return (
     <PageContainer className="py-8 sm:py-10">
-      <PageHeader
-        caption="Genel Bakış"
-        title="Bugün ilgilenmeniz gerekenler"
-        description="Satıcı müdahalesi isteyen konular burada öncelik sırasıyla görünecek."
-      />
+      <DashboardHeader total={total} />
 
       {hasTasks ? (
-        <div className="mt-8 flex flex-col gap-8 sm:mt-10 sm:gap-10">
-          {highTasks.length > 0 ? (
-            <DashboardTaskSection
+        <DashboardLayout
+          primary={
+            <PrimaryColumn
               id="section-once-bunlar"
               title="Önce bunlar"
               count={highTasks.length}
-              description="İncelemeniz gereken konular."
               tasks={highTasks}
-              emphasis="primary"
             />
-          ) : null}
-
-          {normalTasks.length > 0 ? (
-            <DashboardTaskSection
-              id="section-bugun-bakilabilecekler"
-              title="Bugün bakılabilecekler"
-              count={normalTasks.length}
-              description="Vakit varsa ilerleyebileceğiniz konular."
-              tasks={normalTasks}
-              emphasis="neutral"
-            />
-          ) : null}
-        </div>
+          }
+          secondary={
+            normalTasks.length > 0 ? (
+              <SecondaryColumn
+                id="section-bugun-bakilabilecekler"
+                title="Bugün bakılabilecekler"
+                count={normalTasks.length}
+                tasks={normalTasks}
+              />
+            ) : null
+          }
+          summary={<QuietSummary tasks={tasks} total={total} />}
+        />
       ) : (
-        <DashboardEmptyState />
+        <div className="mt-8">
+          <EmptyAttention />
+        </div>
       )}
-
-      {total > 0 ? (
-        <p className="mt-10 text-[13px] leading-relaxed text-muted-foreground sm:mt-12">
-          İlgilenmeniz gereken {total} konu var.
-        </p>
-      ) : null}
     </PageContainer>
   );
 }
 
 /**
- * Calm empty state for the dashboard. The empty surface is a thin
- * working surface (Surface) so the page does not feel naked, and
- * the copy stays exactly as it was — no invented data, no
- * placeholder rows.
+ * The high-priority column. Renders the section header
+ * inline (the shared SectionHeader does not get a custom
+ * children slot for a single caller) followed by a stack of
+ * `PriorityCard`s. A short, calm description sets the
+ * reading frame for the seller.
  */
-function DashboardEmptyState() {
-  return (
-    <Surface className="mt-8 px-5 py-6 sm:px-6 sm:py-7">
-      <EmptyState
-        variant="compact"
-        caption="Bugün ilgilenmeniz gerekenler"
-        title="Şu anda ilgilenmeniz gereken bir konu yok."
-        description="Yeni konular geldiğinde burada görünecek."
-      />
-    </Surface>
-  );
-}
-
-/**
- * A single dashboard section.
- *
- * On desktop and tablet the section is a single Surface that
- * contains a stack of comparable task rows separated by 1px
- * dividers. On mobile the same rows remain in the same Surface
- * (the Surface is already comfortable on small screens) but the
- * row internals stack and the CTA becomes full-width so it
- * remains comfortably tappable.
- *
- * The `emphasis` flag only controls the header micro-architecture
- * (caption color + hairline). It is not used to paint the entire
- * section.
- */
-function DashboardTaskSection({
+function PrimaryColumn({
   id,
   title,
   count,
-  description,
   tasks,
-  emphasis,
 }: {
   id: string;
   title: string;
   count: number;
-  description: string;
   tasks: DashboardTask[];
-  emphasis: "primary" | "neutral";
 }) {
-  // The section header is composed inline so the meta line
-  // ("Öncelikli · N konu") can sit visually under the description
-  // without extending the shared SectionHeader API for a single
-  // caller.
   return (
-    <section aria-labelledby={id} className="space-y-3">
-      <div className="space-y-2">
-        <SectionHeader id={id} title={title} description={description} />
-        <p
-          className={
-            emphasis === "primary"
-              ? "flex items-center gap-2 text-[13px] font-medium text-primary"
-              : "flex items-center gap-2 text-[13px] font-medium text-muted-foreground"
-          }
-        >
-          <span>{emphasis === "primary" ? "Öncelikli" : "Sıradaki"}</span>
-          <span aria-hidden="true" className="text-muted-foreground">
-            ·
+    <section aria-labelledby={id} className="space-y-4">
+      <header className="space-y-1.5">
+        <div className="flex items-baseline gap-2">
+          <h2
+            id={id}
+            className="font-heading text-[20px] font-medium leading-snug text-foreground sm:text-[22px]"
+          >
+            {title}
+          </h2>
+          <span
+            aria-hidden="true"
+            className="text-[13px] tabular-nums text-muted-foreground"
+          >
+            · {count}
           </span>
-          <span className="tabular-nums">{count} konu</span>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          İncelemeniz gereken konular.
         </p>
-      </div>
-      <Surface className="overflow-hidden">
-        <ul role="list" className="divide-y divide-divider">
-          {tasks.map((task) => (
-            <DashboardTaskRow key={task.id} task={task} />
-          ))}
-        </ul>
-      </Surface>
+      </header>
+      <ul role="list" className="space-y-3">
+        {tasks.map((task) => (
+          <li key={task.id}>
+            <PriorityCard task={task} />
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
 
 /**
- * Map a backend task type to its UI metadata: short label, target
- * route, and CTA copy. The label is the user-facing category and
- * is intentionally short so it fits inside the small type pill
- * without breaking the rhythm of the row.
+ * The secondary column. Renders the section header plus a
+ * compact list of `SecondaryRow`s. The list is rendered
+ * inside a single `Surface`-style frame so the right column
+ * has a single, calm rectangle to balance the column of
+ * cards on the left.
  */
-const TASK_TYPE_PILL_LABEL: Record<DashboardTaskType, string> = {
-  return_review: "İade incelemesi",
-  order_review: "Sipariş incelemesi",
-  unanswered_question: "Yanıt bekleyen soru",
-};
-
-const TASK_TYPE_ROUTES: Record<DashboardTaskType, Route> = {
-  return_review: "/seller/returns",
-  order_review: "/seller/orders",
-  unanswered_question: "/seller/unanswered",
-};
-
-const TASK_TYPE_CTA: Record<DashboardTaskType, string> = {
-  return_review: "İadelere git",
-  order_review: "Siparişlere git",
-  unanswered_question: "Sorulara git",
-};
-
-const TASK_TYPE_PILL_TONE: Record<
-  DashboardTaskType,
-  "primary" | "review" | "info"
-> = {
-  return_review: "review",
-  order_review: "primary",
-  unanswered_question: "info",
-};
-
-/**
- * Small, quiet category pill. The tone is keyed to the backend
- * `type` only (so the pill reads as a category, not as an
- * urgency indicator). The pill sits at the top of each row and
- * never carries the row's main weight — the title does.
- */
-function TaskTypePill({ type }: { type: DashboardTaskType }) {
-  const tone = TASK_TYPE_PILL_TONE[type];
-  const toneClass =
-    tone === "primary"
-      ? "bg-primary-muted text-primary"
-      : tone === "review"
-        ? "bg-review-muted text-review"
-        : "bg-info-muted text-info";
-
+function SecondaryColumn({
+  id,
+  title,
+  count,
+  tasks,
+}: {
+  id: string;
+  title: string;
+  count: number;
+  tasks: DashboardTask[];
+}) {
   return (
-    <span
-      className={`inline-flex h-5 items-center rounded-pill px-2 text-[11px] font-medium leading-none tracking-wide ${toneClass}`}
+    <section
+      aria-labelledby={id}
+      className="overflow-hidden rounded-md border border-border bg-surface shadow-surface"
     >
-      {TASK_TYPE_PILL_LABEL[type]}
-    </span>
-  );
-}
-
-/**
- * Compose the meta line under the summary. We only ever render
- * fields that the backend actually returned (name / whatsapp /
- * customer-free). The line is intentionally compact and
- * low-contrast — the row's information weight is in the title.
- */
-function composeCustomerLine(task: DashboardTask): string | null {
-  if (!task.customer) return null;
-  const parts: string[] = [];
-  if (
-    typeof task.customer.name === "string" &&
-    task.customer.name.trim().length > 0
-  ) {
-    parts.push(task.customer.name);
-  }
-  if (
-    typeof task.customer.whatsappNumber === "string" &&
-    task.customer.whatsappNumber.trim().length > 0
-  ) {
-    parts.push(task.customer.whatsappNumber);
-  }
-  return parts.length > 0 ? parts.join(" · ") : null;
-}
-
-function DashboardTaskRow({ task }: { task: DashboardTask }) {
-  const href = TASK_TYPE_ROUTES[task.type];
-  const cta = TASK_TYPE_CTA[task.type];
-  const pillLabel = TASK_TYPE_PILL_LABEL[task.type];
-  const customerLine = composeCustomerLine(task);
-  const hasSummary = task.summary.trim().length > 0;
-
-  return (
-    <li>
-      <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-5 sm:py-4">
-        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
-          <div className="hidden h-9 w-9 shrink-0 items-center justify-center sm:flex">
-            <span
-              aria-hidden="true"
-              className="block h-5 w-px rounded-full bg-divider"
-            />
-          </div>
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <TaskTypePill type={task.type} />
-            <p className="text-[15px] font-medium leading-snug text-foreground">
-              {task.title}
-            </p>
-            {hasSummary ? (
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {task.summary}
-              </p>
-            ) : null}
-            {customerLine ? (
-              <p className="pt-0.5 text-[12.5px] leading-relaxed text-muted-foreground">
-                <span className="text-foreground/70">{customerLine}</span>
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <div className="shrink-0 sm:pl-2">
-          <Link
-            href={href}
-            className="group inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-surface-2 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:h-9 sm:w-auto sm:px-3.5"
-            aria-label={`${pillLabel} — ${cta}`}
-          >
-            <span>{cta}</span>
-            <ArrowRight
-              aria-hidden="true"
-              size={14}
-              strokeWidth={1.75}
-              className="text-muted-foreground transition-colors group-hover:text-primary"
-            />
-          </Link>
-        </div>
-      </div>
-    </li>
+      <header className="flex items-baseline gap-2 border-b border-divider px-4 py-3 sm:px-5">
+        <h2
+          id={id}
+          className="font-heading text-[15px] font-medium text-foreground sm:text-base"
+        >
+          {title}
+        </h2>
+        <span
+          aria-hidden="true"
+          className="text-[12.5px] tabular-nums text-muted-foreground"
+        >
+          · {count}
+        </span>
+      </header>
+      <ul role="list">
+        {tasks.map((task) => (
+          <SecondaryRow key={task.id} task={task} />
+        ))}
+      </ul>
+    </section>
   );
 }
