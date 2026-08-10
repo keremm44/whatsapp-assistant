@@ -161,20 +161,23 @@
  */
 .seller-theme {
   /* Surfaces — warm charcoal, layered.
-   * The workspace background is now one step deeper
-   * (#161C1A) than the previous (#1B2220) so the raised
-   * card surface (#232C29) reads with a touch more
-   * separation. The chrome / sidebar / topbar (#121816)
-   * stays exactly where it was, so the L-shaped chrome
-   * shell still reads as the deepest surface and the
-   * workspace sits one step above it. Border, divider,
-   * and raised-surface tokens are unchanged so every
-   * existing card, panel, and rail keeps the same
-   * colour it had before. */
-  --color-background: #161c1a;
-  --color-background-rgb: 22 28 26;
-  --color-chrome: #121816;
-  --color-chrome-rgb: 18 24 22;
+   * The depth stack is now visibly separated into three
+   * steps:
+   *     shell    #0F1513 (L≈5)  — sidebar, topbar, mobile nav
+   *     workspace #111715 (L≈6)  — main page canvas
+   *     surface   #232C29 (L≈14) — cards, panels
+   *     surface-2 #293431 (L≈16) — secondary raised
+   *     border    #394642 (L≈20)
+   * The shell-to-workspace step is a subtle ~2 RGB units
+   * but a clear L* step. The workspace-to-surface step
+   * is the dramatic one (~+18 RGB) so cards visibly
+   * float above the canvas. Cards are NOT darkened;
+   * only the canvas and shell move deeper, which is
+   * what increases BACKGROUND ↔ CARD contrast. */
+  --color-background: #111715;
+  --color-background-rgb: 17 23 21;
+  --color-chrome: #0f1513;
+  --color-chrome-rgb: 15 21 19;
   --color-surface: #232c29;
   --color-surface-rgb: 35 44 41;
   --color-surface-2: #293431;
