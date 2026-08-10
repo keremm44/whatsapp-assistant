@@ -11,12 +11,24 @@ import { ListChecks } from "lucide-react";
  *     family as the sidebar brand mark. The right side
  *     carries the factual count badge.
  *
- *   - Page identity. The caption "Genel Bakış" is petrol,
- *     uppercase, tracking-wide — the same family as the
- *     sidebar's section labels. The H1 is in Manrope and
- *     uses a 1px petrol hairline under it (matching the
- *     sidebar's brand hairline) so the page header and the
- *     sidebar read as parts of the same product identity.
+ *   - Page identity. The caption "Genel Bakış" is rendered
+ *     in terracotta — the warm secondary brand colour —
+ *     so the centre of the dashboard receives the
+ *     terracotta cue at the very top of the page. The
+ *     caption is uppercase, tracking-wide, 11px, on the
+ *     same family as the sidebar's section labels so the
+ *     shell and the page still feel like one product.
+ *
+ *   - The H1 is in Manrope and is followed by a brand
+ *     motif: a long petrol stroke + a shorter but visibly
+ *     chunky terracotta stroke. The two segments sit on
+ *     the same baseline with a controlled gap. The motif
+ *     is the same idea the sidebar uses in its wordmark
+ *     hairline, scaled up so it registers as a
+ *     recognisable brand signature on the page. The
+ *     terracotta segment is wide enough to actually be
+ *     seen; the motif is decorative, not a status
+ *     indicator.
  *
  *   - Count badge. A petrol-soft panel with a petrol
  *     `ListChecks` glyph. The text reads "İlgilenmeniz
@@ -28,7 +40,7 @@ import { ListChecks } from "lucide-react";
  *
  *   - Mobile (< sm). The badge drops below the title block
  *     so the two never compete for horizontal space. The
- *     petrol hairline is preserved.
+ *     brand motif is preserved.
  */
 export function DashboardHeader({
   total,
@@ -44,8 +56,8 @@ export function DashboardHeader({
 }) {
   return (
     <div className="flex flex-col gap-6 pb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
-      <div className="space-y-2.5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+      <div className="space-y-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">
           {caption}
         </p>
         <h1 className="font-heading text-[30px] font-medium leading-[1.1] text-foreground sm:text-[34px]">
@@ -57,15 +69,20 @@ export function DashboardHeader({
           </p>
         ) : null}
         {/*
-         * Brand hairline. Mirrors the sidebar's wordmark
-         * hairline: a petrol segment plus a short clay
-         * segment. Petrol stays the dominant control
-         * colour; clay is the small warm signature that
-         * ties the page header to the sidebar identity.
+         * Brand motif: a long petrol stroke followed by a
+         * shorter but visibly chunky terracotta stroke.
+         * The two segments share a baseline and a 6px gap
+         * so they read as one composed signature, not as
+         * two unrelated ticks. The motif is decorative
+         * brand architecture: it does not imply urgency,
+         * status, priority, or unread state.
          */}
-        <span aria-hidden="true" className="mt-1 flex items-center gap-1">
-          <span className="block h-px w-9 bg-primary" />
-          <span className="block h-px w-2 bg-accent" />
+        <span
+          aria-hidden="true"
+          className="mt-1 flex items-center gap-1.5"
+        >
+          <span className="block h-[2px] w-14 rounded-full bg-primary" />
+          <span className="block h-[2px] w-6 rounded-full bg-accent" />
         </span>
       </div>
       {total > 0 ? <CountBadge total={total} /> : null}

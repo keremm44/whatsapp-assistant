@@ -7,6 +7,7 @@ import { EmptyAttention } from "@/components/seller/dashboard/empty-attention";
 import { PriorityCard } from "@/components/seller/dashboard/priority-card";
 import { QuietSummary } from "@/components/seller/dashboard/quiet-summary";
 import { SecondaryRow } from "@/components/seller/dashboard/secondary-row";
+import { SectionHeading } from "@/components/seller/dashboard/section-heading";
 import { PageContainer } from "@/components/shared/page-container";
 
 import { resolveDashboardTasksFromSession } from "@/lib/seller/dashboard-tasks-server";
@@ -217,27 +218,14 @@ function NormalOnlyLayout({
     <div className="mt-8 flex flex-col gap-10 lg:mt-10">
       <section
         aria-labelledby="section-bugun-bakilabilecekler"
-        className="space-y-4"
+        className="space-y-5"
       >
-        <header className="space-y-1.5">
-          <div className="flex items-baseline gap-2">
-            <h2
-              id="section-bugun-bakilabilecekler"
-              className="font-heading text-[20px] font-medium leading-snug text-foreground sm:text-[22px]"
-            >
-              Bugün bakılabilecekler
-            </h2>
-            <span
-              aria-hidden="true"
-              className="text-[13px] tabular-nums text-muted-foreground"
-            >
-              · {normalTasks.length}
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Vakit varsa ilerleyebileceğiniz konular.
-          </p>
-        </header>
+        <SectionHeading
+          id="section-bugun-bakilabilecekler"
+          title="Bugün bakılabilecekler"
+          count={normalTasks.length}
+          description="Vakit varsa ilerleyebileceğiniz konular."
+        />
         <ul
           role="list"
           className="grid grid-cols-1 gap-3 lg:grid-cols-2"
@@ -278,26 +266,13 @@ function PrimaryColumn({
   tasks: DashboardTask[];
 }) {
   return (
-    <section aria-labelledby={id} className="space-y-4">
-      <header className="space-y-1.5">
-        <div className="flex items-baseline gap-2">
-          <h2
-            id={id}
-            className="font-heading text-[20px] font-medium leading-snug text-foreground sm:text-[22px]"
-          >
-            {title}
-          </h2>
-          <span
-            aria-hidden="true"
-            className="text-[13px] tabular-nums text-muted-foreground"
-          >
-            · {count}
-          </span>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          İncelemeniz gereken konular.
-        </p>
-      </header>
+    <section aria-labelledby={id} className="space-y-5">
+      <SectionHeading
+        id={id}
+        title={title}
+        count={count}
+        description="İncelemeniz gereken konular."
+      />
       <ul role="list" className="space-y-3">
         {tasks.map((task) => (
           <li key={task.id}>
@@ -332,11 +307,24 @@ function SecondaryPanel({
       aria-labelledby={id}
       className="relative overflow-hidden rounded-md border border-border bg-chrome"
     >
+      {/*
+       * The chrome panel that hosts the secondary list.
+       * A thin petrol top hairline is the original framing;
+       * a small terracotta corner accent sits in the
+       * top-left and connects this panel to the page
+       * header's brand motif (long petrol + shorter
+       * terracotta). The corner accent is decorative
+       * brand architecture, not a status indicator.
+       */}
       <span
         aria-hidden="true"
         className="absolute inset-x-0 top-0 h-px bg-primary"
       />
-      <header className="flex items-baseline gap-2 px-4 pb-2 pt-4 sm:px-5 sm:pt-5">
+      <span
+        aria-hidden="true"
+        className="absolute left-0 top-0 h-3 w-3 border-l-2 border-t-2 border-accent"
+      />
+      <header className="flex items-baseline gap-2 px-4 pb-2 pt-5 sm:px-5">
         <h2
           id={id}
           className="font-heading text-[15px] font-semibold text-foreground sm:text-base"
