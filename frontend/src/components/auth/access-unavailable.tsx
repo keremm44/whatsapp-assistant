@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils/cn";
 export function AccessUnavailable({
   className,
   contextLabel,
+  compact = false,
 }: {
   className?: string;
   /**
@@ -37,6 +38,14 @@ export function AccessUnavailable({
    * panel and the admin surface.
    */
   contextLabel?: string;
+  /**
+   * When true the component drops its 60vh min-height and the
+   * wide vertical padding. This is for surfaces that already
+   * constrain the available space (e.g. the auth card around
+   * /giris). The retry UX, copy, and button behavior are
+   * identical to the full-height variant.
+   */
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [isRetrying, setIsRetrying] = React.useState(false);
@@ -75,7 +84,8 @@ export function AccessUnavailable({
       role="status"
       aria-live="polite"
       className={cn(
-        "mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center gap-3 px-4 py-12 text-center",
+        "mx-auto flex w-full max-w-md flex-col items-center justify-center gap-3 px-4 text-center",
+        compact ? "py-4" : "min-h-[60vh] py-12",
         className,
       )}
     >

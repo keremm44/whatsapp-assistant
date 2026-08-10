@@ -55,6 +55,17 @@ const SELLER_PATH: Route = "/seller";
 const ADMIN_PATH: Route = "/admin";
 
 /**
+ * The three protected route constants. Exported so the login page
+ * (and any future server-side redirector) can reference them with
+ * the same `Route` typing without re-declaring string literals.
+ */
+export const PROTECTED_ROUTES = {
+  login: LOGIN_PATH,
+  seller: SELLER_PATH,
+  admin: ADMIN_PATH,
+} as const;
+
+/**
  * Minimal shape-based view of a Supabase auth error.
  *
  * We deliberately do NOT import `@supabase/auth-js` here. That
