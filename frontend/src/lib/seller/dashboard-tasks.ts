@@ -19,6 +19,23 @@
  * SQL function joins three sources (return/issue, order,
  * unanswered) into a single ordered action queue; ordering is
  * `priority_rank ASC, updated_at DESC, related_entity_id DESC`.
+ *
+ * Parser discipline:
+ *   - The SQL read model always emits a fixed set of keys. A
+ *     MISSING key is a malformed backend contract, NOT a
+ *     silently-defaulted null.
+ *   - The VALUE of a nullable key may be `null` (the SQL's CASE
+ *     branch). The KEY must be present.
+ *   - Numeric shapes are validated strictly: positive integers for
+ *     IDs, non-negative integers for `total`/`offset`, integer
+ *     1..100 for `limit`. Fractions, negatives, and zero IDs are
+ *     rejected.
+ *   - Cross-field invariants are validated against the known
+ *     SQL mapping:
+ *         return_review       -> high + return_issue_request
+ *         order_review        -> high + order
+ *         unanswered_question -> normal + unanswered_question_group
+ *     A payload that violates this mapping is a contract error.
  */
 
 import { apiFetchWithAccessToken } from "@/lib/api/authenticated";
@@ -41,12 +58,15 @@ export const DASHBOARD_TASK_TYPES = [
 export type DashboardTaskType = (typeof DASHBOARD_TASK_TYPES)[number];
 
 /**
- * Backend-defined priority. Used internally for sort ranking. The
- * frontend never invents additional priority levels; an unknown
- * value is treated as a contract violation.
+ * Backend-defined priority. The frontend maps this to the two
+ * approved visual sections:
+ *   - "high"   -> "Önce bunlar"
+ *   - "normal" -> "Bugün bakılabilecekler"
+ * The frontend never invents additional priority levels; an unknown
+ * value is a contract error.
  */
 const VALID_PRIORITIES = new Set<string>(["high", "normal"]);
-type DashboardTaskPriority = "high" | "normal";
+export type DashboardTaskPriority = "high" | "normal";
 
 /**
  * The `action_target` block routes the seller to the existing
@@ -63,6 +83,24 @@ type DashboardActionKind =
   | "return_issue_request"
   | "order"
   | "unanswered_question_group";
+
+/**
+ * Known cross-field mapping enforced by the SQL read model. A
+ * payload that violates this mapping (e.g. a `return_review` task
+ * with `priority: "normal"`) is treated as a contract error — we
+ * never repair or reinterpret the mapping in the frontend.
+ */
+const TASK_TYPE_TO_PRIORITY: Record<DashboardTaskType, DashboardTaskPriority> = {
+  return_review: "high",
+  order_review: "high",
+  unanswered_question: "normal",
+};
+
+const TASK_TYPE_TO_ACTION_KIND: Record<DashboardTaskType, DashboardActionKind> = {
+  return_review: "return_issue_request",
+  order_review: "order",
+  unanswered_question: "unanswered_question_group",
+};
 
 export type DashboardTaskCustomer = {
   id: number;
@@ -108,30 +146,87 @@ const isTaskType = (value: unknown): value is DashboardTaskType =>
 const isPriority = (value: unknown): value is DashboardTaskPriority =>
   typeof value === "string" && VALID_PRIORITIES.has(value);
 
-const isActionKind = (
-  value: unknown,
-): value is DashboardActionKind =>
+const isActionKind = (value: unknown): value is DashboardActionKind =>
   typeof value === "string" && VALID_ACTION_KINDS.has(value);
+
+/**
+ * Positive integer guard. Rejects `0`, negatives, fractions,
+ * non-numbers, NaN, +/-Infinity. Used for backend IDs and
+ * `entity_version`.
+ */
+const isPositiveInteger = (value: unknown): value is number =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  Number.isFinite(value) &&
+  value > 0;
+
+/**
+ * Non-negative integer guard. Rejects negatives, fractions, non-
+ * numbers, NaN, +/-Infinity. Used for `total` and `offset`.
+ */
+const isNonNegativeInteger = (value: unknown): value is number =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  Number.isFinite(value) &&
+  value >= 0;
+
+/**
+ * Strict "key must be present, value may be null or T". If the key
+ * is missing we treat it as a contract error; if the value is the
+ * wrong type we treat it as a contract error. Only `null` is
+ * accepted as the "no value" alternative.
+ */
+const readKey = (
+  obj: Record<string, unknown>,
+  key: string,
+): unknown => {
+  if (!(key in obj)) {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}${key}_missing`);
+  }
+  return obj[key];
+};
+
+const readNullableString = (
+  obj: Record<string, unknown>,
+  key: string,
+): string | null => {
+  const v = readKey(obj, key);
+  if (v === null) return null;
+  if (typeof v !== "string") {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}${key}_type`);
+  }
+  return v;
+};
+
+const readNullablePositiveInteger = (
+  obj: Record<string, unknown>,
+  key: string,
+): number | null => {
+  const v = readKey(obj, key);
+  if (v === null) return null;
+  if (!isPositiveInteger(v)) {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}${key}_shape`);
+  }
+  return v;
+};
 
 const parseCustomer = (raw: unknown): DashboardTaskCustomer | null => {
   if (raw === null) return null;
   if (!isPlainObject(raw)) {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}customer`);
   }
-  const idRaw = raw.id;
-  const id =
-    typeof idRaw === "number" && Number.isFinite(idRaw) ? idRaw : null;
-  if (id === null) {
-    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}customer_id`);
+  const idRaw = readKey(raw, "id");
+  if (!isPositiveInteger(idRaw)) {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}customer_id_shape`);
   }
-  return {
-    id,
-    name: typeof raw.name === "string" ? raw.name : null,
-    whatsappNumber:
-      typeof raw.whatsapp_number === "string"
-        ? raw.whatsapp_number
-        : null,
-  };
+  // `name` and `whatsapp_number` are also guaranteed keys per the
+  // SQL projection, but the user's strict-reasoning list explicitly
+  // enumerates only `action_target.customer_id`. We still apply
+  // the same strict reasoning here: the key must be present and
+  // the value is either a string or null.
+  const name = readNullableString(raw, "name");
+  const whatsappNumber = readNullableString(raw, "whatsapp_number");
+  return { id: idRaw, name, whatsappNumber };
 };
 
 const parseActionTarget = (
@@ -141,117 +236,99 @@ const parseActionTarget = (
   if (!isPlainObject(raw)) {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}action_target`);
   }
-  if (!isActionKind(raw.kind)) {
+  const kindRaw = readKey(raw, "kind");
+  if (!isActionKind(kindRaw)) {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}action_target_kind`);
   }
-  const idRaw = raw.id;
-  const id =
-    typeof idRaw === "number" && Number.isFinite(idRaw) ? idRaw : null;
-  if (id === null) {
-    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}action_target_id`);
+  const idRaw = readKey(raw, "id");
+  if (!isPositiveInteger(idRaw)) {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}action_target_id_shape`);
   }
-  const customerIdRaw = raw.customer_id;
-  const customerId =
-    customerIdRaw === null || customerIdRaw === undefined
-      ? null
-      : typeof customerIdRaw === "number" && Number.isFinite(customerIdRaw)
-        ? customerIdRaw
-        : (() => {
-            throw new Error(
-              `${DASHBOARD_TASKS_CONTRACT_PREFIX}action_target_customer_id`,
-            );
-          })();
-  return { kind: raw.kind, id, customerId };
+  const customerId = readNullablePositiveInteger(raw, "customer_id");
+  return { kind: kindRaw, id: idRaw, customerId };
 };
 
 const parseTask = (raw: unknown): DashboardTask => {
   if (!isPlainObject(raw)) {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}task`);
   }
-  // id is a backend-constructed composite "<type>:<related_entity_id>";
-  // we treat it as opaque to the frontend and only verify shape.
-  if (typeof raw.id !== "string" || raw.id.length === 0) {
-    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}task_id`);
+
+  // `id` is a backend-constructed composite "<type>:<related_entity_id>".
+  // It is required and must be a non-empty string. We do not parse
+  // the inner shape — the frontend treats it as opaque.
+  const idRaw = readKey(raw, "id");
+  if (typeof idRaw !== "string" || idRaw.length === 0) {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}task_id_shape`);
   }
-  if (!isTaskType(raw.type)) {
+
+  // `type` is required and must be one of the three allowlisted
+  // values.
+  const typeRaw = readKey(raw, "type");
+  if (!isTaskType(typeRaw)) {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}task_type`);
   }
-  if (!isPriority(raw.priority)) {
+
+  // `priority` is required and must be one of "high" | "normal".
+  // The frontend does NOT treat priority as an internal sort key:
+  // it is the user-facing two-section categorization.
+  const priorityRaw = readKey(raw, "priority");
+  if (!isPriority(priorityRaw)) {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}task_priority`);
   }
-  if (typeof raw.title !== "string") {
-    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}task_title`);
+
+  // Cross-field invariant: the SQL read model defines a fixed
+  // mapping between task type, priority, and action_target.kind.
+  // A payload that violates this mapping is a contract error.
+  if (TASK_TYPE_TO_PRIORITY[typeRaw] !== priorityRaw) {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}task_priority_mismatch`);
   }
 
-  const summary =
-    raw.summary === null || raw.summary === undefined
-      ? null
-      : typeof raw.summary === "string"
-        ? raw.summary
-        : (() => {
-            throw new Error(
-              `${DASHBOARD_TASKS_CONTRACT_PREFIX}task_summary`,
-            );
-          })();
+  // `title` is required and must be a string.
+  const titleRaw = readKey(raw, "title");
+  if (typeof titleRaw !== "string") {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}task_title_shape`);
+  }
 
-  const relatedEntityId =
-    raw.related_entity_id === null || raw.related_entity_id === undefined
-      ? null
-      : typeof raw.related_entity_id === "number" &&
-          Number.isFinite(raw.related_entity_id)
-        ? raw.related_entity_id
-        : (() => {
-            throw new Error(
-              `${DASHBOARD_TASKS_CONTRACT_PREFIX}task_related_entity_id`,
-            );
-          })();
+  // The remaining fields are nullable (string or null for
+  // textual, positive int or null for IDs) but their KEYS must be
+  // present per the SQL projection. A missing key is a contract
+  // error; a wrong-typed value is a contract error.
+  const summary = readNullableString(raw, "summary");
+  const relatedEntityId = readNullablePositiveInteger(
+    raw,
+    "related_entity_id",
+  );
+  const entityVersion = readNullablePositiveInteger(raw, "entity_version");
+  const createdAt = readNullableString(raw, "created_at");
+  const updatedAt = readNullableString(raw, "updated_at");
 
-  const entityVersion =
-    raw.entity_version === null || raw.entity_version === undefined
-      ? null
-      : typeof raw.entity_version === "number" &&
-          Number.isFinite(raw.entity_version)
-        ? raw.entity_version
-        : (() => {
-            throw new Error(
-              `${DASHBOARD_TASKS_CONTRACT_PREFIX}task_entity_version`,
-            );
-          })();
+  const customer = parseCustomer(readKey(raw, "customer"));
+  const actionTarget = parseActionTarget(readKey(raw, "action_target"));
 
-  const createdAt =
-    raw.created_at === null || raw.created_at === undefined
-      ? null
-      : typeof raw.created_at === "string"
-        ? raw.created_at
-        : (() => {
-            throw new Error(
-              `${DASHBOARD_TASKS_CONTRACT_PREFIX}task_created_at`,
-            );
-          })();
-
-  const updatedAt =
-    raw.updated_at === null || raw.updated_at === undefined
-      ? null
-      : typeof raw.updated_at === "string"
-        ? raw.updated_at
-        : (() => {
-            throw new Error(
-              `${DASHBOARD_TASKS_CONTRACT_PREFIX}task_updated_at`,
-            );
-          })();
+  // Cross-field invariant: action_target.kind must match the
+  // task type. We check this after the action_target object is
+  // fully parsed so the error points at the right field.
+  if (
+    actionTarget !== null &&
+    TASK_TYPE_TO_ACTION_KIND[typeRaw] !== actionTarget.kind
+  ) {
+    throw new Error(
+      `${DASHBOARD_TASKS_CONTRACT_PREFIX}action_target_kind_mismatch`,
+    );
+  }
 
   return {
-    id: raw.id,
-    type: raw.type,
-    priority: raw.priority,
-    customer: parseCustomer(raw.customer),
-    title: raw.title,
+    id: idRaw,
+    type: typeRaw,
+    priority: priorityRaw,
+    customer,
+    title: titleRaw,
     summary,
     relatedEntityId,
     entityVersion,
     createdAt,
     updatedAt,
-    actionTarget: parseActionTarget(raw.action_target),
+    actionTarget,
   };
 };
 
@@ -260,31 +337,41 @@ const parseDashboardTasks = (raw: unknown): DashboardTasks => {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}response`);
   }
 
-  const totalRaw = raw.toplam;
-  if (typeof totalRaw !== "number" || !Number.isFinite(totalRaw)) {
-    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}total`);
+  // `toplam` is the total count of filtered tasks (NOT just the
+  // page size). It is a non-negative integer.
+  const totalRaw = readKey(raw, "toplam");
+  if (!isNonNegativeInteger(totalRaw)) {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}total_shape`);
   }
 
-  const limitRaw = raw.limit;
-  if (typeof limitRaw !== "number" || !Number.isFinite(limitRaw)) {
-    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}limit`);
+  // `limit` is the page size. The SQL function accepts 1..100;
+  // the FastAPI route enforces the same range. We mirror the
+  // range here so a backend regression is caught immediately.
+  const limitRaw = readKey(raw, "limit");
+  if (
+    !isNonNegativeInteger(limitRaw) ||
+    !Number.isInteger(limitRaw) ||
+    limitRaw < 1 ||
+    limitRaw > 100
+  ) {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}limit_shape`);
   }
 
-  const offsetRaw = raw.offset;
-  if (typeof offsetRaw !== "number" || !Number.isFinite(offsetRaw)) {
-    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}offset`);
+  // `offset` is the page offset. Non-negative integer.
+  const offsetRaw = readKey(raw, "offset");
+  if (!isNonNegativeInteger(offsetRaw)) {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}offset_shape`);
   }
 
-  const type =
-    raw.type === null || raw.type === undefined
-      ? null
-      : isTaskType(raw.type)
-        ? raw.type
-        : (() => {
-            throw new Error(
-              `${DASHBOARD_TASKS_CONTRACT_PREFIX}type`,
-            );
-          })();
+  // `type` is the request filter, echoed back. Always present
+  // (null when no filter was provided).
+  const typeRaw = readKey(raw, "type");
+  if (typeRaw === null) {
+    // valid: no filter
+  } else if (!isTaskType(typeRaw)) {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}type`);
+  }
+  const type: DashboardTaskType | null = isTaskType(typeRaw) ? typeRaw : null;
 
   if (!Array.isArray(raw.tasks)) {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}tasks`);
@@ -295,7 +382,13 @@ const parseDashboardTasks = (raw: unknown): DashboardTasks => {
     tasks.push(parseTask(rawTask));
   }
 
-  return { total: totalRaw, limit: limitRaw, offset: offsetRaw, type, tasks };
+  return {
+    total: totalRaw,
+    limit: limitRaw,
+    offset: offsetRaw,
+    type,
+    tasks,
+  };
 };
 
 export type FetchDashboardTasksOptions = {
