@@ -33,18 +33,18 @@
   --font-body: "Source Sans 3", ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", "Helvetica Neue", sans-serif;
 
-  /* Surfaces — four-level warm cream hierarchy.
-   *   background: main app canvas
-   *   chrome:     persistent shell surfaces (sidebar, topbar, mobile nav)
-   *   surface:    primary working surfaces (content, lists)
-   *   surface-2:  secondary low-emphasis surface
+  /* Surfaces — four-level warm cream hierarchy, calibrated to the
+   * Sakin Ustalık v2 visual identity: cooler linen background, pure
+   * white working surface, petrol-tinted secondary surface and
+   * cool hairlines. The hierarchy is unchanged (background →
+   * chrome → surface → surface-2); only the values were tuned.
    */
-  --color-background: #f3efe7;
+  --color-background: #f6f4ef;
   --color-chrome: #faf8f3;
-  --color-surface: #fffdf9;
-  --color-surface-2: #ece8df;
-  --color-border: #d8d2c8;
-  --color-divider: #e4ded4;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef2ef;
+  --color-border: #d9e0dc;
+  --color-divider: #e4eae6;
 
   /* Text */
   --color-foreground: #24302e;
@@ -55,7 +55,7 @@
   --color-primary: #245b57;
   --color-primary-hover: #1c4845;
   --color-primary-active: #153634;
-  --color-primary-muted: #dfece9;
+  --color-primary-muted: #e7f0ee;
   --color-primary-foreground: #ffffff;
 
   /* Accent (clay) */

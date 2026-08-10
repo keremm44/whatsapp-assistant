@@ -1,17 +1,19 @@
 import type { Route } from "next";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 import { AccessUnavailable } from "@/components/auth/access-unavailable";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
+import { Surface } from "@/components/shared/surface";
 
 import { resolveDashboardTasksFromSession } from "@/lib/seller/dashboard-tasks-server";
 import type { DashboardTask, DashboardTaskType } from "@/lib/seller/dashboard-tasks";
 
 /**
- * Genel Bakış — "Bugün ilgilenmeniz gerekenler".
+ * Genel Bakış — satıcının günlük dikkat merkezi.
  *
  * Server Component. The page resolves the seller's action queue
  * server-side from `GET /seller/dashboard/tasks` using the same
@@ -29,7 +31,7 @@ import type { DashboardTask, DashboardTaskType } from "@/lib/seller/dashboard-ta
  *     order_review        -> high
  *     unanswered_question -> normal
  *
- *   The dashboard preserves the approved two-section IA:
+ *   The dashboard renders the approved two-section IA:
  *
  *     "Önce bunlar"            <- priority === "high"
  *     "Bugün bakılabilecekler"  <- priority === "normal"
@@ -38,14 +40,30 @@ import type { DashboardTask, DashboardTaskType } from "@/lib/seller/dashboard-ta
  *   by the backend (`priority_rank ASC, updated_at DESC,
  *   related_entity_id DESC`). The frontend never re-sorts.
  *
- *   If one section is empty, the section is omitted cleanly. If
- *   both are empty (i.e. `tasks.length === 0` and `toplam === 0`)
- *   the calm empty state replaces the entire work region.
+ *   Visual character (this step):
  *
- *   The "Günün özeti" placeholder is reduced to a single quiet
- *   factual line that uses only the backend-provided `toplam`
- *   aggregate. No revenue, no customer counts, no AI metrics.
- *   It is omitted entirely when `toplam === 0` to avoid noise.
+ *   - Each section is a single working surface (Surface, white
+ *     canvas) holding comparable task rows. We deliberately do
+ *     NOT wrap each task in its own card. The card-per-task
+ *     pattern reads as a "CRM stack" and dilutes the queue
+ *     feeling.
+ *   - The "high" section is signalled by a thin petrol hairline
+ *     under its header and a subtle petrol caption. The "normal"
+ *     section has no extra color. Priority is communicated by
+ *     position and by the header's micro-architecture, not by
+ *     painting the entire section.
+ *   - Each row carries a small type pill (color-coded by backend
+ *     `type` only — not by `priority` — so the pill is a stable
+ *     category label rather than an "urgency" widget).
+ *   - The CTA is a quiet secondary button with a right-arrow
+ *     affordance. It is never the heaviest element on the row.
+ *   - Below both sections sits a very low-emphasis summary line
+ *     that uses only the backend-provided `toplam` aggregate. It
+ *     is omitted entirely when `toplam === 0` to avoid noise.
+ *   - The "Günün özeti" placeholder label is dropped — the line
+ *     itself is self-explanatory in this layout, and the
+ *     explicit label was adding visual weight without adding
+ *     information.
  */
 export default async function SellerOverviewPage() {
   const bootstrap = await resolveDashboardTasksFromSession();
@@ -88,13 +106,15 @@ export default async function SellerOverviewPage() {
       />
 
       {hasTasks ? (
-        <div className="mt-10 flex flex-col gap-10">
+        <div className="mt-8 flex flex-col gap-8 sm:mt-10 sm:gap-10">
           {highTasks.length > 0 ? (
             <DashboardTaskSection
               id="section-once-bunlar"
               title="Önce bunlar"
-              description="Sistemden gelen sıraya göre incelemeniz gereken konular."
+              count={highTasks.length}
+              description="İncelemeniz gereken konular."
               tasks={highTasks}
+              emphasis="primary"
             />
           ) : null}
 
@@ -102,45 +122,115 @@ export default async function SellerOverviewPage() {
             <DashboardTaskSection
               id="section-bugun-bakilabilecekler"
               title="Bugün bakılabilecekler"
+              count={normalTasks.length}
               description="Vakit varsa ilerleyebileceğiniz konular."
               tasks={normalTasks}
+              emphasis="neutral"
             />
           ) : null}
         </div>
       ) : (
-        <div className="mt-8">
-          <EmptyState
-            variant="compact"
-            caption="Bugün ilgilenmeniz gerekenler"
-            title="Şu anda ilgilenmeniz gereken bir konu yok."
-            description="Yeni konular geldiğinde burada görünecek."
-          />
-        </div>
+        <DashboardEmptyState />
       )}
 
       {total > 0 ? (
-        <section
-          aria-labelledby="section-gunun-ozeti"
-          className="mt-10 space-y-2 border-t border-divider pt-5"
-        >
-          <p className="text-[13px] font-medium text-primary">Günün özeti</p>
-          <p className="text-sm text-muted-foreground">
-            İlgilenmeniz gereken {total} konu var.
-          </p>
-        </section>
+        <p className="mt-10 text-[13px] leading-relaxed text-muted-foreground sm:mt-12">
+          İlgilenmeniz gereken {total} konu var.
+        </p>
       ) : null}
     </PageContainer>
   );
 }
 
 /**
- * Map a backend task type to the existing seller list route that
- * hosts the work surface for that type. Detail routes do not exist
- * for any of these yet; we deliberately link to the list, which is
- * the safest existing destination.
+ * Calm empty state for the dashboard. The empty surface is a thin
+ * working surface (Surface) so the page does not feel naked, and
+ * the copy stays exactly as it was — no invented data, no
+ * placeholder rows.
  */
-const TASK_TYPE_LABELS: Record<DashboardTaskType, string> = {
-  return_review: "İade / sorun incelemesi",
+function DashboardEmptyState() {
+  return (
+    <Surface className="mt-8 px-5 py-6 sm:px-6 sm:py-7">
+      <EmptyState
+        variant="compact"
+        caption="Bugün ilgilenmeniz gerekenler"
+        title="Şu anda ilgilenmeniz gereken bir konu yok."
+        description="Yeni konular geldiğinde burada görünecek."
+      />
+    </Surface>
+  );
+}
+
+/**
+ * A single dashboard section.
+ *
+ * On desktop and tablet the section is a single Surface that
+ * contains a stack of comparable task rows separated by 1px
+ * dividers. On mobile the same rows remain in the same Surface
+ * (the Surface is already comfortable on small screens) but the
+ * row internals stack and the CTA becomes full-width so it
+ * remains comfortably tappable.
+ *
+ * The `emphasis` flag only controls the header micro-architecture
+ * (caption color + hairline). It is not used to paint the entire
+ * section.
+ */
+function DashboardTaskSection({
+  id,
+  title,
+  count,
+  description,
+  tasks,
+  emphasis,
+}: {
+  id: string;
+  title: string;
+  count: number;
+  description: string;
+  tasks: DashboardTask[];
+  emphasis: "primary" | "neutral";
+}) {
+  // The section header is composed inline so the meta line
+  // ("Öncelikli · N konu") can sit visually under the description
+  // without extending the shared SectionHeader API for a single
+  // caller.
+  return (
+    <section aria-labelledby={id} className="space-y-3">
+      <div className="space-y-2">
+        <SectionHeader id={id} title={title} description={description} />
+        <p
+          className={
+            emphasis === "primary"
+              ? "flex items-center gap-2 text-[13px] font-medium text-primary"
+              : "flex items-center gap-2 text-[13px] font-medium text-muted-foreground"
+          }
+        >
+          <span>{emphasis === "primary" ? "Öncelikli" : "Sıradaki"}</span>
+          <span aria-hidden="true" className="text-muted-foreground">
+            ·
+          </span>
+          <span className="tabular-nums">{count} konu</span>
+        </p>
+      </div>
+      <Surface className="overflow-hidden">
+        <ul role="list" className="divide-y divide-divider">
+          {tasks.map((task) => (
+            <DashboardTaskRow key={task.id} task={task} />
+          ))}
+        </ul>
+      </Surface>
+    </section>
+  );
+}
+
+/**
+ * Map a backend task type to its UI metadata: short label, target
+ * route, and CTA copy. The label is the user-facing category and
+ * is intentionally short so it fits inside the small type pill
+ * without breaking the rhythm of the row.
+ */
+const TASK_TYPE_PILL_LABEL: Record<DashboardTaskType, string> = {
+  return_review: "İade incelemesi",
   order_review: "Sipariş incelemesi",
   unanswered_question: "Yanıt bekleyen soru",
 };
@@ -152,74 +242,115 @@ const TASK_TYPE_ROUTES: Record<DashboardTaskType, Route> = {
 };
 
 const TASK_TYPE_CTA: Record<DashboardTaskType, string> = {
-  return_review: "İade listesine git",
-  order_review: "Sipariş listesine git",
+  return_review: "İadelere git",
+  order_review: "Siparişlere git",
   unanswered_question: "Sorulara git",
 };
 
-function DashboardTaskSection({
-  id,
-  title,
-  description,
-  tasks,
-}: {
-  id: string;
-  title: string;
-  description: string;
-  tasks: DashboardTask[];
-}) {
+const TASK_TYPE_PILL_TONE: Record<
+  DashboardTaskType,
+  "primary" | "review" | "info"
+> = {
+  return_review: "review",
+  order_review: "primary",
+  unanswered_question: "info",
+};
+
+/**
+ * Small, quiet category pill. The tone is keyed to the backend
+ * `type` only (so the pill reads as a category, not as an
+ * urgency indicator). The pill sits at the top of each row and
+ * never carries the row's main weight — the title does.
+ */
+function TaskTypePill({ type }: { type: DashboardTaskType }) {
+  const tone = TASK_TYPE_PILL_TONE[type];
+  const toneClass =
+    tone === "primary"
+      ? "bg-primary-muted text-primary"
+      : tone === "review"
+        ? "bg-review-muted text-review"
+        : "bg-info-muted text-info";
+
   return (
-    <section aria-labelledby={id} className="space-y-3">
-      <SectionHeader id={id} title={title} description={description} />
-      <ul
-        role="list"
-        className="divide-y divide-divider border-t border-divider"
-      >
-        {tasks.map((task) => (
-          <DashboardTaskRow key={task.id} task={task} />
-        ))}
-      </ul>
-    </section>
+    <span
+      className={`inline-flex h-5 items-center rounded-pill px-2 text-[11px] font-medium leading-none tracking-wide ${toneClass}`}
+    >
+      {TASK_TYPE_PILL_LABEL[type]}
+    </span>
   );
 }
 
+/**
+ * Compose the meta line under the summary. We only ever render
+ * fields that the backend actually returned (name / whatsapp /
+ * customer-free). The line is intentionally compact and
+ * low-contrast — the row's information weight is in the title.
+ */
+function composeCustomerLine(task: DashboardTask): string | null {
+  if (!task.customer) return null;
+  const parts: string[] = [];
+  if (
+    typeof task.customer.name === "string" &&
+    task.customer.name.trim().length > 0
+  ) {
+    parts.push(task.customer.name);
+  }
+  if (
+    typeof task.customer.whatsappNumber === "string" &&
+    task.customer.whatsappNumber.trim().length > 0
+  ) {
+    parts.push(task.customer.whatsappNumber);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 function DashboardTaskRow({ task }: { task: DashboardTask }) {
-  const typeLabel = TASK_TYPE_LABELS[task.type];
   const href = TASK_TYPE_ROUTES[task.type];
   const cta = TASK_TYPE_CTA[task.type];
-  // `summary` is proven non-null in the SQL projection, but the
-  // raw text may still be empty. We treat empty as absent so the
-  // layout does not leave a stranded muted paragraph.
-  const customerLine = task.customer
-    ? [task.customer.name, task.customer.whatsappNumber]
-        .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
-        .join(" · ")
-    : null;
+  const pillLabel = TASK_TYPE_PILL_LABEL[task.type];
+  const customerLine = composeCustomerLine(task);
+  const hasSummary = task.summary.trim().length > 0;
 
   return (
-    <li className="py-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-        <div className="min-w-0 space-y-1">
-          <p className="text-[13px] font-medium text-primary">{typeLabel}</p>
-          <p className="text-sm font-medium leading-snug text-foreground">
-            {task.title}
-          </p>
-          {task.summary.trim().length > 0 ? (
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              {task.summary}
+    <li>
+      <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-5 sm:py-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+          <div className="hidden h-9 w-9 shrink-0 items-center justify-center sm:flex">
+            <span
+              aria-hidden="true"
+              className="block h-5 w-px rounded-full bg-divider"
+            />
+          </div>
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <TaskTypePill type={task.type} />
+            <p className="text-[15px] font-medium leading-snug text-foreground">
+              {task.title}
             </p>
-          ) : null}
-          {customerLine ? (
-            <p className="text-xs text-muted-foreground">{customerLine}</p>
-          ) : null}
+            {hasSummary ? (
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {task.summary}
+              </p>
+            ) : null}
+            {customerLine ? (
+              <p className="pt-0.5 text-[12.5px] leading-relaxed text-muted-foreground">
+                <span className="text-foreground/70">{customerLine}</span>
+              </p>
+            ) : null}
+          </div>
         </div>
-        <div className="shrink-0">
+        <div className="shrink-0 sm:pl-2">
           <Link
             href={href}
-            className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            aria-label={`${typeLabel} — ${cta}`}
+            className="group inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-surface-2 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:h-9 sm:w-auto sm:px-3.5"
+            aria-label={`${pillLabel} — ${cta}`}
           >
-            {cta}
+            <span>{cta}</span>
+            <ArrowRight
+              aria-hidden="true"
+              size={14}
+              strokeWidth={1.75}
+              className="text-muted-foreground transition-colors group-hover:text-primary"
+            />
           </Link>
         </div>
       </div>

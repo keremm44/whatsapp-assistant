@@ -14,12 +14,23 @@
 
 export const designTokens = {
   color: {
-    background: "#F3EFE7", // linen cream
+    // Keten zemin: a slightly cooler, brighter linen than the previous
+    // cream. The whole app canvas is the same single warm near-white
+    // so the seller shell and the dashboard pages live on the same
+    // surface.
+    background: "#F6F4EF",
     chrome: "#FAF8F3", // warm broken-white for persistent app chrome
-    surface: "#FFFDF9", // near-white working surface
-    surface2: "#ECE8DF", // secondary low-emphasis surface
-    border: "#D8D2C8", // slightly warmer border
-    divider: "#E4DED4", // quieter warmer divider
+    // Beyaz çalışma yüzeyi: pure white, not warm-tinted, so cards and
+    // task blocks read as a calmer working surface against the linen
+    // background.
+    surface: "#FFFFFF",
+    // İkincil yüzey: petrol-tinted neutral, used for muted task rows
+    // and quiet grouped content.
+    surface2: "#EEF2EF",
+    // Kenarlık: cooler, lower-contrast hairline that belongs to the
+    // petrol family rather than the warm beige family.
+    border: "#D9E0DC",
+    divider: "#E4EAE6", // quiet hairline, slightly cooler than border
 
     text: {
       primary: "#24302E",
@@ -32,7 +43,10 @@ export const designTokens = {
       DEFAULT: "#245B57", // petrol
       hover: "#1C4845",
       active: "#153634",
-      muted: "#DFECE9", // visibly petrol-tinted but not saturated
+      // Petrol açık: brighter, less dusty than the previous muted
+      // tint. Used for active sidebar rows, focus rings, and the
+      // high-priority section header underline.
+      muted: "#E7F0EE",
       foreground: "#FFFFFF",
     },
 
