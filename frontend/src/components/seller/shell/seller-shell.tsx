@@ -13,14 +13,26 @@ import { SellerTopbar } from "./seller-topbar";
  *   that opens the same navigation in a Sheet.
  * - Mobile (< 768px): topbar + content + fixed bottom navigation. The
  *   bottom nav exposes the four primary destinations.
+ *
+ * The `storeName` prop is the only display data the shell owns. The
+ * layout is responsible for resolving the seller bootstrap; the
+ * shell itself never reaches for `/seller/me` or any other
+ * business API. The component is otherwise unchanged from the
+ * approved macro shell.
  */
-export function SellerShell({ children }: { children: React.ReactNode }) {
+export function SellerShell({
+  children,
+  storeName,
+}: {
+  children: React.ReactNode;
+  storeName: string;
+}) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex">
         <SellerSidebar />
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <SellerTopbar />
+          <SellerTopbar storeName={storeName} />
           <main className="flex-1 pb-20 md:pb-10">{children}</main>
         </div>
       </div>

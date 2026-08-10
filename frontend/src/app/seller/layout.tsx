@@ -5,6 +5,10 @@ import {
   applySellerGuard,
   resolveServerAccess,
 } from "@/lib/auth/server-access";
+import {
+  pickSellerDisplayName,
+  resolveSellerBootstrapFromSession,
+} from "@/lib/seller/server-bootstrap";
 
 /**
  * Seller panel layout (async Server Component).
@@ -20,9 +24,22 @@ import {
  *   application_rejected  -> redirect to /giris
  *   unavailable           -> render the neutral AccessUnavailable UI
  *
- * The resolver never signs the user out and never reads role from
- * Supabase metadata. Role / status come exclusively from the backend
- * `GET /auth/me` response.
+ * After the auth guard resolves with `allow`, the layout performs a
+ * second server-side fetch: `resolveSellerBootstrapFromSession()`,
+ * which calls `GET /seller/me` to obtain the seller's business
+ * identity (store name, etc.). This is the seller-side analogue of
+ * the auth resolver and is intentionally separate so that:
+ *
+ *   - the auth foundation remains the only authority on role/status
+ *   - a transient failure of `/seller/me` (network, 5xx, contract
+ *     mismatch) does NOT destroy a valid Supabase session
+ *   - the shell can still render with a generic fallback label
+ *     instead of failing closed
+ *
+ * The bootstrap state is mapped to a single `storeName` string for
+ * the topbar. On any non-ready state the layout falls back to the
+ * approved generic label (`FALLBACK_SELLER_LABEL`) so the shell
+ * always reads as intentional rather than a half-rendered skeleton.
  */
 export default async function SellerLayout({
   children,
@@ -36,5 +53,12 @@ export default async function SellerLayout({
     return <AccessUnavailable contextLabel="Satıcı paneli" />;
   }
 
-  return <SellerShell>{children}</SellerShell>;
+  // The guard only returns `allow` for an active seller session, so
+  // a token exists by the time we get here. If the bootstrap fetch
+  // fails for any reason, the layout still renders the shell with
+  // a generic label — never with a fake business name.
+  const bootstrap = await resolveSellerBootstrapFromSession();
+  const storeName = pickSellerDisplayName(bootstrap);
+
+  return <SellerShell storeName={storeName}>{children}</SellerShell>;
 }

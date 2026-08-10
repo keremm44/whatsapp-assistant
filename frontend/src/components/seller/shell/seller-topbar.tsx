@@ -22,22 +22,39 @@ import { SellerIcon } from "./icon-map";
  * Minimal topbar.
  *
  * 64px tall, warm chrome surface, 1px bottom border. The left side
- * shows a neutral "Mağaza" placeholder until real seller/store
- * identity is wired by a later auth step. The right side offers a
- * single safe navigation target: /seller/settings.
+ * shows the seller's bootstrap identity (`storeName` from
+ * `GET /seller/me`); when the bootstrap is not yet resolved the
+ * layout passes the generic "Mağaza" fallback so the surface
+ * always renders something intentional rather than a skeleton.
  *
- * No notification bell, no global search, no assistant switch, no
- * fake avatar — those arrive with the real contracts.
+ * The right side offers a single safe navigation target:
+ * /seller/settings. No notification bell, no global search, no
+ * assistant switch, no fake avatar — those arrive with later
+ * product contracts.
  */
-export function SellerTopbar() {
+export function SellerTopbar({
+  storeName,
+}: {
+  /**
+   * The seller-facing store / business name returned by
+   * `GET /seller/me`. The layout is responsible for resolving
+   * the bootstrap state and passing either the real name or the
+   * approved generic fallback; this component does not invent
+   * labels.
+   */
+  storeName: string;
+}) {
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-chrome px-4 sm:px-6">
       <div className="flex items-center gap-2">
         <TabletNavSheet open={menuOpen} onOpenChange={setMenuOpen} />
-        <p className="font-heading text-base font-semibold text-foreground">
-          Mağaza
+        <p
+          className="font-heading text-base font-semibold text-foreground"
+          title={storeName}
+        >
+          {storeName}
         </p>
       </div>
 
