@@ -17,57 +17,50 @@ import { IconField, type IconFieldTone } from "./icon-field";
 /**
  * The high-priority task card.
  *
- * Visual character:
- *   - A single working surface (white, 1px warm border, soft
- *     shadow, rounded-md). It reads as a calm piece of paper on
- *     the seller's desk, not as a notification card.
- *   - The icon field on the left anchors the row and gives the
- *     category (return / order / unanswered) an immediate,
- *     typographic-feeling reading. The tone is keyed to the
- *     backend task type, NOT to the priority field.
- *   - The right side shows a quiet text CTA. The title is the
- *     heaviest element on the card; the CTA is a sıcak outline
- *     with an arrow and never competes with the title.
- *   - There is no pill. The category is communicated by the
- *     icon field, with a small uppercase caption beneath the
- *     icon on wide viewports and a meta strip near the title on
- *     narrow ones.
- *   - The customer meta line shows `name · whatsapp` when both
- *     are present (per the proven SQL nullability), only `name`
- *     when only that is present, and is omitted entirely when
- *     the customer is null (`unanswered_question` branch).
- *   - The meta strip shows "Güncelleme · X saat önce" when a
- *     parseable `updated_at` is available. The "Güncelleme"
- *     label is required so the user never reads the bare
- *     relative phrase as "waiting N hours". If the timestamp is
- *     unparseable, the line is omitted.
+ * Visual identity (this pass):
  *
- * Data accessibility:
- *   - The full summary text is exposed via the HTML `title`
- *     attribute on the summary paragraph so users can read
- *     the complete context without truncation. The visible
- *     line is wrapped with a soft 2-line clamp on mobile so
- *     the card stays compact, but the full text is always one
- *     hover / long-press away.
- *   - The card itself is NOT a Link. The CTA on the right is
- *     the link, with a single accessible name. The whole card
- *     has a hover border accent for affordance, but the click
- *     target is only the CTA.
+ *   - A single working surface (white, 1px warm border,
+ *     rounded-md). The card has a 4px-wide left rail keyed
+ *     to the backend task TYPE — petrol for order_review,
+ *     clay for return_review, neutral for unanswered_question.
+ *     The rail is the most visible piece of brand colour on
+ *     the page (alongside the petrol hairline under the
+ *     page header). It tells the seller at a glance which
+ *     type of work is sitting on the desk.
  *
- * Mobile touch targets:
- *   The CTA is at least 44px tall on viewports narrower than
- *   `sm` (we use `h-11` = 44px) and shrinks to `h-9` (36px) on
- *   tablet+ where a mouse is the primary input. This matches
- *   the dashboard's commitment that every interactive element
- *   is comfortable on touch.
+ *   - The icon field is 40x40 in the type's soft surface
+ *     with a slightly stronger icon. The icon is the same
+ *     size as the row icons used elsewhere (18px) for
+ *     rhythm.
+ *
+ *   - The category caption is uppercase, 11px, petrol.
+ *     The "Güncelleme · X" meta strip sits on the same
+ *     line as the caption, in muted ink. The full updated_at
+ *     phrase is available via the title attribute.
+ *
+ *   - The title is Manrope medium, 16-17px. The summary is
+ *     always rendered without visual truncation; the full
+ *     text is always accessible.
+ *
+ *   - The customer meta line (name · whatsapp) sits below
+ *     the summary in a slightly lifted ink colour. When the
+ *     customer is null (unanswered_question branch) the
+ *     line is omitted.
+ *
+ *   - Action. The right side shows a small directional link
+ *     with the destination verb ("İade listesine git" etc.)
+ *     and a subtle arrow. The element is at least 44px tall
+ *     on touch screens and 36px on tablet+ where a mouse is
+ *     the primary input. The link is the only interactive
+ *     surface on the card.
  */
-
 const TYPE_META: Record<
   DashboardTaskType,
   {
     label: string;
     icon: LucideIcon;
     tone: IconFieldTone;
+    rail: "primary" | "review" | "neutral";
     href: Route;
     cta: string;
   }
@@ -76,6 +69,7 @@ const TYPE_META: Record<
     label: "İade incelemesi",
     icon: Undo2,
     tone: "review",
+    rail: "review",
     href: "/seller/returns",
     cta: "İade listesine git",
   },
@@ -83,6 +77,7 @@ const TYPE_META: Record<
     label: "Sipariş incelemesi",
     icon: Package,
     tone: "primary",
+    rail: "primary",
     href: "/seller/orders",
     cta: "Sipariş listesine git",
   },
@@ -90,9 +85,16 @@ const TYPE_META: Record<
     label: "Yanıt bekleyen soru",
     icon: MessagesSquare,
     tone: "neutral",
+    rail: "neutral",
     href: "/seller/unanswered",
     cta: "Sorulara git",
   },
+};
+
+const RAIL_CLASS: Record<"primary" | "review" | "neutral", string> = {
+  primary: "bg-primary",
+  review: "bg-accent",
+  neutral: "bg-muted-foreground/50",
 };
 
 export function PriorityCard({ task }: { task: DashboardTask }) {
@@ -104,14 +106,15 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
   const accessibleName = `${meta.label} — ${task.title} — ${meta.cta}`;
 
   return (
-    <article className="group relative rounded-md border border-border bg-surface shadow-surface transition-colors hover:border-primary/30">
-      <div className="flex items-start gap-4 p-4 sm:gap-5 sm:p-5">
+    <article className="group relative overflow-hidden rounded-md border border-border bg-surface shadow-surface transition-colors hover:border-primary/40">
+      {/* Type rail — the single most visible brand cue on the page. */}
+      <span
+        aria-hidden="true"
+        className={`absolute inset-y-0 left-0 w-1 ${RAIL_CLASS[meta.rail]}`}
+      />
+      <div className="flex items-start gap-4 p-4 pl-5 sm:gap-5 sm:p-5 sm:pl-6">
         <div className="flex flex-col items-center gap-2 pt-0.5">
-          <IconField icon={Icon} tone={meta.tone} />
-          <span
-            aria-hidden="true"
-            className="hidden h-6 w-px bg-divider sm:block"
-          />
+          <IconField icon={Icon} tone={meta.tone} size={40} />
         </div>
 
         <div className="min-w-0 flex-1 space-y-2">
@@ -143,7 +146,7 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
         <Link
           href={meta.href}
           aria-label={accessibleName}
-          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-md border border-border bg-surface px-3 text-[13px] font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-surface-2 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:h-9"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-md border border-border bg-surface px-3.5 text-[13px] font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:h-9"
         >
           <span>{meta.cta}</span>
           <ArrowUpRight
@@ -158,15 +161,6 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
   );
 }
 
-/**
- * The category caption that sits at the top of each card's
- * content block. When the backend provides a parseable
- * `updated_at`, the caption shows the category plus a quiet
- * "Güncelleme · X" separator so the user understands what the
- * relative time refers to. The label is part of the same
- * string and is never split; the gap between category and
- * timestamp is purely visual.
- */
 function CategoryCaption({
   label,
   updatedAt,
@@ -176,17 +170,17 @@ function CategoryCaption({
 }) {
   if (!updatedAt) {
     return (
-      <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
         {label}
       </p>
     );
   }
   return (
-    <p className="flex items-center gap-2 text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+    <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
       <span>{label}</span>
       <span aria-hidden="true" className="text-divider">·</span>
       <span
-        className="normal-case tracking-normal text-muted-foreground/80"
+        className="font-medium normal-case tracking-normal text-muted-foreground"
         title={updatedAt}
       >
         {updatedAt}

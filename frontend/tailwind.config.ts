@@ -5,6 +5,20 @@ import type { Config } from "tailwindcss";
  * defined in src/config/design-tokens.ts and exposed as CSS variables
  * via src/app/globals.css. Do not introduce raw hex values here — extend
  * the design tokens instead.
+ *
+ * Color values are stored in `R G B` numeric form (without commas, in
+ * the `--color-*-rgb` variables) so Tailwind can compose them with
+ * the modern `<alpha-value>` placeholder, e.g.
+ *
+ *     color-mix(in srgb, rgb(var(--color-primary-rgb) / <alpha-value>) ...)
+ *
+ * This is what makes `border-primary/40` and `text-foreground/70`
+ * actually produce a partially transparent result. The older direct
+ * `var(--color-primary)` form does NOT support the alpha modifier in
+ * Tailwind 3; utilities like `bg-primary/40` are silently dropped.
+ *
+ * The `globals.css` file is the single source of truth for the
+ * canonical R G B triplets.
  */
 const config: Config = {
   darkMode: ["class"],
@@ -23,43 +37,43 @@ const config: Config = {
     },
     extend: {
       colors: {
-        background: "var(--color-background)",
-        chrome: "var(--color-chrome)",
-        foreground: "var(--color-foreground)",
-        surface: "var(--color-surface)",
-        "surface-2": "var(--color-surface-2)",
-        border: "var(--color-border)",
-        divider: "var(--color-divider)",
-        muted: "var(--color-muted)",
-        "muted-foreground": "var(--color-muted-foreground)",
+        background: "rgb(var(--color-background-rgb) / <alpha-value>)",
+        chrome: "rgb(var(--color-chrome-rgb) / <alpha-value>)",
+        foreground: "rgb(var(--color-foreground-rgb) / <alpha-value>)",
+        surface: "rgb(var(--color-surface-rgb) / <alpha-value>)",
+        "surface-2": "rgb(var(--color-surface-2-rgb) / <alpha-value>)",
+        border: "rgb(var(--color-border-rgb) / <alpha-value>)",
+        divider: "rgb(var(--color-divider-rgb) / <alpha-value>)",
+        muted: "rgb(var(--color-muted-rgb) / <alpha-value>)",
+        "muted-foreground": "rgb(var(--color-muted-foreground-rgb) / <alpha-value>)",
         primary: {
-          DEFAULT: "var(--color-primary)",
-          hover: "var(--color-primary-hover)",
-          active: "var(--color-primary-active)",
-          muted: "var(--color-primary-muted)",
-          foreground: "var(--color-primary-foreground)",
+          DEFAULT: "rgb(var(--color-primary-rgb) / <alpha-value>)",
+          hover: "rgb(var(--color-primary-hover-rgb) / <alpha-value>)",
+          active: "rgb(var(--color-primary-active-rgb) / <alpha-value>)",
+          muted: "rgb(var(--color-primary-muted-rgb) / <alpha-value>)",
+          foreground: "rgb(var(--color-primary-foreground-rgb) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "var(--color-accent)",
-          dark: "var(--color-accent-dark)",
-          muted: "var(--color-accent-muted)",
-          foreground: "var(--color-accent-foreground)",
+          DEFAULT: "rgb(var(--color-accent-rgb) / <alpha-value>)",
+          dark: "rgb(var(--color-accent-dark-rgb) / <alpha-value>)",
+          muted: "rgb(var(--color-accent-muted-rgb) / <alpha-value>)",
+          foreground: "rgb(var(--color-accent-foreground-rgb) / <alpha-value>)",
         },
-        success: "var(--color-success)",
-        "success-muted": "var(--color-success-muted)",
-        info: "var(--color-info)",
-        "info-muted": "var(--color-info-muted)",
-        warning: "var(--color-warning)",
-        "warning-muted": "var(--color-warning-muted)",
-        review: "var(--color-review)",
-        "review-muted": "var(--color-review-muted)",
+        success: "rgb(var(--color-success-rgb) / <alpha-value>)",
+        "success-muted": "rgb(var(--color-success-muted-rgb) / <alpha-value>)",
+        info: "rgb(var(--color-info-rgb) / <alpha-value>)",
+        "info-muted": "rgb(var(--color-info-muted-rgb) / <alpha-value>)",
+        warning: "rgb(var(--color-warning-rgb) / <alpha-value>)",
+        "warning-muted": "rgb(var(--color-warning-muted-rgb) / <alpha-value>)",
+        review: "rgb(var(--color-review-rgb) / <alpha-value>)",
+        "review-muted": "rgb(var(--color-review-muted-rgb) / <alpha-value>)",
         destructive: {
-          DEFAULT: "var(--color-destructive)",
-          muted: "var(--color-destructive-muted)",
-          foreground: "var(--color-destructive-foreground)",
+          DEFAULT: "rgb(var(--color-destructive-rgb) / <alpha-value>)",
+          muted: "rgb(var(--color-destructive-muted-rgb) / <alpha-value>)",
+          foreground: "rgb(var(--color-destructive-foreground-rgb) / <alpha-value>)",
         },
-        paused: "var(--color-paused)",
-        "paused-muted": "var(--color-paused-muted)",
+        paused: "rgb(var(--color-paused-rgb) / <alpha-value>)",
+        "paused-muted": "rgb(var(--color-paused-muted-rgb) / <alpha-value>)",
       },
       borderRadius: {
         xs: "var(--radius-xs)",

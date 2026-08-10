@@ -38,46 +38,87 @@
    * white working surface, petrol-tinted secondary surface and
    * cool hairlines. The hierarchy is unchanged (background →
    * chrome → surface → surface-2); only the values were tuned.
+   *
+   * Each color is exposed in two forms:
+   *   --color-<name>          the canonical hex value, kept for
+   *                           direct CSS use (e.g. shadows) and
+   *                           for runtime introspection
+   *   --color-<name>-rgb      the same value split into three
+   *                           numeric channels (R G B) so
+   *                           Tailwind's modern
+   *                           rgb(... / <alpha-value>) syntax
+   *                           can compose the alpha modifier
    */
   --color-background: #f6f4ef;
+  --color-background-rgb: 246 244 239;
   --color-chrome: #faf8f3;
+  --color-chrome-rgb: 250 248 243;
   --color-surface: #ffffff;
+  --color-surface-rgb: 255 255 255;
   --color-surface-2: #eef2ef;
+  --color-surface-2-rgb: 238 242 239;
   --color-border: #d9e0dc;
+  --color-border-rgb: 217 224 220;
   --color-divider: #e4eae6;
+  --color-divider-rgb: 228 234 230;
 
   /* Text */
   --color-foreground: #24302e;
+  --color-foreground-rgb: 36 48 46;
   --color-muted: #5c6966;
+  --color-muted-rgb: 92 105 102;
   --color-muted-foreground: #626d6a;
+  --color-muted-foreground-rgb: 98 109 106;
 
   /* Primary (petrol) */
   --color-primary: #245b57;
+  --color-primary-rgb: 36 91 87;
   --color-primary-hover: #1c4845;
+  --color-primary-hover-rgb: 28 72 69;
   --color-primary-active: #153634;
+  --color-primary-active-rgb: 21 54 52;
   --color-primary-muted: #e7f0ee;
+  --color-primary-muted-rgb: 231 240 238;
   --color-primary-foreground: #ffffff;
+  --color-primary-foreground-rgb: 255 255 255;
 
   /* Accent (clay) */
   --color-accent: #c86b4a;
+  --color-accent-rgb: 200 107 74;
   --color-accent-dark: #9b4d35;
+  --color-accent-dark-rgb: 155 77 53;
   --color-accent-muted: #f4e7e0;
+  --color-accent-muted-rgb: 244 231 224;
   --color-accent-foreground: #ffffff;
+  --color-accent-foreground-rgb: 255 255 255;
 
   /* Functional states */
   --color-success: #2f7458;
+  --color-success-rgb: 47 116 88;
   --color-success-muted: #e2efe9;
+  --color-success-muted-rgb: 226 239 233;
   --color-info: #2f6597;
+  --color-info-rgb: 47 101 151;
   --color-info-muted: #e2eaf3;
+  --color-info-muted-rgb: 226 234 243;
   --color-warning: #9a6517;
+  --color-warning-rgb: 154 101 23;
   --color-warning-muted: #f3ecdc;
+  --color-warning-muted-rgb: 243 236 220;
   --color-review: #8b5140;
+  --color-review-rgb: 139 81 64;
   --color-review-muted: #f1e6e0;
+  --color-review-muted-rgb: 241 230 224;
   --color-destructive: #b14444;
+  --color-destructive-rgb: 177 68 68;
   --color-destructive-muted: #f1dede;
+  --color-destructive-muted-rgb: 241 222 222;
   --color-destructive-foreground: #ffffff;
+  --color-destructive-foreground-rgb: 255 255 255;
   --color-paused: #5e6873;
+  --color-paused-rgb: 94 104 115;
   --color-paused-muted: #e6e9ec;
+  --color-paused-muted-rgb: 230 233 236;
 
   /* Radius */
   --radius-xs: 6px;

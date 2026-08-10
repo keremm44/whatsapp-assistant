@@ -10,6 +10,7 @@ import {
   ScrollText,
   Settings,
   Settings2,
+  Store,
   Undo2,
   type LucideIcon,
 } from "lucide-react";
@@ -21,6 +22,9 @@ import {
  *
  * `Menu` is reserved for the tablet navigation trigger and is intentionally
  * NOT used as a sidebar destination icon.
+ *
+ * `Store` is the brand mark glyph used in the sidebar's product identity
+ * area. It is intentionally NOT used as a sidebar destination icon.
  */
 export const SELLER_ICON_MAP = {
   LayoutDashboard,
@@ -34,6 +38,7 @@ export const SELLER_ICON_MAP = {
   ScrollText,
   Settings,
   Menu,
+  Store,
 } as const satisfies Record<string, LucideIcon>;
 
 export type SellerIconName = keyof typeof SELLER_ICON_MAP;
@@ -42,11 +47,13 @@ export const SellerIcon = ({
   name,
   className,
   size = 20,
+  strokeWidth = 1.75,
 }: {
   name: SellerIconName;
   className?: string;
-  size?: 16 | 18 | 20 | 22 | 24;
+  size?: 14 | 16 | 18 | 20 | 22 | 24;
+  strokeWidth?: number;
 }) => {
   const Icon = SELLER_ICON_MAP[name];
-  return <Icon className={className} size={size} strokeWidth={1.75} aria-hidden="true" />;
+  return <Icon className={className} size={size} strokeWidth={strokeWidth} aria-hidden="true" />;
 };

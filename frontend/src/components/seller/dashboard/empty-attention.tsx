@@ -2,31 +2,28 @@ import * as React from "react";
 import { Check } from "lucide-react";
 
 /**
- * The dashboard's empty state.
+ * Dashboard empty state (high=0, normal=0).
  *
- * Designed to feel like a quiet, well-deserved pause in the
- * seller's day — not like a placeholder waiting for content.
+ * Visual identity (this pass):
  *
- * Composition:
- *   - A large, soft petrol disc in the center anchors the
- *     surface. The disc is the same hue family as the rest of
- *     the chrome (petrol muted); it is not a notification dot.
- *   - A short Turkish sentence reads as a real human
- *     observation, not as a UI string template.
- *   - The eyebrow label says "İş listesi" rather than a date
- *     scope like "Bugün" — the backend's `toplam` does not
- *     represent a "today" aggregate, so the label is kept
- *     scope-neutral here too.
- *   - No fake reassurance ("you caught up on everything!"), no
- *     inferred metrics, no notifications CTA. The page simply
- *     acknowledges that the action queue is empty.
+ *   - A single working surface (white, 1px warm border,
+ *     soft shadow) with a centred, calm composition.
+ *   - A petrol-soft disc with a petrol `Check` glyph — the
+ *     same disc shape the page header's count badge sits
+ *     in. The disc reads as "the queue is empty" rather
+ *     than as a notification dot.
+ *   - The eyebrow says "İş listesi" so the user knows
+ *     which surface is empty.
+ *   - The body line is the same Turkish copy we have
+ *     always shown. We do not invent reassurance or
+ *     metrics.
  */
 export function EmptyAttention() {
   return (
     <section
       role="status"
       aria-live="polite"
-      className="flex flex-col items-center gap-4 rounded-md border border-border bg-surface px-6 py-14 text-center shadow-surface sm:py-16"
+      className="flex flex-col items-center gap-4 rounded-md border border-border bg-surface px-6 py-16 text-center shadow-surface sm:py-20"
     >
       <span
         aria-hidden="true"
@@ -35,7 +32,9 @@ export function EmptyAttention() {
         <Check size={22} strokeWidth={1.6} />
       </span>
       <div className="space-y-1.5">
-        <p className="text-[13px] font-medium text-primary">İş listesi</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+          İş listesi
+        </p>
         <h2 className="font-heading text-[18px] font-medium leading-snug text-foreground sm:text-[20px]">
           Şu anda ilgilenmeniz gereken bir konu yok.
         </h2>

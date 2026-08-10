@@ -1,8 +1,8 @@
 import * as React from "react";
 
 import { AccessUnavailable } from "@/components/auth/access-unavailable";
+import { CompactTaskCard } from "@/components/seller/dashboard/compact-task-card";
 import { DashboardHeader } from "@/components/seller/dashboard/dashboard-header";
-import { DashboardLayout } from "@/components/seller/dashboard/dashboard-layout";
 import { EmptyAttention } from "@/components/seller/dashboard/empty-attention";
 import { PriorityCard } from "@/components/seller/dashboard/priority-card";
 import { QuietSummary } from "@/components/seller/dashboard/quiet-summary";
@@ -17,12 +17,13 @@ import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
  *
  * Server Component. The page resolves the seller's action queue
  * server-side from `GET /seller/dashboard/tasks` using the same
- * Supabase session the auth foundation and seller bootstrap
- * just validated. There is no client hydration, no skeleton, and
- * no secondary fetch. The data layer (`resolveDashboardTasksFromSession`,
+ * Supabase session the auth foundation and seller bootstrap just
+ * validated. There is no client hydration, no skeleton, and no
+ * secondary fetch. The data layer
+ * (`resolveDashboardTasksFromSession`,
  * `lib/seller/dashboard-tasks.ts`) is unchanged.
  *
- * Information architecture (preserved from the previous step):
+ * Information architecture (preserved):
  *
  *   The backend exposes a user-facing priority categorization on
  *   each task: `priority: "high" | "normal"`. The SQL read model
@@ -40,47 +41,38 @@ import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
  *   Tasks within each section keep the backend's order; the
  *   frontend never re-sorts.
  *
- * Visual character (this step):
+ * Adaptive composition (this pass):
  *
- *   - Two-column desktop composition. The high-priority column
- *     on the left holds the cards the seller is supposed to
- *     act on first; the secondary column on the right holds a
- *     compact list of "bugün bakılabilecekler" rows and a
- *     quiet summary panel. The composition is deliberately
- *     NOT a three-column CRM.
+ *   The page must look deliberate in all four data combinations:
  *
- *   - The high-priority column uses individual cards. Each card
- *     has an icon field keyed to the backend task TYPE (not
- *     the priority), so the card reads as a category anchor,
- *     not as an urgency widget. We do not paint the whole
- *     column in petrol; the petrol cue is contained to the
- *     category glyph and the page header hairline.
+ *     A) high>0, normal>0
+ *        Two-column desktop. Left column holds "Önce bunlar"
+ *        as PriorityCard tiles. Right column holds "Bugün
+ *        bakılabilecekler" as a compact list (SecondaryRow)
+ *        and a QuietSummary side panel. The right column
+ *        has a single shared chrome surface so the column
+ *        reads as one composed block.
  *
- *   - The secondary column is a compact, low-density list. The
- *     whole row is a Link; the chevron appears only on
- *     hover/focus, so the rows stay calm at rest.
+ *     B) high>0, normal=0
+ *        Single column at full content width. "Önce bunlar"
+ *        cards fill the page. A QuietSummary inline footer
+ *        sits at the bottom (the side panel is omitted
+ *        because there is no side column to host it).
  *
- *   - The factual count badge in the header is the
- *     backend-provided `toplam` aggregate, rendered as
- *     "İlgilenmeniz gereken N konu" so the user can see at a
- *     glance how many items the action queue contains. The
- *     badge is rendered as a piece of page furniture, not as
- *     a KPI tile. When the queue is empty the badge is
- *     omitted. The badge is deliberately not labeled "Bugün"
- *     because the backend does not provide a "today"
- *     aggregate — `toplam` is the current queue size, not a
- *     daily total.
+ *     C) high=0, normal>0
+ *        Single column at full content width. "Bugün
+ *        bakılabilecekler" expands to a two-column grid of
+ *        CompactTaskCard tiles so the available horizontal
+ *        space is used. A QuietSummary inline footer sits
+ *        at the bottom.
  *
- *   - Mobile (< lg) collapses to a single column. The
- *     high-priority cards stack first, then the secondary
- *     list, then the summary panel.
+ *     D) high=0, normal=0
+ *        Empty state (EmptyAttention) fills the work
+ *        region. No summary is rendered.
  *
- *   - Empty state is its own surface (`EmptyAttention`). It
- *     reads as a quiet, well-deserved pause — not a placeholder.
- *
- *   - Error state is delegated to `AccessUnavailable` exactly
- *     as before. The retry semantics, the no-signOut contract,
- *     and the failure copy are unchanged.
+ *   The grid never preserves an empty column. The page
+ *   always uses the available horizontal space for the
+ *   work the backend actually returned.
  */
 export default async function SellerOverviewPage() {
   const bootstrap = await resolveDashboardTasksFromSession();
@@ -105,47 +97,174 @@ export default async function SellerOverviewPage() {
   const highTasks = tasks.filter((task) => task.priority === "high");
   const normalTasks = tasks.filter((task) => task.priority === "normal");
 
+  const hasHigh = highTasks.length > 0;
+  const hasNormal = normalTasks.length > 0;
+
   return (
     <PageContainer className="py-8 sm:py-10">
       <DashboardHeader total={total} />
 
-      {hasTasks ? (
-        <DashboardLayout
-          primary={
-            <PrimaryColumn
-              id="section-once-bunlar"
-              title="Önce bunlar"
-              count={highTasks.length}
-              tasks={highTasks}
-            />
-          }
-          secondary={
-            normalTasks.length > 0 ? (
-              <SecondaryColumn
-                id="section-bugun-bakilabilecekler"
-                title="Bugün bakılabilecekler"
-                count={normalTasks.length}
-                tasks={normalTasks}
-              />
-            ) : null
-          }
-          summary={<QuietSummary tasks={tasks} total={total} />}
-        />
-      ) : (
+      {!hasTasks ? (
         <div className="mt-8">
           <EmptyAttention />
         </div>
+      ) : hasHigh && hasNormal ? (
+        <TwoColumnLayout
+          highTasks={highTasks}
+          normalTasks={normalTasks}
+          total={total}
+        />
+      ) : hasHigh ? (
+        <HighOnlyLayout highTasks={highTasks} total={total} />
+      ) : (
+        <NormalOnlyLayout normalTasks={normalTasks} total={total} />
       )}
     </PageContainer>
   );
 }
 
 /**
+ * Scenario A: both groups have data. Desktop two-column
+ * layout. On tablet+mobile the columns stack into a single
+ * column with the same order.
+ */
+function TwoColumnLayout({
+  highTasks,
+  normalTasks,
+  total,
+}: {
+  highTasks: DashboardTask[];
+  normalTasks: DashboardTask[];
+  total: number;
+}) {
+  // The side summary panel needs the same per-priority counts
+  // that the inline footer would show. We pre-compute them
+  // here so the side panel can render the three numbers
+  // (high, normal, total) correctly.
+  const summaryTasks = [
+    ...highTasks.map((t) => ({ priority: t.priority })),
+    ...normalTasks.map((t) => ({ priority: t.priority })),
+  ];
+
+  return (
+    <div className="mt-8 flex flex-col gap-10 lg:mt-10 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_400px]">
+      <PrimaryColumn
+        id="section-once-bunlar"
+        title="Önce bunlar"
+        count={highTasks.length}
+        tasks={highTasks}
+      />
+      <aside className="flex flex-col gap-5 lg:sticky lg:top-20">
+        <SecondaryPanel
+          id="section-bugun-bakilabilecekler"
+          title="Bugün bakılabilecekler"
+          count={normalTasks.length}
+          tasks={normalTasks}
+        />
+        <QuietSummary
+          tasks={summaryTasks}
+          total={total}
+          layout="side"
+        />
+      </aside>
+    </div>
+  );
+}
+
+/**
+ * Scenario B: only high-priority tasks. Full content width.
+ * The PriorityCard tiles fill the page. A QuietSummary inline
+ * footer sits at the bottom. No side column.
+ */
+function HighOnlyLayout({
+  highTasks,
+  total,
+}: {
+  highTasks: DashboardTask[];
+  total: number;
+}) {
+  return (
+    <div className="mt-8 flex flex-col gap-10 lg:mt-10">
+      <PrimaryColumn
+        id="section-once-bunlar"
+        title="Önce bunlar"
+        count={highTasks.length}
+        tasks={highTasks}
+      />
+      <QuietSummary
+        tasks={highTasks.map((t) => ({ priority: t.priority }))}
+        total={total}
+        layout="inline"
+      />
+    </div>
+  );
+}
+
+/**
+ * Scenario C: only normal-priority tasks. Full content
+ * width. The compact task cards use a two-column grid on
+ * `lg+` to fill the available space; single column on
+ * smaller screens. Inline summary footer.
+ */
+function NormalOnlyLayout({
+  normalTasks,
+  total,
+}: {
+  normalTasks: DashboardTask[];
+  total: number;
+}) {
+  return (
+    <div className="mt-8 flex flex-col gap-10 lg:mt-10">
+      <section
+        aria-labelledby="section-bugun-bakilabilecekler"
+        className="space-y-4"
+      >
+        <header className="space-y-1.5">
+          <div className="flex items-baseline gap-2">
+            <h2
+              id="section-bugun-bakilabilecekler"
+              className="font-heading text-[20px] font-medium leading-snug text-foreground sm:text-[22px]"
+            >
+              Bugün bakılabilecekler
+            </h2>
+            <span
+              aria-hidden="true"
+              className="text-[13px] tabular-nums text-muted-foreground"
+            >
+              · {normalTasks.length}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Vakit varsa ilerleyebileceğiniz konular.
+          </p>
+        </header>
+        <ul
+          role="list"
+          className="grid grid-cols-1 gap-3 lg:grid-cols-2"
+        >
+          {normalTasks.map((task) => (
+            <li key={task.id}>
+              <CompactTaskCard task={task} />
+            </li>
+          ))}
+        </ul>
+      </section>
+      <QuietSummary
+        tasks={normalTasks.map((t) => ({ priority: t.priority }))}
+        total={total}
+        layout="inline"
+      />
+    </div>
+  );
+}
+
+/**
  * The high-priority column. Renders the section header
  * inline (the shared SectionHeader does not get a custom
- * children slot for a single caller) followed by a stack of
- * `PriorityCard`s. A short, calm description sets the
- * reading frame for the seller.
+ * children slot for a single caller) followed by a stack
+ * of `PriorityCard`s. The cards use a 1-column stack at
+ * every breakpoint; the column width is set by the parent
+ * grid in the layout components.
  */
 function PrimaryColumn({
   id,
@@ -191,13 +310,13 @@ function PrimaryColumn({
 }
 
 /**
- * The secondary column. Renders the section header plus a
- * compact list of `SecondaryRow`s. The list is rendered
- * inside a single `Surface`-style frame so the right column
- * has a single, calm rectangle to balance the column of
- * cards on the left.
+ * The right-hand secondary panel (scenario A only). Renders
+ * the section header and a chrome-toned surface containing
+ * the secondary rows. The chrome surface has a thin
+ * petrol top hairline so the column reads as a single,
+ * branded block.
  */
-function SecondaryColumn({
+function SecondaryPanel({
   id,
   title,
   count,
@@ -211,12 +330,16 @@ function SecondaryColumn({
   return (
     <section
       aria-labelledby={id}
-      className="overflow-hidden rounded-md border border-border bg-surface shadow-surface"
+      className="relative overflow-hidden rounded-md border border-border bg-chrome"
     >
-      <header className="flex items-baseline gap-2 border-b border-divider px-4 py-3 sm:px-5">
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-px bg-primary"
+      />
+      <header className="flex items-baseline gap-2 px-4 pb-2 pt-4 sm:px-5 sm:pt-5">
         <h2
           id={id}
-          className="font-heading text-[15px] font-medium text-foreground sm:text-base"
+          className="font-heading text-[15px] font-semibold text-foreground sm:text-base"
         >
           {title}
         </h2>
@@ -227,7 +350,7 @@ function SecondaryColumn({
           · {count}
         </span>
       </header>
-      <ul role="list">
+      <ul role="list" className="bg-surface">
         {tasks.map((task) => (
           <SecondaryRow key={task.id} task={task} />
         ))}

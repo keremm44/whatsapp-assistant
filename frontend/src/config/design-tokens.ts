@@ -1,9 +1,20 @@
 /**
  * Sakin Ustalık design tokens — canonical source of truth.
  *
- * These constants are referenced from tailwind.config.ts (via CSS variables
- * declared in src/app/globals.css). Do not duplicate hex values in components:
- * use Tailwind classes mapped to these tokens instead.
+ * These constants are referenced from tailwind.config.ts (via CSS
+ * variables declared in src/app/globals.css). Do not duplicate hex
+ * values in components: use Tailwind classes mapped to these tokens
+ * instead.
+ *
+ * Each color is exposed in two forms:
+ *   - the canonical hex string (for direct CSS use, e.g. shadows)
+ *   - the same value split into three numeric channels (`rgb: [r, g, b]`)
+ *
+ * The Tailwind config consumes the `rgb` form so that modern
+ * `rgb(... / <alpha-value>)` syntax enables utilities like
+ * `border-primary/40` and `text-foreground/70`. Without the
+ * `rgb` form those alpha modifiers are silently dropped in
+ * Tailwind 3, which would erase the design's hierarchy.
  *
  * Surface hierarchy (four visible levels, top to bottom):
  *   1. background       — main warm cream canvas
@@ -12,64 +23,64 @@
  *   4. surface-2        — secondary low-emphasis surface
  */
 
+const split = (hex: string): [number, number, number] => {
+  const h = hex.replace("#", "");
+  const n = h.length === 3
+    ? h.split("").map((c) => parseInt(c + c, 16))
+    : [0, 2, 4, 6].map((i) => parseInt(h.slice(i, i + 2), 16));
+  return [n[0]!, n[1]!, n[2]!] as [number, number, number];
+};
+
+const color = (hex: string, comment?: string) => ({
+  hex,
+  rgb: split(hex),
+  ...(comment ? { comment } : {}),
+}) as const;
+
 export const designTokens = {
   color: {
-    // Keten zemin: a slightly cooler, brighter linen than the previous
-    // cream. The whole app canvas is the same single warm near-white
-    // so the seller shell and the dashboard pages live on the same
-    // surface.
-    background: "#F6F4EF",
-    chrome: "#FAF8F3", // warm broken-white for persistent app chrome
-    // Beyaz çalışma yüzeyi: pure white, not warm-tinted, so cards and
-    // task blocks read as a calmer working surface against the linen
-    // background.
-    surface: "#FFFFFF",
-    // İkincil yüzey: petrol-tinted neutral, used for muted task rows
-    // and quiet grouped content.
-    surface2: "#EEF2EF",
-    // Kenarlık: cooler, lower-contrast hairline that belongs to the
-    // petrol family rather than the warm beige family.
-    border: "#D9E0DC",
-    divider: "#E4EAE6", // quiet hairline, slightly cooler than border
+    background: color("#F6F4EF", "linen"),
+    chrome: color("#FAF8F3", "warm broken-white for persistent app chrome"),
+    surface: color("#FFFFFF", "pure white working surface"),
+    surface2: color("#EEF2EF", "petrol-tinted secondary surface"),
+    border: color("#D9E0DC", "cool low-contrast hairline"),
+    divider: color("#E4EAE6", "quiet hairline, slightly cooler than border"),
 
     text: {
-      primary: "#24302E",
-      secondary: "#5C6966",
-      muted: "#626D6A",
-      inverse: "#FFFFFF",
+      primary: color("#24302E"),
+      secondary: color("#5C6966"),
+      muted: color("#626D6A"),
+      inverse: color("#FFFFFF"),
     },
 
     primary: {
-      DEFAULT: "#245B57", // petrol
-      hover: "#1C4845",
-      active: "#153634",
-      // Petrol açık: brighter, less dusty than the previous muted
-      // tint. Used for active sidebar rows, focus rings, and the
-      // high-priority section header underline.
-      muted: "#E7F0EE",
-      foreground: "#FFFFFF",
+      DEFAULT: color("#245B57", "petrol"),
+      hover: color("#1C4845"),
+      active: color("#153634"),
+      muted: color("#E7F0EE", "petrol soft"),
+      foreground: color("#FFFFFF"),
     },
 
     accent: {
-      DEFAULT: "#C86B4A", // clay
-      dark: "#9B4D35",
-      muted: "#F4E7E0",
-      foreground: "#FFFFFF",
+      DEFAULT: color("#C86B4A", "clay"),
+      dark: color("#9B4D35"),
+      muted: color("#F4E7E0"),
+      foreground: color("#FFFFFF"),
     },
 
     state: {
-      success: "#2F7458",
-      successMuted: "#E2EFE9",
-      info: "#2F6597",
-      infoMuted: "#E2EAF3",
-      warning: "#9A6517",
-      warningMuted: "#F3ECDC",
-      review: "#8B5140",
-      reviewMuted: "#F1E6E0",
-      destructive: "#B14444",
-      destructiveMuted: "#F1DEDE",
-      paused: "#5E6873",
-      pausedMuted: "#E6E9EC",
+      success: color("#2F7458"),
+      successMuted: color("#E2EFE9"),
+      info: color("#2F6597"),
+      infoMuted: color("#E2EAF3"),
+      warning: color("#9A6517"),
+      warningMuted: color("#F3ECDC"),
+      review: color("#8B5140"),
+      reviewMuted: color("#F1E6E0"),
+      destructive: color("#B14444"),
+      destructiveMuted: color("#F1DEDE"),
+      paused: color("#5E6873"),
+      pausedMuted: color("#E6E9EC"),
     },
   },
 

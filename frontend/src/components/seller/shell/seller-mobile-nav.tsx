@@ -77,7 +77,7 @@ const MobileNavLink = ({
     className={cn(
       "flex h-14 min-h-[44px] flex-col items-center justify-center gap-1 text-xs transition-colors",
       isActive
-        ? "font-semibold text-primary"
+        ? "bg-primary-muted font-semibold text-primary"
         : "text-muted-foreground hover:text-foreground",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
     )}

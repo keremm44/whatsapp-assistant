@@ -19,18 +19,36 @@ import { cn } from "@/lib/utils/cn";
 import { SellerIcon } from "./icon-map";
 
 /**
- * Minimal topbar.
+ * Topbar.
  *
- * 64px tall, warm chrome surface, 1px bottom border. The left side
- * shows the seller's bootstrap identity (`storeName` from
- * `GET /seller/me`); when the bootstrap is not yet resolved the
- * layout passes the generic "Mağaza" fallback so the surface
- * always renders something intentional rather than a skeleton.
+ * Visual identity (this pass):
  *
- * The right side offers a single safe navigation target:
- * /seller/settings. No notification bell, no global search, no
- * assistant switch, no fake avatar — those arrive with later
- * product contracts.
+ *   - Same chrome surface as the sidebar. The topbar and the
+ *     sidebar form a single L-shaped chrome surface around
+ *     the linen content canvas, so the product shell reads
+ *     as one piece.
+ *
+ *   - The left side shows the seller's bootstrap identity:
+ *     the store name in Manrope medium, with a small
+ *     petrol-on-chrome `Mağaza` chip right next to it. The
+ *     chip is a deliberate, restrained petrol cue that ties
+ *     the topbar visually to the sidebar's brand mark.
+ *
+ *   - The right side exposes a single safe navigation
+ *     destination (`/seller/settings`). The link uses petrol
+ *     text + a small chevron, so the action affordance is
+ *     visible without being loud.
+ *
+ *   - Tablet only (md to lg): the same topbar exposes a
+ *     sidebar-shaped Menu trigger on the far left so the
+ *     tablet Sheet is the navigation fallback. The trigger
+ *     uses a petrol-soft square, not a bare icon, so it
+ *     reads as the same component family as the sidebar
+ *     brand mark.
+ *
+ *   - No fake status chips, no notification bells, no
+ *     assistant health. We do not have any real data on
+ *     those surfaces, and inventing them is forbidden.
  */
 export function SellerTopbar({
   storeName,
@@ -44,60 +62,85 @@ export function SellerTopbar({
    */
   storeName: string;
 }) {
-  const [menuOpen, setMenuOpen] = React.useState(false);
-
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-chrome px-4 sm:px-6">
-      <div className="flex items-center gap-2">
-        <TabletNavSheet open={menuOpen} onOpenChange={setMenuOpen} />
-        <p
-          className="font-heading text-base font-semibold text-foreground"
-          title={storeName}
-        >
-          {storeName}
-        </p>
-      </div>
+    <header className="sticky top-0 z-10 border-b border-border bg-chrome">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <TabletNavSheet />
+          <p
+            className="truncate font-heading text-[15px] font-semibold text-foreground"
+            title={storeName}
+          >
+            {storeName}
+          </p>
+          <span
+            aria-hidden="true"
+            className="hidden h-4 w-px bg-divider sm:block"
+          />
+          <span className="hidden h-6 items-center rounded-pill bg-primary-muted px-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-primary sm:inline-flex">
+            Mağaza
+          </span>
+        </div>
 
-      <div className="flex items-center gap-3">
-        <Link
-          href="/seller/settings"
-          className="text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
-        >
-          Ayarlar
-        </Link>
+        <div className="flex items-center">
+          <Link
+            href="/seller/settings"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
+          >
+            <span>Ayarlar</span>
+            <SellerIcon
+              name="Settings"
+              size={14}
+              className="text-primary"
+            />
+          </Link>
+        </div>
       </div>
     </header>
   );
 }
 
-const TabletNavSheet = ({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) => {
+const TabletNavSheet = () => {
+  const [open, setOpen] = React.useState(false);
   const pathname = usePathname();
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         aria-label="Menüyü aç"
         className={cn(
-          "hidden h-11 w-11 items-center justify-center rounded-md text-foreground hover:bg-surface-2 md:inline-flex lg:hidden",
+          "hidden h-9 w-9 items-center justify-center rounded-md bg-primary-muted text-primary transition-colors hover:bg-primary-muted/70 md:inline-flex lg:hidden",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
         )}
       >
-        <SellerIcon name="Menu" size={22} />
+        <SellerIcon name="Menu" size={18} />
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] bg-chrome sm:max-w-sm">
-        <SheetHeader>
-          <SheetTitle>Menü</SheetTitle>
+      <SheetContent
+        side="left"
+        className="w-[300px] gap-0 bg-chrome p-0 sm:max-w-sm"
+      >
+        <SheetHeader className="border-b border-border px-5 pb-4 pt-5">
+          <div className="flex items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground"
+            >
+              <SellerIcon name="Store" size={18} strokeWidth={1.7} />
+            </span>
+            <div className="flex flex-col leading-tight">
+              <SheetTitle className="text-[15px] font-semibold">
+                WhatsApp Asistan
+              </SheetTitle>
+              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                Mağaza yönetimi
+              </span>
+            </div>
+          </div>
         </SheetHeader>
         <SidebarNavList
           pathname={pathname}
-          onNavigate={() => onOpenChange(false)}
-          className="mt-2"
+          onNavigate={() => setOpen(false)}
+          className="flex-1 overflow-y-auto px-3 py-5"
         />
       </SheetContent>
     </Sheet>
@@ -107,7 +150,9 @@ const TabletNavSheet = ({
 /**
  * Sidebar-style nav list, used inside the tablet menu Sheet. Renders
  * the same three sections as the desktop sidebar and highlights the
- * current destination using the shared active-route helper.
+ * current destination using the shared active-route helper. The
+ * active state matches the desktop sidebar's marker pattern so the
+ * seller gets the same visual language on tablet as on desktop.
  */
 function SidebarNavList({
   pathname,
@@ -120,13 +165,13 @@ function SidebarNavList({
 }) {
   return (
     <nav aria-label="Satıcı paneli gezinme menüsü" className={className}>
-      <ul className="flex flex-col gap-5">
+      <ul className="flex flex-col gap-1">
         {sellerNavigation.map((section, index) => (
           <li
             key={section.title}
-            className={cn(index > 0 && "border-t border-divider pt-4")}
+            className={cn(index > 0 && "mt-1 border-t border-divider pt-4")}
           >
-            <p className="px-3 pb-1 text-xs font-medium text-muted-foreground">
+            <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
               {section.title}
             </p>
             <ul className="flex flex-col gap-0.5">
@@ -139,25 +184,23 @@ function SidebarNavList({
                       onClick={onNavigate}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
-                        "relative flex h-11 items-center gap-3 rounded-md pl-4 pr-3 text-sm transition-colors",
+                        "relative flex h-10 items-center gap-3 rounded-md pl-4 pr-3 text-sm transition-colors",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
                         isActive
-                          ? "bg-primary-muted font-medium text-primary"
+                          ? "bg-primary-muted font-semibold text-primary"
                           : "text-foreground hover:bg-surface-2",
                       )}
                     >
                       {isActive ? (
                         <span
                           aria-hidden="true"
-                          className="absolute inset-y-2 left-0 w-[2px] rounded-full bg-primary"
+                          className="absolute inset-y-2.5 left-0 w-[2px] rounded-full bg-primary"
                         />
                       ) : null}
                       <SellerIcon
                         name={item.icon}
                         className={
-                          isActive
-                            ? "text-primary"
-                            : "text-muted-foreground"
+                          isActive ? "text-primary" : "text-muted-foreground"
                         }
                       />
                       <span>{item.label}</span>

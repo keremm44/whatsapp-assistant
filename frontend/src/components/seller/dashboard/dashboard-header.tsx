@@ -1,27 +1,34 @@
 import * as React from "react";
 import { ListChecks } from "lucide-react";
 
-import { PageHeader } from "@/components/shared/page-header";
-
 /**
- * The dashboard's page header.
+ * Dashboard page header.
  *
- * Composition:
- *   - The existing shared `PageHeader` is rendered unchanged on
- *     the left (caption + title + description + petrol hairline).
- *     We do not fork it.
- *   - On the right we render a quiet factual count badge. The
- *     count is the backend-provided `toplam` aggregate. The
- *     badge explicitly says "İlgilenmeniz gereken N konu" so the
- *     user understands what the number represents.
+ * Visual identity (this pass):
  *
- *   The badge is deliberately NOT labeled "Bugün" or anything
- *   that would imply a date scope the backend does not provide.
- *   `toplam` is the total count of the current action queue; it
- *   is not a "today" aggregate.
+ *   - Asymmetric. The left side carries the page identity
+ *     (caption + H1 + description) on the same typography
+ *     family as the sidebar brand mark. The right side
+ *     carries the factual count badge.
  *
- * On viewports narrower than `sm` the badge drops below the
- * title block so the two never compete for horizontal space.
+ *   - Page identity. The caption "Genel Bakış" is petrol,
+ *     uppercase, tracking-wide — the same family as the
+ *     sidebar's section labels. The H1 is in Manrope and
+ *     uses a 1px petrol hairline under it (matching the
+ *     sidebar's brand hairline) so the page header and the
+ *     sidebar read as parts of the same product identity.
+ *
+ *   - Count badge. A petrol-soft panel with a petrol
+ *     `ListChecks` glyph. The text reads "İlgilenmeniz
+ *     gereken N konu" — a factual description of the
+ *     backend's `toplam` aggregate, NOT a "today" label.
+ *
+ *   - When the queue is empty (toplam = 0) the badge is
+ *     omitted. The page identity still stands on its own.
+ *
+ *   - Mobile (< sm). The badge drops below the title block
+ *     so the two never compete for horizontal space. The
+ *     petrol hairline is preserved.
  */
 export function DashboardHeader({
   total,
@@ -36,42 +43,54 @@ export function DashboardHeader({
   description?: string;
 }) {
   return (
-    <div className="flex flex-col gap-5 pb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
-      <PageHeader
-        caption={caption}
-        title={title}
-        description={description}
-        className="pb-0"
-      />
+    <div className="flex flex-col gap-6 pb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
+      <div className="space-y-2.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+          {caption}
+        </p>
+        <h1 className="font-heading text-[30px] font-medium leading-[1.1] text-foreground sm:text-[34px]">
+          {title}
+        </h1>
+        {description ? (
+          <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+        <span
+          aria-hidden="true"
+          className="mt-1 block h-px w-9 bg-primary"
+        />
+      </div>
       {total > 0 ? <CountBadge total={total} /> : null}
     </div>
   );
 }
 
 /**
- * Small factual count badge.
+ * Factual count badge.
  *
- * Shows "İlgilenmeniz gereken N konu" with a checkmark glyph so
- * the user can see at a glance how many items are waiting in
- * the queue. The numeral is in `tabular-nums` so the count
- * does not jitter on re-render.
+ * The badge is a petrol-soft rectangle with a petrol glyph
+ * and the sentence "İlgilenmeniz gereken N konu". The
+ * sentence is wrapped in a real `<p>` so screen readers
+ * read it as a single phrase, and the numeral is in
+ * `tabular-nums` so it does not jitter on re-render.
  */
 function CountBadge({ total }: { total: number }) {
   return (
     <div
       role="status"
       aria-label={`İlgilenmeniz gereken ${total} konu`}
-      className="flex w-fit items-center gap-2.5 self-start rounded-md border border-border bg-chrome px-3.5 py-2 sm:self-auto"
+      className="flex w-fit items-center gap-3 self-start rounded-md border border-primary/20 bg-primary-muted px-4 py-2.5 sm:self-auto"
     >
       <span
         aria-hidden="true"
-        className="flex h-6 w-6 items-center justify-center rounded-sm bg-primary-muted text-primary"
+        className="flex h-7 w-7 items-center justify-center rounded-sm bg-primary text-primary-foreground"
       >
-        <ListChecks size={14} strokeWidth={1.6} />
+        <ListChecks size={16} strokeWidth={1.7} />
       </span>
       <p className="flex items-baseline gap-1.5 text-[13px] leading-none text-foreground">
         <span className="text-foreground/80">İlgilenmeniz gereken</span>
-        <span className="tabular-nums font-semibold text-foreground">
+        <span className="tabular-nums font-semibold text-primary">
           {total}
         </span>
         <span className="text-muted-foreground">konu</span>

@@ -13,58 +13,49 @@ import type { DashboardTask, DashboardTaskType } from "@/lib/seller/dashboard-ta
 import { composeCustomerLine, formatUpdatedAt } from "@/lib/seller/dashboard-format";
 
 /**
- * The compact "bugün bakılabilecekler" row.
+ * Compact "bugün bakılabilecekler" row used in the right-hand
+ * column when BOTH high and normal groups are populated. The
+ * row carries a 3px type rail so the brand colour is visible
+ * in the side column too. The whole row is a single Link with
+ * min-h-[56px] and the chevron appears on hover/focus.
  *
- * Visual character:
- *   - Entire row is a single Link. The whole line is tappable
- *     (44px+ target) but no CTA copy is shown at rest; the
- *     chevron appears on hover/focus to indicate the action
- *     affordance.
- *   - Reads as a quiet, hand-written entry, not as a row in a
- *     data table. The category glyph on the left is small
- *     (16px), sentence case, in muted ink.
- *   - Customer meta line is preserved (`name · whatsapp`) but
- *     truncated at the second line on long titles via
- *     `line-clamp` so the row never exceeds two visual lines
- *     in the side panel.
- *
- * Data accessibility:
- *   The visible title and customer line are clamped to keep
- *   the row calm, but the full backend text is always
- *   available via the HTML `title` attribute on the relevant
- *   element. Long-press or hover on mobile / desktop surfaces
- *   reveals the complete text.
- *
- * Semantic labelling:
- *   The relative timestamp is rendered as "Güncelleme · X saat
- *   önce" (or shorter) so the user never reads the bare
- *   phrase as "waiting N hours". If the backend's
- *   `updated_at` is unparseable, the meta line is just the
- *   category label.
- *
- * The row's destination mirrors the parent task type's
- * canonical list route. We do not invent detail routes.
+ * When the normal region is the only region (high=0), the
+ * dashboard uses `CompactTaskCard` instead, which gives each
+ * item more horizontal space and a more readable summary.
  */
-
 const TYPE_META: Record<
   DashboardTaskType,
-  { label: string; icon: LucideIcon; href: Route }
+  {
+    label: string;
+    icon: LucideIcon;
+    rail: "primary" | "review" | "neutral";
+    href: Route;
+  }
 > = {
   return_review: {
     label: "İade",
     icon: Undo2,
+    rail: "review",
     href: "/seller/returns",
   },
   order_review: {
     label: "Sipariş",
     icon: Package,
+    rail: "primary",
     href: "/seller/orders",
   },
   unanswered_question: {
     label: "Yanıt bekleyen",
     icon: MessagesSquare,
+    rail: "neutral",
     href: "/seller/unanswered",
   },
+};
+
+const RAIL_CLASS: Record<"primary" | "review" | "neutral", string> = {
+  primary: "bg-primary",
+  review: "bg-accent",
+  neutral: "bg-muted-foreground/50",
 };
 
 export function SecondaryRow({ task }: { task: DashboardTask }) {
@@ -75,28 +66,30 @@ export function SecondaryRow({ task }: { task: DashboardTask }) {
   const accessibleName = `${meta.label} — ${task.title}`;
 
   return (
-    <li className="border-b border-divider last:border-b-0">
+    <li className="relative border-b border-divider last:border-b-0">
+      <span
+        aria-hidden="true"
+        className={`absolute inset-y-3 left-0 w-[2px] rounded-full ${RAIL_CLASS[meta.rail]}`}
+      />
       <Link
         href={meta.href}
         aria-label={accessibleName}
-        className="group flex min-h-[56px] items-start gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset sm:px-5"
+        className="group flex min-h-[60px] items-start gap-3 px-4 py-3.5 pl-5 transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset sm:px-5"
       >
         <Icon
           aria-hidden="true"
-          size={16}
+          size={18}
           strokeWidth={1.6}
-          className="mt-0.5 shrink-0 text-muted-foreground"
+          className="mt-0.5 shrink-0 text-muted-foreground group-hover:text-foreground"
         />
         <div className="min-w-0 flex-1 space-y-0.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {meta.label}
+          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+            <span>{meta.label}</span>
             {updatedAtLabel ? (
               <>
-                <span aria-hidden="true" className="mx-1.5 text-divider">
-                  ·
-                </span>
+                <span aria-hidden="true" className="text-divider">·</span>
                 <span
-                  className="normal-case tracking-normal text-muted-foreground/80"
+                  className="font-medium normal-case tracking-normal text-muted-foreground"
                   title={updatedAtLabel}
                 >
                   {updatedAtLabel}
