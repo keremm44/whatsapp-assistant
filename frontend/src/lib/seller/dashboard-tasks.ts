@@ -20,22 +20,26 @@
  * unanswered) into a single ordered action queue; ordering is
  * `priority_rank ASC, updated_at DESC, related_entity_id DESC`.
  *
- * Parser discipline:
- *   - The SQL read model always emits a fixed set of keys. A
- *     MISSING key is a malformed backend contract, NOT a
- *     silently-defaulted null.
- *   - The VALUE of a nullable key may be `null` (the SQL's CASE
- *     branch). The KEY must be present.
- *   - Numeric shapes are validated strictly: positive integers for
- *     IDs, non-negative integers for `total`/`offset`, integer
- *     1..100 for `limit`. Fractions, negatives, and zero IDs are
- *     rejected.
- *   - Cross-field invariants are validated against the known
- *     SQL mapping:
- *         return_review       -> high + return_issue_request
- *         order_review        -> high + order
- *         unanswered_question -> normal + unanswered_question_group
- *     A payload that violates this mapping is a contract error.
+ * Proven nullability (per the SQL read model and the underlying
+ * tables; every claim is documented inline):
+ *
+ *   id, type, priority, title, summary,
+ *   related_entity_id, entity_version, created_at, updated_at,
+ *   action_target, action_target.kind, action_target.id
+ *     -> ALWAYS present, never null
+ *
+ *   customer, action_target.customer_id
+ *     -> key ALWAYS present; value MAY be null
+ *
+ *   customer.id, customer.name, customer.whatsapp_number
+ *     -> key ALWAYS present when customer is non-null;
+ *        value MAY be null (per the underlying customers columns)
+ *
+ *   The outer `customer` field is null only on the
+ *   `unanswered_question` branch (which uses LEFT JOIN); the
+ *   `return_review` and `order_review` branches INNER JOIN
+ *   customers, so customer is non-null there. This is enforced as
+ *   a cross-field invariant in the parser.
  */
 
 import { apiFetchWithAccessToken } from "@/lib/api/authenticated";
@@ -102,6 +106,17 @@ const TASK_TYPE_TO_ACTION_KIND: Record<DashboardTaskType, DashboardActionKind> =
   unanswered_question: "unanswered_question_group",
 };
 
+/**
+ * Which task types are guaranteed to carry a non-null customer by
+ * the SQL's join structure. `return_review` and `order_review` use
+ * INNER JOIN; `unanswered_question` uses LEFT JOIN.
+ */
+const TASK_TYPE_WITH_REQUIRED_CUSTOMER: Record<DashboardTaskType, boolean> = {
+  return_review: true,
+  order_review: true,
+  unanswered_question: false,
+};
+
 export type DashboardTaskCustomer = {
   id: number;
   name: string | null;
@@ -114,19 +129,45 @@ export type DashboardTaskActionTarget = {
   customerId: number | null;
 };
 
-export type DashboardTask = {
+/**
+ * Common fields shared by every task shape. Proven-always-present,
+ * non-null values use the non-nullable TS type. Nullable-by-SQL
+ * values use `T | null`.
+ */
+type DashboardTaskBase = {
   id: string;
   type: DashboardTaskType;
   priority: DashboardTaskPriority;
-  customer: DashboardTaskCustomer | null;
   title: string;
-  summary: string | null;
-  relatedEntityId: number | null;
-  entityVersion: number | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-  actionTarget: DashboardTaskActionTarget | null;
+  summary: string;
+  relatedEntityId: number;
+  entityVersion: number;
+  createdAt: string;
+  updatedAt: string;
+  actionTarget: DashboardTaskActionTarget;
 };
+
+/**
+ * Discriminated union of task shapes, split by whether the SQL's
+ * join guarantees a customer row.
+ *
+ *   return_review       -> customer is non-null
+ *   order_review        -> customer is non-null
+ *   unanswered_question -> customer may be null
+ *
+ * The dashboard page iterates these uniformly; the union exists so
+ * the page (or any future consumer) can narrow on `type` and rely on
+ * the customer nullability being correct.
+ */
+export type DashboardTask =
+  | (DashboardTaskBase & {
+      type: "return_review" | "order_review";
+      customer: DashboardTaskCustomer;
+    })
+  | (DashboardTaskBase & {
+      type: "unanswered_question";
+      customer: DashboardTaskCustomer | null;
+    });
 
 export type DashboardTasks = {
   total: number;
@@ -176,14 +217,22 @@ const isNonNegativeInteger = (value: unknown): value is number =>
  * wrong type we treat it as a contract error. Only `null` is
  * accepted as the "no value" alternative.
  */
-const readKey = (
-  obj: Record<string, unknown>,
-  key: string,
-): unknown => {
+const readKey = (obj: Record<string, unknown>, key: string): unknown => {
   if (!(key in obj)) {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}${key}_missing`);
   }
   return obj[key];
+};
+
+const readRequiredString = (
+  obj: Record<string, unknown>,
+  key: string,
+): string => {
+  const v = readKey(obj, key);
+  if (typeof v !== "string") {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}${key}_type`);
+  }
+  return v;
 };
 
 const readNullableString = (
@@ -194,6 +243,17 @@ const readNullableString = (
   if (v === null) return null;
   if (typeof v !== "string") {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}${key}_type`);
+  }
+  return v;
+};
+
+const readRequiredPositiveInteger = (
+  obj: Record<string, unknown>,
+  key: string,
+): number => {
+  const v = readKey(obj, key);
+  if (!isPositiveInteger(v)) {
+    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}${key}_shape`);
   }
   return v;
 };
@@ -210,8 +270,7 @@ const readNullablePositiveInteger = (
   return v;
 };
 
-const parseCustomer = (raw: unknown): DashboardTaskCustomer | null => {
-  if (raw === null) return null;
+const parseCustomer = (raw: unknown): DashboardTaskCustomer => {
   if (!isPlainObject(raw)) {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}customer`);
   }
@@ -229,10 +288,7 @@ const parseCustomer = (raw: unknown): DashboardTaskCustomer | null => {
   return { id: idRaw, name, whatsappNumber };
 };
 
-const parseActionTarget = (
-  raw: unknown,
-): DashboardTaskActionTarget | null => {
-  if (raw === null) return null;
+const parseActionTarget = (raw: unknown): DashboardTaskActionTarget => {
   if (!isPlainObject(raw)) {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}action_target`);
   }
@@ -244,6 +300,8 @@ const parseActionTarget = (
   if (!isPositiveInteger(idRaw)) {
     throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}action_target_id_shape`);
   }
+  // `customer_id` is the only field that may be null. The key must
+  // be present per the SQL projection.
   const customerId = readNullablePositiveInteger(raw, "customer_id");
   return { kind: kindRaw, id: idRaw, customerId };
 };
@@ -280,55 +338,79 @@ const parseTask = (raw: unknown): DashboardTask => {
   // mapping between task type, priority, and action_target.kind.
   // A payload that violates this mapping is a contract error.
   if (TASK_TYPE_TO_PRIORITY[typeRaw] !== priorityRaw) {
-    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}task_priority_mismatch`);
+    throw new Error(
+      `${DASHBOARD_TASKS_CONTRACT_PREFIX}task_priority_mismatch`,
+    );
   }
 
-  // `title` is required and must be a string.
-  const titleRaw = readKey(raw, "title");
-  if (typeof titleRaw !== "string") {
-    throw new Error(`${DASHBOARD_TASKS_CONTRACT_PREFIX}task_title_shape`);
-  }
-
-  // The remaining fields are nullable (string or null for
-  // textual, positive int or null for IDs) but their KEYS must be
-  // present per the SQL projection. A missing key is a contract
-  // error; a wrong-typed value is a contract error.
-  const summary = readNullableString(raw, "summary");
-  const relatedEntityId = readNullablePositiveInteger(
+  // `title`, `summary`, `related_entity_id`, `entity_version`,
+  // `created_at`, `updated_at`, `action_target` are ALL proven
+  // non-null in the SQL projection (see file header). The
+  // customer / action_target.customer_id fields are the only
+  // nullable ones; see the task-type-specific branches below.
+  const title = readRequiredString(raw, "title");
+  const summary = readRequiredString(raw, "summary");
+  const relatedEntityId = readRequiredPositiveInteger(
     raw,
     "related_entity_id",
   );
-  const entityVersion = readNullablePositiveInteger(raw, "entity_version");
-  const createdAt = readNullableString(raw, "created_at");
-  const updatedAt = readNullableString(raw, "updated_at");
-
-  const customer = parseCustomer(readKey(raw, "customer"));
+  const entityVersion = readRequiredPositiveInteger(raw, "entity_version");
+  const createdAt = readRequiredString(raw, "created_at");
+  const updatedAt = readRequiredString(raw, "updated_at");
   const actionTarget = parseActionTarget(readKey(raw, "action_target"));
 
   // Cross-field invariant: action_target.kind must match the
   // task type. We check this after the action_target object is
   // fully parsed so the error points at the right field.
-  if (
-    actionTarget !== null &&
-    TASK_TYPE_TO_ACTION_KIND[typeRaw] !== actionTarget.kind
-  ) {
+  if (TASK_TYPE_TO_ACTION_KIND[typeRaw] !== actionTarget.kind) {
     throw new Error(
       `${DASHBOARD_TASKS_CONTRACT_PREFIX}action_target_kind_mismatch`,
     );
   }
 
-  return {
+  // Cross-field invariant: customer is required for
+  // `return_review` and `order_review` (the SQL's INNER JOIN
+  // guarantees a non-null customer). `unanswered_question` allows
+  // null. We enforce the requirement before constructing the
+  // discriminated union so the impossible combination can never
+  // be represented.
+  const customerRaw = readKey(raw, "customer");
+  if (customerRaw === null && TASK_TYPE_WITH_REQUIRED_CUSTOMER[typeRaw]) {
+    throw new Error(
+      `${DASHBOARD_TASKS_CONTRACT_PREFIX}customer_required`,
+    );
+  }
+
+  // Build the common base. All fields here are proven non-null in
+  // the SQL projection. We set `type: typeRaw` (widened) here; the
+  // discriminator is set per-branch below.
+  const base: Omit<DashboardTaskBase, "type"> = {
     id: idRaw,
-    type: typeRaw,
     priority: priorityRaw,
-    customer,
-    title: titleRaw,
+    title,
     summary,
     relatedEntityId,
     entityVersion,
     createdAt,
     updatedAt,
     actionTarget,
+  };
+
+  // `customer` is the only field that may be null. The
+  // discriminated union maps the proven SQL nullability onto the
+  // TypeScript type: `unanswered_question` may have a null
+  // customer; the other two branches never do.
+  if (customerRaw === null) {
+    return {
+      ...base,
+      type: "unanswered_question",
+      customer: null,
+    };
+  }
+  return {
+    ...base,
+    type: typeRaw,
+    customer: parseCustomer(customerRaw),
   };
 };
 

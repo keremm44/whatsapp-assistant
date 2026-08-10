@@ -187,6 +187,9 @@ function DashboardTaskRow({ task }: { task: DashboardTask }) {
   const typeLabel = TASK_TYPE_LABELS[task.type];
   const href = TASK_TYPE_ROUTES[task.type];
   const cta = TASK_TYPE_CTA[task.type];
+  // `summary` is proven non-null in the SQL projection, but the
+  // raw text may still be empty. We treat empty as absent so the
+  // layout does not leave a stranded muted paragraph.
   const customerLine = task.customer
     ? [task.customer.name, task.customer.whatsappNumber]
         .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
@@ -201,7 +204,7 @@ function DashboardTaskRow({ task }: { task: DashboardTask }) {
           <p className="text-sm font-medium leading-snug text-foreground">
             {task.title}
           </p>
-          {task.summary ? (
+          {task.summary.trim().length > 0 ? (
             <p className="text-sm leading-relaxed text-muted-foreground">
               {task.summary}
             </p>
