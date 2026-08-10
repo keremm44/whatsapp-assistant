@@ -142,6 +142,107 @@
   --dur-base: 200ms;
 }
 
+/*
+ * SELLER WORKSPACE — DARK WORKSHOP / WARM ATELIER OVERRIDE
+ *
+ * The seller workspace lives under `.seller-theme` (set on the root
+ * <div> in `seller-shell.tsx`). Every value here overrides the
+ * canonical Sakin Ustalık v2 light palette ONLY for the seller
+ * subtree. Admin, auth, public, and shared surfaces stay on the
+ * light theme; nothing outside the seller workspace reads these
+ * variables.
+ *
+ * The override is the "Dark Workshop" / warm-atelier reading of
+ * the same brand: warm charcoal + petrol + terracotta + warm
+ * off-white. No pure black, no neon, no glassmorphism. The
+ * workspace is layered (chrome → workspace → surface → surface-2)
+ * with a slightly different charcoal value at each layer, which
+ * gives the UI its tactile, workshop-material feel.
+ */
+.seller-theme {
+  /* Surfaces — warm charcoal, layered */
+  --color-background: #1b2220;
+  --color-background-rgb: 27 34 32;
+  --color-chrome: #121816;
+  --color-chrome-rgb: 18 24 22;
+  --color-surface: #232c29;
+  --color-surface-rgb: 35 44 41;
+  --color-surface-2: #293431;
+  --color-surface-2-rgb: 41 52 49;
+  --color-border: #394642;
+  --color-border-rgb: 57 70 66;
+  --color-divider: #303b37;
+  --color-divider-rgb: 48 59 55;
+
+  /* Text — warm off-white hierarchy */
+  --color-foreground: #f2eee6;
+  --color-foreground-rgb: 242 238 230;
+  --color-muted: #b3bdb8;
+  --color-muted-rgb: 179 189 184;
+  --color-muted-foreground: #87938e;
+  --color-muted-foreground-rgb: 135 147 142;
+
+  /* Primary (petrol) — brighter so it reads on dark surfaces */
+  --color-primary: #3f817a;
+  --color-primary-rgb: 63 129 122;
+  --color-primary-hover: #5a9a92;
+  --color-primary-hover-rgb: 90 154 146;
+  --color-primary-active: #2f635d;
+  --color-primary-active-rgb: 47 99 93;
+  --color-primary-muted: #24413d;
+  --color-primary-muted-rgb: 36 65 61;
+  --color-primary-foreground: #f2eee6;
+  --color-primary-foreground-rgb: 242 238 230;
+
+  /* Accent (terracotta) — warm character, brighter for dark */
+  --color-accent: #b85e42;
+  --color-accent-rgb: 184 94 66;
+  --color-accent-dark: #cf7354;
+  --color-accent-dark-rgb: 207 115 84;
+  --color-accent-muted: #3b2923;
+  --color-accent-muted-rgb: 59 41 35;
+  --color-accent-foreground: #f2eee6;
+  --color-accent-foreground-rgb: 242 238 230;
+
+  /* Functional states tuned for dark readability */
+  --color-success: #5fa37f;
+  --color-success-rgb: 95 163 127;
+  --color-success-muted: #1f3a2c;
+  --color-success-muted-rgb: 31 58 44;
+  --color-info: #6f93c0;
+  --color-info-rgb: 111 147 192;
+  --color-info-muted: #1d2e44;
+  --color-info-muted-rgb: 29 46 68;
+  --color-warning: #d49a4f;
+  --color-warning-rgb: 212 154 79;
+  --color-warning-muted: #3a2d18;
+  --color-warning-muted-rgb: 58 45 24;
+  --color-review: #b56f5a;
+  --color-review-rgb: 181 111 90;
+  --color-review-muted: #3a2520;
+  --color-review-muted-rgb: 58 37 32;
+  --color-destructive: #d36767;
+  --color-destructive-rgb: 211 103 103;
+  --color-destructive-muted: #3a1f1f;
+  --color-destructive-muted-rgb: 58 31 31;
+  --color-destructive-foreground: #f2eee6;
+  --color-destructive-foreground-rgb: 242 238 230;
+  --color-paused: #7d8a96;
+  --color-paused-rgb: 125 138 150;
+  --color-paused-muted: #2b3138;
+  --color-paused-muted-rgb: 43 49 56;
+
+  /* Shadows — dark surfaces need a different shadow recipe.
+   * The light-theme shadows are nearly invisible on dark
+   * backgrounds. Replace with a subtle 1px inner hairline
+   * plus a tight drop shadow tinted toward black so cards
+   * still feel "lifted" without using heavy elevation. */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-surface: 0 0 0 1px rgba(57, 70, 66, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
 @layer base {
   html {
     background-color: var(--color-background);

@@ -47,7 +47,7 @@ export function QuietSummary({
     return (
       <section
         aria-labelledby="dashboard-quiet-summary"
-        className="relative overflow-hidden rounded-md border border-accent/25 bg-accent-muted/60"
+        className="relative overflow-hidden rounded-md border border-accent/30 bg-accent-muted/85"
       >
         <span
           aria-hidden="true"

@@ -192,7 +192,7 @@ const BottomRail = () => {
    * petrol brand mark at the top.
    */
   return (
-    <div className="border-t border-border bg-accent-muted/70 px-4 py-4">
+    <div className="border-t border-border bg-accent-muted/85 px-4 py-4">
       <Link
         href="/seller/settings"
         className="flex items-center gap-3 rounded-md px-1 py-1 text-sm text-foreground/80 transition-colors hover:bg-surface/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-accent-muted"

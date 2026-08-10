@@ -19,6 +19,15 @@ import { SellerTopbar } from "./seller-topbar";
  * shell itself never reaches for `/seller/me` or any other
  * business API. The component is otherwise unchanged from the
  * approved macro shell.
+ *
+ * Theme:
+ *   The root <div> carries the `seller-theme` class. The
+ *   `.seller-theme` selector in `src/app/globals.css` overrides
+ *   the canonical light-palette CSS variables so every Tailwind
+ *   utility inside the seller workspace (e.g. `bg-primary`,
+ *   `text-foreground`, `border-border`, `bg-surface`) resolves
+ *   to a dark-warm value. Admin, auth, and public surfaces are
+ *   outside this wrapper and stay on the light theme.
  */
 export function SellerShell({
   children,
@@ -28,7 +37,7 @@ export function SellerShell({
   storeName: string;
 }) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="seller-theme min-h-screen bg-background text-foreground">
       <div className="flex">
         <SellerSidebar />
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
