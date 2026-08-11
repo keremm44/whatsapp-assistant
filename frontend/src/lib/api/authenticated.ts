@@ -15,7 +15,12 @@
  * backend contract in later steps.
  */
 
-import { apiFetch, type ApiFetchOptions } from "./client";
+import {
+  apiFetch,
+  apiFetchBlob,
+  type ApiBlobPayload,
+  type ApiFetchOptions,
+} from "./client";
 
 export async function apiFetchWithAccessToken<TResponse = unknown>(
   path: string,
@@ -23,6 +28,25 @@ export async function apiFetchWithAccessToken<TResponse = unknown>(
   options: Omit<ApiFetchOptions, "auth"> = {},
 ): Promise<TResponse> {
   return apiFetch<TResponse>(path, {
+    ...options,
+    headers: {
+      ...(options.headers ?? {}),
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
+/**
+ * Authenticated binary variant (e.g. the seller media proxy). The Bearer
+ * token goes to the backend request only; the fetched bytes are returned
+ * to the caller without ever exposing any upstream resource URL.
+ */
+export async function apiFetchBlobWithAccessToken(
+  path: string,
+  accessToken: string,
+  options: Omit<ApiFetchOptions, "auth"> = {},
+): Promise<ApiBlobPayload> {
+  return apiFetchBlob(path, {
     ...options,
     headers: {
       ...(options.headers ?? {}),

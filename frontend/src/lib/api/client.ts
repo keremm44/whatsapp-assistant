@@ -146,3 +146,53 @@ export async function apiFetch<TResponse = unknown>(
 
   return (await response.json()) as TResponse;
 }
+
+/**
+ * Binary payload returned by `apiFetchBlob`.
+ */
+export type ApiBlobPayload = {
+  blob: Blob;
+  /** Raw Content-Type of the upstream/resource response, when present. */
+  contentType: string | null;
+};
+
+/**
+ * Minimal typed binary variant of `apiFetch`.
+ *
+ * Required so features can download authenticated binary resources (e.g.
+ * the seller media proxy) through the SAME request pipeline — error bodies
+ * are still normalized into `ApiError` with the backend's own message, so
+ * nothing about failure handling changes. The raw resource URL is never
+ * exposed; callers receive only the fetched bytes.
+ */
+export async function apiFetchBlob(
+  path: string,
+  options: ApiFetchOptions = {},
+): Promise<ApiBlobPayload> {
+  const { auth: _auth = "off", headers, signal, ...rest } = options;
+
+  const requestInit: RequestInit = {
+    ...rest,
+    headers: {
+      ...headers,
+    },
+  };
+
+  if (signal) {
+    requestInit.signal = signal;
+  }
+
+  const response = await fetch(buildUrl(path), requestInit);
+
+  if (!response.ok) {
+    // Error bodies from the backend stay JSON; read exactly once.
+    const body: unknown = await response.json().catch(() => ({}));
+    const message = messageFromBody(body, response.status);
+    throw new ApiError(message, response.status, body);
+  }
+
+  return {
+    blob: await response.blob(),
+    contentType: response.headers.get("content-type"),
+  };
+}

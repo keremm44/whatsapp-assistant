@@ -1,1 +1,7 @@
-export { apiFetch, ApiError, type ApiFetchOptions } from "./client";
+export {
+  apiFetch,
+  apiFetchBlob,
+  ApiError,
+  type ApiBlobPayload,
+  type ApiFetchOptions,
+} from "./client";
