@@ -1,7 +1,9 @@
 -- ============================================================
 -- 027_honor_order_image_requirement.sql
 -- Sipariş completion eşiği artık seller order config'indeki
--- image_required bayrağını da dikkate alır.
+-- image_required bayrağını da dikkate alır; her iki bayrağın
+-- (image_required / custom_text_required) çözümlemesi Python
+-- uygulama katmanıyla birebir aynı kanonik kuralları izler.
 --
 -- Kapsam (bilinçli olarak dar):
 --   - Yalnızca public._recompute_order_completion(BIGINT, BIGINT,
@@ -9,12 +11,20 @@
 --     siteleri ve optimistic-concurrency sözleşmesi aynen korunur.
 --   - 015'teki "ana görsel her zaman zorunlu" kuralı, config okuyan
 --     bir kapıya çevrilir: product_info.order.image_required
---       * true            -> görsel yoksa completion olmaz
---       * false           -> görsel eksikliği completion'ı bloklamaz
---       * NULL / eksik    -> TRUE kabul edilir (015 davranışı aynen;
---                            mevcut canlı veri ticari olarak değişmez)
---   - custom_text_required okuması 015'teki gibi kalır
---     (NULL/eksik -> FALSE).
+--   - Bayrak çözümleme kuralları (= order_service
+--     _read_core_requirement_flag ile aynı):
+--       * eksik / JSON null -> image_required: TRUE (legacy; 015
+--         davranışı aynen, mevcut canlı veri ticari olarak değişmez),
+--         custom_text_required: FALSE (015 davranışı aynen)
+--       * JSON boolean      -> değerin kendisi
+--       * JSON string       -> btrim + lower sonrası YALNIZ
+--                              'true' / 'false' geçerlidir
+--       * diğer her değer   -> GEÇERSİZ: core_ready=FALSE;
+--         fonksiyon FALSE döner ve sipariş ASLA COMPLETE olmaz.
+--     Doğrudan ::boolean cast BİLİNÇLİ OLARAK kullanılmaz:
+--     PostgreSQL boolean girdisi 'yes'/'on'/'1'/'t' gibi formları
+--     sessizce kabul eder; Python'ın reddettiği bir config'in DB
+--     tarafında completion üretmesine izin verilemez (fail-closed).
 --   - Dinamik zorunlu alan eşiği, tenant kapsamı, advisory lock,
 --     version kontrolü ve COMPLETE kısa-devresi değişmez.
 --
@@ -40,6 +50,9 @@ AS $$
 DECLARE
     order_row public.orders%ROWTYPE;
     seller_info JSONB;
+    order_config JSONB;
+    raw_flag JSONB;
+    normalized_flag TEXT;
     core_ready BOOLEAN := TRUE;
     image_required BOOLEAN := TRUE;
     custom_text_required BOOLEAN := FALSE;
@@ -77,21 +90,62 @@ BEGIN
     FROM public.sellers
     WHERE id = target_seller_id;
 
-    -- Ana görsel zorunluluğu artık seller config'inden okunur.
-    -- NULL/eksik -> TRUE (önceki üretim davranışıyla birebir aynı).
-    image_required := COALESCE(
-        (seller_info -> 'order' ->> 'image_required')::boolean,
-        TRUE
-    );
+    order_config := seller_info -> 'order';
+
+    -- Ana görsel zorunluluğu config'den, Python ile aynı kanonik
+    -- kurallarla okunur (aşağıdaki merdiven her iki bayrak için aynıdır).
+    image_required := TRUE;
+    raw_flag := order_config -> 'image_required';
+
+    IF raw_flag IS NULL OR jsonb_typeof(raw_flag) = 'null' THEN
+        -- Eksik / JSON null -> TRUE (legacy)
+        image_required := TRUE;
+    ELSIF jsonb_typeof(raw_flag) = 'boolean' THEN
+        image_required := (raw_flag = 'true'::jsonb);
+    ELSIF jsonb_typeof(raw_flag) = 'string' THEN
+        normalized_flag := lower(btrim(raw_flag #>> '{}'));
+
+        IF normalized_flag = 'true' THEN
+            image_required := TRUE;
+        ELSIF normalized_flag = 'false' THEN
+            image_required := FALSE;
+        ELSE
+            -- Geçersiz config: tahmin yok, completion yok.
+            core_ready := FALSE;
+        END IF;
+    ELSE
+        -- JSON number / array / object gibi türler: geçersiz config.
+        core_ready := FALSE;
+    END IF;
 
     IF image_required AND order_row.image_message_id IS NULL THEN
         core_ready := FALSE;
     END IF;
 
-    custom_text_required := COALESCE(
-        (seller_info -> 'order' ->> 'custom_text_required')::boolean,
-        FALSE
-    );
+    -- custom_text_required: aynı kanonik çözümleme; varsayılan FALSE.
+    custom_text_required := FALSE;
+    raw_flag := order_config -> 'custom_text_required';
+
+    IF raw_flag IS NULL OR jsonb_typeof(raw_flag) = 'null' THEN
+        -- Eksik / JSON null -> FALSE
+        custom_text_required := FALSE;
+    ELSIF jsonb_typeof(raw_flag) = 'boolean' THEN
+        custom_text_required := (raw_flag = 'true'::jsonb);
+    ELSIF jsonb_typeof(raw_flag) = 'string' THEN
+        normalized_flag := lower(btrim(raw_flag #>> '{}'));
+
+        IF normalized_flag = 'true' THEN
+            custom_text_required := TRUE;
+        ELSIF normalized_flag = 'false' THEN
+            custom_text_required := FALSE;
+        ELSE
+            -- Geçersiz config: tahmin yok, completion yok.
+            core_ready := FALSE;
+        END IF;
+    ELSE
+        -- JSON number / array / object gibi türler: geçersiz config.
+        core_ready := FALSE;
+    END IF;
 
     IF custom_text_required
        AND (

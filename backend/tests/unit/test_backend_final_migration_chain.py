@@ -25,9 +25,10 @@ def test_027_gates_image_requirement_on_seller_config() -> None:
     sql = Path("migrations/027_honor_order_image_requirement.sql").read_text(encoding="utf-8").lower()
     assert "create or replace function public._recompute_order_completion" in sql
     assert "set search_path = pg_catalog, public" in sql
-    assert "(seller_info -> 'order' ->> 'image_required')::boolean" in sql
+    assert "order_config -> 'image_required'" in sql
+    assert "order_config -> 'custom_text_required'" in sql
     assert "if image_required and order_row.image_message_id is null then" in sql
-    assert "(seller_info -> 'order' ->> 'custom_text_required')::boolean" in sql
+    assert "if custom_text_required" in sql
     assert "revoke execute on function public._recompute_order_completion" in sql
     assert "grant execute on function public._recompute_order_completion" in sql
     assert "on conflict (version) do nothing" in sql
