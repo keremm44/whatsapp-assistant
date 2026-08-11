@@ -1439,7 +1439,32 @@ def process_active_state(
         order_id = state_data.get("order_id")
 
         if order_id is not None:
+            # Config-authority dayanıklılığı: görsel adımı yalnızca
+            # image_required=true (veya legacy NULL) iken sorulur. Konuşma
+            # AWAITING_IMAGE'de açılmışsa ama config artık görsel istemiyorsa
+            # (veya koleksiyon zaten ilerlemişse), görsel dışı bir mesaj
+            # sessizce düşürülmez; akış gerçek adıma hizalanır. Aksi halde
+            # konuşma hiç sorulmayacak bir görseli bekleyerek kilitli
+            # kalırdı. AWAITING_CUSTOM_TEXT / AWAITING_ORDER_FIELD
+            # kollarındaki re-align pattern'inin aynısıdır. Görsel mesajı
+            # gerçekten geldiyse eskisi gibi saklanır; persist sonrası
+            # yapılan adım hesabı (config kapısından geçer) akışı
+            # kendiliğinden hizalar.
             if message_type != "image":
+                current_step = order_get_next_collection_step(seller_id, order_id)
+                if (
+                    current_step.get("durum") != "başarılı"
+                    or current_step.get("step") != "image"
+                ):
+                    return _transition_order_collection_step(
+                        seller_id=seller_id,
+                        customer_id=customer_id,
+                        order_id=order_id,
+                        step_result=current_step,
+                        source_message_id=source_message_id,
+                        control_context=control_context,
+                    )
+
                 return None
 
             core_result = order_update_core_from_message(

@@ -663,25 +663,26 @@ def update_core_from_message(
     )
 
 
-def _read_custom_text_required(seller_id: int) -> tuple[bool, bool, str | None]:
-    """Seller order config'inden custom_text_required değerini güvenli okur."""
-    result = get_seller_product_info(seller_id)
+def _read_core_requirement_flag(
+    order_config: dict[str, Any],
+    key: str,
+    *,
+    default_when_missing: bool,
+) -> tuple[bool, bool, str | None]:
+    """Tek bir zorunluluk bayrağını konvansiyona uygun güvenli okur.
 
-    if result.get("durum") != "başarılı":
-        return False, False, "Sipariş toplama ayarları okunamadı."
+    Kabul edilen değerler:
+      - None / eksik      -> default_when_missing (legacy uyumluluğu)
+      - bool              -> değerin kendisi
+      - "true" / "false"  -> legacy string bool uyumluluğu (case-insensitive)
 
-    product_info = result.get("product_info")
-    if not isinstance(product_info, dict):
-        return False, False, "Sipariş toplama ayarları geçersiz."
-
-    order_config = product_info.get("order") or {}
-    if not isinstance(order_config, dict):
-        return False, False, "Sipariş toplama ayarları geçersiz."
-
-    raw_value = order_config.get("custom_text_required")
+    Bunun dışındaki her değer geçersizdir; çağıran taraf koleksiyonu
+    güvenli biçimde durdurur. Sessiz tahmin yapılmaz.
+    """
+    raw_value = order_config.get(key)
 
     if raw_value is None:
-        return True, False, None
+        return True, default_when_missing, None
 
     if isinstance(raw_value, bool):
         return True, raw_value, None
@@ -693,7 +694,52 @@ def _read_custom_text_required(seller_id: int) -> tuple[bool, bool, str | None]:
         if normalized == "false":
             return True, False, None
 
-    return False, False, "custom_text_required ayarı geçersiz."
+    return False, False, f"{key} ayarı geçersiz."
+
+
+def _read_order_core_requirements(
+    seller_id: int,
+) -> tuple[bool, bool, bool, str | None]:
+    """Seller order config'inden image/custom_text zorunluluklarını okur.
+
+    Dönüş: (config_ok, image_required, custom_text_required, error).
+
+    Geriye dönük uyumluluk: mevcut üretim davranışı ana görseli her
+    zaman zorunlu saydığı için image_required eksik/None ise TRUE
+    kabul edilir; custom_text_required eksik/None ise FALSE kabul
+    edilir (mevcut davranışın aynısı). Geçersiz config ticari akışı
+    sessizce değiştirmez; deterministik biçimde güvenli hataya düşer.
+    """
+    result = get_seller_product_info(seller_id)
+
+    if result.get("durum") != "başarılı":
+        return False, True, False, "Sipariş toplama ayarları okunamadı."
+
+    product_info = result.get("product_info")
+    if not isinstance(product_info, dict):
+        return False, True, False, "Sipariş toplama ayarları geçersiz."
+
+    order_config = product_info.get("order") or {}
+    if not isinstance(order_config, dict):
+        return False, True, False, "Sipariş toplama ayarları geçersiz."
+
+    image_ok, image_required, image_error = _read_core_requirement_flag(
+        order_config,
+        "image_required",
+        default_when_missing=True,
+    )
+    if not image_ok:
+        return False, True, False, image_error
+
+    text_ok, custom_text_required, text_error = _read_core_requirement_flag(
+        order_config,
+        "custom_text_required",
+        default_when_missing=False,
+    )
+    if not text_ok:
+        return False, image_required, False, text_error
+
+    return True, image_required, custom_text_required, None
 
 
 def _collection_field_payload(field: dict[str, Any]) -> dict[str, Any]:
@@ -719,8 +765,11 @@ def get_next_collection_step(
     """
     Sipariş snapshot'larını esas alarak sıradaki zorunlu collection adımını belirler.
 
-    Öncelik: sipariş no -> ana görsel -> zorunlu custom_text -> zorunlu
-    dynamic snapshot alanları -> complete. Optional dynamic alanlar sorulmaz.
+    Öncelik: sipariş no -> zorunluysa ana görsel -> zorunluysa custom_text ->
+    zorunlu dynamic snapshot alanları -> complete. Optional dynamic alanlar
+    sorulmaz. Görsel ve custom_text zorunluluğu seller order config'inden
+    okunur; config authoritative'dir, müşterinin gönderdiğinden çıkarım
+    yapılmaz.
     """
     detail = get_order_detail(seller_id, order_id)
 
@@ -782,8 +831,24 @@ def get_next_collection_step(
             "order": order,
         }
 
+    (
+        config_valid,
+        image_required,
+        custom_text_required,
+        config_error,
+    ) = _read_order_core_requirements(seller_id)
+    if not config_valid:
+        return _domain_error(
+            "order_config_unavailable",
+            config_error or "Sipariş toplama ayarları okunamadı.",
+        )
+
     image_message_id = order.get("image_message_id")
-    if not isinstance(image_message_id, int) or isinstance(image_message_id, bool) or image_message_id <= 0:
+    if image_required and (
+        not isinstance(image_message_id, int)
+        or isinstance(image_message_id, bool)
+        or image_message_id <= 0
+    ):
         return {
             "durum": "başarılı",
             "complete": False,
@@ -792,15 +857,6 @@ def get_next_collection_step(
             "question": "Üründe kullanılacak görseli gönderebilir misiniz?",
             "order": order,
         }
-
-    config_valid, custom_text_required, config_error = _read_custom_text_required(
-        seller_id
-    )
-    if not config_valid:
-        return _domain_error(
-            "order_config_unavailable",
-            config_error or "Sipariş toplama ayarları okunamadı.",
-        )
 
     custom_text = order.get("custom_text")
     if custom_text_required and (

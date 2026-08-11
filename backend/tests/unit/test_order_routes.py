@@ -48,6 +48,7 @@ def order_summary(
     status: str = "COLLECTING",
     external_order_number: str | None = None,
     image_message_id: int | None = None,
+    custom_text: str | None = None,
     review_reason_code: str | None = None,
 ) -> dict[str, Any]:
     return {
@@ -65,6 +66,7 @@ def order_summary(
         "updated_at": "2026-08-06T12:00:00+00:00",
         "completed_at": None,
         "image_message_id": image_message_id,
+        "custom_text": custom_text,
     }
 
 
@@ -161,6 +163,44 @@ def test_orders_list_returns_summaries(
     assert data["orders"][0]["id"] == 1
     assert data["orders"][0]["display_status"] == "Bilgi toplanıyor"
     assert data["orders"][0]["seller_action_required"] is False
+
+
+def test_orders_list_summary_includes_custom_text_and_has_image(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Fix B: liste özeti custom_text'i kaynak-doğru veri olarak taşır;
+    # backend formatlanmış Türkçe "print_content" stringi ÜRETMEZ.
+    monkeypatch.setattr(
+        protected_routes,
+        "list_seller_orders",
+        lambda *args, **kwargs: {
+            "durum": "başarılı",
+            "toplam": 2,
+            "orders": [
+                order_summary(
+                    order_id=1,
+                    custom_text="İyi ki doğdun Elif",
+                    image_message_id=105,
+                ),
+                order_summary(order_id=2),
+            ],
+        },
+    )
+
+    response = client.get("/seller/orders")
+
+    assert response.status_code == 200
+    orders = response.json()["orders"]
+    first, second = orders[0], orders[1]
+    assert first["custom_text"] == "İyi ki doğdun Elif"
+    assert first["has_image"] is True
+    assert second["custom_text"] is None
+    assert second["has_image"] is False
+    # Sunum metni frontend sorumluluğu: backend biçimlendirilmiş
+    # print_content alanı döndürmez.
+    assert "print_content" not in first
+    assert "print_content" not in second
 
 
 def test_orders_list_action_required(

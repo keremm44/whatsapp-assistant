@@ -1029,7 +1029,49 @@ def test_next_step_order_number_does_not_need_seller_config(
     assert result["step"] == "order_number"
 
 
-def test_next_step_image_is_always_required(
+_CONFIG_NOT_SET = object()
+
+
+def product_info_config(
+    *,
+    image_required: Any = _CONFIG_NOT_SET,
+    custom_text_required: Any = _CONFIG_NOT_SET,
+) -> dict[str, Any]:
+    """get_seller_product_info mock yanıtı; sadece verilen bayrakları yazar."""
+    order_config: dict[str, Any] = {}
+    if image_required is not _CONFIG_NOT_SET:
+        order_config["image_required"] = image_required
+    if custom_text_required is not _CONFIG_NOT_SET:
+        order_config["custom_text_required"] = custom_text_required
+    return {"durum": "başarılı", "product_info": {"order": order_config}}
+
+
+def test_next_step_legacy_config_without_flags_keeps_image_required(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Geriye dönük uyumluluk: image_required eksik/NULL ise TRUE kabul edilir;
+    # mevcut satıcılar görsel sormayı bırakmaz. Config artık görsel kapısından
+    # ÖNCE okunur (görselin zorunlu olup olmadığını bilmek için gerekli).
+    monkeypatch.setattr(
+        order_service,
+        "get_order_detail",
+        lambda seller_id, order_id: successful_order_detail(
+            order=order_record(external_order_number="ETSY-42"),
+        ),
+    )
+    monkeypatch.setattr(
+        order_service,
+        "get_seller_product_info",
+        lambda seller_id: product_info_config(),
+    )
+
+    result = order_service.get_next_collection_step(11, 1)
+
+    assert result["durum"] == "başarılı"
+    assert result["step"] == "image"
+
+
+def test_next_step_null_image_required_flag_keeps_image_required(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
@@ -1042,12 +1084,250 @@ def test_next_step_image_is_always_required(
     monkeypatch.setattr(
         order_service,
         "get_seller_product_info",
-        lambda seller_id: pytest.fail("config should not be read before image"),
+        lambda seller_id: product_info_config(image_required=None),
     )
 
     result = order_service.get_next_collection_step(11, 1)
 
     assert result["step"] == "image"
+
+
+def test_next_step_image_still_first_when_both_required_and_image_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # image_required=true + custom_text_required=true: koleksiyon sırası
+    # korunur; görsel eksikken custom_text sorulmaz.
+    monkeypatch.setattr(
+        order_service,
+        "get_order_detail",
+        lambda seller_id, order_id: successful_order_detail(
+            order=order_record(external_order_number="ETSY-42"),
+        ),
+    )
+    monkeypatch.setattr(
+        order_service,
+        "get_seller_product_info",
+        lambda seller_id: product_info_config(
+            image_required=True,
+            custom_text_required=True,
+        ),
+    )
+
+    result = order_service.get_next_collection_step(11, 1)
+
+    assert result["step"] == "image"
+
+
+def test_next_step_image_not_required_skips_image_and_asks_custom_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # image_required=false + custom_text_required=true: görsel hiç sorulmaz,
+    # sıra doğrudan custom_text adımına geçer.
+    monkeypatch.setattr(
+        order_service,
+        "get_order_detail",
+        lambda seller_id, order_id: successful_order_detail(
+            order=order_record(external_order_number="ETSY-42"),
+        ),
+    )
+    monkeypatch.setattr(
+        order_service,
+        "get_seller_product_info",
+        lambda seller_id: product_info_config(
+            image_required=False,
+            custom_text_required=True,
+        ),
+    )
+
+    result = order_service.get_next_collection_step(11, 1)
+
+    assert result["durum"] == "başarılı"
+    assert result["step"] == "custom_text"
+
+
+def test_next_step_image_not_required_and_no_text_goes_to_dynamic_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # image_required=false + custom_text_required=false: zorunlu dynamic
+    # snapshot alanı hâlâ kapı görevi görür.
+    field = field_snapshot(snapshot_id=31, field_key="print_name")
+    monkeypatch.setattr(
+        order_service,
+        "get_order_detail",
+        lambda seller_id, order_id: successful_order_detail(
+            order=order_record(external_order_number="ETSY-42"),
+            fields=[field],
+        ),
+    )
+    monkeypatch.setattr(
+        order_service,
+        "get_seller_product_info",
+        lambda seller_id: product_info_config(
+            image_required=False,
+            custom_text_required=False,
+        ),
+    )
+
+    result = order_service.get_next_collection_step(11, 1)
+
+    assert result["step"] == "dynamic_field"
+    assert result["field"]["id"] == 31
+
+
+def test_next_step_image_not_required_and_no_text_completes_without_dynamic_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # image_required=false + custom_text_required=false + zorunlu alan yok:
+    # sipariş no yeterli, koleksiyon complete olur.
+    monkeypatch.setattr(
+        order_service,
+        "get_order_detail",
+        lambda seller_id, order_id: successful_order_detail(
+            order=order_record(external_order_number="ETSY-42"),
+        ),
+    )
+    monkeypatch.setattr(
+        order_service,
+        "get_seller_product_info",
+        lambda seller_id: product_info_config(
+            image_required=False,
+            custom_text_required=False,
+        ),
+    )
+
+    result = order_service.get_next_collection_step(11, 1)
+
+    assert result["complete"] is True
+    assert result["step"] == "complete"
+
+
+def test_next_step_image_required_and_present_then_custom_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # image_required=true + custom_text_required=true + görsel kayıtlı:
+    # sıradaki adım custom_text olur.
+    monkeypatch.setattr(
+        order_service,
+        "get_order_detail",
+        lambda seller_id, order_id: successful_order_detail(
+            order=order_record(
+                external_order_number="ETSY-42",
+                image_message_id=110,
+                custom_text="Ali",
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        order_service,
+        "get_seller_product_info",
+        lambda seller_id: product_info_config(
+            image_required=True,
+            custom_text_required=True,
+        ),
+    )
+
+    result = order_service.get_next_collection_step(11, 1)
+
+    assert result["complete"] is True
+    assert result["step"] == "complete"
+
+
+@pytest.mark.parametrize("image_flag", ["true", " True ", "TRUE"])
+def test_next_step_accepts_string_true_for_image_required(
+    monkeypatch: pytest.MonkeyPatch,
+    image_flag: str,
+) -> None:
+    # Legacy konvansiyon: string bool değerler kabul edilmeye devam eder.
+    monkeypatch.setattr(
+        order_service,
+        "get_order_detail",
+        lambda seller_id, order_id: successful_order_detail(
+            order=order_record(external_order_number="ETSY-42"),
+        ),
+    )
+    monkeypatch.setattr(
+        order_service,
+        "get_seller_product_info",
+        lambda seller_id: product_info_config(image_required=image_flag),
+    )
+
+    result = order_service.get_next_collection_step(11, 1)
+
+    assert result["step"] == "image"
+
+
+def test_next_step_accepts_string_false_for_image_required(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        order_service,
+        "get_order_detail",
+        lambda seller_id, order_id: successful_order_detail(
+            order=order_record(external_order_number="ETSY-42"),
+        ),
+    )
+    monkeypatch.setattr(
+        order_service,
+        "get_seller_product_info",
+        lambda seller_id: product_info_config(image_required=" false "),
+    )
+
+    result = order_service.get_next_collection_step(11, 1)
+
+    assert result["step"] == "complete"
+
+
+@pytest.mark.parametrize("invalid_flag", ["yes", "1", 0, 1, 2.5, ["true"]])
+def test_next_step_fails_closed_for_invalid_image_required(
+    monkeypatch: pytest.MonkeyPatch,
+    invalid_flag: Any,
+) -> None:
+    # Geçersiz image_required sessizce varsayılana çevrilmez; koleksiyon
+    # deterministik biçimde güvenli hataya düşer (görsel kapısından önce).
+    monkeypatch.setattr(
+        order_service,
+        "get_order_detail",
+        lambda seller_id, order_id: successful_order_detail(
+            order=order_record(external_order_number="ETSY-42"),
+        ),
+    )
+    monkeypatch.setattr(
+        order_service,
+        "get_seller_product_info",
+        lambda seller_id: product_info_config(image_required=invalid_flag),
+    )
+
+    result = order_service.get_next_collection_step(11, 1)
+
+    assert result["durum"] == "hata"
+    assert result["error_code"] == "order_config_unavailable"
+
+
+@pytest.mark.parametrize("invalid_flag", ["yes", 3, {}])
+def test_next_step_fails_closed_for_invalid_custom_text_required(
+    monkeypatch: pytest.MonkeyPatch,
+    invalid_flag: Any,
+) -> None:
+    monkeypatch.setattr(
+        order_service,
+        "get_order_detail",
+        lambda seller_id, order_id: successful_order_detail(
+            order=order_record(
+                external_order_number="ETSY-42",
+                image_message_id=110,
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        order_service,
+        "get_seller_product_info",
+        lambda seller_id: product_info_config(custom_text_required=invalid_flag),
+    )
+
+    result = order_service.get_next_collection_step(11, 1)
+
+    assert result["durum"] == "hata"
+    assert result["error_code"] == "order_config_unavailable"
 
 
 def test_next_step_custom_text_only_when_required(

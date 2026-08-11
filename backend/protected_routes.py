@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import (
     BaseModel,
@@ -57,6 +57,7 @@ from unanswered_question_service import (
     present_group_summary,
     set_seller_answer,
 )
+from seller_media_service import get_seller_message_media
 from seller_panel_service import (
     get_conversation_detail as get_seller_panel_conversation_detail,
     list_conversations as list_seller_panel_conversations,
@@ -138,6 +139,18 @@ def _raise_from_seller_panel_service(result: dict[str, Any]) -> None:
     status_code = {
         "not_found": status.HTTP_404_NOT_FOUND,
         "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
+        "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
+    }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
+    raise HTTPException(status_code=status_code, detail=result["error"])
+
+
+def _raise_from_media_service(result: dict[str, Any]) -> None:
+    kind = result.get("kind")
+    status_code = {
+        "not_found": status.HTTP_404_NOT_FOUND,
+        "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
+        "unsupported": status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        "upstream": status.HTTP_502_BAD_GATEWAY,
         "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
     }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
     raise HTTPException(status_code=status_code, detail=result["error"])
@@ -554,6 +567,29 @@ def seller_conversation_detail(
     return {key: value for key, value in result.items() if key != "ok"}
 
 
+@router.get("/seller/messages/{message_id}/media")
+def seller_message_media(
+    message_id: PositiveInt,
+    context: AuthContext = Depends(require_seller),
+) -> Response:
+    """Satıcının kendi mesajına ait görseli kimlikli proxy üzerinden döndürür.
+
+    Ham sağlayıcı URL'si istemciye hiçbir biçimde verilmez; içerik sunucu
+    tarafında yalnızca güvenilir sağlayıcı hostundan HTTPS ile indirilir.
+    """
+    result = get_seller_message_media(context.seller_id, message_id)
+    if not result.get("ok"):
+        _raise_from_media_service(result)
+    return Response(
+        content=result["content"],
+        media_type=result["content_type"],
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.get("/seller/dashboard/tasks")
 def seller_dashboard_tasks(
     task_type: str | None = Query(
@@ -746,6 +782,7 @@ def _present_order_summary(order: dict[str, Any]) -> dict[str, Any]:
         "display_status": display_status,
         "image_message_id": order.get("image_message_id"),
         "has_image": order.get("image_message_id") is not None,
+        "custom_text": order.get("custom_text"),
         "review_reason_code": order.get("review_reason_code"),
         "review_reason_note": order.get("review_reason_note"),
         "version": order.get("version"),

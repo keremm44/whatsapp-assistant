@@ -424,6 +424,9 @@ def test_main_image_requires_real_image_message_type(monkeypatch: pytest.MonkeyP
     harness = ChatHarness().install(monkeypatch)
     harness.flow_state = {"current_state": "AWAITING_IMAGE", "state_data": {"order_id": 1}}
     harness.classification_result = classification("greeting")
+    # Config-authority kontrolü: görsel hâlâ istenen adım (image_required
+    # legacy/TRUE) ise görsel dışı mesaj eskisi gibi sessizce düşürülür.
+    harness.next_steps = [step_image()]
 
     result = harness.send("görsel", message_type="text", media_url="https://example.com/fake.jpg")
 
@@ -431,6 +434,35 @@ def test_main_image_requires_real_image_message_type(monkeypatch: pytest.MonkeyP
     assert result["kaynak"] == "template"
     assert harness.order_core_calls == []
     assert harness.flow_transitions == []
+
+
+def test_stale_image_state_realigns_when_image_no_longer_required(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Seller konuşma AWAITING_IMAGE'de açıkken image_required=false yaptı
+    # (ya da config baştan görsel istemiyordu). Görsel dışı bir mesaj
+    # geldiğinde akış kilitli kalmaz; gerçek adıma (custom_text) hizalanır.
+    harness = ChatHarness().install(monkeypatch)
+    harness.flow_state = {"current_state": "AWAITING_IMAGE", "state_data": {"order_id": 1}}
+    harness.next_steps = [step_custom_text()]
+
+    result = harness.send("merhaba", message_type="text")
+
+    assert result["durum"] == "başarılı"
+    assert harness.order_core_calls == []
+    assert harness.flow_state["current_state"] == "AWAITING_CUSTOM_TEXT"
+
+
+def test_stale_image_state_realigns_to_completion_when_nothing_remains(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Görsel istenmiyor ve başka açık adım da yoksa parked AWAITING_IMAGE
+    # konuşma completion kısa-devresine hizalanır.
+    harness = ChatHarness().install(monkeypatch)
+    harness.flow_state = {"current_state": "AWAITING_IMAGE", "state_data": {"order_id": 1}}
+    harness.next_steps = [step_complete()]
+
+    result = harness.send("tamam", message_type="text")
+
+    assert result["durum"] == "başarılı"
+    assert harness.order_core_calls == []
+    assert harness.flow_state["current_state"] == "NORMAL"
 
 
 def test_main_image_is_persisted_by_incoming_message_reference(monkeypatch: pytest.MonkeyPatch) -> None:

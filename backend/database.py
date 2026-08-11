@@ -740,6 +740,60 @@ def _is_positive_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
 
+def get_seller_message_media_reference(
+    seller_id: int,
+    message_id: int,
+) -> dict[str, Any]:
+    """Medya proxy uç noktası için mesajın medya referansını tenant scope'unda okur.
+
+    Dikkat: dönen ``media_url`` ham sağlayıcı adresidir; yalnızca sunucu
+    tarafı sağlayıcı indirmesinde kullanılır ve asla tarayıcıya
+    döndürülmemelidir (bkz. seller_media_service). Tenant kapsamı
+    ``seller_id`` filtresiyle zorlanır; başka satıcının mesajı mevcutmuş
+    gibi görünmez (varlık sızıntısı yok).
+    """
+    if not _is_positive_int(seller_id) or not _is_positive_int(message_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id ve message_id pozitif tam sayı olmalıdır.",
+        }
+
+    try:
+        result = (
+            get_supabase()
+            .table("messages")
+            .select("id, customer_id, message_type, media_url")
+            .eq("id", message_id)
+            .eq("seller_id", seller_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Mesaj medya bilgisi okunamadı.",
+        }
+
+    rows = result.data or []
+    if not rows:
+        return {
+            "durum": "bulunamadı",
+            "mesaj": "Mesaj bulunamadı.",
+            "message": None,
+        }
+
+    row = rows[0]
+    return {
+        "durum": "başarılı",
+        "message": {
+            "id": row.get("id"),
+            "customer_id": row.get("customer_id"),
+            "message_type": row.get("message_type"),
+            "media_url": row.get("media_url"),
+        },
+    }
+
+
 def _validate_conversation_identity(
     seller_id: int,
     customer_id: int,

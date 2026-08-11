@@ -37,6 +37,7 @@ class AppSettings(BaseModel):
     enable_dev_endpoints: bool
     internal_api_token: str | None
     cors_origins: tuple[str, ...]
+    media_allowed_hosts: tuple[str, ...]
     log_level: str
 
     @property
@@ -55,6 +56,14 @@ def get_settings() -> AppSettings:
         os.getenv("INTERNAL_API_TOKEN", "").strip() or None
     )
     cors_origins = _csv_env("CORS_ORIGINS")
+    # Medya proxy'sinin güvendiği sağlayıcı hostları. Boşsa medya
+    # indirme tamamen kapalıdır (fail-closed). Yalnızca host adı
+    # yazılır (şema/port/kullanıcı bilgisi kabul edilmez).
+    media_allowed_hosts = tuple(
+        host.strip().lower().rstrip(".")
+        for host in _csv_env("MEDIA_ALLOWED_HOSTS")
+        if host.strip()
+    )
 
     if app_env == "production" and enable_dev_endpoints:
         raise RuntimeError(
@@ -80,5 +89,6 @@ def get_settings() -> AppSettings:
         enable_dev_endpoints=enable_dev_endpoints,
         internal_api_token=internal_api_token,
         cors_origins=cors_origins,
+        media_allowed_hosts=media_allowed_hosts,
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper(),
     )
