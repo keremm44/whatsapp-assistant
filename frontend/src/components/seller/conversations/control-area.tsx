@@ -10,12 +10,12 @@ import type { ConversationControlBootstrap } from "@/lib/seller/conversations-se
 import {
   fetchConversationControl,
   mutateConversationControl,
-  type ConversationCapabilities,
   type ConversationControlView,
 } from "@/lib/seller/conversations";
 import {
   CONTROL_STATE_CHIP_TONE,
   resolveConversationHandoff,
+  type ConversationHandoff,
 } from "@/lib/seller/conversations-format";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
@@ -28,11 +28,12 @@ import { cn } from "@/lib/utils/cn";
  *   - The chip label is the control endpoint's own `display_name`
  *     ("Asistan aktif" / "Siz ilgileniyorsunuz" / "İade incelemesi" /
  *     "Yanıtlar durduruldu"). The frontend owns only the chip tone.
- *   - The handoff button is rendered ONLY from the backend capability
- *     map (resolveConversationHandoff). V1 exposes exactly one
- *     reversible action:
- *       can_take_over      → "Ben ilgileneceğim" (take_over)
- *       can_resume         → "Asistana bırak"    (resume_assistant)
+ *   - The handoff button is resolved state-aware
+ *     (resolveConversationHandoff): the backend control state picks
+ *     the single approved V1 candidate action, and the backend
+ *     capability map gates it:
+ *       ASSISTANT_ACTIVE / RETURN_REVIEW     → "Ben ilgileneceğim"
+ *       SELLER_TAKEN_OVER / ASSISTANT_PAUSED → "Asistana bırak"
  *     `pause_assistant` and `activate_assistant` are never posted and
  *     never shown — the deliberate V1 mental model is one handoff.
  *   - Optimistic concurrency is mandatory: every POST carries the
@@ -73,8 +74,13 @@ export function ConversationControlArea({
 
   const readyView: ConversationControlView | null =
     control.state === "ready" ? control.view : null;
+  // State-aware V1 handoff: the backend control state selects WHICH
+  // action is even a candidate; the capability map then gates it.
   const handoff = readyView
-    ? resolveConversationHandoff(readyView.capabilities)
+    ? resolveConversationHandoff(
+        readyView.control.state,
+        readyView.capabilities,
+      )
     : null;
 
   const reloadControl = async (signal: AbortSignal): Promise<boolean> => {
@@ -113,11 +119,9 @@ export function ConversationControlArea({
   };
 
   const onHandoff = async (
-    capabilities: ConversationCapabilities,
+    handoff: ConversationHandoff,
     expectedVersion: number,
   ) => {
-    const handoff = resolveConversationHandoff(capabilities);
-    if (!handoff) return;
     if (isPending || isRetrying || inflightRef.current) return;
     setErrorMessage(null);
 
@@ -204,9 +208,7 @@ export function ConversationControlArea({
             type="button"
             variant="primary"
             size="sm"
-            onClick={() =>
-              onHandoff(readyView.capabilities, readyView.control.version)
-            }
+            onClick={() => onHandoff(handoff, readyView.control.version)}
             disabled={isPending || isRetrying}
             aria-busy={isPending}
           >

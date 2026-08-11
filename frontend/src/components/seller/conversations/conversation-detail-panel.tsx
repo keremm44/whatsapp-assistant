@@ -115,23 +115,21 @@ export function ConversationDetailPanel({
             </div>
           </div>
 
-          <div className="flex shrink-0 items-start gap-1.5">
-            {hasContext ? (
-              <button
-                type="button"
-                onClick={() => setIsContextOpen(true)}
-                aria-label="Konuşma bağlamını aç"
-                aria-haspopup="dialog"
-                className={cn(
-                  "inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-medium text-muted-foreground transition-colors xl:hidden",
-                  "hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                )}
-              >
-                <PanelRight aria-hidden="true" size={16} strokeWidth={1.75} />
-                <span>Bağlam</span>
-              </button>
-            ) : null}
-          </div>
+          {hasContext ? (
+            <button
+              type="button"
+              onClick={() => setIsContextOpen(true)}
+              aria-label="Konuşma bağlamını aç"
+              aria-haspopup="dialog"
+              className={cn(
+                "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-medium text-muted-foreground transition-colors xl:hidden",
+                "hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+              )}
+            >
+              <PanelRight aria-hidden="true" size={16} strokeWidth={1.75} />
+              <span>Bağlam</span>
+            </button>
+          ) : null}
         </div>
 
         <div className="flex items-start justify-start md:justify-end">

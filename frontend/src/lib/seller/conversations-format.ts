@@ -209,15 +209,30 @@ export const CONTROL_STATE_CHIP_TONE: Record<
 /* ------------------------------------------------------------------ */
 
 /**
- * The single V1 handoff action for a control state. Backend
- * capabilities are the final gate — an action is returned only when
- * the matching capability is true.
+ * The single V1 handoff action for a control state.
+ *
+ * The resolution is STATE-AWARE, never capability-order-dependent.
+ * The locked V1 mapping is:
+ *
+ *   ASSISTANT_ACTIVE   -> "Ben ilgileneceğim" (take_over)
+ *   RETURN_REVIEW      -> "Ben ilgileneceğim" (take_over)
+ *   SELLER_TAKEN_OVER  -> "Asistana bırak"    (resume_assistant)
+ *   ASSISTANT_PAUSED   -> "Asistana bırak"    (resume_assistant)
+ *
+ * and the backend capability is the FINAL gate on top of the state:
+ * an action is returned only when the state's approved V1 action is
+ * also permitted by the capability map. This matters concretely for
+ * ASSISTANT_PAUSED: the backend permits BOTH can_take_over and
+ * can_resume_assistant there, so a capability-priority helper would
+ * incorrectly offer "Ben ilgileneceğim"; the V1 product decision is
+ * that a paused conversation is handed back to the assistant.
  *
  * Deliberate V1 scope: `canPauseAssistant` and `canActivateAssistant`
  * are ignored — the panel never posts `pause_assistant` or
- * `activate_assistant`. The initial mental model is one reversible
- * handoff: seller takes over, or the conversation is handed back to
- * the assistant.
+ * `activate_assistant`, regardless of state or capabilities.
+ *
+ * Returns null when the state has no approved V1 action here or when
+ * the required capability is false; the caller renders no action.
  */
 export type ConversationHandoff = {
   action: Extract<
@@ -229,25 +244,33 @@ export type ConversationHandoff = {
   supporting: string;
 };
 
+const TAKE_OVER_HANDOFF: ConversationHandoff = {
+  action: "take_over",
+  label: "Ben ilgileneceğim",
+  supporting:
+    "Asistan bekler; bu konuşmanın yanıtlarını siz yönetirsiniz.",
+};
+
+const RESUME_HANDOFF: ConversationHandoff = {
+  action: "resume_assistant",
+  label: "Asistana bırak",
+  supporting: "Asistan yeni mesajlarda yeniden devreye girer.",
+};
+
 export const resolveConversationHandoff = (
+  controlState: ConversationControlState,
   capabilities: ConversationCapabilities,
 ): ConversationHandoff | null => {
-  if (capabilities.canTakeOver) {
-    return {
-      action: "take_over",
-      label: "Ben ilgileneceğim",
-      supporting:
-        "Asistan bekler; bu konuşmanın yanıtlarını siz yönetirsiniz.",
-    };
+  switch (controlState) {
+    case "ASSISTANT_ACTIVE":
+    case "RETURN_REVIEW":
+      return capabilities.canTakeOver ? TAKE_OVER_HANDOFF : null;
+    case "SELLER_TAKEN_OVER":
+    case "ASSISTANT_PAUSED":
+      return capabilities.canResumeAssistant ? RESUME_HANDOFF : null;
+    default:
+      return null;
   }
-  if (capabilities.canResumeAssistant) {
-    return {
-      action: "resume_assistant",
-      label: "Asistana bırak",
-      supporting: "Asistan yeni mesajlarda yeniden devreye girer.",
-    };
-  }
-  return null;
 };
 
 /* ------------------------------------------------------------------ */

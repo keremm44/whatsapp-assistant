@@ -63,6 +63,11 @@ export function ConversationListPanel({
   );
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(null);
+  // Offset pages walk a live, re-ranked queue: if the backend returns
+  // an empty page while `rows.length < total` still holds (rows moved
+  // between pages), the queue end is reached and the footer must stop
+  // offering "Daha fazla göster" instead of looping on empty pages.
+  const [endReached, setEndReached] = React.useState(false);
   const inflightRef = React.useRef<AbortController | null>(null);
 
   // Re-seed from the server payload whenever it changes (filter
@@ -75,6 +80,7 @@ export function ConversationListPanel({
         bootstrap.page.offset + bootstrap.page.conversations.length,
       );
       setLoadMoreError(null);
+      setEndReached(false);
     }
   }, [bootstrap]);
 
@@ -115,6 +121,9 @@ export function ConversationListPanel({
       });
       setTotal(page.total);
       setNextOffset(page.offset + page.conversations.length);
+      if (page.conversations.length === 0) {
+        setEndReached(true);
+      }
     } catch {
       if (controller.signal.aborted) return;
       setLoadMoreError(
@@ -194,9 +203,9 @@ export function ConversationListPanel({
             </ul>
           </div>
 
-          {rows.length < total || loadMoreError ? (
+          {(!endReached && rows.length < total) || loadMoreError ? (
             <div className="space-y-2 px-4 py-3">
-              {rows.length < total ? (
+              {!endReached && rows.length < total ? (
                 <Button
                   type="button"
                   variant="ghost"
