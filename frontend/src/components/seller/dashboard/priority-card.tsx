@@ -146,7 +146,7 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
         <Link
           href={meta.href}
           aria-label={accessibleName}
-          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-md border border-border bg-surface px-3.5 text-[13px] font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:h-9"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-md border border-border bg-surface px-3.5 text-[13px] font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary-muted hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:h-9"
         >
           <span>{meta.cta}</span>
           <ArrowUpRight
@@ -170,13 +170,13 @@ function CategoryCaption({
 }) {
   if (!updatedAt) {
     return (
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-text">
         {label}
       </p>
     );
   }
   return (
-    <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+    <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-text">
       <span>{label}</span>
       <span aria-hidden="true" className="text-divider">·</span>
       <span

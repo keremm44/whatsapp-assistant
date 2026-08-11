@@ -28,7 +28,7 @@ export default function SellerConversationsPage() {
           list={
             <Surface className="bg-chrome">
               <div className="px-4 pt-4">
-                <p className="text-[13px] font-medium text-primary">
+                <p className="text-[13px] font-medium text-primary-text">
                   Konuşma listesi
                 </p>
               </div>
@@ -42,7 +42,7 @@ export default function SellerConversationsPage() {
           detail={
             <Surface>
               <div className="px-5 pt-5">
-                <p className="text-[13px] font-medium text-primary">
+                <p className="text-[13px] font-medium text-primary-text">
                   Mesaj geçmişi
                 </p>
               </div>

@@ -77,7 +77,7 @@ export function SellerTopbar({
             aria-hidden="true"
             className="hidden h-4 w-px bg-divider sm:block"
           />
-          <span className="hidden h-6 items-center rounded-pill bg-primary-muted px-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-primary sm:inline-flex">
+          <span className="hidden h-6 items-center rounded-pill bg-primary-muted px-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-primary-text sm:inline-flex">
             Mağaza
           </span>
         </div>
@@ -85,7 +85,7 @@ export function SellerTopbar({
         <div className="flex items-center">
           <Link
             href="/seller/settings"
-            className="inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-primary-text transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
           >
             <span>Ayarlar</span>
             <SellerIcon
@@ -109,7 +109,7 @@ const TabletNavSheet = () => {
       <SheetTrigger
         aria-label="Menüyü aç"
         className={cn(
-          "hidden h-9 w-9 items-center justify-center rounded-md bg-primary-muted text-primary transition-colors hover:bg-primary-muted/70 md:inline-flex lg:hidden",
+          "hidden h-9 w-9 items-center justify-center rounded-md bg-primary-muted text-primary-text transition-colors hover:bg-primary-muted/70 md:inline-flex lg:hidden",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
         )}
       >
@@ -171,7 +171,7 @@ function SidebarNavList({
             key={section.title}
             className={cn(index > 0 && "mt-1 border-t border-divider pt-4")}
           >
-            <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+            <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-text">
               {section.title}
             </p>
             <ul className="flex flex-col gap-0.5">
@@ -187,7 +187,7 @@ function SidebarNavList({
                         "relative flex h-10 items-center gap-3 rounded-md pl-4 pr-3 text-sm transition-colors",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
                         isActive
-                          ? "bg-primary-muted font-semibold text-primary"
+                          ? "bg-primary-muted font-semibold text-primary-text"
                           : "text-foreground hover:bg-surface-2",
                       )}
                     >

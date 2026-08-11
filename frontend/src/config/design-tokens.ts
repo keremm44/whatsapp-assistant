@@ -59,6 +59,13 @@ export const designTokens = {
       active: color("#153634"),
       muted: color("#E7F0EE", "petrol soft"),
       foreground: color("#FFFFFF"),
+      // Role split (light values shown here; the dark seller theme
+      // overrides both in globals.css): `text` is the readable
+      // small-copy expression of petrol, `button` is the filled
+      // primary control step meeting AA with primary-foreground.
+      text: color("#245B57", "petrol as small text (light = base)"),
+      button: color("#245B57", "filled primary control (light = base)"),
+      buttonHover: color("#1C4845", "filled primary control hover"),
     },
 
     accent: {
@@ -73,6 +80,9 @@ export const designTokens = {
       dark: color("#7E3F2F", "terracotta dark"),
       muted: color("#EED8CF", "terracotta soft"),
       foreground: color("#FFFFFF"),
+      // Readable small-copy expression of the clay family;
+      // the dark seller theme overrides it with a brighter step.
+      text: color("#7E3F2F", "clay as small text (light = accent dark)"),
     },
 
     state: {

@@ -81,6 +81,20 @@
   --color-primary-muted-rgb: 231 240 238;
   --color-primary-foreground: #ffffff;
   --color-primary-foreground-rgb: 255 255 255;
+  /* Text role split: `primary-text` is the readable textual
+   * expression of petrol for small copy; on the light theme it is
+   * identical to the base petrol so light surfaces do not change.
+   * The dark seller theme overrides it with a brighter step. */
+  --color-primary-text: #245b57;
+  --color-primary-text-rgb: 36 91 87;
+  /* Filled primary control role: on the light theme identical to
+   * the base petrol / hover step (no visual change). The dark
+   * seller theme points it at the darker petrol step so filled
+   * buttons meet AA for normal-size text. */
+  --color-primary-button: #245b57;
+  --color-primary-button-rgb: 36 91 87;
+  --color-primary-button-hover: #1c4845;
+  --color-primary-button-hover-rgb: 28 72 69;
 
   /* Accent (terracotta — warm secondary brand family) */
   --color-accent: #9a4f3a;
@@ -91,6 +105,12 @@
   --color-accent-muted-rgb: 238 216 207;
   --color-accent-foreground: #ffffff;
   --color-accent-foreground-rgb: 255 255 255;
+  /* Text role split for the clay family, mirroring the petrol
+   * split: on the light theme identical to the existing small-text
+   * clay step (accent dark). The dark seller theme overrides it
+   * with a brighter step that passes AA on dark clay surfaces. */
+  --color-accent-text: #7e3f2f;
+  --color-accent-text-rgb: 126 63 47;
 
   /* Functional states */
   --color-success: #2f7458;
@@ -206,6 +226,23 @@
   --color-primary-muted-rgb: 36 65 61;
   --color-primary-foreground: #f2eee6;
   --color-primary-foreground-rgb: 242 238 230;
+  /* Petrol text role: the base petrol #3F817A is kept for
+   * structure (rails, marks, icon fields, hairlines) but measures
+   * 3.2:1–4.0:1 as small text on dark surfaces, and only 2.4:1 on
+   * primary-muted. `primary-text` is the same hue at a lighter
+   * value: 6.4:1 on surface, 7.4:1 on workspace, 4.9:1 on
+   * primary-muted — readable where the base petrol is structural. */
+  --color-primary-text: #7ab8b1;
+  --color-primary-text-rgb: 122 184 177;
+  /* Filled primary control role: base petrol with the warm
+   * off-white label measures 3.9:1 (below AA for normal text), so
+   * filled controls in the seller workspace use the darker petrol
+   * step (5.9:1). Hover lifts one small in-family step (5.1:1);
+   * pressed returns to the active step. No hue change. */
+  --color-primary-button: #2f635d;
+  --color-primary-button-rgb: 47 99 93;
+  --color-primary-button-hover: #356e67;
+  --color-primary-button-hover-rgb: 53 110 103;
 
   /* Accent (terracotta) — warm character, brighter for dark */
   --color-accent: #b85e42;
@@ -216,6 +253,13 @@
   --color-accent-muted-rgb: 59 41 35;
   --color-accent-foreground: #f2eee6;
   --color-accent-foreground-rgb: 242 238 230;
+  /* Clay text role: small terracotta copy on dark clay surfaces
+   * (e.g. the quiet-summary heading on accent-muted) measures ~4.3:1
+   * with accent-dark, just below AA. accent-text is the same clay at
+   * a brighter value: ~5.0:1 on accent-muted surfaces. Terracotta's
+   * hue and structural tones are unchanged. */
+  --color-accent-text: #d9825f;
+  --color-accent-text-rgb: 217 130 95;
 
   /* Functional states tuned for dark readability */
   --color-success: #5fa37f;
@@ -230,10 +274,15 @@
   --color-warning-rgb: 212 154 79;
   --color-warning-muted: #3a2d18;
   --color-warning-muted-rgb: 58 45 24;
-  --color-review: #b56f5a;
-  --color-review-rgb: 181 111 90;
-  --color-review-muted: #3a2520;
-  --color-review-muted-rgb: 58 37 32;
+  /* The `review` semantic state visually joins the main clay
+   * family in the dark workshop: the previous #B56F5A sat only
+   * ~13 ΔE from the terracotta accent, so two near-identical clay
+   * tones carried no extra meaning. One warm clay family now owns
+   * the semantics; the semantic role name is preserved. */
+  --color-review: #b85e42;
+  --color-review-rgb: 184 94 66;
+  --color-review-muted: #3b2923;
+  --color-review-muted-rgb: 59 41 35;
   --color-destructive: #d36767;
   --color-destructive-rgb: 211 103 103;
   --color-destructive-muted: #3a1f1f;

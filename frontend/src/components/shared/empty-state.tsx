@@ -29,7 +29,7 @@ export function EmptyState({
     return (
       <div className={cn("space-y-1.5 py-6", className)}>
         {caption ? (
-          <p className="text-[13px] font-medium text-primary">{caption}</p>
+          <p className="text-[13px] font-medium text-primary-text">{caption}</p>
         ) : null}
         <p className="text-sm font-medium text-foreground">{title}</p>
         {description ? (
@@ -49,7 +49,7 @@ export function EmptyState({
       )}
     >
       {caption ? (
-        <p className="text-[13px] font-medium text-primary">{caption}</p>
+        <p className="text-[13px] font-medium text-primary-text">{caption}</p>
       ) : null}
       <p className="text-sm font-medium text-foreground">{title}</p>
       {description ? (

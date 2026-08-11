@@ -32,7 +32,7 @@ export function EmptyAttention() {
         <Check size={22} strokeWidth={1.6} />
       </span>
       <div className="space-y-1.5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-text">
           İş listesi
         </p>
         <h2 className="font-heading text-[18px] font-medium leading-snug text-foreground sm:text-[20px]">

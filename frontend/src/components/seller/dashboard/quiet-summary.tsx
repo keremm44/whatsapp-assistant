@@ -56,7 +56,7 @@ export function QuietSummary({
         <div className="p-4 sm:p-5">
           <h3
             id="dashboard-quiet-summary"
-            className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent-dark"
+            className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent-text"
           >
             Özet
           </h3>
@@ -78,7 +78,7 @@ export function QuietSummary({
     >
       <h3
         id="dashboard-quiet-summary"
-        className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary"
+        className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-text"
       >
         Özet
       </h3>
@@ -115,7 +115,7 @@ function Row({
       <dd
         className={
           emphasize
-            ? "tabular-nums font-semibold text-primary"
+            ? "tabular-nums font-semibold text-primary-text"
             : "tabular-nums text-foreground"
         }
       >
@@ -148,7 +148,7 @@ function InlineRow({
       <dd
         className={
           emphasize
-            ? "tabular-nums text-[14px] font-semibold text-primary"
+            ? "tabular-nums text-[14px] font-semibold text-primary-text"
             : "tabular-nums text-foreground"
         }
       >

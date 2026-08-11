@@ -86,7 +86,7 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
       <div className="flex items-start gap-3.5 p-3.5 pl-4.5 sm:p-4 sm:pl-5">
         <IconField icon={Icon} tone={meta.tone} size={40} />
         <div className="min-w-0 flex-1 space-y-1.5">
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-text">
             <span>{meta.label}</span>
             {updatedAtLabel ? (
               <>
@@ -126,7 +126,7 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
         <Link
           href={meta.href}
           aria-label={accessibleName}
-          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-md border border-border bg-surface px-3 text-[12.5px] font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:h-9"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-md border border-border bg-surface px-3 text-[12.5px] font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary-muted hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:h-9"
         >
           <span className="hidden sm:inline">{meta.cta}</span>
           <ArrowUpRight

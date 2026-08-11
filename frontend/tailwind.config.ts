@@ -52,12 +52,25 @@ const config: Config = {
           active: "rgb(var(--color-primary-active-rgb) / <alpha-value>)",
           muted: "rgb(var(--color-primary-muted-rgb) / <alpha-value>)",
           foreground: "rgb(var(--color-primary-foreground-rgb) / <alpha-value>)",
+          /* Readable small-text expression of petrol on dark
+           * seller surfaces (identical to base petrol on light). */
+          text: "rgb(var(--color-primary-text-rgb) / <alpha-value>)",
+          /* Filled primary control role (darker AA-passing petrol
+           * step on dark seller surfaces; identical to base on
+           * light). */
+          button: {
+            DEFAULT: "rgb(var(--color-primary-button-rgb) / <alpha-value>)",
+            hover: "rgb(var(--color-primary-button-hover-rgb) / <alpha-value>)",
+          },
         },
         accent: {
           DEFAULT: "rgb(var(--color-accent-rgb) / <alpha-value>)",
           dark: "rgb(var(--color-accent-dark-rgb) / <alpha-value>)",
           muted: "rgb(var(--color-accent-muted-rgb) / <alpha-value>)",
           foreground: "rgb(var(--color-accent-foreground-rgb) / <alpha-value>)",
+          /* Readable small-text expression of the clay family on
+           * dark clay surfaces (identical to accent-dark on light). */
+          text: "rgb(var(--color-accent-text-rgb) / <alpha-value>)",
         },
         success: "rgb(var(--color-success-rgb) / <alpha-value>)",
         "success-muted": "rgb(var(--color-success-muted-rgb) / <alpha-value>)",

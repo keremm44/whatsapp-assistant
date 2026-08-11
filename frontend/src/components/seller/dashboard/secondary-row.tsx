@@ -83,7 +83,7 @@ export function SecondaryRow({ task }: { task: DashboardTask }) {
           className="mt-0.5 shrink-0 text-muted-foreground group-hover:text-foreground"
         />
         <div className="min-w-0 flex-1 space-y-0.5">
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-text">
             <span>{meta.label}</span>
             {updatedAtLabel ? (
               <>

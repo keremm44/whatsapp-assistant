@@ -76,7 +76,7 @@ export function SellerSidebar() {
                   "mt-1 border-t border-divider pt-4",
               )}
             >
-              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-text">
                 {section.title}
               </p>
               <ul className="flex flex-col gap-0.5">
@@ -160,7 +160,7 @@ const NavRow = ({
           "relative flex h-10 items-center gap-3 rounded-md pl-4 pr-3 text-sm transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
           isActive
-            ? "bg-primary-muted font-semibold text-primary"
+            ? "bg-primary-muted font-semibold text-primary-text"
             : "text-foreground hover:bg-surface-2",
         )}
       >

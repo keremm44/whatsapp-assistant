@@ -37,7 +37,7 @@ export function PageHeader({
     >
       <div className="space-y-2">
         {caption ? (
-          <p className="text-[13px] font-medium leading-none text-primary">
+          <p className="text-[13px] font-medium leading-none text-primary-text">
             {caption}
           </p>
         ) : null}

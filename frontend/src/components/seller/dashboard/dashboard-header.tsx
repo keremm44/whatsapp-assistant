@@ -59,7 +59,7 @@ export function DashboardHeader({
   return (
     <div className="flex flex-col gap-6 pb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
       <div className="space-y-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary-text">
           {caption}
         </p>
         <h1 className="font-heading text-[30px] font-medium leading-[1.1] text-foreground sm:text-[34px]">
@@ -116,7 +116,7 @@ function CountBadge({ total }: { total: number }) {
       </span>
       <p className="flex items-baseline gap-1.5 text-[13px] leading-none text-foreground">
         <span className="text-foreground/80">İlgilenmeniz gereken</span>
-        <span className="tabular-nums font-semibold text-primary">
+        <span className="tabular-nums font-semibold text-primary-text">
           {total}
         </span>
         <span className="text-muted-foreground">konu</span>
