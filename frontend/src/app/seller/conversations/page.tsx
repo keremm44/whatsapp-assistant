@@ -1,64 +1,64 @@
-import { ListDetailLayout } from "@/components/shared/list-detail-layout";
+import { ConversationListPanel } from "@/components/seller/conversations/conversation-list-panel";
+import { ConversationsWorkbench } from "@/components/seller/conversations/conversations-workbench";
 import { PageContainer } from "@/components/shared/page-container";
-import { PageHeader } from "@/components/shared/page-header";
-import { Surface } from "@/components/shared/surface";
+
+import { resolveConversationListFromSession } from "@/lib/seller/conversations-server";
 
 /**
- * Konuşmalar — desktop: list + detail. Mobile: list only.
+ * Konuşmalar — the seller's operational workbench (index route).
  *
- * Surface differentiation:
- *   - List column uses a chrome-toned surface (navigation/list region).
- *   - Detail column uses the primary working surface (the actual work area).
+ * Server Component. The queue is resolved server-side from
+ * `GET /seller/conversations` using the same Supabase session the
+ * seller layout's auth guard just validated; the left column owns the
+ * "Konuşmalar" title and the two filters, so no decorative page
+ * header burns workbench height above the real work area.
  *
- * Both columns keep their persistent Surface because they represent
- * persistent workflow panes. Empty states are calm and structural, not
- * giant placeholders.
+ * Filters: the only V1 filter is `?filter=attention`, which maps 1:1
+ * onto the backend's `attention_only=true`. Anything else (or no
+ * param) is the default "Tümü" view (attention_only=false). The
+ * backend owns the ordering; the frontend never re-sorts.
+ *
+ * On desktop the center column shows the calm "Bir konuşma seçin"
+ * state; on mobile this route is the queue itself and the detail
+ * lives at /seller/conversations/[customerId].
  */
-export default function SellerConversationsPage() {
-  return (
-    <PageContainer size="wide" className="py-8 sm:py-10">
-      <PageHeader
-        caption="İşler"
-        title="Konuşmalar"
-        description="WhatsApp konuşmalarını ve mevcut kontrol durumlarını burada inceleyebilirsiniz."
-      />
+export default async function SellerConversationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const attentionOnly = params.filter === "attention";
 
-      <div className="mt-8">
-        <ListDetailLayout
-          list={
-            <Surface className="bg-chrome">
-              <div className="px-4 pt-4">
-                <p className="text-[13px] font-medium text-primary-text">
-                  Konuşma listesi
-                </p>
-              </div>
-              <div className="px-4 pb-6 pt-3">
-                <p className="text-sm text-muted-foreground">
-                  Konuşmalar burada listelenecek.
-                </p>
-              </div>
-            </Surface>
-          }
-          detail={
-            <Surface>
-              <div className="px-5 pt-5">
-                <p className="text-[13px] font-medium text-primary-text">
-                  Mesaj geçmişi
-                </p>
-              </div>
-              <div className="flex min-h-[280px] flex-col items-start justify-center gap-2 px-5 py-10">
-                <p className="text-sm font-medium text-foreground">
-                  Bir konuşma seçin
-                </p>
-                <p className="max-w-md text-sm text-muted-foreground">
-                  Mesaj geçmişini ve konuşmanın mevcut kontrol durumunu
-                  burada görebilirsiniz.
-                </p>
-              </div>
-            </Surface>
-          }
-        />
-      </div>
+  const bootstrap = await resolveConversationListFromSession({
+    attentionOnly,
+  });
+
+  return (
+    <PageContainer size="wide" className="py-4 md:pb-0 md:pt-6">
+      <ConversationsWorkbench
+        mobileView="list"
+        hasContextRail={false}
+        list={
+          <ConversationListPanel
+            bootstrap={bootstrap}
+            attentionOnly={attentionOnly}
+            selectedCustomerId={null}
+          />
+        }
+        center={
+          <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-6 py-16 text-center">
+            <p className="text-sm font-medium text-foreground">
+              Bir konuşma seçin
+            </p>
+            <p className="max-w-sm text-[13px] leading-relaxed text-muted-foreground">
+              Mesaj geçmişini, konuşmanın kimin sorumluluğunda olduğunu
+              ve varsa ilgili sipariş veya iade bağlamını burada
+              görebilirsiniz.
+            </p>
+          </div>
+        }
+      />
     </PageContainer>
   );
 }

@@ -41,6 +41,16 @@ type SheetSide = "right" | "left" | "bottom";
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   side?: SheetSide;
+  /**
+   * Optional Portal container. By default the Sheet portals to
+   * `document.body`, which ESCAPES the `.seller-theme` scoping class
+   * and would render seller-surface sheets with the light root
+   * palette. Callers inside the seller workspace pass a host element
+   * that lives within the seller subtree so the drawer inherits the
+   * dark-workshop tokens. Omitting this prop preserves the previous
+   * body-portal behavior exactly.
+   */
+  portalContainer?: Element | DocumentFragment | null;
 }
 
 const sideStyles: Record<SheetSide, string> = {
@@ -55,8 +65,8 @@ const sideStyles: Record<SheetSide, string> = {
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   SheetContentProps
->(({ className, children, side = "right", ...props }, ref) => (
-  <SheetPortal>
+>(({ className, children, side = "right", portalContainer, ...props }, ref) => (
+  <SheetPortal container={portalContainer ?? undefined}>
     <SheetOverlay />
     <DialogPrimitive.Content
       ref={ref}
