@@ -1,8 +1,10 @@
 import * as React from "react";
 import {
+  Bell,
   Box,
   HelpCircle,
   LayoutDashboard,
+  Megaphone,
   Menu,
   MessagesSquare,
   Package,
@@ -25,6 +27,10 @@ import {
  *
  * `Store` is the brand mark glyph used in the sidebar's product identity
  * area. It is intentionally NOT used as a sidebar destination icon.
+ *
+ * `Megaphone` and `Bell` are reserved for the topbar announcements
+ * preview surface and the notifications control position. They are
+ * intentionally NOT used as sidebar destination icons.
  */
 export const SELLER_ICON_MAP = {
   LayoutDashboard,
@@ -39,6 +45,8 @@ export const SELLER_ICON_MAP = {
   Settings,
   Menu,
   Store,
+  Megaphone,
+  Bell,
 } as const satisfies Record<string, LucideIcon>;
 
 export type SellerIconName = keyof typeof SELLER_ICON_MAP;
