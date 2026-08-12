@@ -43,11 +43,12 @@ import { cn } from "@/lib/utils/cn";
  * Older messages: the "Daha eski mesajları yükle" control at the top
  * pages backwards with the real `before_message_id` cursor. When a
  * page is prepended, the scroll offset is restored by the exact
- * pixel delta so the visible window does not jump. A new server
- * bootstrap (customer switch, overlap refresh, or disconnected
- * reset) aborts any in-flight older-page request and advances a
- * load generation so a stale response cannot prepend onto the
- * newly reconciled timeline.
+ * pixel delta so the visible window does not jump. After a new
+ * server bootstrap commits (customer switch, overlap refresh, or
+ * disconnected reset), a layout effect aborts any in-flight
+ * older-page request and advances a load generation so a stale
+ * response cannot prepend onto the newly reconciled timeline.
+ * Speculative renders never abort or bump generation.
  *
  * Relative timestamps use a stable per-message (or per-fetched-page)
  * anchor: server-delivered messages keep the frozen route `renderedAt`,
@@ -82,12 +83,6 @@ export function MessageTimeline({
   });
   const inflightRef = React.useRef<AbortController | null>(null);
   const loadGenerationRef = React.useRef(0);
-  const lastBootstrapRef = React.useRef({
-    customerId,
-    initialMessages,
-    initialMessagePage,
-    renderedAt,
-  });
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const pendingScrollAdjustRef = React.useRef<number | null>(null);
   const pendingResetScrollRef = React.useRef(false);
@@ -98,36 +93,19 @@ export function MessageTimeline({
   const messagePageRef = React.useRef(messagePage);
   messagePageRef.current = messagePage;
 
-  // Advance the load generation during render — before the reconcile
-  // effect and before any already-resolved older-page continuation
-  // can run — so a stale response cannot win the race against a new
-  // authoritative bootstrap. Abort the in-flight request and drop
-  // any pending prepend-scroll compensation in the same step.
-  if (
-    lastBootstrapRef.current.customerId !== customerId ||
-    lastBootstrapRef.current.initialMessages !== initialMessages ||
-    lastBootstrapRef.current.initialMessagePage !== initialMessagePage ||
-    lastBootstrapRef.current.renderedAt !== renderedAt
-  ) {
-    lastBootstrapRef.current = {
-      customerId,
-      initialMessages,
-      initialMessagePage,
-      renderedAt,
-    };
+  // Committed bootstrap lifecycle. Must not run during a speculative
+  // render: aborting / bumping generation there would cancel work that
+  // still belongs to the currently committed screen. useLayoutEffect
+  // runs only after this bootstrap commits and before paint, so a
+  // stale older-page continuation cannot land on the new tree.
+  React.useLayoutEffect(() => {
     loadGenerationRef.current += 1;
     inflightRef.current?.abort();
     inflightRef.current = null;
     pendingScrollAdjustRef.current = null;
     prevHeightRef.current = 0;
-  }
-
-  // Re-seed when the server payload changes. A different customer
-  // or a same-customer refresh whose newest page no longer overlaps
-  // the loaded window fully resets. An overlapping same-customer
-  // refresh (take-over / resume / conflict) keeps older history.
-  React.useEffect(() => {
     setIsLoadingOlder(false);
+
     const result = reconcileConversationTimeline({
       previousCustomerId: customerIdRef.current,
       nextCustomerId: customerId,
