@@ -6,7 +6,10 @@
  */
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   buildConversationListFreshnessSignature,
@@ -107,4 +110,19 @@ test("conversation signatures move when last message, control or attention chang
     ),
     true,
   );
+});
+
+test("orders list panel mounts one freshness notice per surface", () => {
+  const source = readFileSync(
+    path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "../../components/seller/orders/orders-list-panel.tsx",
+    ),
+    "utf8",
+  );
+  const constructions = source.match(/<SellerFreshnessNotice\b/g) ?? [];
+  assert.equal(constructions.length, 1);
+  const mounts = source.match(/\{freshness\}/g) ?? [];
+  // Empty-state surface + non-empty surface — never two on the same branch.
+  assert.equal(mounts.length, 2);
 });

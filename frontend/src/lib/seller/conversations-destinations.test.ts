@@ -14,9 +14,19 @@ import {
   conversationUnansweredDestination,
 } from "./conversations-destinations.ts";
 
-test("return context opens the exact return request", () => {
+test("COLLECTING return context opens the collecting view on the exact request", () => {
   assert.equal(
-    conversationReturnDestination({ id: 41 }),
+    conversationReturnDestination({ id: 41, status: "COLLECTING" }),
+    "/seller/returns?view=collecting&request=41",
+  );
+});
+
+test("SELLER_REVIEW_REQUIRED return context uses the canonical action-required URL", () => {
+  assert.equal(
+    conversationReturnDestination({
+      id: 41,
+      status: "SELLER_REVIEW_REQUIRED",
+    }),
     "/seller/returns?request=41",
   );
 });

@@ -203,7 +203,6 @@ export function OrdersListPanel({
   return (
     <div className="space-y-0">
       {freshness}
-      {freshness}
       {/* Column titles (desktop scan alignment; rows carry full context) */}
       <div
         aria-hidden="true"
