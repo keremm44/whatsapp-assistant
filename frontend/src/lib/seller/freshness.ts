@@ -50,6 +50,27 @@ export const buildDashboardFreshnessSignature = (
   return `total:${input.total}|tasks:${tasks}`;
 };
 
+export type PausedListFreshnessInput = {
+  total: number;
+  conversations: readonly {
+    customer: { id: number };
+    lastMessage: { id: number } | null;
+    control: { version: number } | null;
+    needsAttention: boolean;
+    attentionReason: string | null;
+  }[];
+};
+
+/**
+ * Paused queue signature: real global filtered total + first-page
+ * conversation identity. A total-only change (row 21 appearing
+ * while the first 20 stay put) must still surface Yenile.
+ */
+export const buildPausedListFreshnessSignature = (
+  input: PausedListFreshnessInput,
+): string =>
+  `total:${input.total}|rows:${buildConversationListFreshnessSignature(input.conversations)}`;
+
 export const buildConversationListFreshnessSignature = (
   conversations: readonly {
     customer: { id: number };

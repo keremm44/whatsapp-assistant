@@ -14,7 +14,7 @@
  * messages.
  */
 
-import { formatTimeAgo } from "@/lib/seller/dashboard-format";
+import { formatTimeAgo } from "./dashboard-format.ts";
 import type {
   ConversationAttentionReason,
   ConversationCapabilities,
@@ -24,7 +24,7 @@ import type {
   ConversationMessage,
   ConversationOrderStatus,
   ReturnIssueType,
-} from "@/lib/seller/conversations";
+} from "./conversations.ts";
 
 /* ------------------------------------------------------------------ */
 /* Customer identity                                                   */

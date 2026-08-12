@@ -33,6 +33,7 @@ import {
   fetchConversationControl,
   fetchConversationDetail,
   fetchConversationList,
+  type ConversationControlState,
   type ConversationControlView,
   type ConversationDetail,
   type ConversationListPage,
@@ -98,11 +99,15 @@ const isContractError = (error: unknown): boolean => {
 
 export const resolveConversationList = async (
   accessToken: string,
-  options?: { attentionOnly?: boolean },
+  options?: {
+    attentionOnly?: boolean;
+    controlState?: ConversationControlState;
+  },
 ): Promise<ConversationListBootstrap> => {
   try {
     const page = await fetchConversationList(accessToken, {
       attentionOnly: options?.attentionOnly === true,
+      controlState: options?.controlState,
       cache: "no-store",
     });
     return { state: "ready", page, renderedAt: Date.now() };
@@ -196,6 +201,7 @@ const resolveAccessTokenFromSession = async (): Promise<string | null> => {
  */
 export const resolveConversationListFromSession = async (options?: {
   attentionOnly?: boolean;
+  controlState?: ConversationControlState;
 }): Promise<ConversationListBootstrap> => {
   const accessToken = await resolveAccessTokenFromSession();
   if (!accessToken) {

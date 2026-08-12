@@ -15,6 +15,7 @@ import {
   buildConversationListFreshnessSignature,
   buildDashboardFreshnessSignature,
   buildIdVersionSignature,
+  buildPausedListFreshnessSignature,
   SELLER_FRESHNESS_COPY,
   SELLER_FRESHNESS_INTERVAL_MS,
   signaturesDiffer,
@@ -168,6 +169,35 @@ test("conversation signatures move when last message, control or attention chang
   );
 });
 
+test("paused freshness includes the global total and first-page identity", () => {
+  const row = {
+    customer: { id: 22 },
+    lastMessage: { id: 90 },
+    control: { version: 4 },
+    needsAttention: true,
+    attentionReason: "assistant_paused",
+  };
+  const first = buildPausedListFreshnessSignature({
+    total: 20,
+    conversations: [row],
+  });
+  assert.equal(first, "total:20|rows:22:90:4:1:assistant_paused");
+  assert.equal(
+    signaturesDiffer(
+      first,
+      buildPausedListFreshnessSignature({ total: 21, conversations: [row] }),
+    ),
+    true,
+  );
+  assert.equal(
+    signaturesDiffer(
+      first,
+      buildPausedListFreshnessSignature({ total: 20, conversations: [row] }),
+    ),
+    false,
+  );
+});
+
 test("orders list panel mounts one freshness notice per surface", () => {
   const source = readFileSync(
     path.resolve(
@@ -181,4 +211,21 @@ test("orders list panel mounts one freshness notice per surface", () => {
   const mounts = source.match(/\{freshness\}/g) ?? [];
   // Empty-state surface + non-empty surface — never two on the same branch.
   assert.equal(mounts.length, 2);
+});
+
+test("paused list panel mounts one freshness notice and requests ASSISTANT_PAUSED", () => {
+  const source = readFileSync(
+    path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "../../components/seller/paused/paused-list-panel.tsx",
+    ),
+    "utf8",
+  );
+  const constructions = source.match(/<SellerFreshnessNotice\b/g) ?? [];
+  assert.equal(constructions.length, 1);
+  const mounts = source.match(/\{freshness\}/g) ?? [];
+  assert.equal(mounts.length, 2);
+  assert.match(source, /controlState:\s*PAUSED_CONTROL_STATE/);
+  assert.match(source, /ASSISTANT_PAUSED/);
+  assert.equal(source.includes("filter((row) => row.control"), false);
 });

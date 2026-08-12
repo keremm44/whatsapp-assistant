@@ -61,6 +61,12 @@
  */
 
 import { apiFetchWithAccessToken } from "@/lib/api/authenticated";
+import {
+  buildConversationListQuery,
+  parseConversationControlStateFilter,
+} from "./conversations-query.ts";
+
+export { buildConversationListQuery } from "./conversations-query.ts";
 
 /**
  * Parser-level error tag prefix. The resolver layer maps any error
@@ -379,6 +385,8 @@ export type ConversationListPage = {
   limit: number;
   offset: number;
   attentionOnly: boolean;
+  /** Echo of the optional backend `control_state` filter; null when omitted. */
+  controlState: ConversationControlState | null;
   conversations: ConversationListItem[];
 };
 
@@ -899,12 +907,30 @@ const parseConversationListPage = (raw: unknown): ConversationListPage => {
   }
   const offset = readRequiredNonNegativeInteger(raw, "offset");
   const attentionOnly = readRequiredBoolean(raw, "attention_only");
+  const controlState = parseOptionalControlStateFilter(raw["control_state"]);
   const conversationsRaw = readKey(raw, "conversations");
   if (!Array.isArray(conversationsRaw)) {
     throw contractError("conversations");
   }
   const conversations = conversationsRaw.map(parseConversationListItem);
-  return { total, limit: limitRaw, offset, attentionOnly, conversations };
+  return {
+    total,
+    limit: limitRaw,
+    offset,
+    attentionOnly,
+    controlState,
+    conversations,
+  };
+};
+
+const parseOptionalControlStateFilter = (
+  value: unknown,
+): ConversationControlState | null => {
+  try {
+    return parseConversationControlStateFilter(value);
+  } catch {
+    throw contractError("control_state");
+  }
 };
 
 const parseConversationDetail = (raw: unknown): ConversationDetail => {
@@ -1024,6 +1050,8 @@ const parseControlMutationResult = (
 
 export type FetchConversationListOptions = {
   attentionOnly?: boolean;
+  /** Exact backend control-state filter; omitted means no filter. */
+  controlState?: ConversationControlState;
   /** 1..100; when omitted the backend default (20) applies. */
   limit?: number;
   offset?: number;
@@ -1036,16 +1064,9 @@ export const fetchConversationList = async (
   accessToken: string,
   options?: FetchConversationListOptions,
 ): Promise<ConversationListPage> => {
-  const query = new URLSearchParams();
-  query.set("attention_only", options?.attentionOnly === true ? "true" : "false");
-  if (typeof options?.limit === "number") {
-    query.set("limit", String(options.limit));
-  }
-  if (typeof options?.offset === "number") {
-    query.set("offset", String(options.offset));
-  }
+  const qs = buildConversationListQuery(options);
   const raw = await apiFetchWithAccessToken<unknown>(
-    `/seller/conversations?${query.toString()}`,
+    `/seller/conversations?${qs}`,
     accessToken,
     { signal: options?.signal, cache: options?.cache ?? "no-store" },
   );
