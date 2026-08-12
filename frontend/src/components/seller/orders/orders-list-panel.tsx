@@ -14,6 +14,11 @@ import {
   ORDER_PAGE_SIZE,
   orderListEmptyCopy,
 } from "@/lib/seller/orders-format";
+import { SellerFreshnessNotice } from "@/components/seller/freshness/seller-freshness-banner";
+import {
+  buildIdVersionSignature,
+  signaturesDiffer,
+} from "@/lib/seller/freshness";
 import { decideOffsetPageAdvance } from "@/lib/seller/offset-pagination";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 
@@ -152,6 +157,28 @@ export function OrdersListPanel({
     }
   };
 
+  const freshness = (
+    <SellerFreshnessNotice
+      key={`${view}:${query ?? ""}`}
+      enabled={ready !== null}
+      check={async (signal) => {
+        const accessToken = await getBrowserAccessToken();
+        if (!accessToken) return false;
+        const page = await fetchOrderList(accessToken, {
+          view,
+          externalOrderNumber: query,
+          limit: ORDER_PAGE_SIZE,
+          offset: 0,
+          signal,
+        });
+        return signaturesDiffer(
+          buildIdVersionSignature(ready?.page.orders ?? []),
+          buildIdVersionSignature(page.orders),
+        );
+      }}
+    />
+  );
+
   if (!ready) {
     return <ListUnavailable />;
   }
@@ -159,19 +186,23 @@ export function OrdersListPanel({
   if (rows.length === 0) {
     const empty = orderListEmptyCopy(view, query !== null);
     return (
-      <div className="px-4 py-10 md:px-5" role="status">
-        <p className="text-sm font-medium text-foreground">{empty.title}</p>
-        {empty.description ? (
-          <p className="mt-1 max-w-md text-[13px] leading-relaxed text-muted-foreground">
-            {empty.description}
-          </p>
-        ) : null}
+      <div>
+        {freshness}
+        <div className="px-4 py-10 md:px-5" role="status">
+          <p className="text-sm font-medium text-foreground">{empty.title}</p>
+          {empty.description ? (
+            <p className="mt-1 max-w-md text-[13px] leading-relaxed text-muted-foreground">
+              {empty.description}
+            </p>
+          ) : null}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-0">
+      {freshness}
       {freshness}
       {/* Column titles (desktop scan alignment; rows carry full context) */}
       <div

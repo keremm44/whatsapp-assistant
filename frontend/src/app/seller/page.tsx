@@ -10,7 +10,9 @@ import { SecondaryRow } from "@/components/seller/dashboard/secondary-row";
 import { SectionHeading } from "@/components/seller/dashboard/section-heading";
 import { PageContainer } from "@/components/shared/page-container";
 
+import { DashboardFreshness } from "@/components/seller/dashboard/dashboard-freshness";
 import { resolveDashboardTasksFromSession } from "@/lib/seller/dashboard-tasks-server";
+import { buildDashboardFreshnessSignature } from "@/lib/seller/freshness";
 import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
 
 /**
@@ -19,9 +21,10 @@ import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
  * Server Component. The page resolves the seller's action queue
  * server-side from `GET /seller/dashboard/tasks` using the same
  * Supabase session the auth foundation and seller bootstrap just
- * validated. There is no client hydration, no skeleton, and no
- * secondary fetch. The data layer
- * (`resolveDashboardTasksFromSession`,
+ * validated. There is no skeleton and no secondary fetch for the
+ * first paint. A conservative visible-tab freshness check may later
+ * offer an explicit “Yeni bilgiler var / Yenile” refresh. The data
+ * layer (`resolveDashboardTasksFromSession`,
  * `lib/seller/dashboard-tasks.ts`) is unchanged.
  *
  * Information architecture (preserved):
@@ -104,6 +107,7 @@ export default async function SellerOverviewPage() {
   return (
     <PageContainer className="py-8 sm:py-10">
       <DashboardHeader total={total} />
+      <DashboardFreshness signature={buildDashboardFreshnessSignature(tasks)} />
 
       {!hasTasks ? (
         <div className="mt-8">

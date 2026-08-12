@@ -16,6 +16,11 @@ import {
   UNANSWERED_PAGE_SIZE,
   unansweredListEmptyCopy,
 } from "@/lib/seller/unanswered-format";
+import { SellerFreshnessNotice } from "@/components/seller/freshness/seller-freshness-banner";
+import {
+  buildIdVersionSignature,
+  signaturesDiffer,
+} from "@/lib/seller/freshness";
 import { decideOffsetPageAdvance } from "@/lib/seller/offset-pagination";
 import type { UnansweredListBootstrap } from "@/lib/seller/unanswered-server";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
@@ -155,6 +160,27 @@ export function UnansweredListPanel({
     }
   };
 
+  const freshness = (
+    <SellerFreshnessNotice
+      key={view}
+      enabled={ready !== null}
+      check={async (signal) => {
+        const accessToken = await getBrowserAccessToken();
+        if (!accessToken) return false;
+        const page = await fetchUnansweredList(accessToken, {
+          view,
+          limit: UNANSWERED_PAGE_SIZE,
+          offset: 0,
+          signal,
+        });
+        return signaturesDiffer(
+          buildIdVersionSignature(ready?.page.questions ?? []),
+          buildIdVersionSignature(page.questions),
+        );
+      }}
+    />
+  );
+
   if (!ready) {
     return <UnansweredListUnavailable />;
   }
@@ -162,19 +188,23 @@ export function UnansweredListPanel({
   if (rows.length === 0) {
     const empty = unansweredListEmptyCopy(view);
     return (
-      <div className="px-4 py-8 md:px-5" role="status">
+      <div>
+        {freshness}
+        <div className="px-4 py-8 md:px-5" role="status">
           <p className="text-sm font-medium text-foreground">{empty.title}</p>
           {empty.description ? (
             <p className="mt-1 max-w-md text-[13px] leading-relaxed text-muted-foreground">
               {empty.description}
             </p>
           ) : null}
+        </div>
       </div>
     );
   }
 
   return (
     <div>
+      {freshness}
       <ul role="list" aria-label="Cevaplanamayan sorular">
         {rows.map((question) => (
           <UnansweredQuestionRow

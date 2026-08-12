@@ -14,7 +14,12 @@ import {
   fetchConversationList,
   type ConversationListItem,
 } from "@/lib/seller/conversations";
+import { SellerFreshnessNotice } from "@/components/seller/freshness/seller-freshness-banner";
 import { conversationsListHref } from "@/lib/seller/conversations-format";
+import {
+  buildConversationListFreshnessSignature,
+  signaturesDiffer,
+} from "@/lib/seller/freshness";
 import { decideOffsetPageAdvance } from "@/lib/seller/offset-pagination";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
@@ -203,6 +208,26 @@ export function ConversationListPanel({
           />
         </nav>
       </header>
+
+      <SellerFreshnessNotice
+        key={attentionOnly ? "attention" : "all"}
+        enabled={ready !== null}
+        check={async (signal) => {
+          const accessToken = await getBrowserAccessToken();
+          if (!accessToken) return false;
+          const page = await fetchConversationList(accessToken, {
+            attentionOnly,
+            offset: 0,
+            signal,
+          });
+          return signaturesDiffer(
+            buildConversationListFreshnessSignature(
+              ready?.page.conversations ?? [],
+            ),
+            buildConversationListFreshnessSignature(page.conversations),
+          );
+        }}
+      />
 
       {!ready ? (
         <ListUnavailable />
