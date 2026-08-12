@@ -107,7 +107,9 @@ export default async function SellerOverviewPage() {
   return (
     <PageContainer className="py-8 sm:py-10">
       <DashboardHeader total={total} />
-      <DashboardFreshness signature={buildDashboardFreshnessSignature(tasks)} />
+      <DashboardFreshness
+        signature={buildDashboardFreshnessSignature({ total, tasks })}
+      />
 
       {!hasTasks ? (
         <div className="mt-8">
@@ -142,10 +144,8 @@ function TwoColumnLayout({
   normalTasks: DashboardTask[];
   total: number;
 }) {
-  // The side summary panel needs the same per-priority counts
-  // that the inline footer would show. We pre-compute them
-  // here so the side panel can render the three numbers
-  // (high, normal, total) correctly.
+  // QuietSummary receives the fetched page plus the global total
+  // so it can tell a complete page from a partial one.
   const summaryTasks = [
     ...highTasks.map((t) => ({ priority: t.priority })),
     ...normalTasks.map((t) => ({ priority: t.priority })),

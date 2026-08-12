@@ -6,6 +6,10 @@
  * conversations). They never invent a count of new records and never
  * claim what changed — only that the current first page no longer
  * matches the page the seller is looking at.
+ *
+ * Dashboard is the exception that also includes the REAL global
+ * filtered total: the first 50 tasks can stay identical while
+ * task 51 appears, and that must still surface “Yeni bilgiler var”.
  */
 
 /** Calm interval: visible-tab only, not a realtime stream. */
@@ -23,16 +27,28 @@ export const buildIdVersionSignature = (
 export const signaturesDiffer = (current: string, next: string): boolean =>
   current !== next;
 
-export const buildDashboardFreshnessSignature = (
+export type DashboardFreshnessInput = {
+  total: number;
   tasks: readonly {
     id: string;
     entityVersion: number;
     updatedAt: string;
-  }[],
-): string =>
-  tasks
+  }[];
+};
+
+/**
+ * Dashboard signature: explicit global total + first-page task
+ * identity. The total is a named field, not an undocumented prefix
+ * trick, so a total-only change is a first-class difference.
+ */
+export const buildDashboardFreshnessSignature = (
+  input: DashboardFreshnessInput,
+): string => {
+  const tasks = input.tasks
     .map((task) => `${task.id}:${task.entityVersion}:${task.updatedAt}`)
     .join(",");
+  return `total:${input.total}|tasks:${tasks}`;
+};
 
 export const buildConversationListFreshnessSignature = (
   conversations: readonly {

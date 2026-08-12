@@ -38,25 +38,57 @@ test("unanswered context opens the exact question group", () => {
   );
 });
 
-test("order context uses the exact Orders search when a number is present", () => {
+test("COLLECTING order with a number opens the collecting queue search", () => {
   assert.equal(
-    conversationOrderDestination({ externalOrderNumber: "TR123456" }),
-    "/seller/orders?q=TR123456",
+    conversationOrderDestination({
+      status: "COLLECTING",
+      externalOrderNumber: "TR123456",
+    }),
+    "/seller/orders?view=collecting&q=TR123456",
   );
 });
 
-test("order context falls back to the Orders list when the number is absent", () => {
+test("COLLECTING order without a number opens the collecting queue", () => {
   assert.equal(
-    conversationOrderDestination({ externalOrderNumber: null }),
-    "/seller/orders",
+    conversationOrderDestination({
+      status: "COLLECTING",
+      externalOrderNumber: null,
+    }),
+    "/seller/orders?view=collecting",
   );
   assert.equal(
-    conversationOrderDestination({ externalOrderNumber: "   " }),
-    "/seller/orders",
+    conversationOrderDestination({
+      status: "COLLECTING",
+      externalOrderNumber: "   ",
+    }),
+    "/seller/orders?view=collecting",
+  );
+});
+
+test("SELLER_REVIEW_REQUIRED order with a number opens the action-required search", () => {
+  assert.equal(
+    conversationOrderDestination({
+      status: "SELLER_REVIEW_REQUIRED",
+      externalOrderNumber: "TR123456",
+    }),
+    "/seller/orders?view=action_required&q=TR123456",
+  );
+});
+
+test("SELLER_REVIEW_REQUIRED order without a number opens the action-required queue", () => {
+  assert.equal(
+    conversationOrderDestination({
+      status: "SELLER_REVIEW_REQUIRED",
+      externalOrderNumber: null,
+    }),
+    "/seller/orders?view=action_required",
   );
 });
 
 test("order context never invents an order detail route", () => {
-  const href = conversationOrderDestination({ externalOrderNumber: "TR9" });
+  const href = conversationOrderDestination({
+    status: "SELLER_REVIEW_REQUIRED",
+    externalOrderNumber: "TR9",
+  });
   assert.equal(href.includes("/seller/orders/"), false);
 });

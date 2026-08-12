@@ -6,7 +6,10 @@
  * and never dump the seller on a broad list when a precise URL exists.
  */
 
-import type { ConversationReturnIssueStatus } from "./conversations.ts";
+import type {
+  ConversationOrderStatus,
+  ConversationReturnIssueStatus,
+} from "./conversations.ts";
 import { ordersListHref } from "./orders-format.ts";
 import { returnsWorkspaceHref } from "./returns-format.ts";
 import { unansweredWorkspaceHref } from "./unanswered-format.ts";
@@ -51,16 +54,24 @@ export const conversationUnansweredDestination = (group: {
   });
 
 /**
- * Active order → existing Orders list. When the marketplace order
- * number is present, use the exact search the list already supports.
- * There is no approved `/seller/orders/{id}` workbench in V1.
+ * Active order → existing Orders list, on the view that matches the
+ * real order status. When the marketplace order number is present,
+ * use the exact search the list already supports. There is no
+ * approved `/seller/orders/{id}` workbench in V1.
  */
 export const conversationOrderDestination = (order: {
+  status: ConversationOrderStatus;
   externalOrderNumber: string | null;
 }): string => {
   const number = order.externalOrderNumber;
-  if (typeof number === "string" && number.trim().length > 0) {
-    return ordersListHref({ view: "all", query: number.trim() });
+  const query =
+    typeof number === "string" && number.trim().length > 0
+      ? number.trim()
+      : null;
+  switch (order.status) {
+    case "COLLECTING":
+      return ordersListHref({ view: "collecting", query });
+    case "SELLER_REVIEW_REQUIRED":
+      return ordersListHref({ view: "action_required", query });
   }
-  return "/seller/orders";
 };

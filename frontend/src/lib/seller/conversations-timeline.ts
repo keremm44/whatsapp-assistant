@@ -16,20 +16,39 @@ import type {
 /* ------------------------------------------------------------------ */
 
 /**
+ * Two message windows can be joined only when they share at least
+ * one id. Shared identity is the only proven connection; there is
+ * no client-side arithmetic that can safely invent the missing
+ * middle of a disconnected pair of pages.
+ */
+export const conversationTimelinesOverlap = (
+  previous: readonly { id: number }[],
+  next: readonly { id: number }[],
+): boolean => {
+  if (previous.length === 0 || next.length === 0) return false;
+  const nextIds = new Set(next.map((message) => message.id));
+  return previous.some((message) => nextIds.has(message.id));
+};
+
+/**
  * Merge a freshly resolved newest page with already-loaded older
- * history for the SAME customer.
+ * history for the SAME customer, only when the two windows overlap.
  *
  * The server page is the authoritative newest window. Messages the
  * seller already loaded that are not in that window stay in place,
  * in their original relative order, in front of the server page.
  * Overlapping ids take the server copy. Nothing is re-sorted.
+ *
+ * When the windows do not overlap (including an empty server page)
+ * the merge is refused: the caller must reset to the server page
+ * rather than present a silent gap as a continuous timeline.
  */
 export const reconcileSameCustomerMessages = (
   previous: readonly ConversationMessage[],
   next: readonly ConversationMessage[],
 ): ConversationMessage[] => {
-  if (next.length === 0) {
-    return [...previous];
+  if (!conversationTimelinesOverlap(previous, next)) {
+    return [...next];
   }
   const nextIds = new Set(next.map((message) => message.id));
   const older = previous.filter((message) => !nextIds.has(message.id));
@@ -55,14 +74,29 @@ export type ConversationTimelineReconcileResult = {
  * Re-seed the timeline when the server payload changes.
  *
  *   different customer → full reset to that customer's server page
- *   same customer      → keep already-loaded older history; adopt the
- *                        newest server page; keep the older-page cursor
- *                        so “Daha eski mesajları yükle” does not rewind
+ *   same customer, overlapping windows
+ *     → keep already-loaded older history; adopt the newest server
+ *       page; keep the older-page cursor so “Daha eski mesajları
+ *       yükle” does not rewind
+ *   same customer, no overlap (including empty server page)
+ *     → safe reset to the new server first page and its cursor.
+ *       Reloading older history is preferable to silently hiding
+ *       the missing middle segment.
  */
 export const reconcileConversationTimeline = (
   input: ConversationTimelineReconcileInput,
 ): ConversationTimelineReconcileResult => {
   if (input.previousCustomerId !== input.nextCustomerId) {
+    return {
+      messages: [...input.nextMessages],
+      messagePage: input.nextMessagePage,
+      didReset: true,
+    };
+  }
+
+  if (
+    !conversationTimelinesOverlap(input.previousMessages, input.nextMessages)
+  ) {
     return {
       messages: [...input.nextMessages],
       messagePage: input.nextMessagePage,
@@ -93,6 +127,8 @@ export const reconcileConversationTimeline = (
  *   - already-assigned anchors never move when another page is loaded
  *   - newly arrived server-page messages use the server renderedAt
  *   - newly arrived older-page messages use that page's fetch time
+ *   - a same-customer no-overlap reset drops disconnected anchors
+ *     because only the new message ids are passed in
  */
 export const assignMessageTimestampAnchors = (input: {
   previousCustomerId: number | null;

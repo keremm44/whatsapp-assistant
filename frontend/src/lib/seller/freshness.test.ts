@@ -20,6 +20,16 @@ import {
   signaturesDiffer,
 } from "./freshness.ts";
 
+const task = (overrides: {
+  id?: string;
+  entityVersion?: number;
+  updatedAt?: string;
+} = {}) => ({
+  id: overrides.id ?? "return_review:41",
+  entityVersion: overrides.entityVersion ?? 2,
+  updatedAt: overrides.updatedAt ?? "2026-08-10T12:05:00+00:00",
+});
+
 test("the interval is conservative (45–60s) and the copy is locked", () => {
   assert.ok(SELLER_FRESHNESS_INTERVAL_MS >= 45_000);
   assert.ok(SELLER_FRESHNESS_INTERVAL_MS <= 60_000);
@@ -55,28 +65,74 @@ test("an empty first page has a stable empty signature", () => {
   assert.equal(signaturesDiffer("", ""), false);
 });
 
-test("dashboard signatures include id, entity version and updated_at", () => {
-  const signature = buildDashboardFreshnessSignature([
-    {
-      id: "return_review:41",
-      entityVersion: 2,
-      updatedAt: "2026-08-10T12:05:00+00:00",
-    },
-  ]);
+test("dashboard signatures include the explicit global total", () => {
+  const signature = buildDashboardFreshnessSignature({
+    total: 50,
+    tasks: [task()],
+  });
   assert.equal(
     signature,
-    "return_review:41:2:2026-08-10T12:05:00+00:00",
+    "total:50|tasks:return_review:41:2:2026-08-10T12:05:00+00:00",
   );
+  assert.match(signature, /^total:50\|tasks:/);
+});
+
+test("dashboard signature is stable when tasks and total stay the same", () => {
+  const first = buildDashboardFreshnessSignature({
+    total: 50,
+    tasks: [task(), task({ id: "order_review:9", entityVersion: 4 })],
+  });
+  const second = buildDashboardFreshnessSignature({
+    total: 50,
+    tasks: [task(), task({ id: "order_review:9", entityVersion: 4 })],
+  });
+  assert.equal(signaturesDiffer(first, second), false);
+});
+
+test("dashboard signature moves when only the global total changes", () => {
+  const tasks = [task()];
   assert.equal(
     signaturesDiffer(
-      signature,
-      buildDashboardFreshnessSignature([
-        {
-          id: "return_review:41",
-          entityVersion: 3,
-          updatedAt: "2026-08-10T12:05:00+00:00",
-        },
-      ]),
+      buildDashboardFreshnessSignature({ total: 50, tasks }),
+      buildDashboardFreshnessSignature({ total: 51, tasks }),
+    ),
+    true,
+  );
+});
+
+test("dashboard signature moves when a task version changes", () => {
+  assert.equal(
+    signaturesDiffer(
+      buildDashboardFreshnessSignature({ total: 1, tasks: [task()] }),
+      buildDashboardFreshnessSignature({
+        total: 1,
+        tasks: [task({ entityVersion: 3 })],
+      }),
+    ),
+    true,
+  );
+});
+
+test("dashboard signature moves when a task updatedAt changes", () => {
+  assert.equal(
+    signaturesDiffer(
+      buildDashboardFreshnessSignature({ total: 1, tasks: [task()] }),
+      buildDashboardFreshnessSignature({
+        total: 1,
+        tasks: [task({ updatedAt: "2026-08-10T12:06:00+00:00" })],
+      }),
+    ),
+    true,
+  );
+});
+
+test("dashboard signature moves when backend task order changes", () => {
+  const a = task({ id: "return_review:41" });
+  const b = task({ id: "order_review:9" });
+  assert.equal(
+    signaturesDiffer(
+      buildDashboardFreshnessSignature({ total: 2, tasks: [a, b] }),
+      buildDashboardFreshnessSignature({ total: 2, tasks: [b, a] }),
     ),
     true,
   );

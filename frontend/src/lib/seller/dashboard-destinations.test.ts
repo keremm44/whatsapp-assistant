@@ -87,8 +87,8 @@ test("unanswered task opens the existing Unanswered workspace on the exact quest
   );
 });
 
-test("order task stays on the Orders list and never invents a detail route", () => {
+test("order task opens the existing Orders action-required queue", () => {
   const href = dashboardTaskHref(orderTask(9));
-  assert.equal(href, "/seller/orders");
+  assert.equal(href, "/seller/orders?view=action_required");
   assert.equal(href.includes("/seller/orders/"), false);
 });

@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { buildDashboardQuietSummary } from "@/lib/seller/dashboard-summary";
 import type { DashboardTaskPriority } from "@/lib/seller/dashboard-tasks";
 
 /**
@@ -18,9 +19,12 @@ import type { DashboardTaskPriority } from "@/lib/seller/dashboard-tasks";
  *     chrome-toned surface with a petrol top hairline,
  *     sits at the bottom of the side column.
  *
- * The two presentations render the same three numbers:
- * high count, normal count, total. No fabricated KPIs,
- * no waiting times, no inferred urgency.
+ * When the fetched page is complete (`tasks.length === total`)
+ * the three numbers are the truthful priority split plus the
+ * global total. When the page is partial the component only
+ * reports how many rows are shown versus the real global total
+ * — it never presents first-page high/normal counts as if they
+ * were global.
  *
  * When the dashboard is empty (scenario D) the component
  * is not rendered.
@@ -36,12 +40,18 @@ export function QuietSummary({
   total: number;
   layout: Layout;
 }) {
-  let high = 0;
-  let normal = 0;
-  for (const t of tasks) {
-    if (t.priority === "high") high += 1;
-    else normal += 1;
-  }
+  const model = buildDashboardQuietSummary({ tasks, total });
+  const rows =
+    model.kind === "complete"
+      ? [
+          { label: "Önce bakılacaklar", value: model.high },
+          { label: "Vakit varsa", value: model.normal },
+          { label: "Toplam", value: model.total, emphasize: true },
+        ]
+      : [
+          { label: "Gösterilen", value: model.shown },
+          { label: "Toplam", value: model.total, emphasize: true },
+        ];
 
   if (layout === "side") {
     return (
@@ -61,10 +71,18 @@ export function QuietSummary({
             Özet
           </h3>
           <dl className="mt-3 space-y-2">
-            <Row label="Önce bakılacaklar" value={high} />
-            <Row label="Vakit varsa" value={normal} />
-            <div className="my-1.5 h-px bg-accent/15" aria-hidden="true" />
-            <Row label="Toplam" value={total} emphasize />
+            {rows.map((row, index) => (
+              <React.Fragment key={row.label}>
+                {row.emphasize && index > 0 ? (
+                  <div className="my-1.5 h-px bg-accent/15" aria-hidden="true" />
+                ) : null}
+                <Row
+                  label={row.label}
+                  value={row.value}
+                  emphasize={row.emphasize}
+                />
+              </React.Fragment>
+            ))}
           </dl>
         </div>
       </section>
@@ -83,10 +101,21 @@ export function QuietSummary({
         Özet
       </h3>
       <dl className="mt-3 flex flex-wrap items-center gap-x-8 gap-y-2 text-[13px]">
-        <InlineRow label="Önce bakılacaklar" value={high} />
-        <InlineRow label="Vakit varsa" value={normal} />
-        <span aria-hidden="true" className="hidden h-3 w-px bg-divider sm:inline-block" />
-        <InlineRow label="Toplam" value={total} emphasize />
+        {rows.map((row, index) => (
+          <React.Fragment key={row.label}>
+            {row.emphasize && index > 0 ? (
+              <span
+                aria-hidden="true"
+                className="hidden h-3 w-px bg-divider sm:inline-block"
+              />
+            ) : null}
+            <InlineRow
+              label={row.label}
+              value={row.value}
+              emphasize={row.emphasize}
+            />
+          </React.Fragment>
+        ))}
       </dl>
     </section>
   );

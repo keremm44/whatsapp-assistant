@@ -23,7 +23,10 @@ export function DashboardFreshness({ signature }: { signature: string }) {
         const page = await fetchDashboardTasks(accessToken, { signal });
         return signaturesDiffer(
           signature,
-          buildDashboardFreshnessSignature(page.tasks),
+          buildDashboardFreshnessSignature({
+            total: page.total,
+            tasks: page.tasks,
+          }),
         );
       }}
     />

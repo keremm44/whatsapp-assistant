@@ -78,6 +78,7 @@ export function MessageTimeline({
   const inflightRef = React.useRef<AbortController | null>(null);
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const pendingScrollAdjustRef = React.useRef<number | null>(null);
+  const pendingResetScrollRef = React.useRef(false);
   const prevHeightRef = React.useRef(0);
   const customerIdRef = React.useRef(customerId);
   const messagesRef = React.useRef(messages);
@@ -86,8 +87,9 @@ export function MessageTimeline({
   messagePageRef.current = messagePage;
 
   // Re-seed when the server payload changes. A different customer
-  // fully resets; a same-customer refresh (take-over / resume /
-  // conflict) keeps already-loaded older history.
+  // or a same-customer refresh whose newest page no longer overlaps
+  // the loaded window fully resets. An overlapping same-customer
+  // refresh (take-over / resume / conflict) keeps older history.
   React.useEffect(() => {
     const result = reconcileConversationTimeline({
       previousCustomerId: customerIdRef.current,
@@ -112,6 +114,7 @@ export function MessageTimeline({
     );
     if (result.didReset) {
       setOlderError(null);
+      pendingResetScrollRef.current = true;
     }
     customerIdRef.current = customerId;
   }, [customerId, initialMessages, initialMessagePage, renderedAt]);
@@ -132,10 +135,17 @@ export function MessageTimeline({
     container.scrollTop = container.scrollHeight;
   }, [customerId]);
 
-  // Restore the reading position after older messages are prepended.
+  // Restore the reading position after older messages are prepended,
+  // or land on newest after a disconnected-window reset.
   React.useLayoutEffect(() => {
-    if (pendingScrollAdjustRef.current === null) return;
     const container = scrollRef.current;
+    if (pendingResetScrollRef.current) {
+      pendingResetScrollRef.current = false;
+      if (!container) return;
+      container.scrollTop = container.scrollHeight;
+      return;
+    }
+    if (pendingScrollAdjustRef.current === null) return;
     pendingScrollAdjustRef.current = null;
     if (!container) return;
     container.scrollTop += container.scrollHeight - prevHeightRef.current;

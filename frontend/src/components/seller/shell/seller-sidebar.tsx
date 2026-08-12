@@ -207,7 +207,7 @@ const BottomRail = () => {
             Ayarlar
           </span>
           <span className="text-[11px] text-muted-foreground">
-            Oturum ve sistem
+            Oturum
           </span>
         </span>
       </Link>

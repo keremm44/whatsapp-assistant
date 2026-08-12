@@ -7,11 +7,14 @@
  *
  *   return_review       → Returns workspace, action queue, exact request
  *   unanswered_question → Unanswered workspace, action queue, exact group
- *   order_review        → Orders list (V1 has no order detail workbench
- *                         and the task does not carry an order number)
+ *   order_review        → Orders action-required queue (V1 has no order
+ *                         detail workbench and the task does not carry
+ *                         an order number; the SQL only emits this type
+ *                         for SELLER_REVIEW_REQUIRED orders)
  */
 
 import type { DashboardTask } from "./dashboard-tasks.ts";
+import { ordersListHref } from "./orders-format.ts";
 import { returnsWorkspaceHref } from "./returns-format.ts";
 import { unansweredWorkspaceHref } from "./unanswered-format.ts";
 
@@ -30,6 +33,9 @@ export const dashboardTaskHref = (task: DashboardTask): string => {
         questionId: task.actionTarget.id,
       });
     case "order_review":
-      return "/seller/orders";
+      return ordersListHref({
+        view: "action_required",
+        query: null,
+      });
   }
 };
