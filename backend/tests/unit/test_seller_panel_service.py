@@ -24,8 +24,41 @@ def test_list_conversations_preserves_pagination(monkeypatch) -> None:
     assert result["ok"] is True
     assert result["toplam"] == 3
     assert result["attention_only"] is True
+    assert result["control_state"] is None
     assert result["limit"] == 10
     assert result["offset"] == 20
+
+
+def test_list_conversations_echoes_control_state_filter(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_list(*args, **kwargs):
+        captured["kwargs"] = kwargs
+        return {
+            "durum": "başarılı",
+            "toplam": 1,
+            "conversations": [{"customer": {"id": 7}}],
+        }
+
+    monkeypatch.setattr(
+        seller_panel_service,
+        "get_seller_conversation_list",
+        fake_list,
+    )
+
+    result = seller_panel_service.list_conversations(
+        42,
+        control_state="ASSISTANT_PAUSED",
+        limit=20,
+        offset=0,
+    )
+
+    assert result["ok"] is True
+    assert result["toplam"] == 1
+    assert result["control_state"] == "ASSISTANT_PAUSED"
+    assert result["attention_only"] is False
+    assert captured["kwargs"]["control_state"] == "ASSISTANT_PAUSED"
+    assert captured["kwargs"]["attention_only"] is False
 
 
 def test_detail_not_found_maps_to_safe_contract(monkeypatch) -> None:

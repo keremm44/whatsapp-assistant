@@ -52,9 +52,45 @@ def test_conversation_list_uses_authenticated_seller_scope() -> None:
     mocked.assert_called_once_with(
         42,
         attention_only=True,
+        control_state=None,
         limit=20,
         offset=0,
     )
+
+
+def test_conversation_list_passes_paused_control_state() -> None:
+    result = {
+        "ok": True,
+        "toplam": 1,
+        "limit": 20,
+        "offset": 0,
+        "attention_only": False,
+        "control_state": "ASSISTANT_PAUSED",
+        "conversations": [{"customer": {"id": 22}}],
+    }
+    with patch(
+        "protected_routes.list_seller_panel_conversations",
+        return_value=result,
+    ) as mocked:
+        response = client.get(
+            "/seller/conversations?control_state=ASSISTANT_PAUSED"
+        )
+
+    assert response.status_code == 200
+    assert response.json()["control_state"] == "ASSISTANT_PAUSED"
+    mocked.assert_called_once_with(
+        42,
+        attention_only=False,
+        control_state="ASSISTANT_PAUSED",
+        limit=20,
+        offset=0,
+    )
+
+
+def test_conversation_list_rejects_unknown_control_state() -> None:
+    response = client.get("/seller/conversations?control_state=MUTED")
+
+    assert response.status_code == 422
 
 
 def test_conversation_list_requires_authentication() -> None:

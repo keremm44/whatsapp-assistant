@@ -5477,6 +5477,7 @@ def get_seller_conversation_list(
     limit: int = 20,
     offset: int = 0,
     attention_only: bool = False,
+    control_state: str | None = None,
 ) -> dict[str, Any]:
     """Seller conversation read model listesini tenant scope'unda döndürür."""
     if not _is_positive_int(seller_id):
@@ -5503,6 +5504,12 @@ def get_seller_conversation_list(
             "mesaj": "attention_only boolean olmalıdır.",
         }
 
+    if control_state is not None and control_state not in VALID_CONTROL_STATES:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "control_state değeri geçersiz.",
+        }
+
     try:
         result = get_supabase().rpc(
             "get_seller_conversation_list",
@@ -5511,6 +5518,7 @@ def get_seller_conversation_list(
                 "result_limit": limit,
                 "result_offset": offset,
                 "attention_only": attention_only,
+                "target_control_state": control_state,
             },
         ).execute()
     except Exception:

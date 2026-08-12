@@ -530,6 +530,13 @@ def seller_onboarding_complete(
 @router.get("/seller/conversations")
 def seller_conversations(
     attention_only: bool = Query(default=False),
+    control_state: Literal[
+        "ASSISTANT_ACTIVE",
+        "SELLER_TAKEN_OVER",
+        "RETURN_REVIEW",
+        "ASSISTANT_PAUSED",
+    ]
+    | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     context: AuthContext = Depends(require_seller),
@@ -538,6 +545,7 @@ def seller_conversations(
     result = list_seller_panel_conversations(
         context.seller_id,
         attention_only=attention_only,
+        control_state=control_state,
         limit=limit,
         offset=offset,
     )

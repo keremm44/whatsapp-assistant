@@ -47,12 +47,14 @@ def list_conversations(
     seller_id: int,
     *,
     attention_only: bool = False,
+    control_state: str | None = None,
     limit: int = 20,
     offset: int = 0,
 ) -> dict[str, Any]:
     result = get_seller_conversation_list(
         seller_id,
         attention_only=attention_only,
+        control_state=control_state,
         limit=limit,
         offset=offset,
     )
@@ -77,6 +79,7 @@ def list_conversations(
         "limit": limit,
         "offset": offset,
         "attention_only": attention_only,
+        "control_state": control_state,
         "conversations": conversations,
     }
 

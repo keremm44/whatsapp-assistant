@@ -56,9 +56,56 @@ def test_conversation_list_rpc_is_tenant_scoped(monkeypatch) -> None:
                 "result_limit": 15,
                 "result_offset": 5,
                 "attention_only": True,
+                "target_control_state": None,
             },
         )
     ]
+
+
+def test_conversation_list_rpc_passes_control_state_filter(monkeypatch) -> None:
+    fake = FakeSupabase(
+        {
+            "status": "success",
+            "total": 1,
+            "control_state": "ASSISTANT_PAUSED",
+            "conversations": [{"customer": {"id": 22}}],
+        }
+    )
+    monkeypatch.setattr(database, "get_supabase", lambda: fake)
+
+    result = database.get_seller_conversation_list(
+        42,
+        control_state="ASSISTANT_PAUSED",
+        limit=20,
+        offset=0,
+    )
+
+    assert result["durum"] == "başarılı"
+    assert result["toplam"] == 1
+    assert fake.calls == [
+        (
+            "get_seller_conversation_list",
+            {
+                "target_seller_id": 42,
+                "result_limit": 20,
+                "result_offset": 0,
+                "attention_only": False,
+                "target_control_state": "ASSISTANT_PAUSED",
+            },
+        )
+    ]
+
+
+def test_conversation_list_rejects_invalid_control_state_without_rpc(
+    monkeypatch,
+) -> None:
+    fake = FakeSupabase({})
+    monkeypatch.setattr(database, "get_supabase", lambda: fake)
+
+    result = database.get_seller_conversation_list(42, control_state="MUTED")
+
+    assert result["durum"] == "doğrulama_hatası"
+    assert fake.calls == []
 
 
 def test_conversation_list_rejects_invalid_limit_without_rpc(monkeypatch) -> None:
