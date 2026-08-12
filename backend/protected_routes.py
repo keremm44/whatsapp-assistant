@@ -1082,6 +1082,7 @@ def seller_return_issue_requests(
     ),
     customer_id: int | None = Query(default=None, ge=1),
     issue_type: str | None = Query(default=None, max_length=48),
+    external_order_number: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     context: AuthContext = Depends(require_seller),
@@ -1092,6 +1093,7 @@ def seller_return_issue_requests(
         view=view,
         customer_id=customer_id,
         issue_type=issue_type,
+        external_order_number=external_order_number,
         limit=limit,
         offset=offset,
     )

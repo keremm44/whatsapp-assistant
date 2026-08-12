@@ -290,6 +290,72 @@ def get_customer_by_id(customer_id: int) -> dict[str, Any]:
         }
 
 
+def get_customers_by_ids(
+    seller_id: int,
+    customer_ids: list[int],
+) -> dict[str, Any]:
+    """Verilen müşteri kimliklerini tek seller-scoped toplu sorguyla okur.
+
+    Liste sayfalarını zenginleştirmek içindir (N+1 yok): kimlikler tek
+    ``IN`` filtresiyle sorgulanır ve en fazla 100 benzersiz kimlik kabul
+    edilir. Yalnız ``id`` ve ``whatsapp_number`` seçilir; telefon numarası
+    depolandığı gibi, normalize edilmeden döndürülür. ``seller_id``
+    filtresi tenant kapsamını zorlar — başka satıcının müşterisi asla
+    sonuç kümesine girmez.
+    """
+    if not _is_positive_int(seller_id):
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "seller_id pozitif tam sayı olmalıdır.",
+        }
+
+    unique_ids: list[int] = []
+    seen_ids: set[int] = set()
+    for customer_id in customer_ids:
+        if not _is_positive_int(customer_id):
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": "customer_ids pozitif tam sayılar içermelidir.",
+            }
+        if customer_id in seen_ids:
+            continue
+        seen_ids.add(customer_id)
+        unique_ids.append(customer_id)
+
+    if len(unique_ids) > 100:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "customer_ids en fazla 100 kayıt içerebilir.",
+        }
+
+    if not unique_ids:
+        return {
+            "durum": "başarılı",
+            "customers": [],
+        }
+
+    try:
+        result = (
+            get_supabase()
+            .table("customers")
+            .select("id,whatsapp_number")
+            .eq("seller_id", seller_id)
+            .in_("id", unique_ids)
+            .execute()
+        )
+
+        return {
+            "durum": "başarılı",
+            "customers": result.data,
+        }
+
+    except Exception:
+        return {
+            "durum": "hata",
+            "mesaj": "Müşteriler okunamadı.",
+        }
+
+
 def increment_customer_message_count(customer_id: int) -> dict[str, Any]:
     """Müşterinin toplam mesaj sayısını artırır."""
     try:
@@ -5270,6 +5336,7 @@ def list_return_issue_requests(
     view: str = "all",
     customer_id: int | None = None,
     issue_type: str | None = None,
+    external_order_number: str | None = None,
     limit: int = 20,
     offset: int = 0,
 ) -> dict[str, Any]:
@@ -5335,6 +5402,14 @@ def list_return_issue_requests(
 
         if issue_type is not None:
             query = query.eq("issue_type", issue_type)
+
+        # Exact order-number search: yalnız tam eşleşme (.eq). Substring /
+        # ILIKE / fuzzy arama yoktur — Orders list endpointiyle aynı sözleşme.
+        if external_order_number:
+            query = query.eq(
+                "external_order_number_snapshot",
+                external_order_number,
+            )
 
         result = query.execute()
 

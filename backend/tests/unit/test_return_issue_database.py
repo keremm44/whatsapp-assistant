@@ -677,6 +677,131 @@ def test_list_return_issue_requests_validates_limit_view_and_bool_offset(
     assert fake.table_calls == []
 
 
+@pytest.mark.parametrize(
+    ("view", "expected_status"),
+    [
+        ("collecting", database.RETURN_ISSUE_STATUS_COLLECTING),
+        ("handled", database.RETURN_ISSUE_STATUS_HANDLED),
+    ],
+)
+def test_list_return_issue_requests_collecting_and_handled_views(
+    monkeypatch: pytest.MonkeyPatch,
+    view: str,
+    expected_status: str,
+) -> None:
+    fake = install_fake(
+        monkeypatch,
+        FakeSupabase(table_data={"return_issue_requests": []}),
+    )
+
+    result = database.list_return_issue_requests(11, view=view)
+
+    assert result == {"durum": "başarılı", "toplam": 0, "requests": []}
+    _, query = fake.queries[0]
+    assert ("seller_id", 11) in query.filters
+    assert ("status", expected_status) in query.filters
+
+
+def test_list_return_issue_requests_exact_order_number_search(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = install_fake(
+        monkeypatch,
+        FakeSupabase(table_data={"return_issue_requests": []}),
+    )
+
+    result = database.list_return_issue_requests(
+        11,
+        view="all",
+        external_order_number="TR-1001",
+        limit=20,
+        offset=40,
+    )
+
+    assert result == {"durum": "başarılı", "toplam": 0, "requests": []}
+    # Tek sorgu, yalnız talep tablosuna; exact-match .eq filtresi —
+    # substring/ILIKE yoktur, "TR-1001" asla "TR-10010"u eşleyemez.
+    assert fake.table_calls == ["return_issue_requests"]
+    _, query = fake.queries[0]
+    assert ("seller_id", 11) in query.filters
+    assert ("external_order_number_snapshot", "TR-1001") in query.filters
+    # Listeleme sıralaması ve sayfalama değişmedi.
+    assert query.order_calls == [("updated_at", True), ("id", True)]
+    assert query.range_call == (40, 59)
+
+
+def test_list_return_issue_requests_without_order_number_adds_no_filter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = install_fake(
+        monkeypatch,
+        FakeSupabase(table_data={"return_issue_requests": []}),
+    )
+
+    database.list_return_issue_requests(11)
+
+    _, query = fake.queries[0]
+    filtered_columns = {column for column, _ in query.filters}
+    assert "external_order_number_snapshot" not in filtered_columns
+
+
+def test_get_customers_by_ids_bulk_scoped_single_query(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = install_fake(
+        monkeypatch,
+        FakeSupabase(
+            table_data={
+                "customers": [
+                    {"id": 22, "whatsapp_number": "+905551111111"},
+                    {"id": 23, "whatsapp_number": "+905552222222"},
+                ]
+            }
+        ),
+    )
+
+    result = database.get_customers_by_ids(11, [22, 23, 22])
+
+    assert result["durum"] == "başarılı"
+    assert len(result["customers"]) == 2
+    # Tek toplu sorgu (N+1 yok), seller scoped + benzersiz IN filtresi.
+    assert fake.table_calls == ["customers"]
+    _, query = fake.queries[0]
+    assert query.selected == "id,whatsapp_number"
+    assert ("seller_id", 11) in query.filters
+    assert query.in_calls == [("id", [22, 23])]
+
+
+def test_get_customers_by_ids_validation_and_bounded_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = install_fake(monkeypatch, FakeSupabase())
+
+    assert database.get_customers_by_ids(0, [1])["durum"] == "doğrulama_hatası"
+    assert database.get_customers_by_ids(11, [1, -2])["durum"] == "doğrulama_hatası"
+    assert database.get_customers_by_ids(11, [True])["durum"] == "doğrulama_hatası"
+    assert database.get_customers_by_ids(11, list(range(1, 102)))["durum"] == "doğrulama_hatası"
+
+    empty = database.get_customers_by_ids(11, [])
+    assert empty == {"durum": "başarılı", "customers": []}
+
+    # Doğrulama hatası veya boş liste asla veritabanına gitmez.
+    assert fake.table_calls == []
+
+
+def test_get_customers_by_ids_db_error_is_hata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = install_fake(
+        monkeypatch,
+        FakeSupabase(table_data={"customers": RuntimeError("db down")}),
+    )
+
+    result = database.get_customers_by_ids(11, [22])
+
+    assert result["durum"] == "hata"
+
+
 def test_get_return_issue_type_settings_is_tenant_scoped(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

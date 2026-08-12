@@ -637,12 +637,143 @@ def test_list_seller_requests_adds_display_and_action_required(monkeypatch: pyte
             "requests": [request_record(status="SELLER_REVIEW_REQUIRED")],
         },
     )
+    monkeypatch.setattr(
+        service,
+        "get_customers_by_ids",
+        lambda *args, **kwargs: {
+            "durum": "başarılı",
+            "customers": [{"id": 22, "whatsapp_number": "+90555"}],
+        },
+    )
 
     result = service.list_seller_return_issue_requests(11, view="action_required")
 
     row = result["requests"][0]
     assert row["display_issue_type"] == "Hasarlı ürün"
     assert row["seller_action_required"] is True
+    assert row["customer_phone"] == "+90555"
+
+
+def test_list_seller_requests_enriches_phones_with_one_bulk_scoped_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rows = [
+        request_record(request_id=41, status="COLLECTING"),
+        {**request_record(request_id=42, status="HANDLED"), "customer_id": 23},
+        request_record(request_id=43, status="SELLER_REVIEW_REQUIRED"),
+        {**request_record(request_id=44, status="COLLECTING"), "customer_id": 24},
+    ]
+    monkeypatch.setattr(
+        service,
+        "list_return_issue_requests",
+        lambda *args, **kwargs: {
+            "durum": "başarılı",
+            "toplam": 4,
+            "requests": rows,
+        },
+    )
+
+    bulk_calls: list[tuple[int, list[int]]] = []
+
+    def fake_bulk(seller_id: int, customer_ids: list[int]) -> dict[str, Any]:
+        bulk_calls.append((seller_id, list(customer_ids)))
+        return {
+            "durum": "başarılı",
+            "customers": [
+                {"id": 23, "whatsapp_number": "+905552222222"},
+                {"id": 22, "whatsapp_number": "+905551111111"},
+            ],
+        }
+
+    monkeypatch.setattr(service, "get_customers_by_ids", fake_bulk)
+
+    result = service.list_seller_return_issue_requests(11, view="all", limit=20)
+
+    assert result["durum"] == "başarılı"
+    # N+1 yok: 4 satır / 3 benzersiz müşteri için tek toplu sorgu.
+    assert bulk_calls == [(11, [22, 23, 24])]
+    phones = [row["customer_phone"] for row in result["requests"]]
+    assert phones == [
+        "+905551111111",
+        "+905552222222",
+        "+905551111111",
+        # Müşteri toplu sonuçta yoksa telefon None kalır; başka bir
+        # tenant'ın numarası asla doldurulmaz.
+        None,
+    ]
+
+
+def test_list_seller_requests_empty_page_skips_customer_lookup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        service,
+        "list_return_issue_requests",
+        lambda *args, **kwargs: {"durum": "başarılı", "toplam": 0, "requests": []},
+    )
+
+    bulk_called = False
+
+    def forbidden_bulk(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        nonlocal bulk_called
+        bulk_called = True
+        return {"durum": "başarılı", "customers": []}
+
+    monkeypatch.setattr(service, "get_customers_by_ids", forbidden_bulk)
+
+    result = service.list_seller_return_issue_requests(11, view="handled")
+
+    assert result["durum"] == "başarılı"
+    assert result["requests"] == []
+    assert bulk_called is False
+
+
+def test_list_seller_requests_customer_lookup_failure_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        service,
+        "list_return_issue_requests",
+        lambda *args, **kwargs: {
+            "durum": "başarılı",
+            "toplam": 1,
+            "requests": [request_record()],
+        },
+    )
+    monkeypatch.setattr(
+        service,
+        "get_customers_by_ids",
+        lambda *args, **kwargs: {"durum": "hata", "mesaj": "db down"},
+    )
+
+    result = service.list_seller_return_issue_requests(11)
+
+    assert result["durum"] == "hata"
+    assert result["error_code"] == "return_issue_list_unavailable"
+    assert result["kind"] == "unavailable"
+
+
+def test_list_seller_requests_passes_external_order_number_exact(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_list(seller_id: int, **kwargs: Any) -> dict[str, Any]:
+        captured["seller_id"] = seller_id
+        captured.update(kwargs)
+        return {"durum": "başarılı", "toplam": 0, "requests": []}
+
+    monkeypatch.setattr(service, "list_return_issue_requests", fake_list)
+
+    result = service.list_seller_return_issue_requests(
+        11,
+        view="all",
+        external_order_number="TR-1001",
+    )
+
+    assert result["durum"] == "başarılı"
+    assert captured["seller_id"] == 11
+    assert captured["external_order_number"] == "TR-1001"
 
 
 def test_service_contains_no_commercial_decision_actions() -> None:

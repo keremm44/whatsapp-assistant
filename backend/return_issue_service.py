@@ -13,6 +13,7 @@ from database import (
     add_return_issue_request_evidence,
     create_or_get_return_issue_request,
     get_active_return_issue_request,
+    get_customers_by_ids,
     get_return_issue_request_detail,
     get_return_issue_type_settings,
     list_orders,
@@ -797,6 +798,7 @@ def list_seller_return_issue_requests(
     view: str = "all",
     customer_id: int | None = None,
     issue_type: str | None = None,
+    external_order_number: str | None = None,
     limit: int = 20,
     offset: int = 0,
 ) -> dict[str, Any]:
@@ -805,6 +807,7 @@ def list_seller_return_issue_requests(
         view=view,
         customer_id=customer_id,
         issue_type=issue_type,
+        external_order_number=external_order_number,
         limit=limit,
         offset=offset,
     )
@@ -815,12 +818,46 @@ def list_seller_return_issue_requests(
             default_message="İade/sorun talepleri okunamadı.",
         )
 
+    requests = result["requests"]
+
+    # Sayfadaki benzersiz customer kimlikleri tek seller-scoped toplu
+    # sorguyla okunur; satır başına müşteri sorgusu (N+1) yapılmaz.
+    # customer_phone, customers.whatsapp_number'ın olduğu gibi halidir;
+    # snapshot değildir, formatlama/normalize uygulanmaz.
+    unique_customer_ids: list[int] = []
+    seen_customer_ids: set[int] = set()
+    for row in requests:
+        row_customer_id = row.get("customer_id")
+        if (
+            _is_positive_int(row_customer_id)
+            and row_customer_id not in seen_customer_ids
+        ):
+            seen_customer_ids.add(row_customer_id)
+            unique_customer_ids.append(row_customer_id)
+
+    phone_by_customer_id: dict[int, Any] = {}
+    if unique_customer_ids:
+        customers_result = get_customers_by_ids(seller_id, unique_customer_ids)
+        if customers_result.get("durum") != "başarılı":
+            return _map_database_error(
+                customers_result,
+                default_code="return_issue_list_unavailable",
+                default_message="İade/sorun talepleri okunamadı.",
+            )
+        for customer in customers_result.get("customers") or []:
+            found_id = customer.get("id")
+            if _is_positive_int(found_id):
+                phone_by_customer_id[found_id] = customer.get("whatsapp_number")
+
     return {
         "durum": "başarılı",
         "toplam": result["toplam"],
         "requests": [
             {
                 **row,
+                "customer_phone": phone_by_customer_id.get(
+                    row.get("customer_id")
+                ),
                 "display_issue_type": ISSUE_TYPE_DISPLAY_NAMES.get(
                     row.get("issue_type"), row.get("issue_type")
                 ),
@@ -828,7 +865,7 @@ def list_seller_return_issue_requests(
                     row.get("status") == RETURN_ISSUE_STATUS_SELLER_REVIEW_REQUIRED
                 ),
             }
-            for row in result["requests"]
+            for row in requests
         ],
     }
 

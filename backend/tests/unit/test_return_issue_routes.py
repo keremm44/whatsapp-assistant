@@ -100,6 +100,66 @@ def test_return_issue_list_validation(client: TestClient) -> None:
     assert client.get("/seller/return-issue-requests?offset=-1").status_code == 422
 
 
+def test_return_issue_list_order_number_search_contract(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_list(seller_id: int, **kwargs: Any) -> dict[str, Any]:
+        captured["seller_id"] = seller_id
+        captured.update(kwargs)
+        return {
+            "durum": "başarılı",
+            "toplam": 1,
+            "requests": [request_record()],
+        }
+
+    monkeypatch.setattr(protected_routes, "list_seller_return_issue_requests", fake_list)
+
+    response = client.get(
+        "/seller/return-issue-requests?external_order_number=TR-1001"
+    )
+
+    assert response.status_code == 200
+    assert captured["seller_id"] == 11
+    assert captured["external_order_number"] == "TR-1001"
+
+    # 100 karakter kabul edilir; 101 karakter mevcut doğrulama
+    # sözleşmesi gereği 422 reddedilir (Orders aramasıyla aynı).
+    assert (
+        client.get("/seller/return-issue-requests?external_order_number=" + "A" * 100).status_code
+        == 200
+    )
+    assert (
+        client.get("/seller/return-issue-requests?external_order_number=" + "A" * 101).status_code
+        == 422
+    )
+
+
+def test_return_issue_list_exposes_customer_phone(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_list(seller_id: int, **kwargs: Any) -> dict[str, Any]:
+        return {
+            "durum": "başarılı",
+            "toplam": 1,
+            "requests": [
+                {**request_record(), "customer_phone": "+905551112244"}
+            ],
+        }
+
+    monkeypatch.setattr(protected_routes, "list_seller_return_issue_requests", fake_list)
+
+    response = client.get("/seller/return-issue-requests")
+
+    assert response.status_code == 200
+    assert (
+        response.json()["requests"][0]["customer_phone"] == "+905551112244"
+    )
+
+
 def test_return_issue_list_service_unavailable_is_503(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
