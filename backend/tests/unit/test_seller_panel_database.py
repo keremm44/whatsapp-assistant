@@ -56,10 +56,10 @@ def test_conversation_list_rpc_is_tenant_scoped(monkeypatch) -> None:
                 "result_limit": 15,
                 "result_offset": 5,
                 "attention_only": True,
-                "target_control_state": None,
             },
         )
     ]
+    assert "target_control_state" not in fake.calls[0][1]
 
 
 def test_conversation_list_rpc_passes_control_state_filter(monkeypatch) -> None:

@@ -5510,16 +5510,22 @@ def get_seller_conversation_list(
             "mesaj": "control_state değeri geçersiz.",
         }
 
+    rpc_params: dict[str, Any] = {
+        "target_seller_id": seller_id,
+        "result_limit": limit,
+        "result_offset": offset,
+        "attention_only": attention_only,
+    }
+    # Omit the 5th argument unless a filter is requested so the live
+    # 4-arg function still accepts unfiltered Conversations calls
+    # before migration 028 is applied.
+    if control_state is not None:
+        rpc_params["target_control_state"] = control_state
+
     try:
         result = get_supabase().rpc(
             "get_seller_conversation_list",
-            {
-                "target_seller_id": seller_id,
-                "result_limit": limit,
-                "result_offset": offset,
-                "attention_only": attention_only,
-                "target_control_state": control_state,
-            },
+            rpc_params,
         ).execute()
     except Exception:
         return {
