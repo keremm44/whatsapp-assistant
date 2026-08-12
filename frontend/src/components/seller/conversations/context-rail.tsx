@@ -15,6 +15,11 @@ import type {
   ConversationUnansweredGroup,
 } from "@/lib/seller/conversations";
 import {
+  conversationOrderDestination,
+  conversationReturnDestination,
+  conversationUnansweredDestination,
+} from "@/lib/seller/conversations-destinations";
+import {
   ORDER_STATUS_LABELS,
   RETURN_ISSUE_TYPE_LABELS,
 } from "@/lib/seller/conversations-format";
@@ -131,7 +136,7 @@ function OrderContextBlock({ order }: { order: ConversationOrderDetail }) {
       icon={Package}
       label="Sipariş"
       labelTone="primary"
-      destination={"/seller/orders" as Route}
+      destination={conversationOrderDestination(order) as Route}
       destinationLabel="Sipariş bilgilerine git"
     >
       {order.externalOrderNumber ? (
@@ -183,7 +188,7 @@ function ReturnIssueContextBlock({
       icon={Undo2}
       label="İade / Sorun"
       labelTone="accent"
-      destination={"/seller/returns" as Route}
+      destination={conversationReturnDestination(issue) as Route}
       destinationLabel="İade ve sorunlara git"
     >
       <p className="text-[13.5px] font-medium text-foreground">
@@ -232,7 +237,11 @@ function UnansweredContextBlock({
       icon={HelpCircle}
       label="Cevaplanamayan soru"
       labelTone="neutral"
-      destination={"/seller/unanswered" as Route}
+      destination={
+        (latest
+          ? conversationUnansweredDestination(latest)
+          : "/seller/unanswered") as Route
+      }
       destinationLabel="Cevaplanamayan sorulara git"
     >
       {groups.length > 1 ? (

@@ -51,11 +51,10 @@ import { SellerIcon } from "./icon-map";
  *     `surface-2` token) on hover. Icons move from muted to
  *     foreground to communicate affordance.
  *
- *   - Bottom account region. A small section at the bottom
- *     shows the store name with a circular petrol-soft
- *     initial badge. This is a quiet acknowledgment that the
- *     sidebar is the seller's workspace, not a generic
- *     control panel.
+ *   - Bottom settings region. A small section at the bottom
+ *     points at the existing /seller/settings surface with a
+ *     neutral Settings icon — never a fabricated initial or
+ *     unsupported profile/team/integration promise.
  */
 export function SellerSidebar() {
   const pathname = usePathname();
@@ -199,16 +198,16 @@ const BottomRail = () => {
       >
         <span
           aria-hidden="true"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-[12px] font-semibold text-accent-foreground"
+          className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-foreground"
         >
-          M
+          <SellerIcon name="Settings" size={16} />
         </span>
         <span className="flex flex-col leading-tight">
           <span className="text-[13px] font-medium text-foreground">
-            Mağaza ayarları
+            Ayarlar
           </span>
           <span className="text-[11px] text-muted-foreground">
-            Profil, ekip, entegrasyon
+            Oturum ve sistem
           </span>
         </span>
       </Link>

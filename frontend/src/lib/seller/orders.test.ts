@@ -67,7 +67,7 @@ test("parses a complete order summary including the print-content fields", () =>
   );
 
   assert.equal(page.view, "all");
-  assert.equal(page.total, 1);
+  assert.equal(page.pageCount, 1);
   assert.equal(page.limit, 20);
   assert.equal(page.offset, 0);
 
@@ -181,6 +181,26 @@ test("rejects drifted payloads with contract errors", () => {
       name,
     );
   }
+});
+
+test("toplam mirrors the returned page length — it is not a global total", () => {
+  // Inspected backend semantics: database.list_orders computes
+  // toplam = len(result.data) of the paginated range. A first page
+  // of 20 items therefore reports toplam=20 even when more exist.
+  const full = parseOrdersListResponse(
+    rawListPage(
+      Array.from({ length: 20 }, (_, index) => rawSummary({ id: index + 1 })),
+      { toplam: 20, offset: 0 },
+    ),
+  );
+  assert.equal(full.pageCount, 20);
+  assert.equal(full.orders.length, 20);
+
+  const short = parseOrdersListResponse(
+    rawListPage([rawSummary()], { toplam: 1, offset: 20 }),
+  );
+  assert.equal(short.pageCount, 1);
+  assert.equal(short.offset, 20);
 });
 
 test("keeps backend ordering verbatim (no client re-sort)", () => {

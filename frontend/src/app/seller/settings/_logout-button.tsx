@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { navigateAfterLogout } from "@/lib/auth/post-login";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 /**
@@ -19,12 +19,11 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
  *   3. `supabase.auth.signOut()` is invoked on the existing browser
  *      Supabase client. The @supabase/ssr browser client owns the
  *      auth cookies; we do not touch them by hand.
- *   4. On success: `router.replace("/giris")` then
- *      `router.refresh()`. The replace navigates to /giris; the
- *      refresh re-fetches the RSC payload so the seller layout's
- *      resolver would not serve a stale view if anything ping-pongs
- *      back. The existing /giris server resolver sees an
- *      unauthenticated state and renders the normal login form.
+ *   4. On success: hard document replacement to `/giris` via
+ *      `navigateAfterLogout()` (`window.location.replace`). An App
+ *      Router transition immediately after the session cookies
+ *      change can leave a stale seller RSC tree visible; a full
+ *      document load is the same auth-boundary pattern as login.
  *   5. On failure: stay on /seller/settings, re-enable the button,
  *      surface a calm inline error. We do NOT assume the session
  *      is closed; the user can simply try again.
@@ -38,7 +37,6 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
  *   - redirects to anywhere other than /giris
  */
 export function LogoutButton() {
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const inflightRef = React.useRef<AbortController | null>(null);
@@ -93,8 +91,7 @@ export function LogoutButton() {
       // component is expected to unmount on the navigation that
       // follows.
       didNavigate = true;
-      router.replace("/giris");
-      router.refresh();
+      navigateAfterLogout();
     } catch {
       if (controller.signal.aborted) return;
       // signOut threw (network, SDK internal error, etc.). Stay

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import type { DashboardTask, DashboardTaskType } from "@/lib/seller/dashboard-tasks";
+import { dashboardTaskHref } from "@/lib/seller/dashboard-destinations";
 import { composeCustomerLine, formatUpdatedAt } from "@/lib/seller/dashboard-format";
 
 /**
@@ -29,26 +30,22 @@ const TYPE_META: Record<
     label: string;
     icon: LucideIcon;
     rail: "primary" | "review" | "neutral";
-    href: Route;
   }
 > = {
   return_review: {
     label: "İade",
     icon: Undo2,
     rail: "review",
-    href: "/seller/returns",
   },
   order_review: {
     label: "Sipariş",
     icon: Package,
     rail: "primary",
-    href: "/seller/orders",
   },
   unanswered_question: {
     label: "Yanıt bekleyen",
     icon: MessagesSquare,
     rail: "neutral",
-    href: "/seller/unanswered",
   },
 };
 
@@ -63,6 +60,7 @@ export function SecondaryRow({ task }: { task: DashboardTask }) {
   const { icon: Icon } = meta;
   const customerLine = composeCustomerLine(task.customer);
   const updatedAtLabel = formatUpdatedAt(task.updatedAt);
+  const href = dashboardTaskHref(task) as Route;
   const accessibleName = `${meta.label} — ${task.title}`;
 
   return (
@@ -72,7 +70,7 @@ export function SecondaryRow({ task }: { task: DashboardTask }) {
         className={`absolute inset-y-3 left-0 w-[2px] rounded-full ${RAIL_CLASS[meta.rail]}`}
       />
       <Link
-        href={meta.href}
+        href={href}
         aria-label={accessibleName}
         className="group flex min-h-[60px] items-start gap-3 px-4 py-3.5 pl-5 transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset sm:px-5"
       >

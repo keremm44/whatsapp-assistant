@@ -14,6 +14,10 @@ import {
   MEDIA_MESSAGE_LABEL,
   formatConversationTimestamp,
 } from "@/lib/seller/conversations-format";
+import {
+  assignMessageTimestampAnchors,
+  reconcileConversationTimeline,
+} from "@/lib/seller/conversations-timeline";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
 
@@ -40,9 +44,10 @@ import { cn } from "@/lib/utils/cn";
  * page is prepended, the scroll offset is restored by the exact
  * pixel delta so the visible window does not jump.
  *
- * Relative timestamps use the route's frozen `renderedAt` for
- * server-delivered messages (SSR/hydration identity) and `Date.now()`
- * for browser-fetched older pages (those render client-side only).
+ * Relative timestamps use a stable per-message (or per-fetched-page)
+ * anchor: server-delivered messages keep the frozen route `renderedAt`,
+ * each browser-fetched older page gets one fetch timestamp, and those
+ * anchors never move when another page is loaded.
  */
 export function MessageTimeline({
   customerId,
@@ -61,18 +66,55 @@ export function MessageTimeline({
     React.useState<ConversationMessagePage>(initialMessagePage);
   const [isLoadingOlder, setIsLoadingOlder] = React.useState(false);
   const [olderError, setOlderError] = React.useState<string | null>(null);
+  const [timestampAnchors, setTimestampAnchors] = React.useState<
+    Map<number, number>
+  >(() => {
+    const initial = new Map<number, number>();
+    for (const message of initialMessages) {
+      initial.set(message.id, renderedAt);
+    }
+    return initial;
+  });
   const inflightRef = React.useRef<AbortController | null>(null);
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const pendingScrollAdjustRef = React.useRef<number | null>(null);
   const prevHeightRef = React.useRef(0);
+  const customerIdRef = React.useRef(customerId);
+  const messagesRef = React.useRef(messages);
+  messagesRef.current = messages;
+  const messagePageRef = React.useRef(messagePage);
+  messagePageRef.current = messagePage;
 
-  // Re-seed when the server payload changes (navigation to another
-  // conversation, or router.refresh() after a control handoff).
+  // Re-seed when the server payload changes. A different customer
+  // fully resets; a same-customer refresh (take-over / resume /
+  // conflict) keeps already-loaded older history.
   React.useEffect(() => {
-    setMessages(initialMessages);
-    setMessagePage(initialMessagePage);
-    setOlderError(null);
-  }, [initialMessages, initialMessagePage]);
+    const result = reconcileConversationTimeline({
+      previousCustomerId: customerIdRef.current,
+      nextCustomerId: customerId,
+      previousMessages: messagesRef.current,
+      nextMessages: initialMessages,
+      previousMessagePage: messagePageRef.current,
+      nextMessagePage: initialMessagePage,
+    });
+    setMessages(result.messages);
+    setMessagePage(result.messagePage);
+    setTimestampAnchors((previous) =>
+      assignMessageTimestampAnchors({
+        previousCustomerId: customerIdRef.current,
+        nextCustomerId: customerId,
+        previousAnchors: previous,
+        messageIds: result.messages.map((message) => message.id),
+        serverMessageIds: new Set(initialMessages.map((message) => message.id)),
+        serverRenderedAt: renderedAt,
+        fetchRenderedAt: renderedAt,
+      }),
+    );
+    if (result.didReset) {
+      setOlderError(null);
+    }
+    customerIdRef.current = customerId;
+  }, [customerId, initialMessages, initialMessagePage, renderedAt]);
 
   React.useEffect(() => {
     return () => {
@@ -125,20 +167,27 @@ export function MessageTimeline({
         signal: controller.signal,
       });
       if (controller.signal.aborted) return;
-      setMessages((previous) => {
-        const seen = new Set(previous.map((message) => message.id));
-        const older = page.messages.filter(
-          (message) => !seen.has(message.id),
-        );
-        return [...older, ...previous];
-      });
+      const fetchRenderedAt = Date.now();
+      const previousMessages = messagesRef.current;
+      const seen = new Set(previousMessages.map((message) => message.id));
+      const older = page.messages.filter((message) => !seen.has(message.id));
+      const nextMessages = [...older, ...previousMessages];
+      setMessages(nextMessages);
+      setTimestampAnchors((previousAnchors) =>
+        assignMessageTimestampAnchors({
+          previousCustomerId: customerId,
+          nextCustomerId: customerId,
+          previousAnchors,
+          messageIds: nextMessages.map((message) => message.id),
+          serverMessageIds: new Set(),
+          serverRenderedAt: renderedAt,
+          fetchRenderedAt,
+        }),
+      );
       setMessagePage(page.messagePage);
       // Flag the layout effect above to compensate the scroll offset
       // by the exact pixel height of the prepended page.
       pendingScrollAdjustRef.current = 1;
-      // Older pages are fetched and rendered in the browser only, so
-      // their relative timestamps may use the real current time.
-      setOlderRenderedAt(Date.now());
     } catch {
       if (controller.signal.aborted) return;
       setOlderError(
@@ -152,13 +201,6 @@ export function MessageTimeline({
     }
   };
 
-  // Server-delivered messages use the frozen route timestamp; pages
-  // fetched in the browser use the fetch time. The initial seed uses
-  // renderedAt for every message.
-  const [olderRenderedAt, setOlderRenderedAt] = React.useState<number | null>(
-    null,
-  );
-
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 py-12 text-center">
@@ -171,12 +213,6 @@ export function MessageTimeline({
       </div>
     );
   }
-
-  // The frozen server timestamp applies to initial messages; browser-
-  // fetched older pages use their own fetch time. Because prepends
-  // only ever ADD to the front, a message's relative anchor never
-  // shifts underneath an already-rendered bubble.
-  const initialIds = new Set(initialMessages.map((m) => m.id));
 
   return (
     <div
@@ -217,11 +253,7 @@ export function MessageTimeline({
           <MessageBubble
             key={message.id}
             message={message}
-            renderedAt={
-              initialIds.has(message.id)
-                ? renderedAt
-                : (olderRenderedAt ?? renderedAt)
-            }
+            renderedAt={timestampAnchors.get(message.id) ?? renderedAt}
           />
         ))}
       </ol>

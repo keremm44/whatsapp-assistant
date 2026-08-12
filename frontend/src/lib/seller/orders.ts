@@ -189,8 +189,12 @@ export type OrderSummary = {
 
 export type OrderListPage = {
   view: OrderView;
-  /** Total filtered count (`toplam`), backend-owned key. */
-  total: number;
+  /**
+   * Returned-page length (`toplam`) — never a global total.
+   * `database.list_orders` computes it as `len(result.data)` of the
+   * paginated range. Pagination must never treat this as a count.
+   */
+  pageCount: number;
   limit: number;
   offset: number;
   orders: OrderSummary[];
@@ -255,7 +259,9 @@ const parseOrderListPage = (raw: unknown): OrderListPage => {
   if (!Array.isArray(ordersRaw)) throw contractError("orders");
   return {
     view: viewRaw,
-    total: readRequiredNonNegativeInteger(raw, "toplam"),
+    // Shape-only validation: the value is the returned page length
+    // (database.py: toplam = len(result.data)), never a global total.
+    pageCount: readRequiredNonNegativeInteger(raw, "toplam"),
     limit: limitRaw,
     offset: readRequiredNonNegativeInteger(raw, "offset"),
     orders: ordersRaw.map(parseOrderSummary),

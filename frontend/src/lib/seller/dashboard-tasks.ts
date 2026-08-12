@@ -73,10 +73,11 @@ const VALID_PRIORITIES = new Set<string>(["high", "normal"]);
 export type DashboardTaskPriority = "high" | "normal";
 
 /**
- * The `action_target` block routes the seller to the existing
- * backend-supported list surface. The frontend maps `kind` to an
- * existing seller route; we never construct detail routes from
- * IDs.
+ * The `action_target` block routes the seller to an existing
+ * backend-supported workspace. Destinations are built in
+ * `dashboard-destinations.ts` from the proven target id and the
+ * already-supported Returns / Unanswered URL helpers. We never
+ * invent `/seller/orders/{id}` or any other unsupported route.
  */
 const VALID_ACTION_KINDS = new Set<string>([
   "return_issue_request",

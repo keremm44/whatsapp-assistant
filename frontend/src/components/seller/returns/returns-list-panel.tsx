@@ -18,6 +18,7 @@ import {
   RETURN_PAGE_SIZE,
   returnListEmptyCopy,
 } from "@/lib/seller/returns-format";
+import { decideOffsetPageAdvance } from "@/lib/seller/offset-pagination";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 
 import { ReturnRequestRow } from "./return-request-row";
@@ -72,6 +73,8 @@ export function ReturnsListPanel({
     null,
   );
   const inflightRef = React.useRef<AbortController | null>(null);
+  const rowsRef = React.useRef(rows);
+  rowsRef.current = rows;
 
   // Re-seed from the server payload whenever it changes.
   React.useEffect(() => {
@@ -107,19 +110,43 @@ export function ReturnsListPanel({
         );
         return;
       }
-      const page = await fetchReturnList(accessToken, {
-        view,
-        externalOrderNumber: query,
-        issueType,
-        limit: RETURN_PAGE_SIZE,
-        offset: nextOffset,
-        signal: controller.signal,
-      });
-      if (controller.signal.aborted) return;
-      setRows((previous) => mergeReturnsPage(previous, page.requests));
-      setNextOffset(page.offset + page.requests.length);
-      if (!hasAnotherReturnsPage(page.requests.length)) {
-        setMoreAvailable(false);
+      let offset = nextOffset;
+      let working = rowsRef.current;
+      let autoContinues = 0;
+
+      while (true) {
+        const page = await fetchReturnList(accessToken, {
+          view,
+          externalOrderNumber: query,
+          issueType,
+          limit: RETURN_PAGE_SIZE,
+          offset,
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+
+        const merged = mergeReturnsPage(working, page.requests);
+        const appendedCount = merged.length - working.length;
+        working = merged;
+        setRows(working);
+
+        const decision = decideOffsetPageAdvance({
+          incomingCount: page.requests.length,
+          appendedCount,
+          incomingOffset: page.offset,
+          pageSize: page.limit,
+          autoContinueCount: autoContinues,
+          moreRule: { kind: "page_size" },
+        });
+        offset = decision.nextOffset;
+        setNextOffset(offset);
+
+        if (decision.shouldAutoContinue) {
+          autoContinues += 1;
+          continue;
+        }
+        setMoreAvailable(decision.moreAvailable);
+        break;
       }
     } catch {
       if (controller.signal.aborted) return;
@@ -145,12 +172,12 @@ export function ReturnsListPanel({
     );
     return (
       <div className="px-4 py-8 md:px-5" role="status">
-        <p className="text-sm font-medium text-foreground">{empty.title}</p>
-        {empty.description ? (
-          <p className="mt-1 max-w-md text-[13px] leading-relaxed text-muted-foreground">
-            {empty.description}
-          </p>
-        ) : null}
+          <p className="text-sm font-medium text-foreground">{empty.title}</p>
+          {empty.description ? (
+            <p className="mt-1 max-w-md text-[13px] leading-relaxed text-muted-foreground">
+              {empty.description}
+            </p>
+          ) : null}
       </div>
     );
   }

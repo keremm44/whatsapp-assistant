@@ -15,6 +15,7 @@ import {
   type ConversationListItem,
 } from "@/lib/seller/conversations";
 import { conversationsListHref } from "@/lib/seller/conversations-format";
+import { decideOffsetPageAdvance } from "@/lib/seller/offset-pagination";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
 
@@ -63,12 +64,16 @@ export function ConversationListPanel({
   );
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(null);
-  // Offset pages walk a live, re-ranked queue: if the backend returns
-  // an empty page while `rows.length < total` still holds (rows moved
-  // between pages), the queue end is reached and the footer must stop
-  // offering "Daha fazla göster" instead of looping on empty pages.
-  const [endReached, setEndReached] = React.useState(false);
+  // Offset pages walk a live, re-ranked queue. Conversations expose a
+  // real global `toplam`, so "more" follows loaded < total; an empty
+  // page still ends the queue, and a page of only duplicates advances
+  // (capped) instead of getting stuck.
+  const [moreAvailable, setMoreAvailable] = React.useState(
+    ready ? ready.page.conversations.length < ready.page.total : false,
+  );
   const inflightRef = React.useRef<AbortController | null>(null);
+  const rowsRef = React.useRef(rows);
+  rowsRef.current = rows;
 
   // Re-seed from the server payload whenever it changes (filter
   // switch via URL, or router.refresh() after a handoff/conflict).
@@ -79,8 +84,10 @@ export function ConversationListPanel({
       setNextOffset(
         bootstrap.page.offset + bootstrap.page.conversations.length,
       );
+      setMoreAvailable(
+        bootstrap.page.conversations.length < bootstrap.page.total,
+      );
       setLoadMoreError(null);
-      setEndReached(false);
     }
   }, [bootstrap]);
 
@@ -106,23 +113,49 @@ export function ConversationListPanel({
         );
         return;
       }
-      const page = await fetchConversationList(accessToken, {
-        attentionOnly,
-        offset: nextOffset,
-        signal: controller.signal,
-      });
-      if (controller.signal.aborted) return;
-      setRows((previous) => {
-        const seen = new Set(previous.map((row) => row.customer.id));
+      let offset = nextOffset;
+      let working = rowsRef.current;
+      let autoContinues = 0;
+      let latestTotal = total;
+
+      while (true) {
+        const page = await fetchConversationList(accessToken, {
+          attentionOnly,
+          offset,
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+
+        const seen = new Set(working.map((row) => row.customer.id));
         const fresh = page.conversations.filter(
           (row) => !seen.has(row.customer.id),
         );
-        return [...previous, ...fresh];
-      });
-      setTotal(page.total);
-      setNextOffset(page.offset + page.conversations.length);
-      if (page.conversations.length === 0) {
-        setEndReached(true);
+        working = [...working, ...fresh];
+        latestTotal = page.total;
+        setRows(working);
+        setTotal(latestTotal);
+
+        const decision = decideOffsetPageAdvance({
+          incomingCount: page.conversations.length,
+          appendedCount: fresh.length,
+          incomingOffset: page.offset,
+          pageSize: page.limit,
+          autoContinueCount: autoContinues,
+          moreRule: {
+            kind: "global_total",
+            loadedCount: working.length,
+            total: latestTotal,
+          },
+        });
+        offset = decision.nextOffset;
+        setNextOffset(offset);
+
+        if (decision.shouldAutoContinue) {
+          autoContinues += 1;
+          continue;
+        }
+        setMoreAvailable(decision.moreAvailable);
+        break;
       }
     } catch {
       if (controller.signal.aborted) return;
@@ -203,9 +236,9 @@ export function ConversationListPanel({
             </ul>
           </div>
 
-          {(!endReached && rows.length < total) || loadMoreError ? (
+          {moreAvailable || loadMoreError ? (
             <div className="space-y-2 px-4 py-3">
-              {!endReached && rows.length < total ? (
+              {moreAvailable ? (
                 <Button
                   type="button"
                   variant="ghost"

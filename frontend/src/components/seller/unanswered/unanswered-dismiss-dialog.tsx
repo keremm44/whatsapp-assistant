@@ -18,6 +18,7 @@ import {
   classifyUnansweredMutationFailure,
   UNANSWERED_DISMISS_CONFIRM_LABEL,
   UNANSWERED_DISMISS_EXPLANATION,
+  UNANSWERED_DISMISS_LATER_ANSWER_NOTE,
   UNANSWERED_DISMISS_NOTE_LABEL,
   UNANSWERED_DISMISS_NOTE_MAX_LENGTH,
   UNANSWERED_DISMISS_TRIGGER_LABEL,
@@ -161,7 +162,7 @@ function DismissDialogBody({
       <DialogContent className="max-w-md" portalContainer={portalContainer}>
         <DialogTitle>{UNANSWERED_DISMISS_TRIGGER_LABEL}</DialogTitle>
         <DialogDescription>
-          {UNANSWERED_DISMISS_EXPLANATION}
+          {UNANSWERED_DISMISS_EXPLANATION} {UNANSWERED_DISMISS_LATER_ANSWER_NOTE}
         </DialogDescription>
 
         <div className="space-y-1.5">

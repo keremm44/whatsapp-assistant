@@ -15,6 +15,7 @@ import {
 import { mobileBottomNav, type MobileNavItem } from "@/config/navigation";
 import {
   activeMobileParent,
+  isSellerItemActive,
   type MobileParent,
 } from "@/lib/routes/active-route";
 import { cn } from "@/lib/utils/cn";
@@ -131,7 +132,7 @@ const MobileSheetTrigger = ({
         </SheetHeader>
         <ul className="mt-2 flex flex-col">
           {sheetEntries.map((entry) => {
-            const entryActive = isEntryActive(pathname, entry.href);
+            const entryActive = isSellerItemActive(pathname, entry.href);
             return (
               <li key={entry.href}>
                 <Link
@@ -167,15 +168,6 @@ const MobileSheetTrigger = ({
       </SheetContent>
     </Sheet>
   );
-};
-
-const isEntryActive = (
-  pathname: string | null,
-  href: string,
-): boolean => {
-  if (!pathname) return false;
-  if (href === "/seller") return pathname === "/seller";
-  return pathname === href || pathname.startsWith(`${href}/`);
 };
 
 export type { MobileParent };

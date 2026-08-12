@@ -22,8 +22,10 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 import {
+  navigateAfterLogout,
   navigateToPostLoginRoute,
   POST_LOGIN_ROUTES,
+  POST_LOGOUT_ROUTE,
   resolvePostLoginRoute,
 } from "./post-login.ts";
 
@@ -158,4 +160,56 @@ test("post-login helper uses location.replace semantics (no history entry, no UR
   assert.ok(helperSource.includes("window.location.replace("));
   assert.equal(helperSource.includes("location.assign("), false);
   assert.equal(helperSource.includes("location.href"), false);
+});
+
+/* ------------------------------------------------------------------ */
+/* Post-logout navigation — same auth-boundary document replace        */
+/* ------------------------------------------------------------------ */
+
+test("successful logout navigates to /giris exactly once", () => {
+  assert.equal(POST_LOGOUT_ROUTE, "/giris");
+  const stub = stubWindowLocationReplace();
+  try {
+    navigateAfterLogout();
+    assert.deepEqual(stub.calls, ["/giris"]);
+  } finally {
+    stub.restore();
+  }
+});
+
+const LOGOUT_BUTTON_SOURCE = readFileSync(
+  join(process.cwd(), "src/app/seller/settings/_logout-button.tsx"),
+  "utf8",
+);
+
+test("logout button navigates only through the hard-replace helper after signOut", () => {
+  const signOutIndex = LOGOUT_BUTTON_SOURCE.indexOf("supabase.auth.signOut(");
+  const navigateIndex = LOGOUT_BUTTON_SOURCE.lastIndexOf("navigateAfterLogout(");
+  assert.ok(signOutIndex !== -1, "logout button must call supabase signOut");
+  assert.ok(navigateIndex !== -1, "logout button must call navigateAfterLogout");
+  assert.ok(navigateIndex > signOutIndex);
+  // The implementation call-site (not the comment mention) is the last
+  // `navigateAfterLogout(` occurrence.
+  assert.ok(navigateIndex > LOGOUT_BUTTON_SOURCE.indexOf("didNavigate = true"));
+});
+
+test("logout button never uses SPA router navigation or cookie/storage hacks", () => {
+  const forbidden = [
+    "router.replace(",
+    "router.push(",
+    "router.refresh(",
+    "location.assign(",
+    "location.href",
+    "setTimeout(",
+    "localStorage.",
+    "sessionStorage.",
+    "document.cookie",
+  ];
+  for (const token of forbidden) {
+    assert.equal(
+      LOGOUT_BUTTON_SOURCE.includes(token),
+      false,
+      `logout button must not contain "${token}"`,
+    );
+  }
 });

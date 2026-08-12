@@ -79,6 +79,42 @@ export const normalizeOrderSearchParam = (
  * transient client concern, so switching view or search starts from the
  * first page (offset reset) by construction.
  */
+/* ------------------------------------------------------------------ */
+/* Pagination (page-length rule — `toplam` is never a global total)    */
+/* ------------------------------------------------------------------ */
+
+/** Fixed V1 page size (backend default). */
+export const ORDER_PAGE_SIZE = 20;
+
+/**
+ * The only “is there another page?” signal: whether the backend
+ * returned a full page. A short page (or an empty one) means the end.
+ * A full first page of 20 must NEVER be treated as “that is all”.
+ */
+export const hasAnotherOrdersPage = (
+  lastPageSize: number,
+  pageSize: number = ORDER_PAGE_SIZE,
+): boolean => lastPageSize > 0 && lastPageSize >= pageSize;
+
+/**
+ * Merge a freshly loaded page, deduping by order id while preserving
+ * the backend's ordering verbatim (rows that shifted between pages
+ * are not duplicated).
+ */
+export const mergeOrdersPage = (
+  existing: readonly OrderSummary[],
+  incoming: readonly OrderSummary[],
+): OrderSummary[] => {
+  const seen = new Set(existing.map((row) => row.id));
+  const fresh = incoming.filter((row) => !seen.has(row.id));
+  return [...existing, ...fresh];
+};
+
+/**
+ * Build the orders list URL. `offset` never appears: pagination is a
+ * transient client concern, so switching view or search starts from the
+ * first page (offset reset) by construction.
+ */
 export const ordersListHref = (input: {
   view: OrderView;
   query: string | null;

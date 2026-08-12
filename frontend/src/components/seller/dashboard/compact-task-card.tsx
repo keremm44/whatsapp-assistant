@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import type { DashboardTask, DashboardTaskType } from "@/lib/seller/dashboard-tasks";
+import { dashboardTaskHref } from "@/lib/seller/dashboard-destinations";
 import { composeCustomerLine, formatUpdatedAt } from "@/lib/seller/dashboard-format";
 
 import { IconField, type IconFieldTone } from "./icon-field";
@@ -33,7 +34,6 @@ const TYPE_META: Record<
     icon: LucideIcon;
     tone: IconFieldTone;
     rail: "primary" | "review" | "neutral";
-    href: Route;
     cta: string;
   }
 > = {
@@ -42,7 +42,6 @@ const TYPE_META: Record<
     icon: Undo2,
     tone: "review",
     rail: "review",
-    href: "/seller/returns",
     cta: "İade listesine git",
   },
   order_review: {
@@ -50,7 +49,6 @@ const TYPE_META: Record<
     icon: Package,
     tone: "primary",
     rail: "primary",
-    href: "/seller/orders",
     cta: "Sipariş listesine git",
   },
   unanswered_question: {
@@ -58,7 +56,6 @@ const TYPE_META: Record<
     icon: MessagesSquare,
     tone: "neutral",
     rail: "neutral",
-    href: "/seller/unanswered",
     cta: "Sorulara git",
   },
 };
@@ -75,6 +72,7 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
   const customerLine = composeCustomerLine(task.customer);
   const updatedAtLabel = formatUpdatedAt(task.updatedAt);
   const hasSummary = task.summary.trim().length > 0;
+  const href = dashboardTaskHref(task) as Route;
   const accessibleName = `${meta.label} — ${task.title} — ${meta.cta}`;
 
   return (
@@ -124,7 +122,7 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
           ) : null}
         </div>
         <Link
-          href={meta.href}
+          href={href}
           aria-label={accessibleName}
           className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-md border border-border bg-surface px-3 text-[12.5px] font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary-muted hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:h-9"
         >

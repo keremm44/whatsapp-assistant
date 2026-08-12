@@ -32,7 +32,9 @@ import {
   UNANSWERED_ANSWER_SECTION_TITLE,
   UNANSWERED_DISMISS_CONFIRM_LABEL,
   UNANSWERED_DISMISS_EXPLANATION,
+  UNANSWERED_DISMISS_LATER_ANSWER_NOTE,
   UNANSWERED_DISMISS_NOTE_LABEL,
+  UNANSWERED_DISMISS_PERSISTENCE_NOTE,
   UNANSWERED_DISMISS_NOTE_MAX_LENGTH,
   UNANSWERED_DISMISS_TRIGGER_LABEL,
   UNANSWERED_FUTURE_ONLY_NOTE,
@@ -302,16 +304,33 @@ test("dismiss copy never reads as deletion", () => {
   assert.equal(UNANSWERED_DISMISS_TRIGGER_LABEL, "Bu soruyu görmezden gel");
   assert.equal(UNANSWERED_DISMISS_CONFIRM_LABEL, "Görmezden gel");
   assert.equal(UNANSWERED_DISMISS_NOTE_LABEL, "Not (isteğe bağlı)");
-  assert.equal(
-    UNANSWERED_DISMISS_EXPLANATION,
-    "Bu soruya asistan için bir cevap kaydetmeyeceksiniz.",
-  );
   const dismissCopy = [
     UNANSWERED_DISMISS_TRIGGER_LABEL,
     UNANSWERED_DISMISS_CONFIRM_LABEL,
     UNANSWERED_DISMISS_EXPLANATION,
+    UNANSWERED_DISMISS_PERSISTENCE_NOTE,
+    UNANSWERED_DISMISS_LATER_ANSWER_NOTE,
   ].join(" ");
   assert.equal(/sil|delete|spam|ban/i.test(dismissCopy), false);
+});
+
+test("dismiss confirmation states persistence and later answering", () => {
+  assert.equal(
+    UNANSWERED_DISMISS_PERSISTENCE_NOTE,
+    "Bu soruyu görmezden geldiğinizde aynı soru tekrar geldiğinde Cevap Bekleyenler listesine otomatik dönmez.",
+  );
+  assert.equal(
+    UNANSWERED_DISMISS_LATER_ANSWER_NOTE,
+    "Daha sonra Görmezden Gelinenler bölümünden tekrar açıp cevap kaydedebilirsiniz.",
+  );
+  assert.equal(UNANSWERED_DISMISS_EXPLANATION, UNANSWERED_DISMISS_PERSISTENCE_NOTE);
+  assert.match(UNANSWERED_DISMISS_PERSISTENCE_NOTE, /otomatik dönmez/);
+  assert.equal(
+    /geçici|bir süre|otomatik.*döner|yeniden açılır/i.test(
+      UNANSWERED_DISMISS_PERSISTENCE_NOTE,
+    ),
+    false,
+  );
 });
 
 /* ------------------------------------------------------------------ */
@@ -333,6 +352,8 @@ test("approved copy makes no AI / fuzzy / semantic promises", () => {
   const approvedCopy = [
     UNANSWERED_FUTURE_ONLY_NOTE,
     UNANSWERED_DISMISS_EXPLANATION,
+    UNANSWERED_DISMISS_PERSISTENCE_NOTE,
+    UNANSWERED_DISMISS_LATER_ANSWER_NOTE,
     UNANSWERED_ANSWER_SECTION_TITLE,
     UNANSWERED_SAVE_ANSWER_LABEL,
     UNANSWERED_ANSWER_LABEL,

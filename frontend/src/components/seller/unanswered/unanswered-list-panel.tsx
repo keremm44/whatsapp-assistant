@@ -16,6 +16,7 @@ import {
   UNANSWERED_PAGE_SIZE,
   unansweredListEmptyCopy,
 } from "@/lib/seller/unanswered-format";
+import { decideOffsetPageAdvance } from "@/lib/seller/offset-pagination";
 import type { UnansweredListBootstrap } from "@/lib/seller/unanswered-server";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 
@@ -68,6 +69,8 @@ export function UnansweredListPanel({
     null,
   );
   const inflightRef = React.useRef<AbortController | null>(null);
+  const rowsRef = React.useRef(rows);
+  rowsRef.current = rows;
 
   // Re-seed from the server payload whenever it changes.
   React.useEffect(() => {
@@ -103,17 +106,41 @@ export function UnansweredListPanel({
         );
         return;
       }
-      const page = await fetchUnansweredList(accessToken, {
-        view,
-        limit: UNANSWERED_PAGE_SIZE,
-        offset: nextOffset,
-        signal: controller.signal,
-      });
-      if (controller.signal.aborted) return;
-      setRows((previous) => mergeUnansweredPage(previous, page.questions));
-      setNextOffset(page.offset + page.questions.length);
-      if (!hasAnotherUnansweredPage(page.questions.length)) {
-        setMoreAvailable(false);
+      let offset = nextOffset;
+      let working = rowsRef.current;
+      let autoContinues = 0;
+
+      while (true) {
+        const page = await fetchUnansweredList(accessToken, {
+          view,
+          limit: UNANSWERED_PAGE_SIZE,
+          offset,
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+
+        const merged = mergeUnansweredPage(working, page.questions);
+        const appendedCount = merged.length - working.length;
+        working = merged;
+        setRows(working);
+
+        const decision = decideOffsetPageAdvance({
+          incomingCount: page.questions.length,
+          appendedCount,
+          incomingOffset: page.offset,
+          pageSize: page.limit,
+          autoContinueCount: autoContinues,
+          moreRule: { kind: "page_size" },
+        });
+        offset = decision.nextOffset;
+        setNextOffset(offset);
+
+        if (decision.shouldAutoContinue) {
+          autoContinues += 1;
+          continue;
+        }
+        setMoreAvailable(decision.moreAvailable);
+        break;
       }
     } catch {
       if (controller.signal.aborted) return;
@@ -136,12 +163,12 @@ export function UnansweredListPanel({
     const empty = unansweredListEmptyCopy(view);
     return (
       <div className="px-4 py-8 md:px-5" role="status">
-        <p className="text-sm font-medium text-foreground">{empty.title}</p>
-        {empty.description ? (
-          <p className="mt-1 max-w-md text-[13px] leading-relaxed text-muted-foreground">
-            {empty.description}
-          </p>
-        ) : null}
+          <p className="text-sm font-medium text-foreground">{empty.title}</p>
+          {empty.description ? (
+            <p className="mt-1 max-w-md text-[13px] leading-relaxed text-muted-foreground">
+              {empty.description}
+            </p>
+          ) : null}
       </div>
     );
   }

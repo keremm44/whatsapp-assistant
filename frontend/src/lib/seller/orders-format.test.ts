@@ -9,8 +9,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
+import type { OrderSummary } from "./orders.ts";
 import {
   DEFAULT_ORDER_VIEW,
+  hasAnotherOrdersPage,
+  mergeOrdersPage,
+  ORDER_PAGE_SIZE,
   getOrderNumberDisplay,
   getPhoneDisplay,
   getPrintContent,
@@ -199,6 +203,58 @@ test("pagination reset: view/search switches never carry an offset", () => {
       );
     }
   }
+});
+
+/* ------------------------------------------------------------------ */
+/* Pagination — page-length rule (`toplam` is never a global total)    */
+/* ------------------------------------------------------------------ */
+
+const orderSummary = (id: number): OrderSummary => ({
+  id,
+  externalOrderNumber: `TR${id}`,
+  productId: null,
+  productNameSnapshot: null,
+  customerId: 22,
+  customerPhoneSnapshot: "+905321112233",
+  status: "COLLECTING",
+  displayStatus: "Bilgi toplanıyor",
+  imageMessageId: null,
+  hasImage: false,
+  customText: null,
+  reviewReasonCode: null,
+  reviewReasonNote: null,
+  version: 1,
+  createdAt: "2026-08-10T12:00:00+00:00",
+  updatedAt: "2026-08-10T12:05:00+00:00",
+  completedAt: null,
+  sellerActionRequired: false,
+});
+
+test("a full returned page may continue; a short or empty page ends the queue", () => {
+  assert.equal(ORDER_PAGE_SIZE, 20);
+  assert.equal(hasAnotherOrdersPage(0), false);
+  assert.equal(hasAnotherOrdersPage(1), false);
+  assert.equal(hasAnotherOrdersPage(19), false);
+  assert.equal(hasAnotherOrdersPage(20), true);
+  assert.equal(hasAnotherOrdersPage(21), true);
+});
+
+test("exactly 20 / 40 items must not be treated as a finished global total", () => {
+  // The previous bug: rows.length === toplam (page length) hid later pages.
+  assert.equal(hasAnotherOrdersPage(20), true);
+  assert.equal(hasAnotherOrdersPage(20, 20), true);
+  assert.equal(hasAnotherOrdersPage(19, 20), false);
+});
+
+test("page merges dedupe by order id and keep backend ordering verbatim", () => {
+  const merged = mergeOrdersPage(
+    [orderSummary(1), orderSummary(2)],
+    [orderSummary(2), orderSummary(3)],
+  );
+  assert.deepEqual(
+    merged.map((row) => row.id),
+    [1, 2, 3],
+  );
 });
 
 /* ------------------------------------------------------------------ */

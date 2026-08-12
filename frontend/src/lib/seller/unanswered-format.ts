@@ -292,8 +292,22 @@ export const UNANSWERED_FUTURE_ONLY_NOTE =
 /* Dismiss — a stored business state, never described as deletion. */
 export const UNANSWERED_DISMISS_TRIGGER_LABEL = "Bu soruyu görmezden gel";
 export const UNANSWERED_DISMISS_CONFIRM_LABEL = "Görmezden gel";
-export const UNANSWERED_DISMISS_EXPLANATION =
-  "Bu soruya asistan için bir cevap kaydetmeyeceksiniz.";
+/**
+ * Inspected backend semantics (migration 017, not changed here):
+ *   - dismiss sets the group to DISMISSED and keeps that status when
+ *     the same normalized question occurs again (record occurrence
+ *     increments last_seen_at but does not reopen OPEN)
+ *   - set_answer is still allowed from DISMISSED, so the seller can
+ *     later open Görmezden Gelinenler and save an answer
+ * The confirmation copy must state both facts before the seller
+ * confirms. It must not claim the dismiss is temporary or that the
+ * same question will automatically return to Cevap Bekleyenler.
+ */
+export const UNANSWERED_DISMISS_PERSISTENCE_NOTE =
+  "Bu soruyu görmezden geldiğinizde aynı soru tekrar geldiğinde Cevap Bekleyenler listesine otomatik dönmez.";
+export const UNANSWERED_DISMISS_LATER_ANSWER_NOTE =
+  "Daha sonra Görmezden Gelinenler bölümünden tekrar açıp cevap kaydedebilirsiniz.";
+export const UNANSWERED_DISMISS_EXPLANATION = UNANSWERED_DISMISS_PERSISTENCE_NOTE;
 export const UNANSWERED_DISMISS_NOTE_LABEL = "Not (isteğe bağlı)";
 
 /* ------------------------------------------------------------------ */

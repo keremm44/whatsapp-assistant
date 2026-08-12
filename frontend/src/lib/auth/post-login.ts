@@ -80,3 +80,17 @@ export const resolvePostLoginRoute = (role: PostLoginRole): PostLoginRoute =>
 export const navigateToPostLoginRoute = (route: PostLoginRoute): void => {
   window.location.replace(route);
 };
+
+/**
+ * Hard document navigation after a successful `supabase.auth.signOut()`.
+ *
+ * Same auth-boundary reason as post-login: an App Router transition
+ * immediately after the session cookies change can leave a stale
+ * seller RSC tree visible. `location.replace` tears the document down
+ * and loads `/giris` as one clean request.
+ */
+export const POST_LOGOUT_ROUTE = "/giris" as const;
+
+export const navigateAfterLogout = (): void => {
+  window.location.replace(POST_LOGOUT_ROUTE);
+};

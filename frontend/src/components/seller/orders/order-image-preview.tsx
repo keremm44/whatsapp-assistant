@@ -55,6 +55,11 @@ export function OrderImagePreview({
   const [attempt, setAttempt] = React.useState(0);
   const objectUrlRef = React.useRef<string | null>(null);
   const inflightRef = React.useRef<AbortController | null>(null);
+  // Seller-subtree portal host so the dialog inherits the
+  // dark-workshop tokens (body-level portals escape `.seller-theme`).
+  const [portalHost, setPortalHost] = React.useState<HTMLDivElement | null>(
+    null,
+  );
 
   const releaseObjectUrl = React.useCallback(() => {
     if (objectUrlRef.current !== null) {
@@ -130,6 +135,8 @@ export function OrderImagePreview({
       : "Sipariş baskı görseli";
 
   return (
+    <>
+    <div ref={setPortalHost} className="contents" />
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
@@ -140,7 +147,7 @@ export function OrderImagePreview({
         }
       }}
     >
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" portalContainer={portalHost}>
         <DialogTitle>Baskı görseli</DialogTitle>
         <DialogDescription>
           {orderNumber !== null
@@ -164,6 +171,7 @@ export function OrderImagePreview({
         ) : null}
       </DialogContent>
     </Dialog>
+    </>
   );
 }
 

@@ -47,12 +47,13 @@ import { SellerIcon } from "./icon-map";
  *       Terracotta is deliberately absent here so the surface
  *       never reads as urgent or as a notification state.
  *
- *       "Bildirimler" bell — a compact, quieter icon control
+ *       "Bildirimler" bell — a compact, quieter icon slot
  *       at the far right. Backend notification persistence
  *       exists, but the seller-facing list/read contract is
- *       not yet available, so this is the presentation slot
- *       only: no badge, no unread count, no fabricated
- *       dropdown content. Wiring lands with the contract.
+ *       not yet available, so this is presentational only:
+ *       not a button, not focusable, no badge, no unread
+ *       count, no fabricated dropdown. Wiring lands with
+ *       the contract.
  *
  *   - Tablet only (md to lg): the same topbar exposes a
  *     sidebar-shaped Menu trigger on the far left so the
@@ -108,7 +109,7 @@ export function SellerTopbar({
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <AnnouncementsPreview title={announcementTitle} />
-          <NotificationsButton />
+          <NotificationsSlot />
         </div>
       </div>
     </header>
@@ -166,16 +167,21 @@ function AnnouncementsPreview({ title }: { title?: string | null }) {
  * rendered — an unread number is real data and the seller-facing
  * contract does not exist yet.
  */
-function NotificationsButton() {
+/**
+ * Notifications slot ("Bildirimler").
+ *
+ * Presentational only until a seller-facing notification list/read
+ * contract exists. Must not be a focusable control, must not open
+ * fake content, and must not show a fabricated unread count.
+ */
+function NotificationsSlot() {
   return (
-    <button
-      type="button"
-      aria-label="Bildirimler"
-      title="Bildirimler"
-      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
+    <span
+      aria-hidden="true"
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground"
     >
       <SellerIcon name="Bell" size={18} />
-    </button>
+    </span>
   );
 }
 

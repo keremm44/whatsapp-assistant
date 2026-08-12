@@ -8,7 +8,13 @@ import { Spinner } from "@/components/ui/spinner";
 import type { OrderListBootstrap } from "@/lib/seller/orders-server";
 import { fetchOrderList } from "@/lib/seller/orders-api";
 import type { OrderSummary, OrderView } from "@/lib/seller/orders";
-import { orderListEmptyCopy } from "@/lib/seller/orders-format";
+import {
+  hasAnotherOrdersPage,
+  mergeOrdersPage,
+  ORDER_PAGE_SIZE,
+  orderListEmptyCopy,
+} from "@/lib/seller/orders-format";
+import { decideOffsetPageAdvance } from "@/lib/seller/offset-pagination";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 
 import { OrderRow } from "./order-row";
@@ -23,6 +29,14 @@ import { OrderRow } from "./order-row";
  * switch, search submit, retry refresh), local pagination state is
  * re-seeded from the new first page — offset resets, stale rows cannot
  * survive, and the backend's ordering is preserved verbatim.
+ *
+ * Pagination contract (inspected backend semantics): `toplam` is the
+ * returned page length, not a global count. “Daha fazla göster” is
+ * offered while the backend keeps returning a full ORDER_PAGE_SIZE
+ * page — a first page of exactly 20 must never hide later work. A
+ * short or empty page ends the queue. Duplicate rows caused by live
+ * queue movement are deduped by order id; a full page of only
+ * duplicates safely advances (capped) instead of getting stuck.
  *
  * Failure discipline: a list failure renders a calm retry surface and
  * never fakes an empty list; load-more failures keep the loaded rows.
@@ -41,28 +55,27 @@ export function OrdersListPanel({
   const [rows, setRows] = React.useState<OrderSummary[]>(
     ready?.page.orders ?? [],
   );
-  const [total, setTotal] = React.useState(ready?.page.total ?? 0);
   const [nextOffset, setNextOffset] = React.useState(
     ready ? ready.page.offset + ready.page.orders.length : 0,
+  );
+  const [moreAvailable, setMoreAvailable] = React.useState(
+    ready ? hasAnotherOrdersPage(ready.page.orders.length) : false,
   );
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(
     null,
   );
-  // If the backend returns an empty page while rows.length < total
-  // still holds (rows changed between pages), the list end is reached
-  // and the footer stops offering "Daha fazla" instead of looping.
-  const [endReached, setEndReached] = React.useState(false);
   const inflightRef = React.useRef<AbortController | null>(null);
+  const rowsRef = React.useRef(rows);
+  rowsRef.current = rows;
 
   // Re-seed from the server payload whenever it changes.
   React.useEffect(() => {
     if (bootstrap.state === "ready") {
       setRows(bootstrap.page.orders);
-      setTotal(bootstrap.page.total);
       setNextOffset(bootstrap.page.offset + bootstrap.page.orders.length);
+      setMoreAvailable(hasAnotherOrdersPage(bootstrap.page.orders.length));
       setLoadMoreError(null);
-      setEndReached(false);
     }
   }, [bootstrap]);
 
@@ -88,22 +101,43 @@ export function OrdersListPanel({
         );
         return;
       }
-      const page = await fetchOrderList(accessToken, {
-        view,
-        externalOrderNumber: query,
-        offset: nextOffset,
-        signal: controller.signal,
-      });
-      if (controller.signal.aborted) return;
-      setRows((previous) => {
-        const seen = new Set(previous.map((row) => row.id));
-        const fresh = page.orders.filter((row) => !seen.has(row.id));
-        return [...previous, ...fresh];
-      });
-      setTotal(page.total);
-      setNextOffset(page.offset + page.orders.length);
-      if (page.orders.length === 0) {
-        setEndReached(true);
+
+      let offset = nextOffset;
+      let working = rowsRef.current;
+      let autoContinues = 0;
+
+      while (true) {
+        const page = await fetchOrderList(accessToken, {
+          view,
+          externalOrderNumber: query,
+          limit: ORDER_PAGE_SIZE,
+          offset,
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+
+        const merged = mergeOrdersPage(working, page.orders);
+        const appendedCount = merged.length - working.length;
+        working = merged;
+        setRows(working);
+
+        const decision = decideOffsetPageAdvance({
+          incomingCount: page.orders.length,
+          appendedCount,
+          incomingOffset: page.offset,
+          pageSize: page.limit,
+          autoContinueCount: autoContinues,
+          moreRule: { kind: "page_size" },
+        });
+        offset = decision.nextOffset;
+        setNextOffset(offset);
+
+        if (decision.shouldAutoContinue) {
+          autoContinues += 1;
+          continue;
+        }
+        setMoreAvailable(decision.moreAvailable);
+        break;
       }
     } catch {
       if (controller.signal.aborted) return;
@@ -138,15 +172,7 @@ export function OrdersListPanel({
 
   return (
     <div className="space-y-0">
-      <div className="flex items-center justify-end px-4 pb-2 pt-3 md:px-5">
-        <span
-          className="text-[12px] tabular-nums text-muted-foreground"
-          aria-label={`Toplam ${total} sipariş`}
-        >
-          {rows.length < total ? `${rows.length} / ${total}` : `${total}`}
-        </span>
-      </div>
-
+      {freshness}
       {/* Column titles (desktop scan alignment; rows carry full context) */}
       <div
         aria-hidden="true"
@@ -169,9 +195,9 @@ export function OrdersListPanel({
         ))}
       </ul>
 
-      {(!endReached && rows.length < total) || loadMoreError ? (
+      {moreAvailable || loadMoreError ? (
         <div className="space-y-2 px-4 py-3 md:px-5">
-          {!endReached && rows.length < total ? (
+          {moreAvailable ? (
             <Button
               type="button"
               variant="ghost"
