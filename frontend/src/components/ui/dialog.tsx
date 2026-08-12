@@ -33,9 +33,21 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    /**
+     * Optional Portal container. By default the Dialog portals to
+     * `document.body`, which ESCAPES the `.seller-theme` scoping class
+     * and would render seller-surface dialogs with the light root
+     * palette. Callers inside the seller workspace pass a host element
+     * that lives within the seller subtree so the dialog inherits the
+     * dark-workshop tokens (same contract as Sheet.portalContainer).
+     * Omitting this prop preserves the previous body-portal behavior
+     * exactly.
+     */
+    portalContainer?: Element | DocumentFragment | null;
+  }
+>(({ className, children, portalContainer, ...props }, ref) => (
+  <DialogPortal container={portalContainer ?? undefined}>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
