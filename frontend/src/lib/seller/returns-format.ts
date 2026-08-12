@@ -501,6 +501,41 @@ export type ReturnSettingUpdatePayload = {
   image_requirement: ReturnImageRequirement;
 };
 
+/* ------------------------------------------------------------------ */
+/* Settings reload — conflict notice lifecycle (409 regression fix)     */
+/* ------------------------------------------------------------------ */
+
+/** Locked calm copy shown after a concurrent-settings conflict (409). */
+export const RETURN_SETTINGS_CONFLICT_NOTICE =
+  "Tercihler başka bir işlemle değiştirildi; güncel değerler getirildi.";
+
+/** Why the settings list inside the dialog is being (re)loaded. */
+export type ReturnSettingsReloadReason = "normal" | "conflict_refetch";
+
+/**
+ * The conflict notice a settings reload leaves behind.
+ *
+ * Regression contract: the reload triggered BY a 409 used to clear the
+ * notice it had just established, so the seller never saw why values
+ * suddenly changed. The rule:
+ *
+ *   "normal" (dialog open / manual retry)
+ *     → clear; stale notices must not linger across calm reloads.
+ *
+ *   "conflict_refetch" (the reload the 409 handler itself runs)
+ *     → the locked conflict notice. The refetch is precisely what
+ *       makes the notice true ("güncel değerler getirildi"), so the
+ *       refetch must never erase its own feedback.
+ *
+ * Callers apply this ONLY on a successful reload: a failed reload shows
+ * the dialog's own error state and clears the notice regardless, since
+ * "values were refetched" must never be claimed when they were not.
+ */
+export const resolveReturnSettingsConflictNotice = (
+  reason: ReturnSettingsReloadReason,
+): string | null =>
+  reason === "conflict_refetch" ? RETURN_SETTINGS_CONFLICT_NOTICE : null;
+
 /**
  * Build the PATCH body for one row; expected_version is the value the
  * seller currently sees (explicit optimistic concurrency).

@@ -24,7 +24,9 @@ import type {
 import {
   buildReturnSettingUpdatePayload,
   classifyReturnMutationFailure,
+  resolveReturnSettingsConflictNotice,
   RETURN_IMAGE_REQUIREMENT_OPTIONS,
+  type ReturnSettingsReloadReason,
 } from "@/lib/seller/returns-format";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
@@ -46,9 +48,10 @@ import { cn } from "@/lib/utils/cn";
  *     that row; saving is an explicit per-row PATCH carrying the
  *     row's current expected_version.
  *   - on success the returned setting/version becomes the new truth;
- *     on 409 all settings are refetched and the seller is told the
- *     current value changed elsewhere; other failures keep the draft
- *     and allow retry.
+ *     on 409 all settings are refetched and the calm conflict notice
+ *     KEEPS its visibility across that refetch — the reload must never
+ *     erase the conflict feedback it has just created; other failures
+ *     keep the draft and allow retry.
  */
 export function ReturnPhotoPreferences() {
   const [open, setOpen] = React.useState(false);
@@ -111,29 +114,41 @@ function PreferencesDialog({
   const [attempt, setAttempt] = React.useState(0);
   const inflightRef = React.useRef<AbortController | null>(null);
 
-  const load = React.useCallback(async (signal: AbortSignal) => {
-    const accessToken = await getBrowserAccessToken();
-    if (signal.aborted) return;
-    if (!accessToken) {
-      setLoadState({ phase: "error" });
-      return;
-    }
-    try {
-      const settings = await fetchReturnIssueSettings(accessToken, {
-        signal,
-      });
+  const load = React.useCallback(
+    async (
+      signal: AbortSignal,
+      reason: ReturnSettingsReloadReason = "normal",
+    ) => {
+      const accessToken = await getBrowserAccessToken();
       if (signal.aborted) return;
-      // Fresh backend truth clears every draft: a dirty value must
-      // never silently override a version the seller cannot see.
-      setDrafts({});
-      setRowError({});
-      setConflictNotice(null);
-      setLoadState({ phase: "ready", settings });
-    } catch {
-      if (signal.aborted) return;
-      setLoadState({ phase: "error" });
-    }
-  }, []);
+      if (!accessToken) {
+        setConflictNotice(null);
+        setLoadState({ phase: "error" });
+        return;
+      }
+      try {
+        const settings = await fetchReturnIssueSettings(accessToken, {
+          signal,
+        });
+        if (signal.aborted) return;
+        // Fresh backend truth clears every draft: a dirty value must
+        // never silently override a version the seller cannot see.
+        setDrafts({});
+        setRowError({});
+        // The conflict notice survives ONLY the conflict-triggered
+        // refetch; a normal open/manual retry clears stale feedback.
+        setConflictNotice(resolveReturnSettingsConflictNotice(reason));
+        setLoadState({ phase: "ready", settings });
+      } catch {
+        if (signal.aborted) return;
+        // Never claim “güncel değerler getirildi” about a reload that
+        // did not deliver fresh values.
+        setConflictNotice(null);
+        setLoadState({ phase: "error" });
+      }
+    },
+    [],
+  );
 
   React.useEffect(() => {
     if (!open) return;
@@ -205,11 +220,10 @@ function PreferencesDialog({
       if (controller.signal.aborted) return;
       const status = error instanceof ApiError ? error.status : null;
       if (classifyReturnMutationFailure(status) === "conflict") {
-        // Someone else changed values: refetch truth, drop drafts.
-        setConflictNotice(
-          "Tercihler başka bir işlemle değiştirildi; güncel değerler getirildi.",
-        );
-        void load(controller.signal);
+        // Someone else changed values: refetch truth, drop drafts, and
+        // keep a calm conflict notice once fresh values arrive — this
+        // refetch must not erase the feedback it itself created.
+        void load(controller.signal, "conflict_refetch");
         return;
       }
       setRowError((previous) => ({
@@ -228,7 +242,19 @@ function PreferencesDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[85vh] max-w-xl overflow-y-auto"
+        className={cn(
+          // Slightly wider on desktop so the six rows scan at a glance;
+          // mobile stays full-width and scrollable.
+          "max-h-[85vh] max-w-xl overflow-y-auto sm:max-w-2xl",
+          // Calm, thin scrollbar that stays quiet on the dark surface
+          // instead of the default chunky high-contrast one.
+          "[scrollbar-width:thin]",
+          "[scrollbar-color:rgb(var(--color-muted-foreground-rgb)/0.3)_transparent]",
+          "[&::-webkit-scrollbar]:w-2",
+          "[&::-webkit-scrollbar-track]:bg-transparent",
+          "[&::-webkit-scrollbar-thumb]:rounded-full",
+          "[&::-webkit-scrollbar-thumb]:bg-muted-foreground/25",
+        )}
         portalContainer={portalContainer}
       >
         <DialogTitle>Fotoğraf tercihleri</DialogTitle>
@@ -292,9 +318,9 @@ function PreferencesDialog({
               return (
                 <li
                   key={setting.issueType}
-                  className="border-t border-divider py-3.5 first:border-t-0 first:pt-0 last:pb-0"
+                  className="border-t border-divider py-3 first:border-t-0 first:pt-0 last:pb-0"
                 >
-                  <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div className="min-w-0 space-y-1">
                       <label
                         htmlFor={`return-pref-${setting.issueType}`}

@@ -30,6 +30,7 @@ import {
   normalizeReturnViewParam,
   reduceReturnEvidencePreview,
   resolveReturnEvidencePreview,
+  resolveReturnSettingsConflictNotice,
   RETURN_ACTION_LABEL,
   RETURN_ACTION_NOTE_LABEL,
   RETURN_ACTION_NOTE_MAX_LENGTH,
@@ -42,6 +43,7 @@ import {
   RETURN_PHOTO_PENDING_LABEL,
   RETURN_REASON_PENDING_LABEL,
   RETURN_SEARCH_MAX_LENGTH,
+  RETURN_SETTINGS_CONFLICT_NOTICE,
   RETURN_STATUS_DISPLAY,
   RETURN_VIEW_TABS,
   returnEvidencePreviewInitial,
@@ -499,6 +501,23 @@ test("409 means refetch-and-explain; anything else is a calm retry", () => {
   assert.equal(classifyReturnMutationFailure(500), "retryable");
   assert.equal(classifyReturnMutationFailure(0), "retryable");
   assert.equal(classifyReturnMutationFailure(null), "retryable");
+});
+
+test("a 409-triggered settings refetch must KEEP its own conflict notice", () => {
+  // Regression: the refetch used to erase the notice it had just
+  // created, so the seller never saw why the values suddenly changed.
+  assert.equal(
+    resolveReturnSettingsConflictNotice("conflict_refetch"),
+    RETURN_SETTINGS_CONFLICT_NOTICE,
+  );
+  assert.equal(
+    RETURN_SETTINGS_CONFLICT_NOTICE,
+    "Tercihler başka bir işlemle değiştirildi; güncel değerler getirildi.",
+  );
+});
+
+test("a normal settings reload (dialog open / manual retry) clears stale notices", () => {
+  assert.equal(resolveReturnSettingsConflictNotice("normal"), null);
 });
 
 /* ------------------------------------------------------------------ */
