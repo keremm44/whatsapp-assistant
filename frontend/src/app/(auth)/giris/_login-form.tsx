@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,10 @@ import {
   classifySupabaseError,
 } from "@/lib/auth/errors";
 import { fetchAuthMe } from "@/lib/auth/me";
+import {
+  navigateToPostLoginRoute,
+  resolvePostLoginRoute,
+} from "@/lib/auth/post-login";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
 
@@ -22,7 +25,10 @@ import { cn } from "@/lib/utils/cn";
  * Flow:
  *   1. Submit -> Supabase signInWithPassword
  *   2. On success, call GET /auth/me with the issued access token
- *   3. On backend success, redirect by role:
+ *   3. On backend success, navigate by role (hard document
+ *      navigation via window.location.replace — see
+ *      lib/auth/post-login.ts for why an SPA router transition is
+ *      not used here):
  *        seller -> /seller
  *        admin  -> /admin
  *   4. On a definitive backend access rejection (401/403/404 from
@@ -37,7 +43,6 @@ import { cn } from "@/lib/utils/cn";
  * session. The Supabase session alone is not enough.
  */
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
@@ -47,6 +52,15 @@ export function LoginForm() {
   const [passwordError, setPasswordError] = React.useState<string | null>(null);
 
   const inflightRef = React.useRef<AbortController | null>(null);
+  /**
+   * Set exactly once, immediately after the post-login hard document
+   * navigation has been initiated. While it is true the component
+   * must not schedule further state updates: the document is being
+   * replaced, and the `finally` cleanup keeps the submitting state
+   * so the form cannot be re-enabled (or re-rendered) in the window
+   * between navigation initiation and document unload.
+   */
+  const navigationInitiatedRef = React.useRef(false);
 
   React.useEffect(() => {
     return () => {
@@ -117,8 +131,21 @@ export function LoginForm() {
           signal: controller.signal,
         });
         if (controller.signal.aborted) return;
-        const target = me.role === "admin" ? "/admin" : "/seller";
-        router.replace(target);
+        const target = resolvePostLoginRoute(me.role);
+        // Hard document navigation into the protected surface; see
+        // lib/auth/post-login.ts. One deterministic endpoint: the
+        // fresh document request carries the current auth cookies,
+        // middleware refreshes the session, and the server access
+        // resolver + layout guard re-validate before anything
+        // renders. No SPA transition state can strand the user on
+        // /giris.
+        navigateToPostLoginRoute(target);
+        // The document is now being replaced. Mark the navigation
+        // as initiated and stop touching React state — the finally
+        // block deliberately keeps isSubmitting=true so the form
+        // stays inert until the browser unloads this document.
+        navigationInitiatedRef.current = true;
+        return;
       } catch (backendError) {
         if (controller.signal.aborted) return;
         const classified = classifyBackendRejection(backendError);
@@ -147,7 +174,13 @@ export function LoginForm() {
       if (inflightRef.current === controller) {
         inflightRef.current = null;
       }
-      setIsSubmitting(false);
+      // After a successful login the hard navigation is already in
+      // flight; keep the submitting state so no re-render can
+      // interfere with the document replacement (and no state
+      // update is scheduled after the component unmounts).
+      if (!navigationInitiatedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   };
 
