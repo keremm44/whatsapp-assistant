@@ -117,6 +117,27 @@ export const reconcileConversationTimeline = (
 };
 
 /* ------------------------------------------------------------------ */
+/* Older-page load validity                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Whether an older-page fetch may still write into the timeline.
+ *
+ * The component advances `currentGeneration` as soon as a new
+ * authoritative bootstrap arrives (customer switch, overlap refresh,
+ * or disconnected reset) and aborts the matching AbortController.
+ * Either signal is enough to refuse a stale response — the fetch
+ * must not mutate messages, cursor, anchors, errors, or scroll.
+ */
+export const isActiveTimelineLoad = (input: {
+  startedGeneration: number;
+  currentGeneration: number;
+  aborted: boolean;
+}): boolean =>
+  input.aborted === false &&
+  input.startedGeneration === input.currentGeneration;
+
+/* ------------------------------------------------------------------ */
 /* Stable relative-time anchors                                        */
 /* ------------------------------------------------------------------ */
 

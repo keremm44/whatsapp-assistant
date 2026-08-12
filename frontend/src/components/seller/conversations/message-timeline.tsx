@@ -16,6 +16,7 @@ import {
 } from "@/lib/seller/conversations-format";
 import {
   assignMessageTimestampAnchors,
+  isActiveTimelineLoad,
   reconcileConversationTimeline,
 } from "@/lib/seller/conversations-timeline";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
@@ -42,7 +43,11 @@ import { cn } from "@/lib/utils/cn";
  * Older messages: the "Daha eski mesajları yükle" control at the top
  * pages backwards with the real `before_message_id` cursor. When a
  * page is prepended, the scroll offset is restored by the exact
- * pixel delta so the visible window does not jump.
+ * pixel delta so the visible window does not jump. A new server
+ * bootstrap (customer switch, overlap refresh, or disconnected
+ * reset) aborts any in-flight older-page request and advances a
+ * load generation so a stale response cannot prepend onto the
+ * newly reconciled timeline.
  *
  * Relative timestamps use a stable per-message (or per-fetched-page)
  * anchor: server-delivered messages keep the frozen route `renderedAt`,
@@ -76,6 +81,13 @@ export function MessageTimeline({
     return initial;
   });
   const inflightRef = React.useRef<AbortController | null>(null);
+  const loadGenerationRef = React.useRef(0);
+  const lastBootstrapRef = React.useRef({
+    customerId,
+    initialMessages,
+    initialMessagePage,
+    renderedAt,
+  });
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const pendingScrollAdjustRef = React.useRef<number | null>(null);
   const pendingResetScrollRef = React.useRef(false);
@@ -86,11 +98,36 @@ export function MessageTimeline({
   const messagePageRef = React.useRef(messagePage);
   messagePageRef.current = messagePage;
 
+  // Advance the load generation during render — before the reconcile
+  // effect and before any already-resolved older-page continuation
+  // can run — so a stale response cannot win the race against a new
+  // authoritative bootstrap. Abort the in-flight request and drop
+  // any pending prepend-scroll compensation in the same step.
+  if (
+    lastBootstrapRef.current.customerId !== customerId ||
+    lastBootstrapRef.current.initialMessages !== initialMessages ||
+    lastBootstrapRef.current.initialMessagePage !== initialMessagePage ||
+    lastBootstrapRef.current.renderedAt !== renderedAt
+  ) {
+    lastBootstrapRef.current = {
+      customerId,
+      initialMessages,
+      initialMessagePage,
+      renderedAt,
+    };
+    loadGenerationRef.current += 1;
+    inflightRef.current?.abort();
+    inflightRef.current = null;
+    pendingScrollAdjustRef.current = null;
+    prevHeightRef.current = 0;
+  }
+
   // Re-seed when the server payload changes. A different customer
   // or a same-customer refresh whose newest page no longer overlaps
   // the loaded window fully resets. An overlapping same-customer
   // refresh (take-over / resume / conflict) keeps older history.
   React.useEffect(() => {
+    setIsLoadingOlder(false);
     const result = reconcileConversationTimeline({
       previousCustomerId: customerIdRef.current,
       nextCustomerId: customerId,
@@ -160,12 +197,19 @@ export function MessageTimeline({
     const container = scrollRef.current;
     prevHeightRef.current = container?.scrollHeight ?? 0;
 
+    const startedGeneration = loadGenerationRef.current;
     const controller = new AbortController();
     inflightRef.current = controller;
     setIsLoadingOlder(true);
+    const isCurrent = () =>
+      isActiveTimelineLoad({
+        startedGeneration,
+        currentGeneration: loadGenerationRef.current,
+        aborted: controller.signal.aborted,
+      });
     try {
       const accessToken = await getBrowserAccessToken();
-      if (controller.signal.aborted) return;
+      if (!isCurrent()) return;
       if (!accessToken) {
         setOlderError(
           "Oturum bilgisi şu anda alınamadı. Lütfen tekrar deneyin.",
@@ -176,7 +220,7 @@ export function MessageTimeline({
         beforeMessageId: cursor,
         signal: controller.signal,
       });
-      if (controller.signal.aborted) return;
+      if (!isCurrent()) return;
       const fetchRenderedAt = Date.now();
       const previousMessages = messagesRef.current;
       const seen = new Set(previousMessages.map((message) => message.id));
@@ -199,7 +243,7 @@ export function MessageTimeline({
       // by the exact pixel height of the prepended page.
       pendingScrollAdjustRef.current = 1;
     } catch {
-      if (controller.signal.aborted) return;
+      if (!isCurrent()) return;
       setOlderError(
         "Daha eski mesajlar şu anda yüklenemedi. Lütfen tekrar deneyin.",
       );
@@ -207,7 +251,9 @@ export function MessageTimeline({
       if (inflightRef.current === controller) {
         inflightRef.current = null;
       }
-      setIsLoadingOlder(false);
+      if (isCurrent()) {
+        setIsLoadingOlder(false);
+      }
     }
   };
 

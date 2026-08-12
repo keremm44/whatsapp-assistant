@@ -15,6 +15,7 @@ import type {
 import {
   assignMessageTimestampAnchors,
   conversationTimelinesOverlap,
+  isActiveTimelineLoad,
   reconcileConversationTimeline,
   reconcileSameCustomerMessages,
 } from "./conversations-timeline.ts";
@@ -239,6 +240,41 @@ test("a newly fetched older page shares one stable fetch timestamp", () => {
   assert.equal(next.get(9), 3333);
   assert.equal(next.get(10), 1000);
   assert.equal(next.get(11), 1000);
+});
+
+test("an older-page load stays active only for its own non-aborted generation", () => {
+  assert.equal(
+    isActiveTimelineLoad({
+      startedGeneration: 4,
+      currentGeneration: 4,
+      aborted: false,
+    }),
+    true,
+  );
+  assert.equal(
+    isActiveTimelineLoad({
+      startedGeneration: 4,
+      currentGeneration: 5,
+      aborted: false,
+    }),
+    false,
+  );
+  assert.equal(
+    isActiveTimelineLoad({
+      startedGeneration: 4,
+      currentGeneration: 4,
+      aborted: true,
+    }),
+    false,
+  );
+  assert.equal(
+    isActiveTimelineLoad({
+      startedGeneration: 4,
+      currentGeneration: 5,
+      aborted: true,
+    }),
+    false,
+  );
 });
 
 test("no-overlap reset drops disconnected anchors and uses the server time", () => {
