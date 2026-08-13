@@ -459,6 +459,24 @@ export const parseProductFieldListResponse = (
   raw: unknown,
 ): ProductFieldListPage => parseFieldListPage(raw);
 
+/**
+ * Product-specific list entry point. Every definition must belong to
+ * the requested product. Store-wide (null) or other-product rows are
+ * a contract failure — never silently filtered.
+ */
+export const parseProductSpecificFieldListResponse = (
+  raw: unknown,
+  expectedProductId: number,
+): ProductFieldListPage => {
+  const page = parseFieldListPage(raw);
+  for (const definition of page.definitions) {
+    if (definition.productId !== expectedProductId) {
+      throw contractError("product_id_scope");
+    }
+  }
+  return page;
+};
+
 export const parseProductFieldDefinitionResponse = (
   raw: unknown,
 ): ProductFieldDefinition => parseFieldDefinitionResponse(raw);

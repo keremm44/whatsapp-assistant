@@ -112,6 +112,25 @@ export const parseRuleListResponse = (raw: unknown): RuleListPage => {
   return { rules: rulesRaw.map(parseRule) };
 };
 
+/**
+ * Filtered-view entry point. When the request asked for active=true
+ * or active=false, every returned rule must match. Inconsistent rows
+ * fail the whole response — they are never silently dropped.
+ */
+export const parseFilteredRuleListResponse = (
+  raw: unknown,
+  expectedActive: boolean | undefined,
+): RuleListPage => {
+  const page = parseRuleListResponse(raw);
+  if (expectedActive === undefined) return page;
+  for (const rule of page.rules) {
+    if (rule.isActive !== expectedActive) {
+      throw contractError("is_active_filter");
+    }
+  }
+  return page;
+};
+
 export const parseRuleMutationResponse = (raw: unknown): RuleMutationResult => {
   if (!isPlainObject(raw)) throw contractError("response");
   return { rule: parseRule(readKey(raw, "rule")) };

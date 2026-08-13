@@ -11,6 +11,7 @@ import {
   buildCreateRulePayload,
   buildEditRulePayload,
   buildReactivateRulePayload,
+  parseFilteredRuleListResponse,
   parseRuleDeactivateResponse,
   parseRuleListResponse,
   parseRuleMutationResponse,
@@ -59,6 +60,53 @@ test("rejects a malformed rule payload", () => {
         error.message.startsWith(RULES_CONTRACT_ERROR_PREFIX),
     );
   }
+});
+
+test("filtered rule list fails closed when a row disagrees with the requested view", () => {
+  const activeOk = parseFilteredRuleListResponse(
+    { rules: [rawRule({ is_active: true })] },
+    true,
+  );
+  assert.equal(activeOk.rules[0]?.isActive, true);
+
+  assert.throws(
+    () =>
+      parseFilteredRuleListResponse(
+        { rules: [rawRule({ is_active: false })] },
+        true,
+      ),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.message.startsWith(RULES_CONTRACT_ERROR_PREFIX),
+  );
+
+  const inactiveOk = parseFilteredRuleListResponse(
+    { rules: [rawRule({ is_active: false })] },
+    false,
+  );
+  assert.equal(inactiveOk.rules[0]?.isActive, false);
+
+  assert.throws(
+    () =>
+      parseFilteredRuleListResponse(
+        { rules: [rawRule({ is_active: true })] },
+        false,
+      ),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.message.startsWith(RULES_CONTRACT_ERROR_PREFIX),
+  );
+
+  const allOk = parseFilteredRuleListResponse(
+    {
+      rules: [
+        rawRule({ id: 7, is_active: true }),
+        rawRule({ id: 8, is_active: false }),
+      ],
+    },
+    undefined,
+  );
+  assert.equal(allOk.rules.length, 2);
 });
 
 test("view mapping matches backend active query", () => {

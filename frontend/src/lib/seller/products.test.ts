@@ -20,6 +20,7 @@ import {
   generateFieldKey,
   parseProductFieldDefinitionResponse,
   parseProductFieldListResponse,
+  parseProductSpecificFieldListResponse,
   parseProductListResponse,
   parseProductMutationResponse,
   PRODUCTS_CONTRACT_ERROR_PREFIX,
@@ -155,6 +156,51 @@ test("parses field definitions and rejects unsupported types/options", () => {
       toplam: 1,
       definitions: [rawField({ options: [{ label: "Kırmızı" }] })],
     }),
+  );
+});
+
+test("product-specific field list requires every row to match the requested product", () => {
+  const accepted = parseProductSpecificFieldListResponse(
+    { toplam: 1, definitions: [rawField({ product_id: 12 })] },
+    12,
+  );
+  assert.equal(accepted.definitions[0]?.productId, 12);
+
+  assert.throws(
+    () =>
+      parseProductSpecificFieldListResponse(
+        { toplam: 1, definitions: [rawField({ product_id: null })] },
+        12,
+      ),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.message.startsWith(PRODUCTS_CONTRACT_ERROR_PREFIX),
+  );
+  assert.throws(
+    () =>
+      parseProductSpecificFieldListResponse(
+        { toplam: 1, definitions: [rawField({ product_id: 13 })] },
+        12,
+      ),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.message.startsWith(PRODUCTS_CONTRACT_ERROR_PREFIX),
+  );
+  assert.throws(
+    () =>
+      parseProductSpecificFieldListResponse(
+        {
+          toplam: 2,
+          definitions: [
+            rawField({ id: 44, product_id: 12 }),
+            rawField({ id: 45, product_id: null }),
+          ],
+        },
+        12,
+      ),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.message.startsWith(PRODUCTS_CONTRACT_ERROR_PREFIX),
   );
 });
 

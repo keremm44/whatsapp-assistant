@@ -4,8 +4,8 @@
 
 import { apiFetchWithAccessToken } from "@/lib/api/authenticated";
 import {
+  parseFilteredRuleListResponse,
   parseRuleDeactivateResponse,
-  parseRuleListResponse,
   parseRuleMutationResponse,
   type CreateRulePayload,
   type RuleDeactivateResult,
@@ -33,7 +33,7 @@ export const fetchRuleList = async (
     accessToken,
     { signal: options?.signal, cache: options?.cache ?? "no-store" },
   );
-  return parseRuleListResponse(raw);
+  return parseFilteredRuleListResponse(raw, options?.active);
 };
 
 export const createRule = async (

@@ -50,14 +50,11 @@ export function RulesWorkspace({
         <RuleCreateDialog />
       </div>
       {rules.length === 0 ? (
-        <div className="space-y-4">
-          <EmptyState
-            variant="compact"
-            title={empty.title}
-            description={empty.description ?? undefined}
-          />
-          {view !== "inactive" ? <RuleCreateDialog /> : null}
-        </div>
+        <EmptyState
+          variant="compact"
+          title={empty.title}
+          description={empty.description ?? undefined}
+        />
       ) : (
         <ul className="space-y-3">
           {rules.map((rule) => (

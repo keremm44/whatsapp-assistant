@@ -1,6 +1,10 @@
 "use client";
 
+import * as React from "react";
+import { useRouter } from "next/navigation";
+
 import { EmptyState } from "@/components/shared/empty-state";
+import { Button } from "@/components/ui/button";
 import type {
   Product,
   ProductFieldDefinition,
@@ -50,14 +54,12 @@ export function ProductDetailPanel({
           <h3 className="text-sm font-medium text-foreground">
             Bu ürün için toplanacak bilgiler
           </h3>
-          <FieldCreateDialog
-            productId={product.id}
-            nextSortOrder={
-              fieldsBootstrap?.state === "ready"
-                ? fieldsBootstrap.page.definitions.length
-                : 0
-            }
-          />
+          {fieldsBootstrap?.state === "ready" ? (
+            <FieldCreateDialog
+              productId={product.id}
+              nextSortOrder={fieldsBootstrap.page.definitions.length}
+            />
+          ) : null}
         </div>
         <FieldsRegion bootstrap={fieldsBootstrap} />
       </div>
@@ -78,16 +80,7 @@ function FieldsRegion({
     );
   }
   if (bootstrap.state !== "ready") {
-    return (
-      <div className="space-y-1.5" role="status">
-        <p className="text-sm font-medium text-foreground">
-          {FIELD_UNAVAILABLE_TITLE}
-        </p>
-        <p className="text-[13px] leading-relaxed text-muted-foreground">
-          {FIELD_UNAVAILABLE_DESCRIPTION}
-        </p>
-      </div>
-    );
+    return <FieldsUnavailable />;
   }
   if (bootstrap.page.definitions.length === 0) {
     return (
@@ -106,6 +99,45 @@ function FieldsRegion({
         </li>
       ))}
     </ul>
+  );
+}
+
+function FieldsUnavailable() {
+  const router = useRouter();
+  const [isRetrying, setIsRetrying] = React.useState(false);
+  const [isPending, startTransition] = React.useTransition();
+
+  React.useEffect(() => {
+    if (!isPending) setIsRetrying(false);
+  }, [isPending]);
+
+  const disabled = isRetrying || isPending;
+
+  return (
+    <div className="space-y-3" role="status">
+      <p className="text-sm font-medium text-foreground">
+        {FIELD_UNAVAILABLE_TITLE}
+      </p>
+      <p className="text-[13px] leading-relaxed text-muted-foreground">
+        {FIELD_UNAVAILABLE_DESCRIPTION}
+      </p>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        disabled={disabled}
+        aria-busy={disabled}
+        onClick={() => {
+          if (disabled) return;
+          setIsRetrying(true);
+          startTransition(() => {
+            router.refresh();
+          });
+        }}
+      >
+        Tekrar dene
+      </Button>
+    </div>
   );
 }
 

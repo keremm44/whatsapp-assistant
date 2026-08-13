@@ -104,11 +104,7 @@ export function ProductsWorkspace({
             <ProductDetailPanel
               key={selected.id}
               product={selected}
-              fieldsBootstrap={
-                selected.id === requestedProductId || requestedProductId === null
-                  ? fieldsBootstrap
-                  : fieldsBootstrap
-              }
+              fieldsBootstrap={fieldsBootstrap}
             />
           </>
         ) : (

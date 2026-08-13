@@ -8,7 +8,7 @@
 import { apiFetchWithAccessToken } from "@/lib/api/authenticated";
 import {
   parseProductFieldDefinitionResponse,
-  parseProductFieldListResponse,
+  parseProductSpecificFieldListResponse,
   parseProductListResponse,
   parseProductMutationResponse,
   type CreateFieldPayload,
@@ -104,7 +104,7 @@ export const fetchProductFieldList = async (
     accessToken,
     { signal: options.signal, cache: options.cache ?? "no-store" },
   );
-  return parseProductFieldListResponse(raw);
+  return parseProductSpecificFieldListResponse(raw, options.productId);
 };
 
 export const createProductField = async (
