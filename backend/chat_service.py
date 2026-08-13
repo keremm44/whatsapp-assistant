@@ -27,11 +27,16 @@ from database import (
     transition_state,
 )
 from order_service import (
+    build_product_selection_question as order_build_product_selection_question,
     get_next_collection_step as order_get_next_collection_step,
     get_or_create_order,
     initialize_collection as order_initialize_collection,
+    list_active_order_products as order_list_active_products,
+    match_order_product_selection as order_match_product_selection,
     parse_collection_field_answer as order_parse_collection_field_answer,
     record_field_value as order_record_field_value,
+    resolve_new_order_product_decision as order_resolve_new_order_product,
+    set_order_product as order_set_order_product,
     update_core as order_update_core,
     update_core_from_message as order_update_core_from_message,
 )
@@ -901,6 +906,7 @@ def handle_violation(
 # =====================================================
 
 ORDER_COLLECTION_MUTATION_STATES = {
+    "AWAITING_ORDER_PRODUCT",
     "AWAITING_ORDER_NUMBER",
     "AWAITING_IMAGE",
     "AWAITING_CUSTOM_TEXT",
@@ -1221,6 +1227,94 @@ def _transition_order_collection_step(
     )
 
 
+def _continue_order_after_product_assignment(
+    *,
+    seller_id: int,
+    customer_id: int,
+    order_id: int,
+    product_id: int,
+    source_message_id: int,
+    control_context: OutgoingControlContext,
+    expected_version: int | None = None,
+    ai_confidence: float | None = None,
+) -> dict[str, Any]:
+    """Canonical set_order_product yolunu kullanır; başarısızsa ilerletmez."""
+    assign_result = order_set_order_product(
+        seller_id,
+        customer_id,
+        order_id,
+        product_id,
+        expected_version=expected_version,
+    )
+    if assign_result.get("durum") != "başarılı":
+        return _order_flow_error(
+            customer_id=customer_id,
+            incoming_message_id=source_message_id,
+            reason_code=str(
+                assign_result.get("error_code") or "order_product_assignment_failed"
+            ),
+            message=assign_result.get("mesaj")
+            or "Sipariş ürünü güvenli biçimde atanamadı.",
+        )
+
+    step_result = order_get_next_collection_step(seller_id, order_id)
+    return _transition_order_collection_step(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        order_id=order_id,
+        step_result=step_result,
+        source_message_id=source_message_id,
+        control_context=control_context,
+        ai_confidence=ai_confidence,
+    )
+
+
+def _prompt_order_product_selection(
+    *,
+    seller_id: int,
+    customer_id: int,
+    order_id: int,
+    products: list[dict[str, Any]],
+    source_message_id: int,
+    control_context: OutgoingControlContext,
+    ai_confidence: float | None = None,
+) -> dict[str, Any]:
+    question = order_build_product_selection_question(products)
+    if not question.strip():
+        return _order_flow_error(
+            customer_id=customer_id,
+            incoming_message_id=source_message_id,
+            reason_code="order_product_question_unavailable",
+            message="Ürün seçim sorusu güvenli biçimde oluşturulamadı.",
+        )
+
+    transition_result = transition_state(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        to_state="AWAITING_ORDER_PRODUCT",
+        reason_code="user_action",
+        trigger_message_id=source_message_id,
+        state_data={"order_id": order_id},
+        expires_in_hours=24,
+    )
+    if transition_result.get("durum") != "başarılı":
+        return _order_flow_error(
+            customer_id=customer_id,
+            incoming_message_id=source_message_id,
+            reason_code="order_flow_transition_failed",
+            message="Ürün seçim akışı güvenli biçimde ilerletilemedi.",
+        )
+
+    return outgoing_response(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        response_text=question,
+        source="state",
+        control_context=control_context,
+        ai_confidence=ai_confidence,
+    )
+
+
 def _invalid_dynamic_field_response(
     field: dict[str, Any],
     fallback_question: str,
@@ -1312,6 +1406,66 @@ def process_active_state(
                     message="Sipariş kimliği doğrulanamadı.",
                 )
 
+            # Yalnız yeni oluşturulan siparişlerde ürün seçimi uygulanır.
+            # Mevcut açık / legacy product_id=NULL siparişler geriye dönük
+            # ürün atanmaz.
+            if order_result.get("created") is True:
+                decision = order_resolve_new_order_product(seller_id)
+                if decision.get("durum") != "başarılı":
+                    return _order_flow_error(
+                        customer_id=customer_id,
+                        incoming_message_id=source_message_id,
+                        reason_code=str(
+                            decision.get("error_code")
+                            or "order_product_list_unavailable"
+                        ),
+                        message=decision.get("mesaj")
+                        or "Aktif ürün listesi okunamadı.",
+                    )
+
+                if decision.get("decision") == "single":
+                    product = decision.get("product") or {}
+                    product_id = product.get("id")
+                    if (
+                        not isinstance(product_id, int)
+                        or isinstance(product_id, bool)
+                        or product_id <= 0
+                    ):
+                        return _order_flow_error(
+                            customer_id=customer_id,
+                            incoming_message_id=source_message_id,
+                            reason_code="order_product_assignment_failed",
+                            message="Aktif ürün kimliği doğrulanamadı.",
+                        )
+                    expected_version = order.get("version")
+                    return _continue_order_after_product_assignment(
+                        seller_id=seller_id,
+                        customer_id=customer_id,
+                        order_id=order_id,
+                        product_id=product_id,
+                        source_message_id=source_message_id,
+                        control_context=control_context,
+                        expected_version=(
+                            expected_version
+                            if isinstance(expected_version, int)
+                            and not isinstance(expected_version, bool)
+                            and expected_version > 0
+                            else None
+                        ),
+                        ai_confidence=classification.get("confidence"),
+                    )
+
+                if decision.get("decision") == "multiple":
+                    return _prompt_order_product_selection(
+                        seller_id=seller_id,
+                        customer_id=customer_id,
+                        order_id=order_id,
+                        products=list(decision.get("products") or []),
+                        source_message_id=source_message_id,
+                        control_context=control_context,
+                        ai_confidence=classification.get("confidence"),
+                    )
+
             step_result = order_get_next_collection_step(seller_id, order_id)
             return _transition_order_collection_step(
                 seller_id=seller_id,
@@ -1358,6 +1512,100 @@ def process_active_state(
             )
 
         return None
+
+    if current_state == "AWAITING_ORDER_PRODUCT":
+        state_data = state.get("state_data") or {}
+        order_id = state_data.get("order_id")
+        if (
+            not isinstance(order_id, int)
+            or isinstance(order_id, bool)
+            or order_id <= 0
+        ):
+            return _order_flow_error(
+                customer_id=customer_id,
+                incoming_message_id=source_message_id,
+                reason_code="order_flow_state_invalid",
+                message="Ürün seçim state pointer'ı geçersiz.",
+            )
+
+        listed = order_list_active_products(seller_id)
+        if listed.get("durum") != "başarılı":
+            return _order_flow_error(
+                customer_id=customer_id,
+                incoming_message_id=source_message_id,
+                reason_code=str(
+                    listed.get("error_code") or "order_product_list_unavailable"
+                ),
+                message=listed.get("mesaj") or "Aktif ürün listesi okunamadı.",
+            )
+
+        products = list(listed.get("products") or [])
+        if len(products) == 0:
+            step_result = order_get_next_collection_step(seller_id, order_id)
+            return _transition_order_collection_step(
+                seller_id=seller_id,
+                customer_id=customer_id,
+                order_id=order_id,
+                step_result=step_result,
+                source_message_id=source_message_id,
+                control_context=control_context,
+            )
+
+        if len(products) == 1:
+            product_id = products[0].get("id")
+            if (
+                not isinstance(product_id, int)
+                or isinstance(product_id, bool)
+                or product_id <= 0
+            ):
+                return _order_flow_error(
+                    customer_id=customer_id,
+                    incoming_message_id=source_message_id,
+                    reason_code="order_product_assignment_failed",
+                    message="Aktif ürün kimliği doğrulanamadı.",
+                )
+            return _continue_order_after_product_assignment(
+                seller_id=seller_id,
+                customer_id=customer_id,
+                order_id=order_id,
+                product_id=product_id,
+                source_message_id=source_message_id,
+                control_context=control_context,
+            )
+
+        match = order_match_product_selection(user_message, products)
+        if match.get("durum") != "başarılı":
+            question = order_build_product_selection_question(products)
+            return outgoing_response(
+                seller_id=seller_id,
+                customer_id=customer_id,
+                response_text=question,
+                source="state",
+                control_context=control_context,
+            )
+
+        product = match.get("product") or {}
+        product_id = product.get("id")
+        if (
+            not isinstance(product_id, int)
+            or isinstance(product_id, bool)
+            or product_id <= 0
+        ):
+            return _order_flow_error(
+                customer_id=customer_id,
+                incoming_message_id=source_message_id,
+                reason_code="order_product_assignment_failed",
+                message="Seçilen ürün kimliği doğrulanamadı.",
+            )
+
+        return _continue_order_after_product_assignment(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            order_id=order_id,
+            product_id=product_id,
+            source_message_id=source_message_id,
+            control_context=control_context,
+        )
 
     if current_state == "AWAITING_ORDER_NUMBER":
         order_number = extract_order_number(user_message)

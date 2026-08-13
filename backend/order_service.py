@@ -21,6 +21,7 @@ from database import (
     update_order_core,
     update_order_core_from_message,
 )
+from seller_product_service import list_products as list_seller_products
 
 
 # =====================================================
@@ -984,6 +985,106 @@ def set_order_product(
         "order_unavailable",
         result.get("mesaj") or "Ürün ve alan snapshot işlemi tamamlanamadı.",
     )
+
+
+def _is_positive_product_id(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def normalize_product_selection_text(value: str) -> str:
+    """Türkçe-duyarlı, tam eşleşme için güvenli karşılaştırma anahtarı."""
+    normalized = " ".join(value.strip().split())
+    normalized = normalized.translate(str.maketrans({"I": "ı", "İ": "i"}))
+    return normalized.casefold()
+
+
+def list_active_order_products(seller_id: int) -> dict[str, Any]:
+    """Yeni sipariş seçiminde kullanılacak aktif ürünleri canonical listedir."""
+    result = list_seller_products(seller_id, include_inactive=False)
+    if result.get("ok") is not True:
+        return _domain_error(
+            "order_product_list_unavailable",
+            result.get("error", {}).get("message")
+            if isinstance(result.get("error"), dict)
+            else "Aktif ürün listesi okunamadı.",
+        )
+
+    products: list[dict[str, Any]] = []
+    for row in result.get("products") or []:
+        if not isinstance(row, dict):
+            continue
+        product_id = row.get("id")
+        name = row.get("name")
+        if not _is_positive_product_id(product_id):
+            continue
+        if not isinstance(name, str) or not name.strip():
+            continue
+        if row.get("is_active") is not True:
+            continue
+        products.append({"id": product_id, "name": name.strip()})
+
+    return {"durum": "başarılı", "products": products}
+
+
+def resolve_new_order_product_decision(seller_id: int) -> dict[str, Any]:
+    """Yeni siparişte 0 / 1 / 2+ aktif ürün kararını fail-closed üretir."""
+    listed = list_active_order_products(seller_id)
+    if listed.get("durum") != "başarılı":
+        return listed
+
+    products = listed["products"]
+    if len(products) == 0:
+        return {"durum": "başarılı", "decision": "none", "products": products}
+    if len(products) == 1:
+        return {
+            "durum": "başarılı",
+            "decision": "single",
+            "product": products[0],
+            "products": products,
+        }
+    return {
+        "durum": "başarılı",
+        "decision": "multiple",
+        "products": products,
+    }
+
+
+def match_order_product_selection(
+    raw_value: str,
+    products: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Yalnız sıra numarası veya tam normalize isimle tek ürün seçer."""
+    if not isinstance(raw_value, str) or not raw_value.strip():
+        return {"durum": "eşleşmedi"}
+    if not products:
+        return {"durum": "eşleşmedi"}
+
+    text = " ".join(raw_value.strip().split())
+    if text.isdigit():
+        index = int(text)
+        if 1 <= index <= len(products):
+            return {"durum": "başarılı", "product": products[index - 1]}
+        return {"durum": "eşleşmedi"}
+
+    target = normalize_product_selection_text(text)
+    matches = [
+        product
+        for product in products
+        if normalize_product_selection_text(str(product.get("name") or "")) == target
+    ]
+    if len(matches) == 1:
+        return {"durum": "başarılı", "product": matches[0]}
+    return {"durum": "eşleşmedi"}
+
+
+def build_product_selection_question(products: list[dict[str, Any]]) -> str:
+    """Aktif ürünlerden deterministic Türkçe seçim sorusu üretir."""
+    lines = ["Bu sipariş hangi ürün için?"]
+    for index, product in enumerate(products, start=1):
+        lines.append(f"{index}. {product['name']}")
+    lines.append("")
+    lines.append("Ürün adını veya sıra numarasını yazabilirsiniz.")
+    return "\n".join(lines)
 
 
 def record_field_value(
