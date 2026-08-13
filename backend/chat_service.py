@@ -1246,6 +1246,19 @@ def _continue_order_after_product_assignment(
         product_id,
         expected_version=expected_version,
     )
+    if assign_result.get("durum") == "ürün_değişikliği_inceleme_gerekli":
+        # Image / custom-text / field values already exist. Reuse the
+        # existing RPC safeguard: do not attach a late product.
+        step_result = order_get_next_collection_step(seller_id, order_id)
+        return _transition_order_collection_step(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            order_id=order_id,
+            step_result=step_result,
+            source_message_id=source_message_id,
+            control_context=control_context,
+            ai_confidence=ai_confidence,
+        )
     if assign_result.get("durum") != "başarılı":
         return _order_flow_error(
             customer_id=customer_id,
@@ -1267,6 +1280,164 @@ def _continue_order_after_product_assignment(
         control_context=control_context,
         ai_confidence=ai_confidence,
     )
+
+
+def _is_positive_order_id(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def _order_has_assigned_product(order: dict[str, Any]) -> bool:
+    product_id = order.get("product_id")
+    return _is_positive_order_id(product_id)
+
+
+def _order_collection_has_progressed(order: dict[str, Any]) -> bool:
+    """True after image / custom-text collection has already started.
+
+    Dynamic field values are enforced by set_order_product_and_snapshot_fields
+    (order_product_change_requires_review). External order number alone is
+    not progress — the SQL product-change guard does not treat it as such.
+    """
+    image_message_id = order.get("image_message_id")
+    if _is_positive_order_id(image_message_id):
+        return True
+    custom_text = order.get("custom_text")
+    return isinstance(custom_text, str) and bool(custom_text.strip())
+
+
+def _should_attempt_order_product_resolution(
+    order_result: dict[str, Any],
+    state: dict[str, Any],
+) -> bool:
+    """Retry-eligible new orders vs genuinely legacy open orders.
+
+    created=True enters the product-resolution phase. The explicit
+    state_data marker keeps that phase retryable after a later
+    get_or_create returns created=False. Legacy open orders never
+    receive the marker and are not retrofitted.
+    """
+    if order_result.get("created") is True:
+        return True
+    state_data = state.get("state_data") or {}
+    return state_data.get("awaiting_product_resolution") is True
+
+
+def _ensure_product_resolution_marker(
+    *,
+    seller_id: int,
+    customer_id: int,
+    order_id: int,
+    source_message_id: int,
+    state_data: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Persist the retry marker before assignment / selection runs.
+
+    Returns an error result if the write fails; None when the marker
+    is already present or was written.
+    """
+    if state_data.get("awaiting_product_resolution") is True:
+        return None
+
+    transition_result = transition_state(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        to_state="AWAITING_ORDER_CONFIRMATION",
+        reason_code="user_action",
+        trigger_message_id=source_message_id,
+        state_data={
+            "order_id": order_id,
+            "awaiting_product_resolution": True,
+        },
+        expires_in_hours=24,
+    )
+    if transition_result.get("durum") != "başarılı":
+        return _order_flow_error(
+            customer_id=customer_id,
+            incoming_message_id=source_message_id,
+            reason_code="order_flow_transition_failed",
+            message="Ürün seçim akışı güvenli biçimde işaretlenemedi.",
+        )
+    return None
+
+
+def _resolve_order_product_for_new_or_retry(
+    *,
+    seller_id: int,
+    customer_id: int,
+    order: dict[str, Any],
+    order_id: int,
+    source_message_id: int,
+    control_context: OutgoingControlContext,
+    state_data: dict[str, Any],
+    ai_confidence: float | None = None,
+) -> dict[str, Any] | None:
+    """Run product resolution for a new/retry-eligible order.
+
+    Returns a chat response when this turn is fully handled, or None
+    to continue the legacy collection path without assigning a product.
+    """
+    if _order_has_assigned_product(order) or _order_collection_has_progressed(order):
+        return None
+
+    marker_error = _ensure_product_resolution_marker(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        order_id=order_id,
+        source_message_id=source_message_id,
+        state_data=state_data,
+    )
+    if marker_error is not None:
+        return marker_error
+
+    decision = order_resolve_new_order_product(seller_id)
+    if decision.get("durum") != "başarılı":
+        return _order_flow_error(
+            customer_id=customer_id,
+            incoming_message_id=source_message_id,
+            reason_code=str(
+                decision.get("error_code") or "order_product_list_unavailable"
+            ),
+            message=decision.get("mesaj") or "Aktif ürün listesi okunamadı.",
+        )
+
+    if decision.get("decision") == "single":
+        product = decision.get("product") or {}
+        product_id = product.get("id")
+        if not _is_positive_order_id(product_id):
+            return _order_flow_error(
+                customer_id=customer_id,
+                incoming_message_id=source_message_id,
+                reason_code="order_product_assignment_failed",
+                message="Aktif ürün kimliği doğrulanamadı.",
+            )
+        expected_version = order.get("version")
+        return _continue_order_after_product_assignment(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            order_id=order_id,
+            product_id=product_id,
+            source_message_id=source_message_id,
+            control_context=control_context,
+            expected_version=(
+                expected_version
+                if _is_positive_order_id(expected_version)
+                else None
+            ),
+            ai_confidence=ai_confidence,
+        )
+
+    if decision.get("decision") == "multiple":
+        return _prompt_order_product_selection(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            order_id=order_id,
+            products=list(decision.get("products") or []),
+            source_message_id=source_message_id,
+            control_context=control_context,
+            ai_confidence=ai_confidence,
+        )
+
+    return None
 
 
 def _prompt_order_product_selection(
@@ -1406,65 +1577,22 @@ def process_active_state(
                     message="Sipariş kimliği doğrulanamadı.",
                 )
 
-            # Yalnız yeni oluşturulan siparişlerde ürün seçimi uygulanır.
-            # Mevcut açık / legacy product_id=NULL siparişler geriye dönük
-            # ürün atanmaz.
-            if order_result.get("created") is True:
-                decision = order_resolve_new_order_product(seller_id)
-                if decision.get("durum") != "başarılı":
-                    return _order_flow_error(
-                        customer_id=customer_id,
-                        incoming_message_id=source_message_id,
-                        reason_code=str(
-                            decision.get("error_code")
-                            or "order_product_list_unavailable"
-                        ),
-                        message=decision.get("mesaj")
-                        or "Aktif ürün listesi okunamadı.",
-                    )
-
-                if decision.get("decision") == "single":
-                    product = decision.get("product") or {}
-                    product_id = product.get("id")
-                    if (
-                        not isinstance(product_id, int)
-                        or isinstance(product_id, bool)
-                        or product_id <= 0
-                    ):
-                        return _order_flow_error(
-                            customer_id=customer_id,
-                            incoming_message_id=source_message_id,
-                            reason_code="order_product_assignment_failed",
-                            message="Aktif ürün kimliği doğrulanamadı.",
-                        )
-                    expected_version = order.get("version")
-                    return _continue_order_after_product_assignment(
-                        seller_id=seller_id,
-                        customer_id=customer_id,
-                        order_id=order_id,
-                        product_id=product_id,
-                        source_message_id=source_message_id,
-                        control_context=control_context,
-                        expected_version=(
-                            expected_version
-                            if isinstance(expected_version, int)
-                            and not isinstance(expected_version, bool)
-                            and expected_version > 0
-                            else None
-                        ),
-                        ai_confidence=classification.get("confidence"),
-                    )
-
-                if decision.get("decision") == "multiple":
-                    return _prompt_order_product_selection(
-                        seller_id=seller_id,
-                        customer_id=customer_id,
-                        order_id=order_id,
-                        products=list(decision.get("products") or []),
-                        source_message_id=source_message_id,
-                        control_context=control_context,
-                        ai_confidence=classification.get("confidence"),
-                    )
+            # Yeni siparişler ve "ürün çözümü bekleniyor" işaretli
+            # retry'ler ürün seçimine girer. Marker olmayan açık /
+            # legacy product_id=NULL siparişler geriye dönük atanmaz.
+            if _should_attempt_order_product_resolution(order_result, state):
+                product_response = _resolve_order_product_for_new_or_retry(
+                    seller_id=seller_id,
+                    customer_id=customer_id,
+                    order=order,
+                    order_id=order_id,
+                    source_message_id=source_message_id,
+                    control_context=control_context,
+                    state_data=state.get("state_data") or {},
+                    ai_confidence=classification.get("confidence"),
+                )
+                if product_response is not None:
+                    return product_response
 
             step_result = order_get_next_collection_step(seller_id, order_id)
             return _transition_order_collection_step(

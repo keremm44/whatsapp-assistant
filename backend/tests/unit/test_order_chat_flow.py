@@ -1073,7 +1073,11 @@ def test_product_list_failure_does_not_guess(
 
     assert result["reason_code"] == "order_product_list_unavailable"
     assert harness.product_assign_calls == []
-    assert harness.flow_transitions == []
+    assert harness.order_next_step_calls == []
+    assert harness.flow_state == {
+        "current_state": "AWAITING_ORDER_CONFIRMATION",
+        "state_data": {"order_id": 1, "awaiting_product_resolution": True},
+    }
 
 
 def test_product_assignment_failure_does_not_advance(
@@ -1095,6 +1099,162 @@ def test_product_assignment_failure_does_not_advance(
 
     assert result["reason_code"] == "order_product_assignment_failed"
     assert harness.flow_state["current_state"] == "AWAITING_ORDER_PRODUCT"
+
+
+def test_failed_single_product_assignment_retries_on_later_confirmation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = ChatHarness().install(monkeypatch)
+    harness.flow_state = {"current_state": "AWAITING_ORDER_CONFIRMATION", "state_data": {}}
+    harness.classification_result = classification("order_confirmation_yes")
+    harness.product_decision_result = {
+        "durum": "başarılı",
+        "decision": "single",
+        "product": {"id": 5, "name": "Kupa"},
+        "products": [{"id": 5, "name": "Kupa"}],
+    }
+    harness.product_assign_result = {
+        "durum": "hata",
+        "error_code": "order_product_assignment_failed",
+        "mesaj": "Ürün atanamadı.",
+    }
+
+    first = harness.send("Evet aldım", provider_message_id="confirm-101")
+
+    assert first["reason_code"] == "order_product_assignment_failed"
+    assert len(harness.product_decision_calls) == 1
+    assert len(harness.product_assign_calls) == 1
+    assert harness.order_next_step_calls == []
+    assert harness.flow_state == {
+        "current_state": "AWAITING_ORDER_CONFIRMATION",
+        "state_data": {"order_id": 1, "awaiting_product_resolution": True},
+    }
+
+    harness.incoming_id = 102
+    harness.order_initialize_result = {
+        "durum": "başarılı",
+        "order": order_record(version=1),
+        "created": False,
+        "changed": False,
+        "idempotent": True,
+        "snapshot_count": 0,
+    }
+    harness.product_assign_result = {
+        "durum": "başarılı",
+        "order": order_record(product_id=5, version=2),
+        "snapshot_count": 1,
+    }
+    harness.next_steps = [step_order_number()]
+
+    second = harness.send("Evet aldım", provider_message_id="confirm-102")
+
+    assert second["durum"] == "başarılı"
+    assert len(harness.product_decision_calls) == 2
+    assert len(harness.product_assign_calls) == 2
+    assert harness.product_assign_calls[1]["product_id"] == 5
+    assert harness.flow_state == {
+        "current_state": "AWAITING_ORDER_NUMBER",
+        "state_data": {"order_id": 1},
+    }
+    collection_transitions = [
+        item
+        for item in harness.flow_transitions
+        if item["to_state"] == "AWAITING_ORDER_NUMBER"
+    ]
+    assert len(collection_transitions) == 1
+
+
+def test_failed_multi_product_transition_retries_selection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = ChatHarness().install(monkeypatch)
+    harness.flow_state = {"current_state": "AWAITING_ORDER_CONFIRMATION", "state_data": {}}
+    harness.classification_result = classification("order_confirmation_yes")
+    harness.product_decision_result = {
+        "durum": "başarılı",
+        "decision": "multiple",
+        "products": _active_products(),
+    }
+
+    product_transition_attempts = {"count": 0}
+
+    def maybe_fail_product_transition(**kwargs: Any) -> dict[str, Any]:
+        harness.flow_transitions.append(kwargs)
+        if kwargs["to_state"] == "AWAITING_ORDER_PRODUCT":
+            product_transition_attempts["count"] += 1
+            if product_transition_attempts["count"] == 1:
+                return {"durum": "hata", "mesaj": "db unavailable"}
+        harness.flow_state = {
+            "current_state": kwargs["to_state"],
+            "state_data": kwargs.get("state_data") or {},
+        }
+        return {"durum": "başarılı", "state": harness.flow_state}
+
+    monkeypatch.setattr(chat_service, "transition_state", maybe_fail_product_transition)
+
+    first = harness.send("Evet aldım", provider_message_id="confirm-101")
+
+    assert first["reason_code"] == "order_flow_transition_failed"
+    assert first["cevap"] is None
+    assert harness.product_assign_calls == []
+    assert harness.flow_state == {
+        "current_state": "AWAITING_ORDER_CONFIRMATION",
+        "state_data": {"order_id": 1, "awaiting_product_resolution": True},
+    }
+
+    harness.incoming_id = 102
+    harness.order_initialize_result = {
+        "durum": "başarılı",
+        "order": order_record(),
+        "created": False,
+        "changed": False,
+        "idempotent": True,
+        "snapshot_count": 0,
+    }
+
+    second = harness.send("Evet aldım", provider_message_id="confirm-102")
+
+    assert second["durum"] == "başarılı"
+    assert harness.product_assign_calls == []
+    assert len(harness.product_decision_calls) == 2
+    assert harness.flow_state == {
+        "current_state": "AWAITING_ORDER_PRODUCT",
+        "state_data": {"order_id": 1},
+    }
+    assert "1. Kupa" in second["cevap"]
+
+
+def test_progressed_order_cannot_receive_a_late_product(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = ChatHarness().install(monkeypatch)
+    harness.flow_state = {
+        "current_state": "AWAITING_ORDER_CONFIRMATION",
+        "state_data": {"order_id": 1, "awaiting_product_resolution": True},
+    }
+    harness.classification_result = classification("order_confirmation_yes")
+    harness.order_initialize_result = {
+        "durum": "başarılı",
+        "order": order_record(image_message_id=55, version=3),
+        "created": False,
+        "changed": False,
+        "idempotent": True,
+        "snapshot_count": 0,
+    }
+    harness.product_decision_result = {
+        "durum": "başarılı",
+        "decision": "single",
+        "product": {"id": 5, "name": "Kupa"},
+        "products": [{"id": 5, "name": "Kupa"}],
+    }
+    harness.next_steps = [step_image()]
+
+    result = harness.send("Evet aldım")
+
+    assert result["durum"] == "başarılı"
+    assert harness.product_decision_calls == []
+    assert harness.product_assign_calls == []
+    assert harness.flow_state["current_state"] == "AWAITING_IMAGE"
 
 
 def test_existing_open_order_is_not_retrofitted(
