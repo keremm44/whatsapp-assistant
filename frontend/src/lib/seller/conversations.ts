@@ -103,6 +103,7 @@ export type ConversationAttentionReason =
 const CONVERSATION_FLOW_STATES = [
   "NORMAL",
   "AWAITING_ORDER_CONFIRMATION",
+  "AWAITING_ORDER_PRODUCT",
   "AWAITING_ORDER_NUMBER",
   "AWAITING_IMAGE",
   "AWAITING_CUSTOM_TEXT",
@@ -126,6 +127,7 @@ export type ConversationFlowStateType =
 const FLOW_STATE_TO_TYPE: Record<ConversationFlowState, ConversationFlowStateType> = {
   NORMAL: "no_lock",
   AWAITING_ORDER_CONFIRMATION: "soft_lock",
+  AWAITING_ORDER_PRODUCT: "soft_lock",
   AWAITING_ORDER_NUMBER: "soft_lock",
   AWAITING_IMAGE: "soft_lock",
   AWAITING_CUSTOM_TEXT: "soft_lock",

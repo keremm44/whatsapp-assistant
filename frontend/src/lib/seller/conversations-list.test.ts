@@ -56,6 +56,19 @@ test("parser rejects an unknown echoed control_state", () => {
   );
 });
 
+test("flow-state allowlist accepts AWAITING_ORDER_PRODUCT as soft_lock", () => {
+  const source = readFileSync(
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), "conversations.ts"),
+    "utf8",
+  );
+  assert.match(source, /"AWAITING_ORDER_PRODUCT"/);
+  assert.match(source, /AWAITING_ORDER_PRODUCT:\s*"soft_lock"/);
+  assert.doesNotMatch(
+    source,
+    /AWAITING_ORDER_PRODUCT:\s*"(?:no_lock|informational)"/,
+  );
+});
+
 test("paused page asks the backend for ASSISTANT_PAUSED instead of client-filtering", () => {
   const page = readFileSync(
     path.resolve(
