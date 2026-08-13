@@ -106,13 +106,6 @@ class OrderSettingsPatch(StrictModel):
     image_required: bool | None = None
     custom_text_required: bool | None = None
 
-    @field_validator("image_required")
-    @classmethod
-    def main_image_must_remain_required(cls, value: bool | None) -> bool | None:
-        if value is False:
-            raise ValueError("Ana sipariş görseli zorunlu kalmalıdır.")
-        return value
-
     @model_validator(mode="after")
     def required_fields_cannot_be_cleared(self) -> "OrderSettingsPatch":
         for field_name in ("min_quantity", "image_required", "custom_text_required"):

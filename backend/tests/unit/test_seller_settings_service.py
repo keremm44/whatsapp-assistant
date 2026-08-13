@@ -97,9 +97,64 @@ def test_required_shipping_field_cannot_be_cleared() -> None:
         service.SellerSettingsUpdateRequest(expected_version=1, shipping={"company": None})
 
 
-def test_settings_rejects_main_image_false() -> None:
+def test_settings_accepts_image_required_false() -> None:
+    request = service.SellerSettingsUpdateRequest(
+        expected_version=1,
+        order={"image_required": False},
+    )
+    assert request.order is not None
+    assert request.order.image_required is False
+
+
+def test_settings_accepts_image_required_true() -> None:
+    request = service.SellerSettingsUpdateRequest(
+        expected_version=1,
+        order={"image_required": True},
+    )
+    assert request.order is not None
+    assert request.order.image_required is True
+
+
+def test_settings_rejects_explicit_image_required_null() -> None:
     with pytest.raises(ValidationError):
-        service.SellerSettingsUpdateRequest(expected_version=1, order={"image_required": False})
+        service.SellerSettingsUpdateRequest(
+            expected_version=1,
+            order={"image_required": None},
+        )
+
+
+def test_settings_persists_image_required_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        service,
+        "get_seller_settings_record",
+        lambda seller_id: {"durum": "başarılı", "seller": seller_row()},
+    )
+
+    def fake_update(seller_id, expected_version, *, seller_patch, product_info):
+        captured["product_info"] = product_info
+        return {"durum": "başarılı", "seller": seller_row(settings_version=4)}
+
+    monkeypatch.setattr(service, "update_seller_settings_record", fake_update)
+    monkeypatch.setattr(
+        service,
+        "get_settings",
+        lambda seller_id: {"ok": True, "settings": {"version": 4}},
+    )
+
+    request = service.SellerSettingsUpdateRequest(
+        expected_version=3,
+        order={"image_required": False},
+    )
+    result = service.update_settings(42, request)
+
+    assert result["ok"] is True
+    order_config = captured["product_info"]["order"]  # type: ignore[index]
+    assert order_config["image_required"] is False
+    assert order_config["custom_text_required"] is True
 
 
 def test_settings_rejects_invalid_effective_quantity_range(monkeypatch: pytest.MonkeyPatch) -> None:
