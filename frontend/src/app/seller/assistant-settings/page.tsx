@@ -1,65 +1,30 @@
-import type { Route } from "next";
-import Link from "next/link";
-
+import { AssistantSettingsHub } from "@/components/seller/assistant-settings/assistant-settings-hub";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
-import { Surface } from "@/components/shared/surface";
-import { assistantSubRoutes } from "@/config/navigation";
-import { assistantHubDescription } from "@/lib/seller/assistant-settings-format";
-import { cn } from "@/lib/utils/cn";
-
-import { SellerIcon } from "@/components/seller/shell/icon-map";
+import {
+  HUB_PAGE_CAPTION,
+  HUB_PAGE_DESCRIPTION,
+  HUB_PAGE_TITLE,
+} from "@/lib/seller/assistant-settings-hub";
+import { resolveAssistantSettingsHubFromSession } from "@/lib/seller/assistant-settings-hub-server";
 
 /**
- * Asistan Ayarları — navigation hub.
+ * Asistan Ayarları — read-only hub for the four child workspaces.
  *
- * The two navigation rows genuinely are navigation cards and therefore
- * earn bounded surfaces. They are not placeholders.
+ * Summaries are derived from existing GET contracts. One unavailable
+ * source never blanks the other cards.
  */
-export default function SellerAssistantSettingsPage() {
+export default async function SellerAssistantSettingsPage() {
+  const bootstrap = await resolveAssistantSettingsHubFromSession();
+
   return (
     <PageContainer className="py-8 sm:py-10">
       <PageHeader
-        caption="Asistan"
-        title="Asistan Ayarları"
-        description="Asistanın müşterilere yardımcı olurken kullanabileceği bilgileri yönetin."
+        caption={HUB_PAGE_CAPTION}
+        title={HUB_PAGE_TITLE}
+        description={HUB_PAGE_DESCRIPTION}
       />
-
-      <ul className="mt-8 flex flex-col gap-3">
-        {assistantSubRoutes.map((entry) => (
-          <li key={entry.href}>
-            <Link
-              href={entry.href as Route}
-              className={cn(
-                "block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-              )}
-            >
-              <Surface className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-surface-2">
-                <div className="flex items-center gap-3">
-                  <SellerIcon
-                    name={entry.icon}
-                    className="text-muted-foreground"
-                  />
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium text-foreground">
-                      {entry.label}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {assistantHubDescription(entry.label)}
-                    </p>
-                  </div>
-                </div>
-                <span
-                  aria-hidden="true"
-                  className="text-sm text-muted-foreground"
-                >
-                  →
-                </span>
-              </Surface>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <AssistantSettingsHub bootstrap={bootstrap} />
     </PageContainer>
   );
 }

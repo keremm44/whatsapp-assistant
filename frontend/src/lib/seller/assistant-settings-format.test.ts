@@ -123,7 +123,7 @@ test("hub descriptions stay restrained and label-specific", () => {
     /ürün, kullanım, kargo ve iade/,
   );
   assert.match(assistantHubDescription("Sipariş Toplama"), /temel bilgileri/);
-  assert.match(assistantHubDescription("Ürünler"), /ürünleriniz/);
+  assert.match(assistantHubDescription("Ürünler"), /ürün bazlı/);
   assert.match(assistantHubDescription("Kurallar"), /satıcı tanımlı/);
 });
 

@@ -111,18 +111,6 @@ export const sellerNavigation: NavigationSection[] = [
  */
 export const assistantSubRoutes: NavigationItem[] = [
   {
-    label: "Asistanın Bildikleri",
-    href: "/seller/assistant-knowledge",
-    icon: "BookOpen",
-    childOf: "/seller/assistant-settings",
-  },
-  {
-    label: "Sipariş Toplama",
-    href: "/seller/order-collection",
-    icon: "ClipboardList",
-    childOf: "/seller/assistant-settings",
-  },
-  {
     label: "Ürünler",
     href: "/seller/products",
     icon: "Box",
@@ -132,6 +120,18 @@ export const assistantSubRoutes: NavigationItem[] = [
     label: "Kurallar",
     href: "/seller/rules",
     icon: "ScrollText",
+    childOf: "/seller/assistant-settings",
+  },
+  {
+    label: "Asistanın Bildikleri",
+    href: "/seller/assistant-knowledge",
+    icon: "BookOpen",
+    childOf: "/seller/assistant-settings",
+  },
+  {
+    label: "Sipariş Toplama",
+    href: "/seller/order-collection",
+    icon: "ClipboardList",
     childOf: "/seller/assistant-settings",
   },
 ];

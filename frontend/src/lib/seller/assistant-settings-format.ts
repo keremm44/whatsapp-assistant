@@ -13,6 +13,7 @@ export const SETTINGS_BACK_LABEL = "← Asistan Ayarları";
 export const SETTINGS_BACK_HREF = "/seller/assistant-settings";
 
 export const SETTINGS_SAVE_LABEL = "Kaydet";
+export const SETTINGS_SAVE_CHANGES_LABEL = "Değişiklikleri kaydet";
 export const SETTINGS_SAVING_LABEL = "Kaydediliyor…";
 export const SETTINGS_SAVED_LABEL = "Kaydedildi";
 export const SETTINGS_RETRY_LABEL = "Tekrar dene";
@@ -146,10 +147,10 @@ export const HUB_ORDER_COLLECTION_DESCRIPTION =
   "Asistanın yeni siparişlerde müşteriden hangi temel bilgileri istemesi gerektiğini yönetin.";
 
 export const HUB_PRODUCTS_DESCRIPTION =
-  "Asistanın müşterilere ürünleriniz hakkında verebileceği bilgileri yönetin.";
+  "Satışını yaptığınız ürünleri ve ürün bazlı toplanacak bilgileri yönetin.";
 
 export const HUB_RULES_DESCRIPTION =
-  "Asistanın müşterilerle konuşurken kullanacağı satıcı tanımlı kuralları yönetin.";
+  "Müşteri mesajlarında belirli ifadeler için kullanılacak satıcı tanımlı cevapları yönetin.";
 
 export const assistantHubDescription = (label: string): string => {
   if (label === "Asistanın Bildikleri") return HUB_KNOWLEDGE_DESCRIPTION;
@@ -281,3 +282,31 @@ export const SETTINGS_FORBIDDEN_COPY = [
   "güven skoru",
   "hazırlık yüzdesi",
 ] as const;
+
+/* ------------------------------------------------------------------ */
+/* General Settings / Business                                         */
+/* ------------------------------------------------------------------ */
+
+export const GENERAL_SETTINGS_CAPTION = "Sistem";
+export const GENERAL_SETTINGS_TITLE = "Ayarlar";
+export const GENERAL_SETTINGS_DESCRIPTION =
+  "İşletme bilgilerinizi ve bu cihazdaki oturumunuzu yönetin.";
+
+export const BUSINESS_SECTION_TITLE = "İşletme Bilgileri";
+export const BUSINESS_SECTION_DESCRIPTION =
+  "Asistanın ve sistemin işletmeniz için kullandığı temel iletişim bilgileri.";
+
+export const BUSINESS_NAME_LABEL = "Yetkili / işletme adı";
+export const BUSINESS_STORE_NAME_LABEL = "Mağaza adı";
+export const BUSINESS_PHONE_LABEL = "Telefon";
+export const BUSINESS_STORE_LINK_LABEL = "Mağaza bağlantısı";
+
+export const BUSINESS_CLEAR_LABEL = "Belirtilmedi";
+export const BUSINESS_PHONE_CLEAR_HELP =
+  "Boş bırakırsanız telefon belirtilmedi olarak kaydedilir.";
+export const BUSINESS_STORE_LINK_CLEAR_HELP =
+  "Boş bırakırsanız mağaza bağlantısı belirtilmedi olarak kaydedilir.";
+
+export const SESSION_SECTION_TITLE = "Oturum";
+export const SESSION_SECTION_DESCRIPTION =
+  "Bu cihazdaki oturumunuzu güvenli şekilde kapatabilirsiniz.";
