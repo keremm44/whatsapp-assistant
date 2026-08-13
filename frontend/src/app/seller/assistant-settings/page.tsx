@@ -5,6 +5,7 @@ import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
 import { Surface } from "@/components/shared/surface";
 import { assistantSubRoutes } from "@/config/navigation";
+import { assistantHubDescription } from "@/lib/seller/assistant-settings-format";
 import { cn } from "@/lib/utils/cn";
 
 import { SellerIcon } from "@/components/seller/shell/icon-map";
@@ -44,9 +45,7 @@ export default function SellerAssistantSettingsPage() {
                       {entry.label}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {entry.label === "Ürünler"
-                        ? "Asistanın müşterilere ürünleriniz hakkında verebileceği bilgileri yönetin."
-                        : "Asistanın müşterilerle konuşurken kullanacağı satıcı tanımlı kuralları yönetin."}
+                      {assistantHubDescription(entry.label)}
                     </p>
                   </div>
                 </div>

@@ -8,9 +8,10 @@
  *
  * The rules below match the approved information architecture:
  *   - /seller  lights up ONLY on the exact /seller path
- *   - /seller/products and /seller/rules light up /seller/assistant-settings
+ *   - /seller/products, /seller/rules, /seller/assistant-knowledge and
+ *     /seller/order-collection light up /seller/assistant-settings
  *     because they are children of "Asistan Ayarları" in the sidebar IA
- *   - /seller/assistant-settings, /seller/products, /seller/rules,
+ *   - /seller/assistant-settings and its child routes plus
  *     /seller/settings all count as the "Diğer" mobile parent
  *   - the "İşler" mobile parent covers orders / returns / paused / unanswered
  *   - the "Konuşmalar" mobile parent covers /seller/conversations
@@ -31,6 +32,8 @@ const ASSISTANT_PARENT = "/seller/assistant-settings";
 
 const DIĞER_HREFS: readonly string[] = [
   "/seller/assistant-settings",
+  "/seller/assistant-knowledge",
+  "/seller/order-collection",
   "/seller/products",
   "/seller/rules",
   "/seller/settings",
@@ -50,7 +53,7 @@ const belongsToPrefix = (pathname: string, href: string): boolean =>
  * Whether a given sidebar href should be the active sidebar destination
  * for the current pathname. Used by the desktop sidebar and the tablet
  * Sheet nav list. The `/seller/assistant-settings` entry stays active
- * for /seller/products and /seller/rules.
+ * for assistant child routes.
  */
 export const isSellerItemActive = (
   pathname: string | null,
@@ -62,7 +65,9 @@ export const isSellerItemActive = (
   if (href === ASSISTANT_PARENT) {
     return (
       belongsToPrefix(pathname, "/seller/products") ||
-      belongsToPrefix(pathname, "/seller/rules")
+      belongsToPrefix(pathname, "/seller/rules") ||
+      belongsToPrefix(pathname, "/seller/assistant-knowledge") ||
+      belongsToPrefix(pathname, "/seller/order-collection")
     );
   }
 

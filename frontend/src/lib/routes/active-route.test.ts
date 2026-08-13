@@ -76,6 +76,30 @@ test("/seller/rules keeps Asistan Ayarları active inside Diğer", () => {
   assert.equal(isSellerItemActive("/seller/rules", "/seller/settings"), false);
 });
 
+test("/seller/assistant-knowledge keeps Asistan Ayarları active inside Diğer", () => {
+  assert.equal(activeMobileParent("/seller/assistant-knowledge"), "Diğer");
+  assert.equal(
+    isSellerItemActive("/seller/assistant-knowledge", "/seller/assistant-settings"),
+    true,
+  );
+  assert.equal(
+    isSellerItemActive("/seller/assistant-knowledge", "/seller/settings"),
+    false,
+  );
+});
+
+test("/seller/order-collection keeps Asistan Ayarları active inside Diğer", () => {
+  assert.equal(activeMobileParent("/seller/order-collection"), "Diğer");
+  assert.equal(
+    isSellerItemActive("/seller/order-collection", "/seller/assistant-settings"),
+    true,
+  );
+  assert.equal(
+    isSellerItemActive("/seller/order-collection", "/seller/settings"),
+    false,
+  );
+});
+
 test("/seller/settings lights Diğer and the Ayarlar row only", () => {
   assert.equal(activeMobileParent("/seller/settings"), "Diğer");
   assert.equal(isSellerItemActive("/seller/settings", "/seller/settings"), true);

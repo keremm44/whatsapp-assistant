@@ -1,7 +1,9 @@
 import * as React from "react";
 import {
   Bell,
+  BookOpen,
   Box,
+  ClipboardList,
   HelpCircle,
   LayoutDashboard,
   Megaphone,
@@ -42,6 +44,8 @@ export const SELLER_ICON_MAP = {
   Settings2,
   Box,
   ScrollText,
+  BookOpen,
+  ClipboardList,
   Settings,
   Menu,
   Store,

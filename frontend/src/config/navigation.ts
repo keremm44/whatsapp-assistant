@@ -2,7 +2,8 @@
  * Conceptual information architecture for the seller panel.
  *
  * The route architecture is wider than the sidebar information architecture:
- * /seller/products and /seller/rules live under the "Asistan Ayarları" parent
+ * /seller/products, /seller/rules, /seller/assistant-knowledge and
+ * /seller/order-collection live under the "Asistan Ayarları" parent
  * in the sidebar. See `childOf` on the relevant items.
  *
  * Every entry below is implemented as a route in this step; deeper detail
@@ -24,6 +25,8 @@ export type NavigationItem = {
     | "Settings2"
     | "Box"
     | "ScrollText"
+    | "BookOpen"
+    | "ClipboardList"
     | "Settings";
   /**
    * Sidebar parent for routes that are not promoted to a top-level item.
@@ -41,8 +44,8 @@ export type NavigationSection = {
 /**
  * Canonical desktop sidebar destinations, in display order.
  * The `childOf` field is used by the sidebar to keep "Asistan Ayarları"
- * highlighted on /seller/products and /seller/rules without adding extra
- * entries to the visible navigation.
+ * highlighted on assistant child routes without adding extra entries
+ * to the visible navigation.
  */
 export const sellerNavigation: NavigationSection[] = [
   {
@@ -107,6 +110,18 @@ export const sellerNavigation: NavigationSection[] = [
  * "Asistan Ayarları" and should keep the parent highlighted.
  */
 export const assistantSubRoutes: NavigationItem[] = [
+  {
+    label: "Asistanın Bildikleri",
+    href: "/seller/assistant-knowledge",
+    icon: "BookOpen",
+    childOf: "/seller/assistant-settings",
+  },
+  {
+    label: "Sipariş Toplama",
+    href: "/seller/order-collection",
+    icon: "ClipboardList",
+    childOf: "/seller/assistant-settings",
+  },
   {
     label: "Ürünler",
     href: "/seller/products",
