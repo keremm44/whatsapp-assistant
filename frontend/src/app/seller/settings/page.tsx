@@ -1,37 +1,42 @@
+import { BusinessSettingsWorkspace } from "@/components/seller/assistant-settings/business-settings-workspace";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
+import {
+  GENERAL_SETTINGS_CAPTION,
+  GENERAL_SETTINGS_DESCRIPTION,
+  GENERAL_SETTINGS_TITLE,
+  SESSION_SECTION_DESCRIPTION,
+  SESSION_SECTION_TITLE,
+} from "@/lib/seller/assistant-settings-format";
+import { resolveSellerSettingsFromSession } from "@/lib/seller/assistant-settings-server";
 
 import { LogoutButton } from "./_logout-button";
 
 /**
- * Seller settings page.
- *
- * The page header ("Ayarlar") is preserved from the previous layout
- * so the navigation context remains consistent. The body is the
- * "Oturum" section: a single, calm control that lets the seller
- * close the current Supabase session. The interactive button itself
- * is a small Client Component (`./_logout-button`).
- *
- * Additional settings sections will be added below this one in
- * later steps. This page is a Server Component — the only client
- * island is the logout button.
+ * Sistem Ayarları — business information plus the existing session
+ * control. Logout semantics stay in `_logout-button.tsx`.
  */
-export default function SellerSettingsPage() {
+export default async function SellerSettingsPage() {
+  const bootstrap = await resolveSellerSettingsFromSession();
+
   return (
     <PageContainer className="py-8 sm:py-10">
       <PageHeader
-        caption="Sistem"
-        title="Ayarlar"
-        description="Desteklenen hesap ve sistem ayarları bu alanda gösterilecek."
+        caption={GENERAL_SETTINGS_CAPTION}
+        title={GENERAL_SETTINGS_TITLE}
+        description={GENERAL_SETTINGS_DESCRIPTION}
       />
 
-      <div className="mt-8 max-w-xl space-y-2.5">
-        <SectionHeader
-          title="Oturum"
-          description="Bu cihazdaki oturumunuzu güvenli şekilde kapatabilirsiniz."
-        />
-        <LogoutButton />
+      <div className="mt-8 max-w-xl space-y-8">
+        <BusinessSettingsWorkspace bootstrap={bootstrap} />
+        <div className="space-y-2.5">
+          <SectionHeader
+            title={SESSION_SECTION_TITLE}
+            description={SESSION_SECTION_DESCRIPTION}
+          />
+          <LogoutButton />
+        </div>
       </div>
     </PageContainer>
   );

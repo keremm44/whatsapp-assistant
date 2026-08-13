@@ -145,6 +145,7 @@ export type SellerSettings = {
 };
 
 export type SettingsSectionKey =
+  | "business"
   | "product"
   | "order"
   | "usage"
@@ -175,6 +176,15 @@ export const SHIPPING_COMPANY_MAX_LENGTH = 120;
 export const RETURN_PERIOD_DAYS_MIN = 0;
 export const RETURN_PERIOD_DAYS_MAX = 365;
 
+export const BUSINESS_NAME_MIN_LENGTH = 2;
+export const BUSINESS_NAME_MAX_LENGTH = 120;
+export const BUSINESS_STORE_NAME_MIN_LENGTH = 2;
+export const BUSINESS_STORE_NAME_MAX_LENGTH = 160;
+export const BUSINESS_PHONE_MIN_LENGTH = 7;
+export const BUSINESS_PHONE_MAX_LENGTH = 30;
+export const BUSINESS_STORE_LINK_MIN_LENGTH = 8;
+export const BUSINESS_STORE_LINK_MAX_LENGTH = 500;
+
 /* ------------------------------------------------------------------ */
 /* Null-clear allowlist                                                */
 /* ------------------------------------------------------------------ */
@@ -183,6 +193,8 @@ export const RETURN_PERIOD_DAYS_MAX = 365;
  * Fields the backend accepts as explicit null on PATCH.
  *
  * Inspected from `SellerSettingsUpdateRequest` validators:
+ *   - BusinessSettingsPatch forbids null for name/store_name and
+ *     allows phone/store_link
  *   - ProductSettingsPatch forbids null for material/size_ml/print_method
  *     and allows custom_text_max_length
  *   - UsageSettingsPatch has no cannot-clear validator
@@ -193,6 +205,7 @@ export const RETURN_PERIOD_DAYS_MAX = 365;
  *   - ShippingSettingsPatch forbids null for every shipping field
  */
 export const NULL_CLEARABLE_FIELDS = {
+  business: ["phone", "store_link"],
   product: ["custom_text_max_length"],
   order: ["max_quantity"],
   usage: [
@@ -338,8 +351,16 @@ export type ReturnPolicyPatchFields = {
   wrong_print_replacement?: boolean;
 };
 
+export type BusinessPatchFields = {
+  name?: string;
+  phone?: string | null;
+  store_name?: string;
+  store_link?: string | null;
+};
+
 export type SellerSettingsPatchPayload = {
   expected_version: number;
+  business?: BusinessPatchFields;
   product?: ProductPatchFields;
   order?: OrderPatchFields;
   usage?: UsagePatchFields;
@@ -375,6 +396,31 @@ const assignChanged = <T extends Record<string, unknown>>(
   if (next === undefined) return;
   if (sameValue(next, current)) return;
   target[key] = next;
+};
+
+export const buildBusinessSectionPatch = (input: {
+  expectedVersion: number;
+  current: BusinessSettings;
+  draft: BusinessSettings;
+}): SellerSettingsPatchPayload | null => {
+  assertPositiveVersion(input.expectedVersion);
+  const business: BusinessPatchFields = {};
+  if (!sameValue(input.draft.name, input.current.name)) {
+    rejectDisallowedNull("business", "name", input.draft.name);
+    if (input.draft.name !== null) business.name = input.draft.name;
+  }
+  if (!sameValue(input.draft.storeName, input.current.storeName)) {
+    rejectDisallowedNull("business", "store_name", input.draft.storeName);
+    if (input.draft.storeName !== null) business.store_name = input.draft.storeName;
+  }
+  if (!sameValue(input.draft.phone, input.current.phone)) {
+    business.phone = input.draft.phone;
+  }
+  if (!sameValue(input.draft.storeLink, input.current.storeLink)) {
+    business.store_link = input.draft.storeLink;
+  }
+  if (Object.keys(business).length === 0) return null;
+  return { expected_version: input.expectedVersion, business };
 };
 
 export const buildProductSectionPatch = (input: {
@@ -595,6 +641,7 @@ export const patchSectionKeys = (
   payload: SellerSettingsPatchPayload,
 ): SettingsSectionKey[] => {
   const keys: SettingsSectionKey[] = [];
+  if (payload.business) keys.push("business");
   if (payload.product) keys.push("product");
   if (payload.order) keys.push("order");
   if (payload.usage) keys.push("usage");
@@ -638,6 +685,95 @@ const inClosedRange = (value: number, min: number, max: number): boolean =>
 
 const stringLengthOk = (value: string, min: number, max: number): boolean =>
   value.length >= min && value.length <= max;
+
+export const isHttpUrl = (value: string): boolean => {
+  try {
+    const parsed = new URL(value.trim());
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+/** Basic digit-count check. Backend remains the normalizer. */
+export const looksLikePhone = (value: string): boolean => {
+  const digits = value.replace(/[^0-9]/g, "");
+  return digits.length >= 7 && digits.length <= 15;
+};
+
+export const validateBusinessDraft = (
+  draft: BusinessSettings,
+  current: BusinessSettings,
+): SettingsValidationIssue[] => {
+  const issues: SettingsValidationIssue[] = [];
+
+  if (draft.name !== current.name) {
+    if (draft.name === null) {
+      issues.push({
+        field: "name",
+        message: "Yetkili / işletme adı boş bırakılamaz.",
+      });
+    } else if (
+      !stringLengthOk(draft.name, BUSINESS_NAME_MIN_LENGTH, BUSINESS_NAME_MAX_LENGTH)
+    ) {
+      issues.push({
+        field: "name",
+        message: "Yetkili / işletme adı 2 ile 120 karakter arasında olmalıdır.",
+      });
+    }
+  }
+
+  if (draft.storeName !== current.storeName) {
+    if (draft.storeName === null) {
+      issues.push({
+        field: "store_name",
+        message: "Mağaza adı boş bırakılamaz.",
+      });
+    } else if (
+      !stringLengthOk(
+        draft.storeName,
+        BUSINESS_STORE_NAME_MIN_LENGTH,
+        BUSINESS_STORE_NAME_MAX_LENGTH,
+      )
+    ) {
+      issues.push({
+        field: "store_name",
+        message: "Mağaza adı 2 ile 160 karakter arasında olmalıdır.",
+      });
+    }
+  }
+
+  if (draft.phone !== current.phone && draft.phone !== null) {
+    if (
+      draft.phone.length < BUSINESS_PHONE_MIN_LENGTH ||
+      draft.phone.length > BUSINESS_PHONE_MAX_LENGTH ||
+      !looksLikePhone(draft.phone)
+    ) {
+      issues.push({
+        field: "phone",
+        message: "Geçerli bir telefon numarası girin.",
+      });
+    }
+  }
+
+  if (draft.storeLink !== current.storeLink && draft.storeLink !== null) {
+    if (
+      !stringLengthOk(
+        draft.storeLink,
+        BUSINESS_STORE_LINK_MIN_LENGTH,
+        BUSINESS_STORE_LINK_MAX_LENGTH,
+      ) ||
+      !isHttpUrl(draft.storeLink)
+    ) {
+      issues.push({
+        field: "store_link",
+        message: "Mağaza bağlantısı http veya https ile başlamalıdır.",
+      });
+    }
+  }
+
+  return issues;
+};
 
 export const validateProductDraft = (
   draft: ProductSettings,

@@ -26,6 +26,7 @@ export function SettingsSection({
   canSave,
   status,
   onSave,
+  saveLabel = SETTINGS_SAVE_LABEL,
 }: {
   title: string;
   description: string;
@@ -34,6 +35,7 @@ export function SettingsSection({
   canSave: boolean;
   status: SettingsSectionStatus;
   onSave: () => void;
+  saveLabel?: string;
 }) {
   const isSaving = status.kind === "saving";
   const statusMessage =
@@ -73,7 +75,7 @@ export function SettingsSection({
                 <span>{SETTINGS_SAVING_LABEL}</span>
               </span>
             ) : (
-              SETTINGS_SAVE_LABEL
+              saveLabel
             )}
           </Button>
           {statusMessage ? (
