@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test src/lib/seller/orders.test.ts src/lib/seller/orders-format.test.ts src/lib/auth/post-login.test.ts src/lib/seller/returns.test.ts src/lib/seller/returns-format.test.ts src/lib/seller/unanswered.test.ts src/lib/seller/unanswered-format.test.ts src/lib/seller/offset-pagination.test.ts src/lib/seller/dashboard-destinations.test.ts src/lib/seller/dashboard-summary.test.ts src/lib/seller/conversations-destinations.test.ts src/lib/seller/conversations-timeline.test.ts src/lib/seller/conversations-list.test.ts src/lib/seller/paused-format.test.ts src/lib/routes/active-route.test.ts src/lib/seller/freshness.test.ts"
+    "test": "node --test src/lib/seller/orders.test.ts src/lib/seller/orders-format.test.ts src/lib/auth/post-login.test.ts src/lib/seller/returns.test.ts src/lib/seller/returns-format.test.ts src/lib/seller/unanswered.test.ts src/lib/seller/unanswered-format.test.ts src/lib/seller/offset-pagination.test.ts src/lib/seller/dashboard-destinations.test.ts src/lib/seller/dashboard-summary.test.ts src/lib/seller/conversations-destinations.test.ts src/lib/seller/conversations-timeline.test.ts src/lib/seller/conversations-list.test.ts src/lib/seller/paused-format.test.ts src/lib/routes/active-route.test.ts src/lib/seller/freshness.test.ts src/lib/seller/products.test.ts src/lib/seller/products-format.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",
