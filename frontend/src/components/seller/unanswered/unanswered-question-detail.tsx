@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useRecordMutationGate } from "@/components/shared/use-record-mutation-gate";
 import type {
   UnansweredAction,
   UnansweredQuestionDetail,
@@ -73,6 +74,12 @@ export function UnansweredQuestionDetail({
   const { question } = detail;
   const statusDisplay = UNANSWERED_STATUS_DISPLAY[question.status];
 
+  // One shared mutation gate for the selected QUESTION RECORD:
+  // set_answer and dismiss carry the same expected_version, so they
+  // may never overlap. The workspace keys this component per question
+  // id, so the gate naturally reseeds on selection change.
+  const questionGate = useRecordMutationGate();
+
   const firstSeenLabel = formatUnansweredTimestamp(question.firstSeenAt);
   const lastSeenLabel = formatUnansweredTimestamp(question.lastSeenAt);
   const answeredLabel = question.answeredAt
@@ -106,6 +113,7 @@ export function UnansweredQuestionDetail({
         version={question.version}
         initialAnswer=""
         submitLabel={UNANSWERED_SAVE_ANSWER_LABEL}
+        gate={questionGate}
         onSuccess={() => onMutationSuccess("set_answer")}
         onCancel={
           question.status === "DISMISSED"
@@ -119,6 +127,7 @@ export function UnansweredQuestionDetail({
         version={question.version}
         initialAnswer={savedAnswer ?? ""}
         submitLabel={UNANSWERED_UPDATE_ANSWER_LABEL}
+        gate={questionGate}
         onSuccess={() => onMutationSuccess("set_answer")}
         onCancel={() => setAnswerMode("read")}
       />
@@ -340,6 +349,7 @@ export function UnansweredQuestionDetail({
             <UnansweredDismissDialog
               groupId={question.id}
               version={question.version}
+              gate={questionGate}
               onSuccess={() => onMutationSuccess("dismiss")}
             />
           </div>

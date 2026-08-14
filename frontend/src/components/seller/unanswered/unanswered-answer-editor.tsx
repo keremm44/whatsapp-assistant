@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import type { RecordMutationGate } from "@/components/shared/use-record-mutation-gate";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/client";
 import { postUnansweredAction } from "@/lib/seller/unanswered-api";
@@ -37,6 +37,7 @@ export function UnansweredAnswerEditor({
   version,
   initialAnswer,
   submitLabel,
+  gate,
   onSuccess,
   onCancel,
 }: {
@@ -46,12 +47,17 @@ export function UnansweredAnswerEditor({
   /** Prefill for the ANSWERED edit mode; empty for a fresh answer. */
   initialAnswer: string;
   submitLabel: string;
+  /**
+   * Shared question-record mutation gate: set_answer and dismiss use
+   * the same expected_version, so they may never overlap. While the
+   * sibling owns the gate, this submit is disabled and fails closed.
+   */
+  gate: RecordMutationGate;
   /** Called once after a successful set_answer; the workspace re-resolves. */
   onSuccess: () => void;
   /** Optional “Vazgeç” affordance for the ANSWERED edit mode. */
   onCancel?: () => void;
 }) {
-  const router = useRouter();
   const [answer, setAnswer] = React.useState(initialAnswer);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
@@ -65,10 +71,16 @@ export function UnansweredAnswerEditor({
   }, []);
 
   const trimmedLength = answer.trim().length;
-  const canSubmit = trimmedLength > 0 && !isSubmitting;
+  const canSubmit = trimmedLength > 0 && !isSubmitting && !gate.locked;
 
   const onSubmit = async () => {
     if (!canSubmit || inflightRef.current) return;
+    // Synchronous shared gate: an active dismiss (or its pending
+    // authoritative refresh) owns the record — this submit fails
+    // closed instead of posting with the same stale version.
+    const token = gate.acquire();
+    if (token === null) return;
+    let gateFinished = false;
     setActionError(null);
     setWasConflict(false);
 
@@ -91,16 +103,24 @@ export function UnansweredAnswerEditor({
         { signal: controller.signal },
       );
       if (controller.signal.aborted) return;
+      // The workspace's success resolution starts the authoritative
+      // transition (navigation or refresh) synchronously; only then
+      // is the gate released.
       onSuccess();
+      gateFinished = true;
+      gate.finish(token, { refresh: false });
     } catch (error) {
       if (controller.signal.aborted) return;
       const status = error instanceof ApiError ? error.status : null;
       const kind = classifyUnansweredMutationFailure(status);
       if (kind === "conflict") {
         // Never overwrite: re-resolve, then tell the seller the record
-        // changed elsewhere. The typed answer stays in the field.
+        // changed elsewhere. The typed answer stays in the field, and
+        // the sibling action stays blocked until the refreshed
+        // version has landed (gate-tracked refresh).
         setWasConflict(true);
-        router.refresh();
+        gateFinished = true;
+        gate.finish(token, { refresh: true });
         return;
       }
       setActionError(
@@ -109,6 +129,9 @@ export function UnansweredAnswerEditor({
           : "Cevap şu anda kaydedilemedi. Metniniz korundu; lütfen tekrar deneyin.",
       );
     } finally {
+      if (!gateFinished) {
+        gate.finish(token, { refresh: false });
+      }
       if (inflightRef.current === controller) {
         inflightRef.current = null;
       }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
+import { useRecordMutationGate } from "@/components/shared/use-record-mutation-gate";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/client";
 import type {
@@ -49,6 +50,14 @@ export function ProductDetailPanel({
   product: Product;
   fieldsBootstrap: ProductFieldsBootstrap | null;
 }) {
+  // One shared mutation gate for the selected PRODUCT RECORD: Rename
+  // and Status both PATCH the same product.version, so they must
+  // never overlap (the sibling stays natively disabled through the
+  // mutation AND its authoritative refresh). Scoped to this product
+  // only — field mutations keep their own existing lock, and nothing
+  // else on the page is affected.
+  const productGate = useRecordMutationGate();
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="space-y-4 border-b border-divider px-4 py-4 md:px-5">
@@ -61,8 +70,8 @@ export function ProductDetailPanel({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <ProductRenameDialog product={product} />
-          <ProductStatusDialog product={product} />
+          <ProductRenameDialog product={product} gate={productGate} />
+          <ProductStatusDialog product={product} gate={productGate} />
         </div>
       </div>
       <div className="space-y-4 px-4 py-4 md:px-5">

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +35,7 @@ import {
   PRODUCTS_REACTIVATE_LABEL,
   PRODUCTS_RENAME_LABEL,
 } from "@/lib/seller/products-format";
+import type { RecordMutationGate } from "@/components/shared/use-record-mutation-gate";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 
 const usePortalHost = () => {
@@ -175,8 +175,19 @@ export function ProductCreateDialog({
   );
 }
 
-export function ProductRenameDialog({ product }: { product: Product }) {
-  const router = useRouter();
+export function ProductRenameDialog({
+  product,
+  gate,
+}: {
+  product: Product;
+  /**
+   * Shared product-record mutation gate: Rename and Status PATCH the
+   * same product.version, so they may never overlap. While the
+   * sibling owns the gate (mutation or its authoritative refresh)
+   * the trigger is natively disabled and the submit fails closed.
+   */
+  gate: RecordMutationGate;
+}) {
   const { host, setHost } = usePortalHost();
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState(product.name);
@@ -201,6 +212,13 @@ export function ProductRenameDialog({ product }: { product: Product }) {
       setError("Ürün adı 2 ile 200 karakter arasında olmalıdır.");
       return;
     }
+    // Synchronous shared gate: even if this dialog was already open,
+    // a sibling Status mutation (or its pending refresh) owning the
+    // record makes this submit fail closed — no PATCH with the same
+    // stale version is ever issued.
+    const token = gate.acquire();
+    if (token === null) return;
+    let gateFinished = false;
     setError(null);
     const controller = new AbortController();
     inflightRef.current = controller;
@@ -220,7 +238,10 @@ export function ProductRenameDialog({ product }: { product: Product }) {
       );
       if (controller.signal.aborted) return;
       setOpen(false);
-      router.refresh();
+      // Authoritative refresh through the gate: the sibling stays
+      // locked until the refreshed product/version has landed.
+      gateFinished = true;
+      gate.finish(token, { refresh: true });
     } catch (caught) {
       if (controller.signal.aborted) return;
       if (caught instanceof ApiError) {
@@ -231,12 +252,20 @@ export function ProductRenameDialog({ product }: { product: Product }) {
               ? PRODUCT_DUPLICATE_MESSAGE
               : PRODUCT_CONFLICT_MESSAGE,
           );
-          router.refresh();
+          gateFinished = true;
+          gate.finish(token, { refresh: true });
           return;
         }
       }
       setError(classifyCreateError(caught));
     } finally {
+      // Transient paths (no authoritative refresh needed) release the
+      // shared gate once this request has safely finished; the draft
+      // is preserved as before. Stale tokens are a no-op inside
+      // gate.finish, so nothing here can release a newer owner.
+      if (!gateFinished) {
+        gate.finish(token, { refresh: false });
+      }
       if (inflightRef.current === controller) inflightRef.current = null;
       setIsSubmitting(false);
     }
@@ -250,6 +279,7 @@ export function ProductRenameDialog({ product }: { product: Product }) {
         variant="secondary"
         size="md"
         className="min-h-11"
+        disabled={gate.locked}
         onClick={() => setOpen(true)}
       >
         {PRODUCTS_RENAME_LABEL}
@@ -285,7 +315,11 @@ export function ProductRenameDialog({ product }: { product: Product }) {
               </p>
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting || gate.locked}
+                aria-busy={isSubmitting}
+              >
                 {isSubmitting ? "Kaydediliyor…" : "Kaydet"}
               </Button>
               <Button
@@ -304,8 +338,14 @@ export function ProductRenameDialog({ product }: { product: Product }) {
   );
 }
 
-export function ProductStatusDialog({ product }: { product: Product }) {
-  const router = useRouter();
+export function ProductStatusDialog({
+  product,
+  gate,
+}: {
+  product: Product;
+  /** Shared product-record mutation gate — see ProductRenameDialog. */
+  gate: RecordMutationGate;
+}) {
   const { host, setHost } = usePortalHost();
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -317,6 +357,12 @@ export function ProductStatusDialog({ product }: { product: Product }) {
 
   const onConfirm = async () => {
     if (isSubmitting || inflightRef.current) return;
+    // Synchronous shared gate: an active Rename (or its pending
+    // authoritative refresh) owns the record — this confirm fails
+    // closed instead of issuing a PATCH with the same stale version.
+    const token = gate.acquire();
+    if (token === null) return;
+    let gateFinished = false;
     setError(null);
     const controller = new AbortController();
     inflightRef.current = controller;
@@ -339,7 +385,8 @@ export function ProductStatusDialog({ product }: { product: Product }) {
       );
       if (controller.signal.aborted) return;
       setOpen(false);
-      router.refresh();
+      gateFinished = true;
+      gate.finish(token, { refresh: true });
     } catch (caught) {
       if (controller.signal.aborted) return;
       if (
@@ -347,11 +394,15 @@ export function ProductStatusDialog({ product }: { product: Product }) {
         classifyProductsMutationFailure(caught.status) === "conflict"
       ) {
         setError(PRODUCT_CONFLICT_MESSAGE);
-        router.refresh();
+        gateFinished = true;
+        gate.finish(token, { refresh: true });
         return;
       }
       setError("İşlem şu anda tamamlanamadı. Lütfen tekrar deneyin.");
     } finally {
+      if (!gateFinished) {
+        gate.finish(token, { refresh: false });
+      }
       if (inflightRef.current === controller) inflightRef.current = null;
       setIsSubmitting(false);
     }
@@ -365,6 +416,7 @@ export function ProductStatusDialog({ product }: { product: Product }) {
         variant="secondary"
         size="md"
         className="min-h-11"
+        disabled={gate.locked}
         onClick={() => setOpen(true)}
       >
         {product.isActive ? PRODUCTS_DEACTIVATE_LABEL : PRODUCTS_REACTIVATE_LABEL}
@@ -398,7 +450,7 @@ export function ProductStatusDialog({ product }: { product: Product }) {
               onClick={() => {
                 void onConfirm();
               }}
-              disabled={isSubmitting}
+              disabled={isSubmitting || gate.locked}
               aria-busy={isSubmitting}
             >
               {isSubmitting ? "Kaydediliyor…" : "Onayla"}

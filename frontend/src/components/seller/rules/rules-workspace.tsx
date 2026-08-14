@@ -6,8 +6,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { EmptyState } from "@/components/shared/empty-state";
+import { useRecordMutationGate } from "@/components/shared/use-record-mutation-gate";
 import { Button } from "@/components/ui/button";
-import type { RuleView } from "@/lib/seller/rules";
+import type { RuleView, SellerRule } from "@/lib/seller/rules";
 import {
   getRuleHitCountLabel,
   getRuleStatusLabel,
@@ -83,10 +84,7 @@ export function RulesWorkspace({
                       {" · "}
                       {getRuleHitCountLabel(rule.hitCount)}
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      <RuleEditDialog rule={rule} />
-                      <RuleStatusDialog rule={rule} />
-                    </div>
+                    <RuleRowActions rule={rule} />
                   </div>
                 </div>
               </article>
@@ -163,6 +161,24 @@ function WorkspaceRetry({
       >
         Tekrar dene
       </Button>
+    </div>
+  );
+}
+
+/**
+ * Per-record action group. Edit and Status PATCH the same
+ * rule.version, so each row owns ONE shared mutation gate: starting
+ * either action natively disables the sibling (and fails its submit
+ * closed) until the mutation and its authoritative refresh finish.
+ * Scoped strictly to this rule — other rows and the create action
+ * stay independent.
+ */
+function RuleRowActions({ rule }: { rule: SellerRule }) {
+  const gate = useRecordMutationGate();
+  return (
+    <div className="flex flex-wrap gap-2">
+      <RuleEditDialog rule={rule} gate={gate} />
+      <RuleStatusDialog rule={rule} gate={gate} />
     </div>
   );
 }

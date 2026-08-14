@@ -6,7 +6,10 @@
  */
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   conversationDetailHref,
@@ -141,4 +144,25 @@ test("rows do not repeat the page-level paused state as a per-row chip", () => {
   for (const code of ["manual_pause", "security", "violation"]) {
     assert.notEqual(getPausedReasonPresentation(code).label, PAUSED_STATE_LABEL);
   }
+});
+
+test("paused load-more uses the shared stale-context lifecycle helpers", () => {
+  // The panel must cancel the in-flight load-more when a new bootstrap
+  // replaces the list context, and only the owning request may release
+  // the shared lifecycle state — same standard as the other queues.
+  const dir = path.dirname(fileURLToPath(import.meta.url));
+  const source = readFileSync(
+    path.resolve(
+      dir,
+      "../../components/seller/paused/paused-list-panel.tsx",
+    ),
+    "utf8",
+  );
+  assert.match(source, /cancelInflightLoadMore\(inflightRef\)/);
+  assert.match(source, /ownsLoadMoreLifecycle\(inflightRef, controller\)/);
+  // The old unguarded release pattern must not come back.
+  assert.doesNotMatch(
+    source,
+    /}\n\s*setIsLoadingMore\(false\);\n\s*}\n\s*};/,
+  );
 });

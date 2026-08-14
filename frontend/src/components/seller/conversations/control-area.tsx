@@ -66,11 +66,33 @@ export function ConversationControlArea({
     setControl(initialControl);
   }, [initialControl]);
 
+  // Identity boundary. This component instance can be reused across
+  // conversations, so switching customers must immediately orphan any
+  // in-flight control work belonging to the previous customer:
+  //   - abort makes every awaited step inside the old request bail
+  //     out (all state writes are behind `signal.aborted` checks), so
+  //     a late resolution/rejection can never write A's control,
+  //     error, or conflict feedback into B;
+  //   - nulling the ref INVALIDATES OWNERSHIP: the old request's
+  //     finally is identity-guarded below, so it can no longer clear
+  //     the inflight ref or pending/retrying state that now belongs
+  //     to the new customer.
+  // The cleanup also runs on unmount, preserving the old behavior.
   React.useEffect(() => {
     return () => {
       inflightRef.current?.abort();
+      inflightRef.current = null;
     };
-  }, []);
+  }, [customerId]);
+
+  // Fresh identity starts with clean request-local state: no stale
+  // error text, no pending/retrying flags inherited from the previous
+  // customer's request lifecycle.
+  React.useEffect(() => {
+    setErrorMessage(null);
+    setIsPending(false);
+    setIsRetrying(false);
+  }, [customerId]);
 
   const readyView: ConversationControlView | null =
     control.state === "ready" ? control.view : null;
@@ -112,10 +134,13 @@ export function ConversationControlArea({
         "Kontrol bilgisi şu anda alınamadı. Lütfen tekrar deneyin.",
       );
     }
+    // Only the request that still owns the inflight ref may release
+    // the lifecycle state; a request orphaned by an identity switch
+    // (ref already cleared) must not touch the new customer's state.
     if (inflightRef.current === controller) {
       inflightRef.current = null;
+      setIsRetrying(false);
     }
-    setIsRetrying(false);
   };
 
   const onHandoff = async (
@@ -182,10 +207,14 @@ export function ConversationControlArea({
         );
       }
     } finally {
+      // Ownership-guarded release: an identity switch aborts AND
+      // clears the ref, so this old finalizer becomes a strict no-op
+      // and can never reset the pending state of a request started
+      // for the next customer.
       if (inflightRef.current === controller) {
         inflightRef.current = null;
+        setIsPending(false);
       }
-      setIsPending(false);
     }
   };
 

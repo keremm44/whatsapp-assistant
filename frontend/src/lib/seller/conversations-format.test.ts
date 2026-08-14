@@ -7,7 +7,10 @@
  */
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import type { ConversationControlHistoryEntry } from "./conversations.ts";
 import {
@@ -168,4 +171,43 @@ test("expansion copy never claims a complete lifetime history", () => {
   assert.equal(CONTROL_HISTORY_SHOW_MORE_LABEL, "Daha fazlasını göster");
   assert.equal(CONTROL_HISTORY_SHOW_LESS_LABEL, "Daha az göster");
   assert.doesNotMatch(CONTROL_HISTORY_SHOW_MORE_LABEL, /Tüm|Eksiksiz/);
+});
+
+/* ------------------------------------------------------------------ */
+/* Control-area request identity/ownership (source-level invariants)   */
+/* ------------------------------------------------------------------ */
+
+test("control area orphans the previous customer's in-flight request", () => {
+  const dir = path.dirname(fileURLToPath(import.meta.url));
+  const source = readFileSync(
+    path.resolve(
+      dir,
+      "../../components/seller/conversations/control-area.tsx",
+    ),
+    "utf8",
+  );
+  // Identity boundary: the abort/invalidate cleanup is keyed to the
+  // customer, not only to unmount — switching conversations aborts
+  // AND clears ownership of the previous customer's request.
+  assert.match(
+    source,
+    /inflightRef\.current\?\.abort\(\);\s*\n\s*inflightRef\.current = null;\s*\n\s*};\s*\n\s*}, \[customerId\]\);/,
+  );
+  // Finalizers are ownership-guarded: a stale request (ref already
+  // cleared or superseded) can no longer reset pending/retrying state
+  // that belongs to the new customer's lifecycle.
+  const guardedPending = source.match(
+    /if \(inflightRef\.current === controller\) \{\s*\n\s*inflightRef\.current = null;\s*\n\s*setIsPending\(false\);/,
+  );
+  const guardedRetrying = source.match(
+    /if \(inflightRef\.current === controller\) \{\s*\n\s*inflightRef\.current = null;\s*\n\s*setIsRetrying\(false\);/,
+  );
+  assert.ok(guardedPending, "handoff finalizer must be ownership-guarded");
+  assert.ok(guardedRetrying, "retry finalizer must be ownership-guarded");
+  // The old unguarded pattern (release outside the identity check)
+  // must not come back.
+  assert.doesNotMatch(
+    source,
+    /inflightRef\.current = null;\s*\n\s*}\s*\n\s*setIsPending\(false\);/,
+  );
 });

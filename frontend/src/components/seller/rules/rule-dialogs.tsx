@@ -44,6 +44,7 @@ import {
   RULES_DEACTIVATE_LABEL,
   RULES_REACTIVATE_LABEL,
 } from "@/lib/seller/rules-format";
+import type { RecordMutationGate } from "@/components/shared/use-record-mutation-gate";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 
 const usePortalHost = () => {
@@ -203,8 +204,19 @@ export function RuleCreateDialog() {
   );
 }
 
-export function RuleEditDialog({ rule }: { rule: SellerRule }) {
-  const router = useRouter();
+export function RuleEditDialog({
+  rule,
+  gate,
+}: {
+  rule: SellerRule;
+  /**
+   * Shared rule-record mutation gate: Edit and Status PATCH the same
+   * rule.version, so they may never overlap. While the sibling owns
+   * the gate (mutation or its authoritative refresh) the trigger is
+   * natively disabled and the submit fails closed.
+   */
+  gate: RecordMutationGate;
+}) {
   const { host, setHost } = usePortalHost();
   const [open, setOpen] = React.useState(false);
   const [triggerText, setTriggerText] = React.useState(rule.triggerText);
@@ -230,6 +242,13 @@ export function RuleEditDialog({ rule }: { rule: SellerRule }) {
       setError("İfade 2–150, cevap 2–1500 karakter olmalıdır.");
       return;
     }
+    // Synchronous shared gate: an active Status mutation (or its
+    // pending authoritative refresh) owns the record — this submit
+    // fails closed instead of issuing a PATCH with the same stale
+    // version, even if the dialog was already open.
+    const token = gate.acquire();
+    if (token === null) return;
+    let gateFinished = false;
     setError(null);
     const controller = new AbortController();
     inflightRef.current = controller;
@@ -253,7 +272,10 @@ export function RuleEditDialog({ rule }: { rule: SellerRule }) {
       );
       if (controller.signal.aborted) return;
       setOpen(false);
-      router.refresh();
+      // Authoritative refresh through the gate: the sibling stays
+      // locked until the refreshed rule/version has landed.
+      gateFinished = true;
+      gate.finish(token, { refresh: true });
     } catch (caught) {
       if (controller.signal.aborted) return;
       if (caught instanceof ApiError) {
@@ -264,12 +286,19 @@ export function RuleEditDialog({ rule }: { rule: SellerRule }) {
               ? RULE_DUPLICATE_MESSAGE
               : RULE_CONFLICT_MESSAGE,
           );
-          router.refresh();
+          gateFinished = true;
+          gate.finish(token, { refresh: true });
           return;
         }
       }
       setError("İşlem şu anda tamamlanamadı. Girdiğiniz metin korundu.");
     } finally {
+      // Transient paths release the shared gate once this request has
+      // safely finished; the typed draft is preserved as before.
+      // Stale tokens are a no-op inside gate.finish.
+      if (!gateFinished) {
+        gate.finish(token, { refresh: false });
+      }
       if (inflightRef.current === controller) inflightRef.current = null;
       setIsSubmitting(false);
     }
@@ -283,6 +312,7 @@ export function RuleEditDialog({ rule }: { rule: SellerRule }) {
         variant="secondary"
         size="sm"
         className="min-h-11"
+        disabled={gate.locked}
         onClick={() => setOpen(true)}
       >
         Düzenle
@@ -335,7 +365,11 @@ export function RuleEditDialog({ rule }: { rule: SellerRule }) {
               </p>
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting || gate.locked}
+                aria-busy={isSubmitting}
+              >
                 {isSubmitting ? "Kaydediliyor…" : "Kaydet"}
               </Button>
               <Button
@@ -354,8 +388,14 @@ export function RuleEditDialog({ rule }: { rule: SellerRule }) {
   );
 }
 
-export function RuleStatusDialog({ rule }: { rule: SellerRule }) {
-  const router = useRouter();
+export function RuleStatusDialog({
+  rule,
+  gate,
+}: {
+  rule: SellerRule;
+  /** Shared rule-record mutation gate — see RuleEditDialog. */
+  gate: RecordMutationGate;
+}) {
   const { host, setHost } = usePortalHost();
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -366,6 +406,13 @@ export function RuleStatusDialog({ rule }: { rule: SellerRule }) {
 
   const onConfirm = async () => {
     if (isSubmitting || inflightRef.current) return;
+    // Synchronous shared gate: an active Edit mutation (or its
+    // pending authoritative refresh) owns the record — this confirm
+    // fails closed instead of issuing a PATCH with the same stale
+    // version.
+    const token = gate.acquire();
+    if (token === null) return;
+    let gateFinished = false;
     setError(null);
     const controller = new AbortController();
     inflightRef.current = controller;
@@ -391,7 +438,8 @@ export function RuleStatusDialog({ rule }: { rule: SellerRule }) {
       }
       if (controller.signal.aborted) return;
       setOpen(false);
-      router.refresh();
+      gateFinished = true;
+      gate.finish(token, { refresh: true });
     } catch (caught) {
       if (controller.signal.aborted) return;
       if (
@@ -399,11 +447,15 @@ export function RuleStatusDialog({ rule }: { rule: SellerRule }) {
         classifyRulesMutationFailure(caught.status) === "conflict"
       ) {
         setError(RULE_CONFLICT_MESSAGE);
-        router.refresh();
+        gateFinished = true;
+        gate.finish(token, { refresh: true });
         return;
       }
       setError("İşlem şu anda tamamlanamadı. Lütfen tekrar deneyin.");
     } finally {
+      if (!gateFinished) {
+        gate.finish(token, { refresh: false });
+      }
       if (inflightRef.current === controller) inflightRef.current = null;
       setIsSubmitting(false);
     }
@@ -417,6 +469,7 @@ export function RuleStatusDialog({ rule }: { rule: SellerRule }) {
         variant="secondary"
         size="sm"
         className="min-h-11"
+        disabled={gate.locked}
         onClick={() => setOpen(true)}
       >
         {rule.isActive ? RULES_DEACTIVATE_LABEL : RULES_REACTIVATE_LABEL}
@@ -447,7 +500,7 @@ export function RuleStatusDialog({ rule }: { rule: SellerRule }) {
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
-              disabled={isSubmitting}
+              disabled={isSubmitting || gate.locked}
               aria-busy={isSubmitting}
               onClick={() => {
                 void onConfirm();

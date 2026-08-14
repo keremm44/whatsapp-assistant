@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +22,7 @@ import {
   UNANSWERED_DISMISS_NOTE_MAX_LENGTH,
   UNANSWERED_DISMISS_TRIGGER_LABEL,
 } from "@/lib/seller/unanswered-format";
+import type { RecordMutationGate } from "@/components/shared/use-record-mutation-gate";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 
 /**
@@ -39,11 +39,19 @@ import { getBrowserAccessToken } from "@/lib/supabase/client";
 export function UnansweredDismissDialog({
   groupId,
   version,
+  gate,
   onSuccess,
 }: {
   groupId: number;
   /** The version rendered to the seller — sent as expected_version. */
   version: number;
+  /**
+   * Shared question-record mutation gate: dismiss and set_answer use
+   * the same expected_version, so they may never overlap. While the
+   * sibling owns the gate, the trigger is natively disabled and the
+   * confirm fails closed.
+   */
+  gate: RecordMutationGate;
   /** Called once after a successful dismiss; the workspace re-resolves. */
   onSuccess: () => void;
 }) {
@@ -59,8 +67,9 @@ export function UnansweredDismissDialog({
       <div ref={setPortalHost} className="contents" />
       <button
         type="button"
+        disabled={gate.locked}
         onClick={() => setOpen(true)}
-        className="inline-flex min-h-11 items-center rounded-md px-1 text-[12.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="inline-flex min-h-11 items-center rounded-md px-1 text-[12.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50"
       >
         {UNANSWERED_DISMISS_TRIGGER_LABEL}
       </button>
@@ -68,6 +77,7 @@ export function UnansweredDismissDialog({
         <DismissDialogBody
           groupId={groupId}
           version={version}
+          gate={gate}
           onSuccess={onSuccess}
           onClose={() => setOpen(false)}
           portalContainer={portalHost}
@@ -80,17 +90,18 @@ export function UnansweredDismissDialog({
 function DismissDialogBody({
   groupId,
   version,
+  gate,
   onSuccess,
   onClose,
   portalContainer,
 }: {
   groupId: number;
   version: number;
+  gate: RecordMutationGate;
   onSuccess: () => void;
   onClose: () => void;
   portalContainer: Element | DocumentFragment | null;
 }) {
-  const router = useRouter();
   const [note, setNote] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
@@ -105,6 +116,13 @@ function DismissDialogBody({
 
   const onSubmit = async () => {
     if (isSubmitting || inflightRef.current) return;
+    // Synchronous shared gate: an active answer save (or its pending
+    // authoritative refresh) owns the record — this confirm fails
+    // closed instead of posting with the same stale version, even
+    // though the dialog was already open.
+    const token = gate.acquire();
+    if (token === null) return;
+    let gateFinished = false;
     setActionError(null);
     setWasConflict(false);
 
@@ -127,16 +145,23 @@ function DismissDialogBody({
         { signal: controller.signal },
       );
       if (controller.signal.aborted) return;
+      // The workspace's success resolution starts the authoritative
+      // transition (navigation or refresh) synchronously; only then
+      // is the gate released.
       onSuccess();
+      gateFinished = true;
+      gate.finish(token, { refresh: false });
     } catch (error) {
       if (controller.signal.aborted) return;
       const status = error instanceof ApiError ? error.status : null;
       const kind = classifyUnansweredMutationFailure(status);
       if (kind === "conflict") {
         // The record changed elsewhere: re-resolve truth, keep the
-        // typed note, explain calmly.
+        // typed note, explain calmly. The sibling stays blocked until
+        // the refreshed version has landed (gate-tracked refresh).
         setWasConflict(true);
-        router.refresh();
+        gateFinished = true;
+        gate.finish(token, { refresh: true });
         return;
       }
       setActionError(
@@ -145,6 +170,9 @@ function DismissDialogBody({
           : "İşlem şu anda tamamlanamadı. Notunuz korundu; lütfen tekrar deneyin.",
       );
     } finally {
+      if (!gateFinished) {
+        gate.finish(token, { refresh: false });
+      }
       if (inflightRef.current === controller) {
         inflightRef.current = null;
       }
@@ -209,7 +237,7 @@ function DismissDialogBody({
             onClick={() => {
               void onSubmit();
             }}
-            disabled={isSubmitting}
+            disabled={isSubmitting || gate.locked}
             aria-busy={isSubmitting}
           >
             {isSubmitting ? (
