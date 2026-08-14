@@ -211,3 +211,21 @@ test("control area orphans the previous customer's in-flight request", () => {
     /inflightRef\.current = null;\s*\n\s*}\s*\n\s*setIsPending\(false\);/,
   );
 });
+
+test("control area lifetime is hard-keyed to the customer identity", () => {
+  const dir = path.dirname(fileURLToPath(import.meta.url));
+  const source = readFileSync(
+    path.resolve(
+      dir,
+      "../../components/seller/conversations/conversation-detail-panel.tsx",
+    ),
+    "utf8",
+  );
+  // Switching A → B must REMOUNT the control area (A's local state and
+  // in-flight work die with the instance) — keyed to exactly the
+  // customer id, never to version/state/timestamps.
+  assert.match(
+    source,
+    /<ConversationControlArea\s*\n\s*key=\{customerId\}\s*\n\s*customerId=\{customerId\}/,
+  );
+});

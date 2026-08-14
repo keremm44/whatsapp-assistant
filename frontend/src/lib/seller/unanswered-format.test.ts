@@ -8,7 +8,10 @@
  */
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import type { UnansweredQuestionSummary } from "./unanswered.ts";
 import {
@@ -26,6 +29,7 @@ import {
   mergeUnansweredPage,
   normalizeUnansweredQuestionIdParam,
   normalizeUnansweredViewParam,
+  gateModeForUnansweredSuccess,
   resolveUnansweredMutationSuccess,
   UNANSWERED_ANSWER_LABEL,
   UNANSWERED_ANSWER_MAX_LENGTH,
@@ -445,4 +449,75 @@ test("the Rules-distinction note says the answer is not added to Mesaja Göre Ce
     UNANSWERED_NOT_A_RULE_NOTE,
     /canonical|normalize|normalized|kural motoru|veritabanı/i,
   );
+});
+
+/* ------------------------------------------------------------------ */
+/* Success → record-gate lifecycle                                     */
+/* ------------------------------------------------------------------ */
+
+test("success gate mode follows the business resolution without duplicating it", () => {
+  // refresh success → the gate owns the one tracked router.refresh().
+  assert.equal(gateModeForUnansweredSuccess("refresh"), "refresh");
+  // clear-selection success → navigation unmounts the keyed detail
+  // (and its gate); the gate is deliberately never finished early.
+  assert.equal(
+    gateModeForUnansweredSuccess("clear_selection"),
+    "navigation_unmount",
+  );
+  // Composed over the unchanged matrix: view=all saves/dismisses are
+  // gate-owned refreshes; action_required paths are unmount-bound.
+  assert.equal(
+    gateModeForUnansweredSuccess(
+      resolveUnansweredMutationSuccess("all", "set_answer"),
+    ),
+    "refresh",
+  );
+  assert.equal(
+    gateModeForUnansweredSuccess(
+      resolveUnansweredMutationSuccess("all", "dismiss"),
+    ),
+    "refresh",
+  );
+  assert.equal(
+    gateModeForUnansweredSuccess(
+      resolveUnansweredMutationSuccess("action_required", "set_answer"),
+    ),
+    "navigation_unmount",
+  );
+  assert.equal(
+    gateModeForUnansweredSuccess(
+      resolveUnansweredMutationSuccess("action_required", "dismiss"),
+    ),
+    "navigation_unmount",
+  );
+});
+
+test("success paths never release the gate with an untracked refresh", () => {
+  // Regression guard for the exact old bug: after a successful
+  // mutation the components must NOT call
+  //   onSuccess(); ... gate.finish(token, { refresh: false })
+  // — refresh successes are gate-owned (refresh: true) and
+  // clear-selection successes deliberately do not finish at all.
+  const dir = path.dirname(fileURLToPath(import.meta.url));
+  for (const relative of [
+    "../../components/seller/unanswered/unanswered-answer-editor.tsx",
+    "../../components/seller/unanswered/unanswered-dismiss-dialog.tsx",
+  ]) {
+    const source = readFileSync(path.resolve(dir, relative), "utf8");
+    // The success path routes through the single lifecycle decision…
+    assert.match(source, /gateModeForUnansweredSuccess\(onSuccess\(\)\)/);
+    // …and the refresh mode is gate-tracked.
+    assert.match(
+      source,
+      /if \(mode === "refresh"\) \{\s*\n\s*gate\.finish\(token, \{ refresh: true \}\);/,
+    );
+    // The old premature-release pattern must not come back.
+    assert.doesNotMatch(
+      source,
+      /onSuccess\(\);[\s\S]{0,200}gate\.finish\(token, \{ refresh: false \}\)/,
+    );
+    // The workspace owns navigation; children never hold a router of
+    // their own (all refreshes go through the gate).
+    assert.doesNotMatch(source, /useRouter/);
+  }
 });

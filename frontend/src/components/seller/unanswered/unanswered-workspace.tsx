@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import type { UnansweredAction, UnansweredView } from "@/lib/seller/unanswered";
 import {
   resolveUnansweredMutationSuccess,
+  type UnansweredMutationResolution,
   UNANSWERED_DETAIL_EMPTY_GUIDANCE,
   UNANSWERED_DETAIL_NOT_FOUND_TITLE,
   unansweredWorkspaceHref,
@@ -65,13 +66,23 @@ export function UnansweredWorkspace({
   const router = useRouter();
   const hasSelection = selectedQuestionId !== null;
 
+  // Success resolution: the ONE source of truth for view+action →
+  // refresh / clear_selection stays resolveUnansweredMutationSuccess.
+  // The parent performs ONLY the clear-selection navigation (which
+  // unmounts the keyed detail together with its record gate) and
+  // returns the resolution to the mutating child. For "refresh" the
+  // child's shared record gate owns the single authoritative
+  // router.refresh() (gate.finish(token, { refresh: true })), so the
+  // sibling action stays locked until fresh versions land — the
+  // parent must NOT refresh here (exactly one authoritative
+  // transition).
   const onMutationSuccess = React.useCallback(
-    (action: UnansweredAction) => {
-      if (resolveUnansweredMutationSuccess(view, action) === "clear_selection") {
+    (action: UnansweredAction): UnansweredMutationResolution => {
+      const resolution = resolveUnansweredMutationSuccess(view, action);
+      if (resolution === "clear_selection") {
         router.push(unansweredWorkspaceHref({ view }) as Route);
-        return;
       }
-      router.refresh();
+      return resolution;
     },
     [view, router],
   );
@@ -108,7 +119,7 @@ function UnansweredDetailRegion({
 }: {
   bootstrap: UnansweredDetailBootstrap | null;
   view: UnansweredView;
-  onMutationSuccess: (action: UnansweredAction) => void;
+  onMutationSuccess: (action: UnansweredAction) => UnansweredMutationResolution;
 }) {
   if (bootstrap === null) {
     // Only visible from lg up: below that the region is hidden while

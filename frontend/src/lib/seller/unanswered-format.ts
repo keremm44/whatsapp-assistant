@@ -436,10 +436,12 @@ export const classifyUnansweredMutationFailure = (
  *
  * Nothing is ever faked locally in place of backend truth.
  */
+export type UnansweredMutationResolution = "clear_selection" | "refresh";
+
 export const resolveUnansweredMutationSuccess = (
   view: UnansweredView,
   action: UnansweredAction,
-): "clear_selection" | "refresh" => {
+): UnansweredMutationResolution => {
   if (action === "set_answer") {
     if (view === "action_required" || view === "dismissed") {
       return "clear_selection";
@@ -452,3 +454,36 @@ export const resolveUnansweredMutationSuccess = (
   }
   return "refresh";
 };
+
+/* ------------------------------------------------------------------ */
+/* Success → record-gate lifecycle (single testable decision)          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * How the shared question-record mutation gate must terminate after a
+ * SUCCESSFUL mutation, derived from the business resolution (which
+ * stays solely in resolveUnansweredMutationSuccess — this helper never
+ * duplicates the view+action matrix):
+ *
+ *   "refresh"           → the gate OWNS the one authoritative
+ *                         router.refresh(): finish(token,
+ *                         { refresh: true }), so the sibling action
+ *                         stays locked until the fresh state/version
+ *                         has landed. The parent must NOT issue its
+ *                         own refresh for this path (exactly one
+ *                         authoritative transition).
+ *
+ *   "navigation_unmount" → clear-selection: the parent's router.push
+ *                         removes the selected question, and the
+ *                         keyed detail (and its gate instance)
+ *                         unmounts with it. The success path
+ *                         deliberately does NOT finish the gate —
+ *                         the stale question detail must never become
+ *                         interactable again while still mounted.
+ */
+export type UnansweredSuccessGateMode = "refresh" | "navigation_unmount";
+
+export const gateModeForUnansweredSuccess = (
+  resolution: UnansweredMutationResolution,
+): UnansweredSuccessGateMode =>
+  resolution === "refresh" ? "refresh" : "navigation_unmount";

@@ -15,6 +15,8 @@ import { postUnansweredAction } from "@/lib/seller/unanswered-api";
 import {
   buildDismissPayload,
   classifyUnansweredMutationFailure,
+  gateModeForUnansweredSuccess,
+  type UnansweredMutationResolution,
   UNANSWERED_DISMISS_CONFIRM_LABEL,
   UNANSWERED_DISMISS_EXPLANATION,
   UNANSWERED_DISMISS_LATER_ANSWER_NOTE,
@@ -52,8 +54,13 @@ export function UnansweredDismissDialog({
    * confirm fails closed.
    */
   gate: RecordMutationGate;
-  /** Called once after a successful dismiss; the workspace re-resolves. */
-  onSuccess: () => void;
+  /**
+   * Called once after a successful dismiss. The workspace performs
+   * ONLY the clear-selection navigation and returns the business
+   * resolution; the gate lifecycle follows it (see the answer
+   * editor's contract).
+   */
+  onSuccess: () => UnansweredMutationResolution;
 }) {
   const [open, setOpen] = React.useState(false);
   // Seller-subtree portal host so the dialog inherits the
@@ -98,7 +105,7 @@ function DismissDialogBody({
   groupId: number;
   version: number;
   gate: RecordMutationGate;
-  onSuccess: () => void;
+  onSuccess: () => UnansweredMutationResolution;
   onClose: () => void;
   portalContainer: Element | DocumentFragment | null;
 }) {
@@ -145,12 +152,16 @@ function DismissDialogBody({
         { signal: controller.signal },
       );
       if (controller.signal.aborted) return;
-      // The workspace's success resolution starts the authoritative
-      // transition (navigation or refresh) synchronously; only then
-      // is the gate released.
-      onSuccess();
+      // Success lifecycle follows the business resolution (see the
+      // answer editor): refresh success is gate-owned so the sibling
+      // stays locked until fresh versions land; clear-selection
+      // leaves the gate engaged — the keyed detail (and this gate)
+      // unmounts with the workspace's navigation.
+      const mode = gateModeForUnansweredSuccess(onSuccess());
       gateFinished = true;
-      gate.finish(token, { refresh: false });
+      if (mode === "refresh") {
+        gate.finish(token, { refresh: true });
+      }
     } catch (error) {
       if (controller.signal.aborted) return;
       const status = error instanceof ApiError ? error.status : null;

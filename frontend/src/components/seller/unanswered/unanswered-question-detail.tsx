@@ -14,6 +14,7 @@ import type {
 } from "@/lib/seller/unanswered";
 import {
   canAnswerUnanswered,
+  type UnansweredMutationResolution,
   canDismissUnanswered,
   formatUnansweredTimestamp,
   getUnansweredConversationHref,
@@ -69,7 +70,9 @@ export function UnansweredQuestionDetail({
   /** Current view — keeps “Listeye dön” on the same queue. */
   view: UnansweredView;
   /** Called once after a successful set_answer / dismiss. */
-  onMutationSuccess: (action: UnansweredAction) => void;
+  onMutationSuccess: (
+    action: UnansweredAction,
+  ) => UnansweredMutationResolution;
 }) {
   const { question } = detail;
   const statusDisplay = UNANSWERED_STATUS_DISPLAY[question.status];

@@ -133,7 +133,15 @@ export function ConversationDetailPanel({
         </div>
 
         <div className="flex items-start justify-start md:justify-end">
+          {/* Hard identity boundary: the control area's lifetime is
+              keyed to exactly the customer id, so switching A → B
+              unmounts A's instance (its local control/error/pending
+              state and any in-flight request die with it) and mounts
+              B directly from B's initialControl. This is defense in
+              depth ON TOP of the component's own [customerId]
+              abort/ownership guards, not a replacement for them. */}
           <ConversationControlArea
+            key={customerId}
             customerId={customerId}
             initialControl={initialControl}
           />

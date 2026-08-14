@@ -10,6 +10,8 @@ import { postUnansweredAction } from "@/lib/seller/unanswered-api";
 import {
   buildSetAnswerPayload,
   classifyUnansweredMutationFailure,
+  gateModeForUnansweredSuccess,
+  type UnansweredMutationResolution,
   UNANSWERED_ANSWER_LABEL,
   UNANSWERED_ANSWER_MAX_LENGTH,
   UNANSWERED_FUTURE_ONLY_NOTE,
@@ -53,8 +55,14 @@ export function UnansweredAnswerEditor({
    * sibling owns the gate, this submit is disabled and fails closed.
    */
   gate: RecordMutationGate;
-  /** Called once after a successful set_answer; the workspace re-resolves. */
-  onSuccess: () => void;
+  /**
+   * Called once after a successful set_answer. The workspace performs
+   * ONLY the clear-selection navigation and returns the business
+   * resolution; the gate lifecycle here follows it (refresh success
+   * is gate-owned; clear-selection leaves the gate engaged until the
+   * keyed detail unmounts with the navigation).
+   */
+  onSuccess: () => UnansweredMutationResolution;
   /** Optional “Vazgeç” affordance for the ANSWERED edit mode. */
   onCancel?: () => void;
 }) {
@@ -103,12 +111,22 @@ export function UnansweredAnswerEditor({
         { signal: controller.signal },
       );
       if (controller.signal.aborted) return;
-      // The workspace's success resolution starts the authoritative
-      // transition (navigation or refresh) synchronously; only then
-      // is the gate released.
-      onSuccess();
+      // Success lifecycle follows the business resolution:
+      //   refresh            → the gate owns the ONE authoritative
+      //                        router.refresh(); the sibling stays
+      //                        locked until fresh versions land.
+      //   navigation_unmount → the workspace's router.push (started
+      //                        synchronously inside onSuccess) will
+      //                        unmount the keyed detail together with
+      //                        this gate instance; deliberately NO
+      //                        gate.finish, so the stale question can
+      //                        never become interactable again while
+      //                        still mounted.
+      const mode = gateModeForUnansweredSuccess(onSuccess());
       gateFinished = true;
-      gate.finish(token, { refresh: false });
+      if (mode === "refresh") {
+        gate.finish(token, { refresh: true });
+      }
     } catch (error) {
       if (controller.signal.aborted) return;
       const status = error instanceof ApiError ? error.status : null;
