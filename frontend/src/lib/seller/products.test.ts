@@ -8,8 +8,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  isFieldMutationLocked,
   nextFieldSortOrder,
   planFieldMove,
+  shouldReleaseFieldMutationGate,
   buildChoiceOptions,
   buildCreateFieldPayload,
   buildCreateProductPayload,
@@ -435,4 +437,59 @@ test("a duplicate touching the pair's boundary also renumbers", () => {
   ]);
   const plan = planFieldMove(fields, 12, "up");
   assert.equal(plan.kind, "renumber");
+});
+
+/* ------------------------------------------------------------------ */
+/* Field mutation lock (reorder concurrency hardening)                 */
+/* ------------------------------------------------------------------ */
+
+test("field mutations lock through PATCH AND the authoritative refresh", () => {
+  // reorder PATCH sequence running → locked
+  assert.equal(
+    isFieldMutationLocked({ reorderInFlight: true, refreshPending: false }),
+    true,
+  );
+  // refresh transition pending (versions not fresh yet) → still locked
+  assert.equal(
+    isFieldMutationLocked({ reorderInFlight: false, refreshPending: true }),
+    true,
+  );
+  assert.equal(
+    isFieldMutationLocked({ reorderInFlight: true, refreshPending: true }),
+    true,
+  );
+  // refreshed bootstrap landed → unlocked; Edit/Status work normally
+  assert.equal(
+    isFieldMutationLocked({ reorderInFlight: false, refreshPending: false }),
+    false,
+  );
+});
+
+test("the synchronous gate releases only after the refresh completes", () => {
+  // Mirrors the panel's busyRef lifecycle: engaged when the reorder
+  // starts, kept through the PATCH sequence, any rollback, and the
+  // router.refresh() transition — no window between PATCH success
+  // and the refreshed bootstrap landing.
+  assert.equal(
+    shouldReleaseFieldMutationGate({
+      reorderInFlight: true,
+      refreshPending: false,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldReleaseFieldMutationGate({
+      reorderInFlight: false,
+      refreshPending: true,
+    }),
+    false,
+  );
+  // Only the fully-quiet state releases the gate (no permanent lock).
+  assert.equal(
+    shouldReleaseFieldMutationGate({
+      reorderInFlight: false,
+      refreshPending: false,
+    }),
+    true,
+  );
 });

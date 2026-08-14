@@ -283,7 +283,20 @@ export function FieldCreateDialog({
   );
 }
 
-export function FieldEditDialog({ field }: { field: ProductFieldDefinition }) {
+export function FieldEditDialog({
+  field,
+  disabled = false,
+}: {
+  field: ProductFieldDefinition;
+  /**
+   * Shared field-mutation lock from the field list: while a reorder
+   * (or its authoritative refresh) is active, the trigger is native
+   * disabled AND an already-open dialog's Kaydet cannot launch a
+   * PATCH against the same soon-stale field version. Typed form
+   * state is preserved; nothing auto-closes.
+   */
+  disabled?: boolean;
+}) {
   const router = useRouter();
   const { host, setHost } = usePortalHost();
   const [open, setOpen] = React.useState(false);
@@ -302,7 +315,10 @@ export function FieldEditDialog({ field }: { field: ProductFieldDefinition }) {
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (isSubmitting || inflightRef.current) return;
+    // The shared lock also guards the already-open-dialog sequence:
+    // a submit while the list is mid-reorder/refresh would reuse a
+    // stale field.version and manufacture an avoidable conflict.
+    if (disabled || isSubmitting || inflightRef.current) return;
     const trimmed = label.trim();
     if (!trimmed) {
       setError("Alan adı zorunludur.");
@@ -357,6 +373,7 @@ export function FieldEditDialog({ field }: { field: ProductFieldDefinition }) {
         variant="secondary"
         size="sm"
         className="min-h-11"
+        disabled={disabled}
         onClick={() => setOpen(true)}
       >
         Düzenle
@@ -408,7 +425,11 @@ export function FieldEditDialog({ field }: { field: ProductFieldDefinition }) {
               </p>
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={disabled || isSubmitting}
+                aria-busy={isSubmitting}
+              >
                 {isSubmitting ? "Kaydediliyor…" : "Kaydet"}
               </Button>
               <Button
@@ -427,7 +448,14 @@ export function FieldEditDialog({ field }: { field: ProductFieldDefinition }) {
   );
 }
 
-export function FieldStatusDialog({ field }: { field: ProductFieldDefinition }) {
+export function FieldStatusDialog({
+  field,
+  disabled = false,
+}: {
+  field: ProductFieldDefinition;
+  /** Shared field-mutation lock — same contract as FieldEditDialog. */
+  disabled?: boolean;
+}) {
   const router = useRouter();
   const { host, setHost } = usePortalHost();
   const [open, setOpen] = React.useState(false);
@@ -439,7 +467,8 @@ export function FieldStatusDialog({ field }: { field: ProductFieldDefinition }) 
   React.useEffect(() => () => inflightRef.current?.abort(), []);
 
   const onConfirm = async () => {
-    if (isSubmitting || inflightRef.current) return;
+    // Same already-open-dialog guard as FieldEditDialog.
+    if (disabled || isSubmitting || inflightRef.current) return;
     setError(null);
     const controller = new AbortController();
     inflightRef.current = controller;
@@ -488,6 +517,7 @@ export function FieldStatusDialog({ field }: { field: ProductFieldDefinition }) 
         variant="secondary"
         size="sm"
         className="min-h-11"
+        disabled={disabled}
         onClick={() => setOpen(true)}
       >
         {field.isActive ? PRODUCTS_DEACTIVATE_LABEL : PRODUCTS_REACTIVATE_LABEL}
@@ -518,7 +548,7 @@ export function FieldStatusDialog({ field }: { field: ProductFieldDefinition }) 
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
-              disabled={isSubmitting}
+              disabled={disabled || isSubmitting}
               aria-busy={isSubmitting}
               onClick={() => {
                 void onConfirm();

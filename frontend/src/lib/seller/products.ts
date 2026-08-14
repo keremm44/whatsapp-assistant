@@ -564,6 +564,38 @@ export const planFieldMove = (
   return { kind: "renumber", writes };
 };
 
+/**
+ * Shared field-mutation lock for the product field list.
+ *
+ * Intent: ONE field-definition mutation flow at a time inside the
+ * list. While a reorder is running — or its authoritative
+ * router.refresh() transition is still pending — starting an Edit /
+ * Activate / Deactivate PATCH would reuse the same soon-stale field
+ * versions and manufacture an avoidable 409. The lock therefore
+ * covers the full lifecycle:
+ *
+ *   reorder PATCH sequence running   → locked
+ *   refresh transition pending       → locked (versions not fresh yet)
+ *   refreshed bootstrap landed       → unlocked
+ */
+export const isFieldMutationLocked = (input: {
+  reorderInFlight: boolean;
+  refreshPending: boolean;
+}): boolean => input.reorderInFlight || input.refreshPending;
+
+/**
+ * When the synchronous double-click gate (the panel's busy ref) may
+ * be released: only once NOTHING is active anymore — the PATCH
+ * sequence has finished AND the authoritative refresh transition has
+ * completed. Releasing earlier would open a window where a rapid
+ * click starts a new mutation against versions the refresh is about
+ * to replace.
+ */
+export const shouldReleaseFieldMutationGate = (input: {
+  reorderInFlight: boolean;
+  refreshPending: boolean;
+}): boolean => !input.reorderInFlight && !input.refreshPending;
+
 /** Keys that must never appear on a field PATCH. */
 export const FIELD_IMMUTABLE_PATCH_KEYS = [
   "product_id",

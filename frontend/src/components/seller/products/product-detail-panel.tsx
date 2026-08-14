@@ -14,8 +14,10 @@ import type {
 import {
   buildUpdateFieldPayload,
   isChoiceFieldType,
+  isFieldMutationLocked,
   nextFieldSortOrder,
   planFieldMove,
+  shouldReleaseFieldMutationGate,
 } from "@/lib/seller/products";
 import { updateProductField } from "@/lib/seller/products-api";
 import {
@@ -129,9 +131,14 @@ function FieldsRegion({
  *     first PATCH's returned authoritative version; whether or not
  *     the rollback lands, the seller sees calm feedback and the
  *     refreshed backend order — success is never claimed.
- *   - One in-flight operation at a time: every arrow is disabled
- *     while a reorder (or the follow-up refresh) is pending, so rapid
- *     clicks and overlapping swaps are impossible.
+ *   - One field-definition mutation flow at a time: while a reorder
+ *     (or its follow-up authoritative refresh) is pending, every
+ *     arrow AND every field Edit / Activate / Deactivate action is
+ *     locked (isFieldMutationLocked), so no dialog can issue a PATCH
+ *     against the same soon-stale field versions. The synchronous
+ *     busy gate is released only after the refresh transition
+ *     completes (shouldReleaseFieldMutationGate), closing the window
+ *     between PATCH success and the refreshed bootstrap landing.
  */
 function FieldList({
   definitions,
@@ -144,7 +151,27 @@ function FieldList({
   const [isPending, startTransition] = React.useTransition();
   const busyRef = React.useRef(false);
 
-  const reorderDisabled = isReordering || isPending;
+  const mutationLocked = isFieldMutationLocked({
+    reorderInFlight: isReordering,
+    refreshPending: isPending,
+  });
+
+  // The synchronous double-click gate mirrors the FULL lifecycle:
+  // it stays engaged through the PATCH sequence (and any rollback)
+  // AND the authoritative router.refresh() transition, and is
+  // released only when neither is active anymore. Never released
+  // inside the request's finally — that would open a window between
+  // PATCH success and the refreshed bootstrap landing.
+  React.useEffect(() => {
+    if (
+      shouldReleaseFieldMutationGate({
+        reorderInFlight: isReordering,
+        refreshPending: isPending,
+      })
+    ) {
+      busyRef.current = false;
+    }
+  }, [isReordering, isPending]);
 
   const onMove = async (fieldId: number, direction: "up" | "down") => {
     // Synchronous gate: state updates lag a rapid double click.
@@ -228,11 +255,13 @@ function FieldList({
     } finally {
       setNotice(failureNotice);
       // Success or failure, the backend list becomes authoritative
-      // again; arrows stay disabled until the refresh lands.
+      // again; the whole field list stays locked until the refresh
+      // lands. busyRef is deliberately NOT cleared here — the
+      // lifecycle effect releases it once the refresh transition is
+      // no longer pending.
       startTransition(() => {
         router.refresh();
       });
-      busyRef.current = false;
       setIsReordering(false);
     }
   };
@@ -247,14 +276,14 @@ function FieldList({
           {notice}
         </p>
       ) : null}
-      <ul className="space-y-3" aria-busy={reorderDisabled}>
+      <ul className="space-y-3" aria-busy={mutationLocked}>
         {definitions.map((field, index) => (
           <li key={field.id}>
             <FieldCard
               field={field}
               canMoveUp={index > 0}
               canMoveDown={index < definitions.length - 1}
-              reorderDisabled={reorderDisabled}
+              mutationLocked={mutationLocked}
               onMove={onMove}
             />
           </li>
@@ -307,14 +336,19 @@ function FieldCard({
   field,
   canMoveUp,
   canMoveDown,
-  reorderDisabled,
+  mutationLocked,
   onMove,
 }: {
   field: ProductFieldDefinition;
   canMoveUp: boolean;
   canMoveDown: boolean;
-  /** One reorder at a time: all arrows pause while one is saving. */
-  reorderDisabled: boolean;
+  /**
+   * One field-definition mutation flow at a time: while a reorder or
+   * its authoritative refresh is active, the arrows AND the Edit /
+   * Activate / Deactivate actions all pause so no PATCH can be issued
+   * against soon-stale field versions.
+   */
+  mutationLocked: boolean;
   onMove: (fieldId: number, direction: "up" | "down") => void;
 }) {
   return (
@@ -351,18 +385,18 @@ function FieldCard({
             <FieldMoveButton
               direction="up"
               label={fieldMoveUpLabel(field.label)}
-              disabled={!canMoveUp || reorderDisabled}
+              disabled={!canMoveUp || mutationLocked}
               onClick={() => onMove(field.id, "up")}
             />
             <FieldMoveButton
               direction="down"
               label={fieldMoveDownLabel(field.label)}
-              disabled={!canMoveDown || reorderDisabled}
+              disabled={!canMoveDown || mutationLocked}
               onClick={() => onMove(field.id, "down")}
             />
           </div>
-          <FieldEditDialog field={field} />
-          <FieldStatusDialog field={field} />
+          <FieldEditDialog field={field} disabled={mutationLocked} />
+          <FieldStatusDialog field={field} disabled={mutationLocked} />
         </div>
       </div>
     </article>
@@ -389,7 +423,7 @@ function FieldMoveButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors sm:h-8 sm:w-8",
+        "inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors sm:h-8 sm:w-8",
         "hover:bg-surface-2 hover:text-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         "disabled:pointer-events-none disabled:opacity-40",
