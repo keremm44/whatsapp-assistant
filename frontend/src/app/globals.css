@@ -187,7 +187,8 @@
    *     workspace #111715 (L≈6)  — main page canvas
    *     surface   #232C29 (L≈14) — cards, panels
    *     surface-2 #293431 (L≈16) — secondary raised
-   *     border    #394642 (L≈20)
+   *     border    #333F3B (L≈18) — quiet component boundary
+   *     divider   #2B3532 (L≈16) — softer internal separation
    * The shell-to-workspace step is a subtle ~2 RGB units
    * but a clear L* step. The workspace-to-surface step
    * is the dramatic one (~+18 RGB) so cards visibly
@@ -202,18 +203,30 @@
   --color-surface-rgb: 35 44 41;
   --color-surface-2: #293431;
   --color-surface-2-rgb: 41 52 49;
-  --color-border: #394642;
-  --color-border-rgb: 57 70 66;
-  --color-divider: #303b37;
-  --color-divider-rgb: 48 59 55;
+  /* Boundaries — deliberately quiet. The border marks a real
+   * component edge without competing with content (selected/hover
+   * states still lift via border-primary/40 etc.); the divider is a
+   * visibly softer internal separator, never a second outline. */
+  --color-border: #333f3b;
+  --color-border-rgb: 51 63 59;
+  --color-divider: #2b3532;
+  --color-divider-rgb: 43 53 50;
 
-  /* Text — warm off-white hierarchy */
+  /* Text — warm off-white, THREE deliberate roles:
+   *   foreground        #F2EEE6 — primary: titles, record identity,
+   *                     important values (≈12.9:1 on surface)
+   *   muted             #B3BDB8 — secondary: supporting copy the
+   *                     seller reads normally (≈7.6:1 on surface)
+   *   muted-foreground  #8D9994 — tertiary: timestamps and quiet
+   *                     auxiliary metadata (≈4.8:1 on surface —
+   *                     lifted slightly from #87938E so tertiary is
+   *                     quiet, never washed out) */
   --color-foreground: #f2eee6;
   --color-foreground-rgb: 242 238 230;
   --color-muted: #b3bdb8;
   --color-muted-rgb: 179 189 184;
-  --color-muted-foreground: #87938e;
-  --color-muted-foreground-rgb: 135 147 142;
+  --color-muted-foreground: #8d9994;
+  --color-muted-foreground-rgb: 141 153 148;
 
   /* Primary (petrol) — brighter so it reads on dark surfaces */
   --color-primary: #3f817a;
@@ -301,8 +314,12 @@
    * still feel "lifted" without using heavy elevation. */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.45);
-  --shadow-surface: 0 0 0 1px rgba(57, 70, 66, 0.45),
-    0 1px 2px rgba(0, 0, 0, 0.35);
+  /* No 1px ring here: Surface already draws its own border, and the
+   * old border-colored ring double-stroked every card into an
+   * outlined box. A tight two-step black lift keeps the material
+   * feeling layered instead of outlined. */
+  --shadow-surface: 0 1px 2px rgba(0, 0, 0, 0.3),
+    0 6px 20px rgba(0, 0, 0, 0.16);
 }
 
 @layer base {

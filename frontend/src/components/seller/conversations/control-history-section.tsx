@@ -77,7 +77,7 @@ export function ControlHistorySection({
                 </time>
               ) : null}
               {display.note !== null ? (
-                <p className="whitespace-pre-wrap break-words text-[12px] leading-snug text-muted-foreground">
+                <p className="whitespace-pre-wrap break-words text-[12px] leading-snug text-muted">
                   {display.note}
                 </p>
               ) : null}

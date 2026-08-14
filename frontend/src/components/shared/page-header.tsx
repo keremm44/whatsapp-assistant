@@ -6,9 +6,13 @@ import { cn } from "@/lib/utils/cn";
  * Standard page header rhythm used by every seller page in this macro pass.
  *
  * The header has four deliberate layers:
- *   1. A quiet petrol caption / eyebrow (e.g. "İşler"). Sentence case.
- *   2. The page H1 (30-32px, font-medium, tight line-height).
- *   3. A short description (muted foreground, 14-16px).
+ *   1. A quiet petrol eyebrow caption (e.g. "İşler") — small
+ *      uppercase, matching the sidebar's section-label language so
+ *      the page reads as part of the same product architecture.
+ *   2. The page H1 (30-32px, semibold, tight line-height).
+ *   3. A short description in the readable SECONDARY text role
+ *      (text-muted) — supporting copy the seller actually reads, not
+ *      washed-out metadata.
  *   4. A short petrol hairline that anchors the title to the page.
  *
  * There is intentionally no full-width page-header bottom border. The
@@ -35,17 +39,17 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {caption ? (
-          <p className="text-[13px] font-medium leading-none text-primary-text">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] leading-none text-primary-text">
             {caption}
           </p>
         ) : null}
-        <h1 className="font-heading text-[30px] font-medium leading-[1.15] text-foreground sm:text-[32px]">
+        <h1 className="font-heading text-[30px] font-semibold leading-[1.15] text-foreground sm:text-[32px]">
           {title}
         </h1>
         {description ? (
-          <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+          <p className="max-w-2xl text-[15px] leading-relaxed text-muted">
             {description}
           </p>
         ) : null}

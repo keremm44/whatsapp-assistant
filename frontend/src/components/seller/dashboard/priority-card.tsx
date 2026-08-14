@@ -130,7 +130,7 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
           </h3>
           {hasSummary ? (
             <p
-              className="text-sm leading-relaxed text-muted-foreground"
+              className="text-sm leading-relaxed text-muted"
               title={task.summary}
             >
               {task.summary}

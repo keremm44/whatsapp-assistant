@@ -168,7 +168,7 @@ function OrderContextBlock({ order }: { order: ConversationOrderDetail }) {
       </p>
       {order.customText ? (
         <p
-          className="text-[12px] leading-snug text-muted-foreground"
+          className="text-[12px] leading-snug text-muted"
           title={order.customText}
         >
           Üzerine yazılacak: “{order.customText}”
@@ -176,7 +176,7 @@ function OrderContextBlock({ order }: { order: ConversationOrderDetail }) {
       ) : null}
       {order.status === "SELLER_REVIEW_REQUIRED" &&
       order.reviewReasonNote ? (
-        <p className="line-clamp-3 text-[12px] leading-snug text-muted-foreground">
+        <p className="line-clamp-3 text-[12px] leading-snug text-muted">
           {order.reviewReasonNote}
         </p>
       ) : null}
@@ -219,7 +219,7 @@ function ReturnIssueContextBlock({
         </p>
       ) : null}
       {issue.reasonText ? (
-        <p className="line-clamp-3 text-[12px] leading-snug text-muted-foreground">
+        <p className="line-clamp-3 text-[12px] leading-snug text-muted">
           {issue.reasonText}
         </p>
       ) : null}
