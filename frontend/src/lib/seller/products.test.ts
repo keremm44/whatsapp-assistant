@@ -8,6 +8,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  nextFieldSortOrder,
+  planFieldMove,
   buildChoiceOptions,
   buildCreateFieldPayload,
   buildCreateProductPayload,
@@ -301,4 +303,136 @@ test("field PATCH sends only mutable properties", () => {
     assert.equal(key in payload, false);
     assert.equal(key in statusPayload, false);
   }
+});
+
+/* ------------------------------------------------------------------ */
+/* Field ordering (sort_order contract)                                */
+/* ------------------------------------------------------------------ */
+
+test("field PATCH carries sort_order with the real expected_version", () => {
+  const payload = buildUpdateFieldPayload({ version: 3, sortOrder: 2 });
+  assert.deepEqual(payload, {
+    expected_version: 3,
+    sort_order: 2,
+  });
+  assert.equal(
+    fieldPatchHasOnlyMutableKeys(payload as Record<string, unknown>),
+    true,
+  );
+  // Invalid ordering values never reach the wire.
+  assert.deepEqual(buildUpdateFieldPayload({ version: 3, sortOrder: -1 }), {
+    expected_version: 3,
+  });
+  assert.deepEqual(buildUpdateFieldPayload({ version: 3, sortOrder: 1.5 }), {
+    expected_version: 3,
+  });
+  // Existing mutable fields still combine unchanged.
+  assert.deepEqual(
+    buildUpdateFieldPayload({ version: 4, label: " Renk ", sortOrder: 0 }),
+    { expected_version: 4, label: "Renk", sort_order: 0 },
+  );
+});
+
+test("new fields append after the real backend order, not array length", () => {
+  const defs = (orders: number[]) => orders.map((sortOrder) => ({ sortOrder }));
+  assert.equal(nextFieldSortOrder([]), 0);
+  assert.equal(nextFieldSortOrder(defs([0])), 1);
+  assert.equal(nextFieldSortOrder(defs([0, 1, 2])), 3);
+  // Gapped/legacy values: length (3) would collide inside the order.
+  assert.equal(nextFieldSortOrder(defs([0, 5, 12])), 13);
+  // Order of appearance is irrelevant; only the max matters.
+  assert.equal(nextFieldSortOrder(defs([12, 0, 5])), 13);
+});
+
+const orderedFields = (
+  entries: [id: number, version: number, sortOrder: number][],
+) =>
+  entries.map(([id, version, sortOrder]) => ({ id, version, sortOrder }));
+
+test("boundaries cannot move: first up, last down, unknown id", () => {
+  const fields = orderedFields([
+    [10, 1, 0],
+    [11, 2, 1],
+    [12, 3, 2],
+  ]);
+  assert.deepEqual(planFieldMove(fields, 10, "up"), { kind: "none" });
+  assert.deepEqual(planFieldMove(fields, 12, "down"), { kind: "none" });
+  assert.deepEqual(planFieldMove(fields, 99, "up"), { kind: "none" });
+  assert.deepEqual(planFieldMove([], 10, "up"), { kind: "none" });
+});
+
+test("an adjacent move swaps the two records' sort_order values", () => {
+  const fields = orderedFields([
+    [10, 1, 0], // İsim
+    [11, 2, 1], // Renk
+    [12, 3, 2], // Görsel
+  ]);
+  // Down on İsim: İsim ↔ Renk exchange positions.
+  assert.deepEqual(planFieldMove(fields, 10, "down"), {
+    kind: "swap",
+    writes: [
+      { fieldId: 11, version: 2, sortOrder: 0 },
+      { fieldId: 10, version: 1, sortOrder: 1 },
+    ],
+    rollback: { fieldId: 11, sortOrder: 1 },
+  });
+  // Up on Görsel: Renk ↔ Görsel exchange positions.
+  assert.deepEqual(planFieldMove(fields, 12, "up"), {
+    kind: "swap",
+    writes: [
+      { fieldId: 12, version: 3, sortOrder: 1 },
+      { fieldId: 11, version: 2, sortOrder: 2 },
+    ],
+    rollback: { fieldId: 12, sortOrder: 2 },
+  });
+});
+
+test("adjacency follows the backend array order, not sortOrder ± 1", () => {
+  // Gapped legacy values: neighbors are array neighbors.
+  const fields = orderedFields([
+    [10, 1, 0],
+    [11, 2, 5],
+    [12, 3, 12],
+  ]);
+  assert.deepEqual(planFieldMove(fields, 12, "up"), {
+    kind: "swap",
+    writes: [
+      { fieldId: 12, version: 3, sortOrder: 5 },
+      { fieldId: 11, version: 2, sortOrder: 12 },
+    ],
+    rollback: { fieldId: 12, sortOrder: 12 },
+  });
+});
+
+test("duplicate sort values fall back to an honest renumber plan", () => {
+  // Ties are broken by id ASC in the backend, so exchanging equal
+  // values could never express the move — the plan renumbers the
+  // desired order as sort_order = index, skipping already-correct
+  // records.
+  const fields = orderedFields([
+    [10, 1, 0],
+    [11, 2, 1],
+    [12, 3, 1], // duplicate of its neighbor
+  ]);
+  assert.deepEqual(planFieldMove(fields, 12, "up"), {
+    kind: "renumber",
+    writes: [
+      // desired order: 10 (idx 0, already 0), 12 (idx 1, stored 1 —
+      // already correct, skipped), 11 (idx 2 → the only write).
+      { fieldId: 11, version: 2, sortOrder: 2 },
+    ],
+  });
+});
+
+test("a duplicate touching the pair's boundary also renumbers", () => {
+  // The record BEFORE the pair shares the pair's lower value: a plain
+  // value exchange could jump the moved record past it (id tie), so
+  // the plan must renumber instead.
+  const fields = orderedFields([
+    [10, 1, 1],
+    [11, 2, 1],
+    [12, 3, 2],
+  ]);
+  const plan = planFieldMove(fields, 12, "up");
+  assert.equal(plan.kind, "renumber");
 });

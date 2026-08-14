@@ -178,3 +178,22 @@ export const isProductDuplicateConflict = (body: unknown): boolean =>
 
 /* Hard-delete wording that must never appear in Products V1 copy. */
 export const PRODUCTS_FORBIDDEN_DELETE_WORDS = ["Sil", "silindi", "Delete"];
+
+/* ------------------------------------------------------------------ */
+/* Field ordering (quiet utility copy)                                 */
+/* ------------------------------------------------------------------ */
+
+/** Accessible names for the icon-only ordering controls. */
+export const fieldMoveUpLabel = (label: string): string =>
+  `${label} alanını yukarı taşı`;
+export const fieldMoveDownLabel = (label: string): string =>
+  `${label} alanını aşağı taşı`;
+
+/**
+ * Calm inline feedback near the field list. Raw HTTP codes,
+ * sort_order and expected_version never surface to the seller.
+ */
+export const FIELD_REORDER_ERROR_MESSAGE =
+  "Alan sırası güncellenemedi. Güncel sıra yeniden getirildi.";
+export const FIELD_REORDER_CONFLICT_MESSAGE =
+  "Alanlar başka bir işlemde değişmiş. Güncel sıra getirildi; tekrar deneyin.";

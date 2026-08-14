@@ -406,6 +406,8 @@ export type UpdateFieldPayload = {
   label?: string;
   is_required?: boolean;
   is_active?: boolean;
+  /** Backend ordering position (integer, >= 0); optimistic-locked. */
+  sort_order?: number;
 };
 
 export const buildUpdateFieldPayload = (input: {
@@ -413,6 +415,7 @@ export const buildUpdateFieldPayload = (input: {
   label?: string;
   isRequired?: boolean;
   isActive?: boolean;
+  sortOrder?: number;
 }): UpdateFieldPayload => {
   const payload: UpdateFieldPayload = {
     expected_version: input.version,
@@ -426,7 +429,139 @@ export const buildUpdateFieldPayload = (input: {
   if (typeof input.isActive === "boolean") {
     payload.is_active = input.isActive;
   }
+  if (
+    typeof input.sortOrder === "number" &&
+    Number.isInteger(input.sortOrder) &&
+    input.sortOrder >= 0
+  ) {
+    payload.sort_order = input.sortOrder;
+  }
   return payload;
+};
+
+/* ------------------------------------------------------------------ */
+/* Field ordering (backend sort_order contract)                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Append position for a NEW field: after the real end of the existing
+ * backend order. `definitions.length` is NOT safe once orders can be
+ * reordered or contain gaps/legacy values — the only truthful append
+ * value is max(existing sortOrder) + 1 (0 for an empty list), clamped
+ * to safe non-negative integer behavior.
+ */
+export const nextFieldSortOrder = (
+  definitions: readonly Pick<ProductFieldDefinition, "sortOrder">[],
+): number => {
+  let max = -1;
+  for (const definition of definitions) {
+    const value = definition.sortOrder;
+    if (Number.isInteger(value) && value > max) {
+      max = value;
+    }
+  }
+  if (max < 0) return 0;
+  return Math.min(max + 1, Number.MAX_SAFE_INTEGER);
+};
+
+/** One PATCH the reorder executor must issue (real current version). */
+export type FieldReorderWrite = {
+  fieldId: number;
+  version: number;
+  sortOrder: number;
+};
+
+/**
+ * Plan for moving one field exactly one visible position.
+ *
+ *   none     — boundary move (first up / last down / unknown id);
+ *              nothing to do.
+ *   swap     — the normal case: the two adjacent records exchange
+ *              their sort_order values via two single-record PATCHes.
+ *              `rollback` describes the compensating write for
+ *              writes[0] should writes[1] fail (its version must come
+ *              from the FIRST PATCH's authoritative response, never
+ *              fabricated).
+ *   renumber — legacy/duplicate data where exchanging two values
+ *              cannot express the move (ties are broken by id ASC, so
+ *              a duplicate assignment would not produce the requested
+ *              order). The whole desired order is written as
+ *              sort_order = index, skipping records already correct.
+ */
+export type FieldReorderPlan =
+  | { kind: "none" }
+  | {
+      kind: "swap";
+      writes: [FieldReorderWrite, FieldReorderWrite];
+      rollback: { fieldId: number; sortOrder: number };
+    }
+  | { kind: "renumber"; writes: FieldReorderWrite[] };
+
+/**
+ * Derive the move plan from the backend-returned list order.
+ *
+ * Adjacency is the ARRAY order (the backend's canonical
+ * sort_order ASC, id ASC), never sortOrder ± 1 — gaps and legacy
+ * values are expected. A plain value swap is only planned when the
+ * neighborhood is strictly ordered (A < B, previous < A, B < next);
+ * anything else (duplicates touching the pair) falls back to the
+ * honest renumber plan.
+ */
+export const planFieldMove = (
+  definitions: readonly Pick<
+    ProductFieldDefinition,
+    "id" | "version" | "sortOrder"
+  >[],
+  fieldId: number,
+  direction: "up" | "down",
+): FieldReorderPlan => {
+  const index = definitions.findIndex((entry) => entry.id === fieldId);
+  if (index < 0) return { kind: "none" };
+  const neighborIndex = direction === "up" ? index - 1 : index + 1;
+  if (neighborIndex < 0 || neighborIndex >= definitions.length) {
+    return { kind: "none" };
+  }
+
+  const earlier = Math.min(index, neighborIndex);
+  const a = definitions[earlier]!;
+  const b = definitions[earlier + 1]!;
+  const before = earlier > 0 ? definitions[earlier - 1] : undefined;
+  const after =
+    earlier + 2 < definitions.length ? definitions[earlier + 2] : undefined;
+
+  const plainSwapSafe =
+    a.sortOrder < b.sortOrder &&
+    (before === undefined || before.sortOrder < a.sortOrder) &&
+    (after === undefined || after.sortOrder > b.sortOrder);
+
+  if (plainSwapSafe) {
+    return {
+      kind: "swap",
+      writes: [
+        { fieldId: b.id, version: b.version, sortOrder: a.sortOrder },
+        { fieldId: a.id, version: a.version, sortOrder: b.sortOrder },
+      ],
+      rollback: { fieldId: b.id, sortOrder: b.sortOrder },
+    };
+  }
+
+  // Renumber: the desired order is the current array with the pair
+  // swapped; every record whose stored sort_order differs from its
+  // desired index gets one write, in desired order.
+  const desired = [...definitions];
+  desired[earlier] = b;
+  desired[earlier + 1] = a;
+  const writes: FieldReorderWrite[] = [];
+  desired.forEach((entry, position) => {
+    if (entry.sortOrder !== position) {
+      writes.push({
+        fieldId: entry.id,
+        version: entry.version,
+        sortOrder: position,
+      });
+    }
+  });
+  return { kind: "renumber", writes };
 };
 
 /** Keys that must never appear on a field PATCH. */

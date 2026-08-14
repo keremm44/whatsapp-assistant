@@ -27,6 +27,10 @@ import {
   PRODUCTS_UNAVAILABLE_TITLE,
   productsWorkspaceHref,
   resolveSelectedProduct,
+  FIELD_REORDER_CONFLICT_MESSAGE,
+  FIELD_REORDER_ERROR_MESSAGE,
+  fieldMoveDownLabel,
+  fieldMoveUpLabel,
 } from "./products-format.ts";
 
 const product = (overrides: Partial<Product> = {}): Product => ({
@@ -157,4 +161,30 @@ test("Products UI sources never offer a Sil action or catalog extras", () => {
   assert.doesNotMatch(sources, /["']Sil["']/);
   assert.doesNotMatch(sources, /\bSKU\b|\bstok\b|\bfiyat\b|\bprice\b|\bstock\b/i);
   assert.doesNotMatch(sources, /product_id:\s*null/);
+});
+
+/* ------------------------------------------------------------------ */
+/* Field ordering copy                                                 */
+/* ------------------------------------------------------------------ */
+
+test("ordering controls carry explicit accessible names per field", () => {
+  assert.equal(fieldMoveUpLabel("Renk"), "Renk alanını yukarı taşı");
+  assert.equal(fieldMoveDownLabel("Renk"), "Renk alanını aşağı taşı");
+});
+
+test("reorder feedback is calm and never leaks internals", () => {
+  assert.equal(
+    FIELD_REORDER_ERROR_MESSAGE,
+    "Alan sırası güncellenemedi. Güncel sıra yeniden getirildi.",
+  );
+  assert.equal(
+    FIELD_REORDER_CONFLICT_MESSAGE,
+    "Alanlar başka bir işlemde değişmiş. Güncel sıra getirildi; tekrar deneyin.",
+  );
+  for (const message of [
+    FIELD_REORDER_ERROR_MESSAGE,
+    FIELD_REORDER_CONFLICT_MESSAGE,
+  ]) {
+    assert.doesNotMatch(message, /409|sort_order|expected_version|HTTP/i);
+  }
 });
