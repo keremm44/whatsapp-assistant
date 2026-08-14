@@ -1,8 +1,9 @@
 /**
  * Presentation helpers for the Seller “İade ve Sorunlar” workspace.
  *
- * Pure, environment-neutral, zero-runtime-import module: everything here
- * is verifiable with Node's built-in test runner (returns-format.test.ts).
+ * Pure, environment-neutral module (the only runtime import is the
+ * pure `ordersListHref` string builder): everything here is verifiable
+ * with Node's built-in test runner (returns-format.test.ts).
  *
  * Scope discipline (V1):
  *   - The page answers: ne oldu → hangi sipariş → kanıt → şu an ne
@@ -25,6 +26,7 @@ import type {
   ReturnStatus,
   ReturnView,
 } from "./returns";
+import { ordersListHref } from "./orders-format.ts";
 
 /* ------------------------------------------------------------------ */
 /* View tabs (approved exact set)                                      */
@@ -80,6 +82,15 @@ export const normalizeReturnViewParam = (
  * substring matching anywhere on this surface.
  */
 export const RETURN_SEARCH_MAX_LENGTH = 100;
+
+/**
+ * Neutral seller-facing search copy. The backend does not guarantee any
+ * marketplace number format, so the placeholder never teaches one
+ * (no fabricated "Örn. TR123456" example) and never implies fuzzy
+ * matching.
+ */
+export const RETURN_SEARCH_LABEL = "Sipariş numarası";
+export const RETURN_SEARCH_PLACEHOLDER = "Sipariş numarasıyla ara";
 
 export const normalizeReturnSearchParam = (
   value: string | string[] | undefined,
@@ -270,6 +281,48 @@ export const getReturnReasonExcerpt = (
 };
 
 export const RETURN_REASON_PENDING_LABEL = "Sorun açıklaması bekleniyor";
+
+/* ------------------------------------------------------------------ */
+/* Cross-panel navigation (approved, real ids only)                    */
+/* ------------------------------------------------------------------ */
+
+/** Visible label of the detail's conversation action. */
+export const RETURN_OPEN_CONVERSATION_LABEL = "Konuşmayı aç";
+
+/**
+ * The canonical conversation route for the request's customer — the
+ * same `/seller/conversations/{customerId}` shape the rest of the panel
+ * uses. A valid positive customer id is required: no id, no link (no
+ * fake identity, no phone-string matching).
+ */
+export const getReturnConversationHref = (
+  customerId: number | null | undefined,
+): string | null =>
+  typeof customerId === "number" &&
+  Number.isInteger(customerId) &&
+  customerId > 0
+    ? `/seller/conversations/${customerId}`
+    : null;
+
+/** Visible label of the detail's related-order action. */
+export const RETURN_RELATED_ORDER_LABEL = "İlgili siparişi aç";
+
+/**
+ * Related order → the existing Orders worklist through its exact
+ * external-order-number search (there is no `/seller/orders/{id}`
+ * detail route to invent). The link exists only when the backend
+ * returned a real related order carrying a usable external number;
+ * an internal-only order id cannot be truthfully resolved by the
+ * Orders surface, so it never fabricates navigation.
+ */
+export const getReturnRelatedOrderHref = (
+  order: { externalOrderNumber: string | null } | null,
+): string | null => {
+  if (order === null) return null;
+  const number = order.externalOrderNumber;
+  if (typeof number !== "string" || number.trim().length === 0) return null;
+  return ordersListHref({ view: "all", query: number.trim() });
+};
 
 /* ------------------------------------------------------------------ */
 /* Timestamps                                                          */
@@ -467,9 +520,11 @@ export const buildMarkHandledPayload = (input: {
 /* ------------------------------------------------------------------ */
 
 /**
- * Locked per-option meaning copy (§21). OPTIONAL is deliberately NOT
- * described as “asistan ister” — the backend only makes REQUIRED block
- * readiness; a voluntarily sent photo is retained regardless.
+ * Locked per-option meaning copy (§21), tightened to one short
+ * consequence line per state. Semantics are unchanged: only REQUIRED
+ * blocks review-readiness; a voluntarily sent photo is retained
+ * regardless (so OPTIONAL/NOT_REQUESTED keep that truthful note).
+ * The labels read like stable settings, not action commands.
  */
 export const RETURN_IMAGE_REQUIREMENT_OPTIONS: readonly {
   value: ReturnImageRequirement;
@@ -478,21 +533,21 @@ export const RETURN_IMAGE_REQUIREMENT_OPTIONS: readonly {
 }[] = [
   {
     value: "REQUIRED",
-    label: "Fotoğraf iste",
+    label: "Fotoğraf gerekli",
     description:
-      "Asistan bu sorun türünde müşteriden fotoğraf ister ve fotoğraf gelmeden incelemeye hazır saymaz.",
+      "Asistan müşteriden fotoğraf ister; fotoğraf gelmeden talep incelemeye hazır sayılmaz.",
   },
   {
     value: "OPTIONAL",
-    label: "Zorunlu değil",
+    label: "Fotoğraf isteğe bağlı",
     description:
-      "Asistan fotoğrafı zorunlu tutmaz; müşteri gönderirse kanıt olarak saklanabilir.",
+      "Fotoğraf zorunlu tutulmaz; müşteri gönderirse kanıt olarak saklanabilir.",
   },
   {
     value: "NOT_REQUESTED",
     label: "Fotoğraf isteme",
     description:
-      "Asistan bu sorun türünde fotoğraf istemez; müşteri kendiliğinden gönderirse kanıt yine saklanabilir.",
+      "Asistan fotoğraf istemez; müşteri yine de gönderirse kanıt olarak saklanabilir.",
   },
 ];
 

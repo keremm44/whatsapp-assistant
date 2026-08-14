@@ -164,8 +164,8 @@ export type OrderSummary = {
   externalOrderNumber: string | null;
   productId: number | null;
   /**
-   * Parsed for forward flexibility (product context may arrive later);
-   * the V1 surface intentionally does not display it as a column.
+   * Stored product-name snapshot; rendered as the row's product line
+   * when present (never replaced by the internal productId).
    */
   productNameSnapshot: string | null;
   customerId: number;

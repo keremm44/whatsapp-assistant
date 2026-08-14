@@ -259,9 +259,8 @@ function PreferencesDialog({
       >
         <DialogTitle>Fotoğraf tercihleri</DialogTitle>
         <DialogDescription>
-          Asistanın her sorun türünde müşteriden fotoğraf isteyip
-          istemeyeceğini belirleyin. Müşterinin kendiliğinden gönderdiği
-          fotoğraflar her durumda kanıt olarak saklanabilir.
+          Her sorun türü için asistanın müşteriden fotoğraf isteyip
+          istemeyeceğini belirleyin.
         </DialogDescription>
 
         {conflictNotice !== null ? (
@@ -318,16 +317,23 @@ function PreferencesDialog({
               return (
                 <li
                   key={setting.issueType}
-                  className="border-t border-divider py-3 first:border-t-0 first:pt-0 last:pb-0"
+                  className="border-t border-divider py-2.5 first:border-t-0 first:pt-0 last:pb-0"
                 >
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="min-w-0 space-y-1">
+                  <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                    <div className="min-w-0 sm:flex-1">
                       <label
                         htmlFor={`return-pref-${setting.issueType}`}
                         className="block text-[13px] font-medium text-foreground"
                       >
                         {setting.displayName}
                       </label>
+                      {selectedOption ? (
+                        <p className="mt-0.5 max-w-md text-[12px] leading-snug text-muted-foreground">
+                          {selectedOption.description}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
                       <select
                         id={`return-pref-${setting.issueType}`}
                         value={current}
@@ -344,7 +350,7 @@ function PreferencesDialog({
                             [setting.issueType]: undefined,
                           }));
                         }}
-                        className="h-10 w-full max-w-56 rounded-md border border-border bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 sm:w-56"
+                        className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 sm:w-52"
                       >
                         {RETURN_IMAGE_REQUIREMENT_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -352,14 +358,7 @@ function PreferencesDialog({
                           </option>
                         ))}
                       </select>
-                      {selectedOption ? (
-                        <p className="max-w-md text-[12px] leading-relaxed text-muted-foreground">
-                          {selectedOption.description}
-                        </p>
-                      ) : null}
-                    </div>
-                    {dirty ? (
-                      <div className="shrink-0">
+                      {dirty ? (
                         <Button
                           type="button"
                           variant="primary"
@@ -379,8 +378,8 @@ function PreferencesDialog({
                             "Kaydet"
                           )}
                         </Button>
-                      </div>
-                    ) : null}
+                      ) : null}
+                    </div>
                   </div>
                   {errorMessage ? (
                     <p

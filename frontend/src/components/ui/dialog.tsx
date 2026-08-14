@@ -23,7 +23,14 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-30 bg-foreground/40 backdrop-blur-[1px] data-[state=open]:animate-fade-in",
+      // Dark translucent backdrop in BOTH themes. `bg-foreground/40`
+      // was theme-relative: under the dark seller theme the foreground
+      // token is near-white, which washed the whole app in light gray
+      // instead of letting the background recede. A fixed ~60% black
+      // scrim keeps the page faintly perceptible while the dialog
+      // clearly owns the focus, and matches the conventional dark
+      // overlay in the light admin theme as well.
+      "fixed inset-0 z-30 bg-black/60 backdrop-blur-[1px] data-[state=open]:animate-fade-in",
       className,
     )}
     {...props}

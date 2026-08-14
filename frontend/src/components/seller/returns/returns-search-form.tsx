@@ -6,7 +6,11 @@ import type { Route } from "next";
 import { Search, X } from "lucide-react";
 
 import type { ReturnIssueType, ReturnView } from "@/lib/seller/returns";
-import { returnsWorkspaceHref } from "@/lib/seller/returns-format";
+import {
+  RETURN_SEARCH_LABEL,
+  RETURN_SEARCH_PLACEHOLDER,
+  returnsWorkspaceHref,
+} from "@/lib/seller/returns-format";
 
 /**
  * Exact external order-number search.
@@ -67,7 +71,7 @@ export function ReturnsSearchForm({
         htmlFor="returns-search"
         className="mb-1 block text-[12px] font-medium text-muted-foreground"
       >
-        Sipariş numarası
+        {RETURN_SEARCH_LABEL}
       </label>
       <div className="relative">
         <Search
@@ -90,7 +94,7 @@ export function ReturnsSearchForm({
             }
           }}
           maxLength={100}
-          placeholder="Örn. TR123456"
+          placeholder={RETURN_SEARCH_PLACEHOLDER}
           aria-busy={isPending}
           className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         />

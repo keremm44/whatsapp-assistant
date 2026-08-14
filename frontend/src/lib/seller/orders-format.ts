@@ -6,7 +6,8 @@
  *
  * Scope discipline (V1 production list):
  *   - The page answers exactly one question: "Bu siparişte ne basacağım?"
- *     Primary hierarchy: Telefon → Sipariş No → Baskı içeriği.
+ *     Primary hierarchy: Sipariş → Ürün → Baskı içeriği → Durum →
+ *     Konuşma. The phone is secondary metadata, never the visual anchor.
  *   - No invented states: "Henüz alınmadı" is a presentation fallback,
  *     never a new business state; COMPLETE stays the backend's
  *     "bilgiler toplandı" meaning only.
@@ -64,6 +65,15 @@ export const normalizeOrderViewParam = (
  * normalized; there is no fuzzy matching anywhere on this surface.
  */
 export const ORDER_SEARCH_MAX_LENGTH = 100;
+
+/**
+ * Neutral seller-facing search copy. The backend does not guarantee any
+ * marketplace number format, so the placeholder never teaches one
+ * (no fabricated "Örn. TR123456" example) and never implies fuzzy
+ * matching — the semantics stay the exact external-order-number filter.
+ */
+export const ORDER_SEARCH_LABEL = "Sipariş numarası";
+export const ORDER_SEARCH_PLACEHOLDER = "Sipariş numarasıyla ara";
 
 export const normalizeOrderSearchParam = (
   value: string | string[] | undefined,
@@ -165,6 +175,49 @@ export const getPhoneDisplay = (
   }
   return PHONE_FALLBACK_LABEL;
 };
+
+/**
+ * Ürün — the stored `product_name_snapshot`, verbatim. Returns null
+ * when absent/blank so the caller simply omits the line: there is no
+ * "Ürün bilinmiyor" fabrication, and the internal productId is never
+ * substituted as a seller-facing product identity.
+ */
+export const getProductNameDisplay = (
+  order: Pick<OrderSummary, "productNameSnapshot">,
+): string | null => {
+  const name = order.productNameSnapshot;
+  if (typeof name === "string" && name.trim().length > 0) {
+    return name.trim();
+  }
+  return null;
+};
+
+/* ------------------------------------------------------------------ */
+/* Order → Conversation (approved cross-panel navigation)              */
+/* ------------------------------------------------------------------ */
+
+/** Visible label of the per-row conversation action. */
+export const ORDER_OPEN_CONVERSATION_LABEL = "Konuşmayı aç";
+
+/**
+ * The canonical conversation route for the order's customer — the same
+ * `/seller/conversations/{customerId}` shape that
+ * conversations-format.conversationDetailHref produces without the
+ * attention filter. Inlined here so this module keeps its
+ * zero-alias-import discipline (Node's built-in test runner cannot
+ * resolve the conversations alias import chain).
+ *
+ * A valid positive customer_id is required — no id, no link (no fake
+ * identity, no invented fallback).
+ */
+export const getOrderConversationHref = (
+  customerId: number | null | undefined,
+): string | null =>
+  typeof customerId === "number" &&
+  Number.isInteger(customerId) &&
+  customerId > 0
+    ? `/seller/conversations/${customerId}`
+    : null;
 
 /* ------------------------------------------------------------------ */
 /* Baskı içeriği — the V1 core presentation concept                    */

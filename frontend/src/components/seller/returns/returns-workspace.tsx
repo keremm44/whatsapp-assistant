@@ -4,7 +4,7 @@ import * as React from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Inbox } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { ReturnIssueType, ReturnView } from "@/lib/seller/returns";
@@ -119,15 +119,24 @@ function ReturnsDetailRegion({
 }) {
   if (bootstrap === null) {
     // Only visible from lg up: below that the region is hidden while
-    // there is no selection, and the queue owns the screen.
+    // there is no selection, and the queue owns the screen. Restrained
+    // anchored guidance — intentional, not a dead area.
     return (
       <div
         className="flex min-h-64 items-center justify-center px-6 py-16"
         role="status"
       >
-        <p className="max-w-56 text-center text-[13px] leading-relaxed text-muted-foreground">
-          İncelemek için listeden bir kayıt seçin.
-        </p>
+        <div className="flex max-w-60 flex-col items-center gap-2.5 text-center">
+          <Inbox
+            aria-hidden="true"
+            size={20}
+            strokeWidth={1.5}
+            className="text-muted-foreground/70"
+          />
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            İncelemek için listeden bir kayıt seçin.
+          </p>
+        </div>
       </div>
     );
   }

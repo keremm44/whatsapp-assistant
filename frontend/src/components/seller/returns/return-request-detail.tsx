@@ -4,7 +4,7 @@ import * as React from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Image as ImageIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -20,14 +20,18 @@ import {
   canMarkReturnHandled,
   classifyReturnMutationFailure,
   formatReturnTimestamp,
+  getReturnConversationHref,
   getReturnEvidenceSection,
   getReturnOrderNumberDisplay,
+  getReturnRelatedOrderHref,
   RETURN_ACTION_LABEL,
   RETURN_ACTION_NOTE_LABEL,
   RETURN_ACTION_NOTE_MAX_LENGTH,
   RETURN_MISSING_FIELD_LABELS,
+  RETURN_OPEN_CONVERSATION_LABEL,
   RETURN_PHONE_MISSING_LABEL,
   RETURN_PHOTO_PENDING_LABEL,
+  RETURN_RELATED_ORDER_LABEL,
   RETURN_STATUS_DISPLAY,
   returnsWorkspaceHref,
 } from "@/lib/seller/returns-format";
@@ -116,6 +120,13 @@ export function ReturnRequestDetail({
     detail.customer.whatsappNumber.trim().length > 0
       ? detail.customer.whatsappNumber
       : RETURN_PHONE_MISSING_LABEL;
+  // Cross-panel navigation from real ids only: the conversation link
+  // needs the detail's customer id; the related-order link needs a
+  // backend-returned order with a usable external number.
+  const conversationHref = getReturnConversationHref(
+    detail.customer?.id ?? null,
+  );
+  const relatedOrderHref = getReturnRelatedOrderHref(detail.order);
 
   const createdLabel = formatReturnTimestamp(request.createdAt);
   const updatedLabel = formatReturnTimestamp(request.updatedAt);
@@ -253,6 +264,11 @@ export function ReturnRequestDetail({
               <DetailRow label="Ürün" value={productName} />
             ) : null}
           </dl>
+          {relatedOrderHref !== null ? (
+            <DetailNavLink href={relatedOrderHref}>
+              {RETURN_RELATED_ORDER_LABEL}
+            </DetailNavLink>
+          ) : null}
         </DetailSection>
 
         {/* C. Müşteri */}
@@ -263,6 +279,11 @@ export function ReturnRequestDetail({
             ) : null}
             <DetailRow label="WhatsApp numarası" value={customerPhone} />
           </dl>
+          {conversationHref !== null ? (
+            <DetailNavLink href={conversationHref}>
+              {RETURN_OPEN_CONVERSATION_LABEL}
+            </DetailNavLink>
+          ) : null}
         </DetailSection>
 
         {/* D. Kanıt */}
@@ -496,5 +517,30 @@ function DetailRow({
         {value}
       </dd>
     </div>
+  );
+}
+
+/**
+ * Quiet secondary navigation inside a detail section — a real Link to
+ * an existing workspace, never a detail route that does not exist.
+ */
+function DetailNavLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href as Route}
+      className={cn(
+        "inline-flex min-h-11 items-center gap-1 rounded-sm px-1 text-[12.5px] font-medium text-primary-text transition-colors md:min-h-8",
+        "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+      )}
+    >
+      <span>{children}</span>
+      <ArrowUpRight aria-hidden="true" size={13} strokeWidth={1.75} />
+    </Link>
   );
 }

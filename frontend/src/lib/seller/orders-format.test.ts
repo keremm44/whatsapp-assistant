@@ -12,6 +12,10 @@ import { test } from "node:test";
 import type { OrderSummary } from "./orders.ts";
 import {
   DEFAULT_ORDER_VIEW,
+  getOrderConversationHref,
+  getProductNameDisplay,
+  ORDER_OPEN_CONVERSATION_LABEL,
+  ORDER_SEARCH_PLACEHOLDER,
   hasAnotherOrdersPage,
   mergeOrdersPage,
   ORDER_PAGE_SIZE,
@@ -355,4 +359,47 @@ test("media failure collapses to a calm failure result (list unaffected)", async
     );
     assert.deepEqual(result, { ok: false });
   }
+});
+
+/* ------------------------------------------------------------------ */
+/* Product line + conversation link (worklist hierarchy)               */
+/* ------------------------------------------------------------------ */
+
+test("product name: stored snapshot renders trimmed; internal ids never leak", () => {
+  assert.equal(
+    getProductNameDisplay({ productNameSnapshot: "Kişiye Özel Kupa" }),
+    "Kişiye Özel Kupa",
+  );
+  assert.equal(
+    getProductNameDisplay({ productNameSnapshot: "  Termos 500ml " }),
+    "Termos 500ml",
+  );
+});
+
+test("product name: absent/blank snapshot omits the line — no fake fallback", () => {
+  for (const productNameSnapshot of [null, "", "   "]) {
+    assert.equal(getProductNameDisplay({ productNameSnapshot }), null);
+  }
+});
+
+test("a valid customer id builds the canonical conversation route", () => {
+  assert.equal(getOrderConversationHref(31), "/seller/conversations/31");
+  assert.equal(ORDER_OPEN_CONVERSATION_LABEL, "Konuşmayı aç");
+});
+
+test("absent or invalid customer id yields no conversation link", () => {
+  assert.equal(getOrderConversationHref(null), null);
+  assert.equal(getOrderConversationHref(undefined), null);
+  assert.equal(getOrderConversationHref(0), null);
+  assert.equal(getOrderConversationHref(-1), null);
+  assert.equal(getOrderConversationHref(2.5), null);
+});
+
+/* ------------------------------------------------------------------ */
+/* Neutral search copy (no fabricated marketplace format)              */
+/* ------------------------------------------------------------------ */
+
+test("search copy is neutral and teaches no fabricated number format", () => {
+  assert.equal(ORDER_SEARCH_PLACEHOLDER, "Sipariş numarasıyla ara");
+  assert.doesNotMatch(ORDER_SEARCH_PLACEHOLDER, /Örn\.|TR\d/);
 });

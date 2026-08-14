@@ -203,23 +203,7 @@ export function OrdersListPanel({
   return (
     <div className="space-y-0">
       {freshness}
-      {/* Column titles (desktop scan alignment; rows carry full context) */}
-      <div
-        aria-hidden="true"
-        className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)] gap-6 border-t border-divider px-5 pb-2 pt-3 md:grid"
-      >
-        <span className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground">
-          Telefon
-        </span>
-        <span className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground">
-          Sipariş No
-        </span>
-        <span className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground">
-          Baskı içeriği
-        </span>
-      </div>
-
-      <ul role="list" className="border-t border-divider md:border-t-0">
+      <ul role="list">
         {rows.map((order) => (
           <OrderRow key={order.id} order={order} />
         ))}

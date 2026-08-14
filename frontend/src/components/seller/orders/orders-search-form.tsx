@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { Search, X } from "lucide-react";
 
-import { ordersListHref } from "@/lib/seller/orders-format";
+import {
+  ORDER_SEARCH_LABEL,
+  ORDER_SEARCH_PLACEHOLDER,
+  ordersListHref,
+} from "@/lib/seller/orders-format";
 import type { OrderView } from "@/lib/seller/orders";
 
 /**
@@ -61,7 +65,7 @@ export function OrdersSearchForm({
         htmlFor="orders-search"
         className="mb-1 block text-[12px] font-medium text-muted-foreground"
       >
-        Sipariş numarası
+        {ORDER_SEARCH_LABEL}
       </label>
       <div className="relative">
         <Search
@@ -84,7 +88,7 @@ export function OrdersSearchForm({
             }
           }}
           maxLength={100}
-          placeholder="Örn. TR123456"
+          placeholder={ORDER_SEARCH_PLACEHOLDER}
           aria-busy={isPending}
           className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         />

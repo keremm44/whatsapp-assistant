@@ -15,8 +15,9 @@ import { resolveOrderListFromSession } from "@/lib/seller/orders-server";
  * Sipariş Bilgileri — the V1 production / print-content worklist.
  *
  * Server Component. The page answers one question at a glance:
- * "Bu siparişte ne basacağım?" — Telefon → Sipariş No → Baskı içeriği,
- * backed only by `GET /seller/orders`.
+ * "Bu siparişte ne basacağım?" — each row is a compact work item
+ * (Sipariş → Ürün → Baskı içeriği → Durum → Konuşma), backed only by
+ * `GET /seller/orders`.
  *
  * URL-owned state (stable across refresh/back):
  *   ?view=collecting | action_required   → the three approved tabs
@@ -50,14 +51,19 @@ export default async function SellerOrdersPage({
       />
 
       <div className="mt-8 space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <OrdersViewTabs activeView={view} query={query} />
-          <OrdersSearchForm view={view} query={query} />
-        </div>
+        <div className="mx-auto max-w-4xl">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <OrdersViewTabs activeView={view} query={query} />
+            <OrdersSearchForm view={view} query={query} />
+          </div>
 
-        <Surface className="overflow-hidden">
-          <OrdersListPanel bootstrap={bootstrap} view={view} query={query} />
-        </Surface>
+          {/* Compact worklist width: the rows group information by
+              meaning, so they are never stretched across the full
+              desktop container like a sparse spreadsheet. */}
+          <Surface className="mt-4 overflow-hidden">
+            <OrdersListPanel bootstrap={bootstrap} view={view} query={query} />
+          </Surface>
+        </div>
       </div>
     </PageContainer>
   );

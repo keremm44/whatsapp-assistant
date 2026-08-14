@@ -18,10 +18,12 @@ import {
   classifyReturnMutationFailure,
   DEFAULT_RETURN_VIEW,
   formatReturnTimestamp,
+  getReturnConversationHref,
   getReturnEvidenceSection,
   getReturnOrderNumberDisplay,
   getReturnPhoneDisplay,
   getReturnReasonExcerpt,
+  getReturnRelatedOrderHref,
   hasAnotherReturnsPage,
   mergeReturnsPage,
   normalizeReturnIssueTypeParam,
@@ -37,12 +39,15 @@ import {
   RETURN_IMAGE_REQUIREMENT_OPTIONS,
   RETURN_ISSUE_TYPE_OPTIONS,
   RETURN_MISSING_FIELD_LABELS,
+  RETURN_OPEN_CONVERSATION_LABEL,
   RETURN_ORDER_NUMBER_PENDING_LABEL,
   RETURN_PAGE_SIZE,
   RETURN_PHONE_MISSING_LABEL,
   RETURN_PHOTO_PENDING_LABEL,
   RETURN_REASON_PENDING_LABEL,
+  RETURN_RELATED_ORDER_LABEL,
   RETURN_SEARCH_MAX_LENGTH,
+  RETURN_SEARCH_PLACEHOLDER,
   RETURN_SETTINGS_CONFLICT_NOTICE,
   RETURN_STATUS_DISPLAY,
   RETURN_VIEW_TABS,
@@ -466,24 +471,33 @@ test("the three canonical photo options with locked meaning copy", () => {
     [
       {
         value: "REQUIRED",
-        label: "Fotoğraf iste",
+        label: "Fotoğraf gerekli",
         description:
-          "Asistan bu sorun türünde müşteriden fotoğraf ister ve fotoğraf gelmeden incelemeye hazır saymaz.",
+          "Asistan müşteriden fotoğraf ister; fotoğraf gelmeden talep incelemeye hazır sayılmaz.",
       },
       {
         value: "OPTIONAL",
-        label: "Zorunlu değil",
+        label: "Fotoğraf isteğe bağlı",
         description:
-          "Asistan fotoğrafı zorunlu tutmaz; müşteri gönderirse kanıt olarak saklanabilir.",
+          "Fotoğraf zorunlu tutulmaz; müşteri gönderirse kanıt olarak saklanabilir.",
       },
       {
         value: "NOT_REQUESTED",
         label: "Fotoğraf isteme",
         description:
-          "Asistan bu sorun türünde fotoğraf istemez; müşteri kendiliğinden gönderirse kanıt yine saklanabilir.",
+          "Asistan fotoğraf istemez; müşteri yine de gönderirse kanıt olarak saklanabilir.",
       },
     ],
   );
+  // Settings language, not action commands — and OPTIONAL is never
+  // described as "asistan ister" (only REQUIRED blocks readiness).
+  for (const option of RETURN_IMAGE_REQUIREMENT_OPTIONS) {
+    assert.doesNotMatch(option.label, /REQUIRED|OPTIONAL|NOT_REQUESTED/);
+  }
+  const optional = RETURN_IMAGE_REQUIREMENT_OPTIONS.find(
+    (option) => option.value === "OPTIONAL",
+  );
+  assert.doesNotMatch(optional!.description, /asistan.*ister/i);
 });
 
 test("the settings payload carries the row's current expected_version", () => {
@@ -574,4 +588,52 @@ test("the preview loader converts bytes to an object URL and fails closed", asyn
   // Any failure collapses to a calm dialog error — no status codes,
   // host names or provider details can leak from here.
   assert.deepEqual(failed, { ok: false });
+});
+
+/* ------------------------------------------------------------------ */
+/* Neutral search copy (no fabricated marketplace format)              */
+/* ------------------------------------------------------------------ */
+
+test("search copy is neutral and teaches no fabricated number format", () => {
+  assert.equal(RETURN_SEARCH_PLACEHOLDER, "Sipariş numarasıyla ara");
+  assert.doesNotMatch(RETURN_SEARCH_PLACEHOLDER, /Örn\.|TR\d/);
+});
+
+/* ------------------------------------------------------------------ */
+/* Cross-panel navigation (real ids only)                              */
+/* ------------------------------------------------------------------ */
+
+test("a valid detail customer id builds the canonical conversation route", () => {
+  assert.equal(getReturnConversationHref(22), "/seller/conversations/22");
+  assert.equal(RETURN_OPEN_CONVERSATION_LABEL, "Konuşmayı aç");
+});
+
+test("absent or invalid customer id yields no conversation link", () => {
+  assert.equal(getReturnConversationHref(null), null);
+  assert.equal(getReturnConversationHref(undefined), null);
+  assert.equal(getReturnConversationHref(0), null);
+  assert.equal(getReturnConversationHref(-3), null);
+  assert.equal(getReturnConversationHref(1.5), null);
+});
+
+test("a related order with an external number opens the existing Orders search", () => {
+  assert.equal(
+    getReturnRelatedOrderHref({ externalOrderNumber: "TR123456" }),
+    "/seller/orders?q=TR123456",
+  );
+  // Surrounding whitespace is normalized; the number itself is exact.
+  assert.equal(
+    getReturnRelatedOrderHref({ externalOrderNumber: "  A-77  " }),
+    "/seller/orders?q=A-77",
+  );
+  assert.equal(RETURN_RELATED_ORDER_LABEL, "İlgili siparişi aç");
+});
+
+test("a missing order or missing external number never fabricates a link", () => {
+  assert.equal(getReturnRelatedOrderHref(null), null);
+  assert.equal(getReturnRelatedOrderHref({ externalOrderNumber: null }), null);
+  assert.equal(
+    getReturnRelatedOrderHref({ externalOrderNumber: "   " }),
+    null,
+  );
 });
