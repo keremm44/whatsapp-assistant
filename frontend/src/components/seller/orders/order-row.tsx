@@ -4,6 +4,7 @@ import { ChevronRight, Image as ImageIcon } from "lucide-react";
 import type { OrderSummary, OrderView } from "@/lib/seller/orders";
 import {
   getOrderNumberDisplay,
+  getOrderRowReviewReason,
   getPhoneDisplay,
   getPrintContent,
   getProductNameDisplay,
@@ -24,7 +25,11 @@ import { cn } from "@/lib/utils/cn";
  *   1. Sipariş numarası (or the single truthful pending phrase)
  *   2. backend displayStatus
  *   3. Ürün · telefon (secondary metadata)
- *   4. short production preview (image marker + truncated text) —
+ *   4. review reason — the backend's own review note, shown inline on
+ *      seller-review rows so İncelenecekler scans as "which order →
+ *      why" without opening each row (never the raw reason code,
+ *      never fabricated when the note is absent)
+ *   5. short production preview (image marker + truncated text) —
  *      the full verbatim content lives in the detail surface
  * The anchor carries NO explicit aria-label: its accessible name is
  * its natural text content, so screen reader users hear the same
@@ -52,6 +57,7 @@ export function OrderRow({
   const phone = getPhoneDisplay(order);
   const content = getPrintContent(order);
   const needsReview = order.sellerActionRequired;
+  const reviewReason = getOrderRowReviewReason(order);
 
   const href = ordersListHref({
     view,
@@ -117,6 +123,14 @@ export function OrderRow({
           {metaParts.length > 0 ? (
             <span className="block truncate text-[12.5px] leading-snug text-muted-foreground">
               {metaParts.join(" · ")}
+            </span>
+          ) : null}
+
+          {/* Why this row needs review — one compact accent line,
+              slightly above ordinary metadata, never a warning box. */}
+          {reviewReason !== null ? (
+            <span className="line-clamp-2 break-words text-[12px] leading-snug text-accent-text">
+              {reviewReason}
             </span>
           ) : null}
 

@@ -9,8 +9,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  cancelInflightLoadMore,
   decideOffsetPageAdvance,
   OFFSET_PAGE_AUTO_CONTINUE_CAP,
+  ownsLoadMoreLifecycle,
 } from "./offset-pagination.ts";
 
 const pageSize = (overrides: {
@@ -179,4 +181,83 @@ test("an empty page stops even if the reported total still looks higher", () => 
   });
   assert.equal(decision.moreAvailable, false);
   assert.equal(decision.shouldAutoContinue, false);
+});
+
+/* ------------------------------------------------------------------ */
+/* Load-more lifecycle: stale-context cancellation                     */
+/* ------------------------------------------------------------------ */
+
+test("context replacement aborts the in-flight request and reopens the gate", () => {
+  const controller = new AbortController();
+  const inflight = { current: controller as AbortController | null };
+
+  // Filter/search/tab change or refresh → new bootstrap → cancel.
+  cancelInflightLoadMore(inflight);
+
+  // The old request is signalled: every await-point check in the
+  // request body (`if (controller.signal.aborted) return;`) now bails,
+  // so a late response cannot append rows / move offset / set errors.
+  assert.equal(controller.signal.aborted, true);
+  // The single-in-flight gate is open again for the new context.
+  assert.equal(inflight.current, null);
+});
+
+test("cancelling with no in-flight request is a safe no-op", () => {
+  const inflight = { current: null };
+  cancelInflightLoadMore(inflight);
+  assert.equal(inflight.current, null);
+});
+
+test("only the owning request may finalize shared lifecycle state", () => {
+  const first = new AbortController();
+  const inflight = { current: first as AbortController | null };
+
+  // Normal completion: the ref still holds this controller.
+  assert.equal(ownsLoadMoreLifecycle(inflight, first), true);
+
+  // Cancelled by a context change: the ref was cleared — the old
+  // request's finally must NOT touch loading/controller state.
+  cancelInflightLoadMore(inflight);
+  assert.equal(ownsLoadMoreLifecycle(inflight, first), false);
+
+  // A new request can start after the old one was aborted…
+  const second = new AbortController();
+  inflight.current = second;
+  assert.equal(ownsLoadMoreLifecycle(inflight, second), true);
+  // …and the stale first request still owns nothing: its finally can
+  // never stomp the newer request's loading/controller state.
+  assert.equal(ownsLoadMoreLifecycle(inflight, first), false);
+  assert.equal(second.signal.aborted, false);
+});
+
+test("stale completion after re-seed cannot mutate the new list state", () => {
+  // Deterministic simulation of the panels' shared flow, with the
+  // same guards the components use around every state write.
+  const inflight = { current: null as AbortController | null };
+  let rows = ["a1", "a2"];
+  let isLoadingMore = false;
+
+  // Old-context load-more starts.
+  const stale = new AbortController();
+  inflight.current = stale;
+  isLoadingMore = true;
+
+  // Context changes: bootstrap re-seed cancels + resets, exactly like
+  // the panels' bootstrap effect.
+  cancelInflightLoadMore(inflight);
+  isLoadingMore = false;
+  rows = ["b1"]; // re-seeded from the new first page
+
+  // The stale request's response finally lands.
+  if (!stale.signal.aborted) {
+    rows = [...rows, "a3"]; // would be the stale append
+  }
+  if (ownsLoadMoreLifecycle(inflight, stale)) {
+    inflight.current = null;
+    isLoadingMore = false;
+  }
+
+  assert.deepEqual(rows, ["b1"]);
+  assert.equal(isLoadingMore, false);
+  assert.equal(inflight.current, null);
 });

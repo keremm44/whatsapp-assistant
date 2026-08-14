@@ -20,7 +20,11 @@ import {
   buildConversationListFreshnessSignature,
   signaturesDiffer,
 } from "@/lib/seller/freshness";
-import { decideOffsetPageAdvance } from "@/lib/seller/offset-pagination";
+import {
+  cancelInflightLoadMore,
+  decideOffsetPageAdvance,
+  ownsLoadMoreLifecycle,
+} from "@/lib/seller/offset-pagination";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
 
@@ -83,6 +87,13 @@ export function ConversationListPanel({
   // Re-seed from the server payload whenever it changes (filter
   // switch via URL, or router.refresh() after a handoff/conflict).
   React.useEffect(() => {
+    // The bootstrap replacing the list context is the stale-request
+    // boundary: abort any in-flight load-more NOW so a late response
+    // from the OLD context can never append rows, move the offset or
+    // set an error against the fresh state, and release the
+    // single-in-flight gate + loading flag for the new context.
+    cancelInflightLoadMore(inflightRef);
+    setIsLoadingMore(false);
     if (bootstrap.state === "ready") {
       setRows(bootstrap.page.conversations);
       setTotal(bootstrap.page.total);
@@ -168,10 +179,14 @@ export function ConversationListPanel({
         "Liste şu anda genişletilemedi. Lütfen tekrar deneyin.",
       );
     } finally {
-      if (inflightRef.current === controller) {
+      // Only the request that still owns the lifecycle may release the
+      // shared state — a request cancelled by a context change (ref
+      // already cleared) or superseded by a newer one must not stomp
+      // the newer request's loading/controller state.
+      if (ownsLoadMoreLifecycle(inflightRef, controller)) {
         inflightRef.current = null;
+        setIsLoadingMore(false);
       }
-      setIsLoadingMore(false);
     }
   };
 

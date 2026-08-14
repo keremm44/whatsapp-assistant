@@ -14,6 +14,7 @@ import {
   DEFAULT_ORDER_VIEW,
   getOrderConversationHref,
   getOrderFieldValueDisplay,
+  getOrderRowReviewReason,
   getPrintContentEmptyLabel,
   getProductNameDisplay,
   normalizeOrderProductParam,
@@ -598,4 +599,55 @@ test("re-selecting the already-selected order never pushes history", () => {
   assert.equal(shouldPushOrderSelection(41, 42), true);
   // First selection from the empty state → push.
   assert.equal(shouldPushOrderSelection(null, 41), true);
+});
+
+/* ------------------------------------------------------------------ */
+/* Row review reason (seller-review scanability)                       */
+/* ------------------------------------------------------------------ */
+
+test("a real backend review note surfaces on flagged rows, trimmed", () => {
+  assert.equal(
+    getOrderRowReviewReason({
+      sellerActionRequired: true,
+      reviewReasonNote: "  Görsel çözünürlüğü düşük olabilir  ",
+      displayStatus: "Satıcı incelemesi gerekiyor",
+    }),
+    "Görsel çözünürlüğü düşük olabilir",
+  );
+});
+
+test("no note → no fabricated reason; the flag alone carries the row", () => {
+  for (const reviewReasonNote of [null, "", "   "]) {
+    assert.equal(
+      getOrderRowReviewReason({
+        sellerActionRequired: true,
+        reviewReasonNote,
+        displayStatus: "Satıcı incelemesi gerekiyor",
+      }),
+      null,
+      String(reviewReasonNote),
+    );
+  }
+});
+
+test("non-review orders never show a review reason line", () => {
+  assert.equal(
+    getOrderRowReviewReason({
+      sellerActionRequired: false,
+      reviewReasonNote: "Görsel çözünürlüğü düşük olabilir",
+      displayStatus: "Bilgi toplanıyor",
+    }),
+    null,
+  );
+});
+
+test("a note repeating the visible status phrase is suppressed", () => {
+  assert.equal(
+    getOrderRowReviewReason({
+      sellerActionRequired: true,
+      reviewReasonNote: "Satıcı incelemesi gerekiyor",
+      displayStatus: "Satıcı incelemesi gerekiyor",
+    }),
+    null,
+  );
 });

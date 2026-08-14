@@ -386,6 +386,28 @@ export const getReviewNoteDisplay = (
   return null;
 };
 
+/**
+ * The list row's compact review-reason line. Shown ONLY when the
+ * backend flags the row (`seller_action_required`) AND stored a real
+ * seller-facing note. Nothing is ever fabricated: no note → no line
+ * (the accent rail + status keep carrying the flag), and a note that
+ * merely repeats the visible displayStatus phrase is suppressed so
+ * the row never says the same thing twice. The raw review_reason_code
+ * is never surfaced.
+ */
+export const getOrderRowReviewReason = (
+  order: Pick<
+    OrderSummary,
+    "sellerActionRequired" | "reviewReasonNote" | "displayStatus"
+  >,
+): string | null => {
+  if (order.sellerActionRequired !== true) return null;
+  const note = getReviewNoteDisplay(order);
+  if (note === null) return null;
+  if (note === order.displayStatus.trim()) return null;
+  return note;
+};
+
 /* ------------------------------------------------------------------ */
 /* Image preview state machine + loader (dependency-injected)          */
 /* ------------------------------------------------------------------ */
@@ -530,7 +552,7 @@ export const getOrderFieldValueDisplay = (
 /* ------------------------------------------------------------------ */
 
 export const ORDER_DETAIL_EMPTY_GUIDANCE =
-  "Detayları görmek için listeden bir sipariş seçin.";
+  "Üretim detaylarını görmek için listeden bir sipariş seçin.";
 export const ORDER_DETAIL_LOADING_LABEL = "Sipariş detayı yükleniyor";
 /** Calm 404 — also covers a URL pointing at another tenant's record. */
 export const ORDER_DETAIL_NOT_FOUND_TITLE = "Bu sipariş bulunamadı.";

@@ -83,3 +83,52 @@ export const decideOffsetPageAdvance = (input: {
     shouldAutoContinue: false,
   };
 };
+
+/* ------------------------------------------------------------------ */
+/* Load-more lifecycle (stale-context cancellation)                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Minimal shape of the mutable in-flight reference every list panel
+ * keeps (React's `useRef<AbortController | null>`). Typed structurally
+ * so the race rules stay verifiable with Node's built-in test runner.
+ */
+export type InflightLoadMoreRef = { current: AbortController | null };
+
+/**
+ * Cancel the active load-more request because the list context was
+ * replaced (new server bootstrap after a filter/search/tab change,
+ * router refresh, or freshness re-resolution).
+ *
+ * Aborting makes every await-point check in the request body bail out,
+ * so a late response can never append rows, advance the offset, change
+ * moreAvailable, or set an error against the NEW list state. Clearing
+ * the ref immediately also re-opens the single-in-flight gate so the
+ * seller can start a fresh load-more in the new context right away.
+ */
+export const cancelInflightLoadMore = (
+  inflight: InflightLoadMoreRef,
+): void => {
+  inflight.current?.abort();
+  inflight.current = null;
+};
+
+/**
+ * Whether a finishing request still OWNS the panel's load-more
+ * lifecycle state. Only the owner may clear the in-flight ref and
+ * reset the shared `isLoadingMore` flag:
+ *
+ *   - normal completion            → ref still holds this controller
+ *                                    → finalize (clear ref + loading)
+ *   - cancelled by context change  → ref was already cleared
+ *                                    → do NOT touch panel state
+ *   - superseded by a newer request → ref holds the newer controller
+ *                                    → do NOT touch panel state
+ *
+ * Without this guard an old request's `finally` block could stomp the
+ * loading/controller state that now belongs to a newer request.
+ */
+export const ownsLoadMoreLifecycle = (
+  inflight: InflightLoadMoreRef,
+  controller: AbortController,
+): boolean => inflight.current === controller;

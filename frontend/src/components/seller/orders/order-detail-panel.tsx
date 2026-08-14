@@ -74,20 +74,19 @@ export function OrderDetailPanel({
 }) {
   if (state.phase === "idle") {
     // Only visible from lg up: below that the region is hidden while
-    // there is no selection, and the queue owns the screen.
+    // there is no selection, and the queue owns the screen. The
+    // guidance sits near the top of the detail surface — quiet and
+    // secondary, not a large vertically-centered empty block.
     return (
-      <div
-        className="flex min-h-64 items-center justify-center px-6 py-16"
-        role="status"
-      >
-        <div className="flex max-w-60 flex-col items-center gap-2.5 text-center">
+      <div className="px-4 py-6 md:px-5 md:py-7" role="status">
+        <div className="flex items-start gap-2.5">
           <Inbox
             aria-hidden="true"
-            size={20}
+            size={16}
             strokeWidth={1.5}
-            className="text-muted-foreground/70"
+            className="mt-0.5 shrink-0 text-muted-foreground/70"
           />
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
+          <p className="max-w-xs text-[13px] leading-relaxed text-muted-foreground">
             {ORDER_DETAIL_EMPTY_GUIDANCE}
           </p>
         </div>
