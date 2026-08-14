@@ -289,6 +289,17 @@ export const UNANSWERED_ADD_ANSWER_LABEL = "Cevap ekle";
 export const UNANSWERED_FUTURE_ONLY_NOTE =
   "Bu cevap geçmiş konuşmalara gönderilmez. Bundan sonra aynı soru tekrar geldiğinde asistan bu kayıtlı cevabı kullanabilir.";
 
+/**
+ * The Rules distinction, in seller language. The seller has two
+ * knowledge-like mechanisms (Kurallar and these saved answers); this
+ * one-liner states plainly that saving here does NOT create a Rule —
+ * the answer stays on this question only. No technical vocabulary,
+ * no AI-learning claims. Rendered next to the form and next to the
+ * saved-answer state.
+ */
+export const UNANSWERED_NOT_A_RULE_NOTE =
+  "Bu cevap Kurallar bölümüne eklenmez; yalnızca bu soru için kayıtlı kalır.";
+
 /* Dismiss — a stored business state, never described as deletion. */
 export const UNANSWERED_DISMISS_TRIGGER_LABEL = "Bu soruyu görmezden gel";
 export const UNANSWERED_DISMISS_CONFIRM_LABEL = "Görmezden gel";

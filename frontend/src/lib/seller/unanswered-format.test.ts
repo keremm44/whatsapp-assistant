@@ -38,6 +38,7 @@ import {
   UNANSWERED_DISMISS_NOTE_MAX_LENGTH,
   UNANSWERED_DISMISS_TRIGGER_LABEL,
   UNANSWERED_FUTURE_ONLY_NOTE,
+  UNANSWERED_NOT_A_RULE_NOTE,
   UNANSWERED_PAGE_SIZE,
   UNANSWERED_SAVE_ANSWER_LABEL,
   UNANSWERED_STATUS_DISPLAY,
@@ -351,6 +352,7 @@ test("the copy explicitly says past conversations are not messaged", () => {
 test("approved copy makes no AI / fuzzy / semantic promises", () => {
   const approvedCopy = [
     UNANSWERED_FUTURE_ONLY_NOTE,
+    UNANSWERED_NOT_A_RULE_NOTE,
     UNANSWERED_DISMISS_EXPLANATION,
     UNANSWERED_DISMISS_PERSISTENCE_NOTE,
     UNANSWERED_DISMISS_LATER_ANSWER_NOTE,
@@ -424,5 +426,23 @@ test("dismiss success routing follows the queue membership rules", () => {
   assert.equal(
     resolveUnansweredMutationSuccess("all", "dismiss"),
     "refresh",
+  );
+});
+
+/* ------------------------------------------------------------------ */
+/* Rules distinction (saved answers are NOT Rules)                     */
+/* ------------------------------------------------------------------ */
+
+test("the Rules-distinction note says the answer is not added to Kurallar", () => {
+  assert.equal(
+    UNANSWERED_NOT_A_RULE_NOTE,
+    "Bu cevap Kurallar bölümüne eklenmez; yalnızca bu soru için kayıtlı kalır.",
+  );
+  assert.match(UNANSWERED_NOT_A_RULE_NOTE, /Kurallar/);
+  assert.match(UNANSWERED_NOT_A_RULE_NOTE, /eklenmez/);
+  // Seller language only — no technical vocabulary.
+  assert.doesNotMatch(
+    UNANSWERED_NOT_A_RULE_NOTE,
+    /canonical|normalize|normalized|kural motoru|veritabanı/i,
   );
 });

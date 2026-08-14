@@ -4,8 +4,8 @@ import * as React from "react";
 
 import { Label } from "@/components/ui/label";
 import {
-  SETTINGS_CLEARABLE_UNSPECIFIED_LABEL,
   SETTINGS_NO_LABEL,
+  SETTINGS_TRISTATE_UNKNOWN_LABEL,
   SETTINGS_UNSPECIFIED_LABEL,
   SETTINGS_YES_LABEL,
   type TriStateValue,
@@ -87,22 +87,26 @@ export function TriStateControl({
     { id: `${name}-no`, label: SETTINGS_NO_LABEL, next: false },
     {
       id: `${name}-unspecified`,
-      label: SETTINGS_CLEARABLE_UNSPECIFIED_LABEL,
+      // Backend NULL stays its own selectable state ("Bilgi yok");
+      // it is never merged into "Hayır".
+      label: SETTINGS_TRISTATE_UNKNOWN_LABEL,
       next: null,
     },
   ];
 
   return (
-    <fieldset className="space-y-2" aria-describedby={describedBy}>
+    <fieldset className="space-y-1.5" aria-describedby={describedBy}>
       <legend className="text-sm font-medium text-foreground">{legend}</legend>
-      <div className="flex flex-wrap gap-1.5 rounded-md border border-border bg-surface p-1">
+      {/* Compact segments: full-width equal thirds on touch screens
+          (>= 44px targets), a quiet inline pill group from sm up. */}
+      <div className="flex w-full flex-wrap gap-1 rounded-md border border-border bg-surface p-0.5 sm:inline-flex sm:w-auto">
         {options.map((option) => {
           const selected = value === option.next;
           return (
             <label
               key={option.id}
               className={cn(
-                "inline-flex min-h-11 min-w-[5.5rem] flex-1 cursor-pointer items-center justify-center rounded-sm px-3 text-[13px] font-medium transition-colors",
+                "inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-sm px-3 text-[12.5px] font-medium transition-colors sm:min-h-8 sm:flex-initial",
                 "focus-within:outline-none focus-within:ring-2 focus-within:ring-primary",
                 selected
                   ? "bg-surface-2 text-foreground shadow-surface"
@@ -149,16 +153,18 @@ export function BinaryChoiceControl({
   ];
 
   return (
-    <fieldset className="space-y-2" aria-describedby={describedBy}>
+    <fieldset className="space-y-1.5" aria-describedby={describedBy}>
       <legend className="text-sm font-medium text-foreground">{legend}</legend>
-      <div className="flex flex-wrap gap-1.5 rounded-md border border-border bg-surface p-1">
+      {/* Compact segments: full-width equal thirds on touch screens
+          (>= 44px targets), a quiet inline pill group from sm up. */}
+      <div className="flex w-full flex-wrap gap-1 rounded-md border border-border bg-surface p-0.5 sm:inline-flex sm:w-auto">
         {options.map((option) => {
           const selected = value === option.next;
           return (
             <label
               key={option.id}
               className={cn(
-                "inline-flex min-h-11 min-w-[5.5rem] flex-1 cursor-pointer items-center justify-center rounded-sm px-3 text-[13px] font-medium transition-colors",
+                "inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-sm px-3 text-[12.5px] font-medium transition-colors sm:min-h-8 sm:flex-initial",
                 "focus-within:outline-none focus-within:ring-2 focus-within:ring-primary",
                 selected
                   ? "bg-surface-2 text-foreground shadow-surface"

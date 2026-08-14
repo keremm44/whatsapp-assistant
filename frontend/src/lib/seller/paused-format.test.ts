@@ -17,6 +17,7 @@ import {
 import {
   getPausedReasonLabel,
   getPausedReasonNote,
+  getPausedReasonPresentation,
   PAUSED_EMPTY_COPY,
   PAUSED_OPEN_CONVERSATION_LABEL,
   PAUSED_STATE_LABEL,
@@ -102,4 +103,42 @@ test("the only destination is the existing conversation detail route", () => {
 test("empty copy is calm and not celebratory", () => {
   assert.equal(PAUSED_EMPTY_COPY.title, "Yanıtı durdurulan konuşma yok");
   assert.match(PAUSED_EMPTY_COPY.description, /burada görünecek/);
+});
+
+/* ------------------------------------------------------------------ */
+/* Reason-first presentation (recognition queue redesign)              */
+/* ------------------------------------------------------------------ */
+
+test("reason presentation leads with the mapped seller-facing category", () => {
+  assert.deepEqual(getPausedReasonPresentation("manual_pause"), {
+    kind: "seller",
+    label: "Sizin tarafınızdan durduruldu",
+  });
+  assert.deepEqual(getPausedReasonPresentation("security"), {
+    kind: "security",
+    label: "Güvenlik nedeniyle durduruldu",
+  });
+  assert.deepEqual(getPausedReasonPresentation("violation"), {
+    kind: "violation",
+    label: "Müşteri davranışı nedeniyle durduruldu",
+  });
+});
+
+test("unknown or missing codes collapse to the generic phrase — raw codes never leak", () => {
+  for (const code of ["future_code", "PAUSE", "", null, undefined]) {
+    const presentation = getPausedReasonPresentation(code);
+    assert.equal(presentation.kind, "unknown", String(code));
+    assert.equal(presentation.label, PAUSED_STATE_LABEL, String(code));
+    if (typeof code === "string" && code.length > 0) {
+      assert.equal(presentation.label.includes(code), false);
+    }
+  }
+});
+
+test("rows do not repeat the page-level paused state as a per-row chip", () => {
+  // The mapped reasons ARE the row's state line; none of them restate
+  // the page title's generic phrase.
+  for (const code of ["manual_pause", "security", "violation"]) {
+    assert.notEqual(getPausedReasonPresentation(code).label, PAUSED_STATE_LABEL);
+  }
 });

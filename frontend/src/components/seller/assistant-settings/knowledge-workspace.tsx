@@ -43,7 +43,11 @@ import {
   KNOWLEDGE_ORDER_COLLECTION_HREF,
   KNOWLEDGE_ORDER_COLLECTION_LINK_LABEL,
   KNOWLEDGE_PRINT_METHOD_LABEL,
+  KNOWLEDGE_PROCESSING_GROUP_HELP,
+  KNOWLEDGE_PROCESSING_GROUP_LABEL,
+  KNOWLEDGE_PROCESSING_MAX_INPUT_LABEL,
   KNOWLEDGE_PROCESSING_MAX_LABEL,
+  KNOWLEDGE_PROCESSING_MIN_INPUT_LABEL,
   KNOWLEDGE_PROCESSING_MIN_LABEL,
   KNOWLEDGE_PROCESSING_UNIT,
   KNOWLEDGE_PRODUCT_DESCRIPTION,
@@ -516,13 +520,13 @@ function ShippingSection({
   if (minParsed.invalid) {
     parseIssues.push({
       field: "processing_days_min",
-      message: "Minimum hazırlık süresi bir tam sayı olmalıdır.",
+      message: "Hazırlık süresi (en az) bir tam sayı olmalıdır.",
     });
   }
   if (maxParsed.invalid) {
     parseIssues.push({
       field: "processing_days_max",
-      message: "Maksimum hazırlık süresi bir tam sayı olmalıdır.",
+      message: "Hazırlık süresi (en çok) bir tam sayı olmalıdır.",
     });
   }
   const issues = [...parseIssues, ...validateShippingDraft(draft, current)];
@@ -540,28 +544,39 @@ function ShippingSection({
         void onSave(draft);
       }}
     >
-      <LabeledTextField
-        id="shipping-min"
-        label={KNOWLEDGE_PROCESSING_MIN_LABEL}
-        value={minDays}
-        onChange={setMinDays}
-        disabled={disabled}
-        placeholder={SETTINGS_UNSPECIFIED_LABEL}
-        suffix={KNOWLEDGE_PROCESSING_UNIT}
-        inputMode="numeric"
-        error={firstIssue(issues, "processing_days_min")}
-      />
-      <LabeledTextField
-        id="shipping-max"
-        label={KNOWLEDGE_PROCESSING_MAX_LABEL}
-        value={maxDays}
-        onChange={setMaxDays}
-        disabled={disabled}
-        placeholder={SETTINGS_UNSPECIFIED_LABEL}
-        suffix={KNOWLEDGE_PROCESSING_UNIT}
-        inputMode="numeric"
-        error={firstIssue(issues, "processing_days_max")}
-      />
+      {/* Hazırlık süresi — ONE seller concept over the two backend
+          fields (processing_days_min / processing_days_max). Grouping
+          is purely visual; the payload shape is unchanged. */}
+      <fieldset className="space-y-1.5">
+        <legend className="text-sm font-medium text-foreground">
+          {KNOWLEDGE_PROCESSING_GROUP_LABEL}
+        </legend>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <LabeledTextField
+            id="shipping-min"
+            label={KNOWLEDGE_PROCESSING_MIN_INPUT_LABEL}
+            value={minDays}
+            onChange={setMinDays}
+            disabled={disabled}
+            placeholder={SETTINGS_UNSPECIFIED_LABEL}
+            suffix={KNOWLEDGE_PROCESSING_UNIT}
+            inputMode="numeric"
+            error={firstIssue(issues, "processing_days_min")}
+          />
+          <LabeledTextField
+            id="shipping-max"
+            label={KNOWLEDGE_PROCESSING_MAX_INPUT_LABEL}
+            value={maxDays}
+            onChange={setMaxDays}
+            disabled={disabled}
+            placeholder={SETTINGS_UNSPECIFIED_LABEL}
+            suffix={KNOWLEDGE_PROCESSING_UNIT}
+            inputMode="numeric"
+            error={firstIssue(issues, "processing_days_max")}
+          />
+        </div>
+        <FieldMessage>{KNOWLEDGE_PROCESSING_GROUP_HELP}</FieldMessage>
+      </fieldset>
       <div className="space-y-2">
         <BinaryChoiceControl
           legend={KNOWLEDGE_SAME_DAY_LABEL}

@@ -1,12 +1,18 @@
 /**
  * Presentation helpers for the Seller “Yanıtı Durdurulanlar” queue.
  *
- * Pure and environment-neutral. The page is a recognition list, not a
- * second Conversations workbench: it never invents control actions,
- * AI summaries, or extra business states.
+ * Pure and environment-neutral. The page is a read-only recognition
+ * list, not a second Conversations workbench: it never invents control
+ * actions, AI summaries, or extra business states. The one operational
+ * transition remains opening the existing conversation.
  */
 
-/** Locked state line for every paused row. */
+/**
+ * Locked page-level state phrase. The page title/description already
+ * say responses are paused, so rows do NOT repeat this as a state
+ * chip; it remains the accessible-name fallback and the reason line
+ * when the backend supplied no recognizable reason code.
+ */
 export const PAUSED_STATE_LABEL = "Yanıtlar durduruldu";
 
 /** Visible CTA — the only action on this surface. */
@@ -32,6 +38,45 @@ export const getPausedReasonLabel = (
   if (reasonCode === "security") return PAUSED_REASON_LABELS.security;
   if (reasonCode === "violation") return PAUSED_REASON_LABELS.violation;
   return null;
+};
+
+/* ------------------------------------------------------------------ */
+/* Reason-first presentation                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The row's primary scan concept: WHY the assistant is not replying.
+ *
+ * `kind` drives restrained visual differentiation only (a small line
+ * icon — never alarm colors; security is a state, not an emergency).
+ * `label` is always a seller-facing sentence; raw backend codes never
+ * surface — an unrecognized/missing code collapses to the generic
+ * paused phrase, which in that case is the only truthful information.
+ */
+export type PausedReasonKind =
+  | "seller"
+  | "security"
+  | "violation"
+  | "unknown";
+
+export type PausedReasonPresentation = {
+  kind: PausedReasonKind;
+  label: string;
+};
+
+export const getPausedReasonPresentation = (
+  reasonCode: string | null | undefined,
+): PausedReasonPresentation => {
+  if (reasonCode === "manual_pause") {
+    return { kind: "seller", label: PAUSED_REASON_LABELS.manual_pause };
+  }
+  if (reasonCode === "security") {
+    return { kind: "security", label: PAUSED_REASON_LABELS.security };
+  }
+  if (reasonCode === "violation") {
+    return { kind: "violation", label: PAUSED_REASON_LABELS.violation };
+  }
+  return { kind: "unknown", label: PAUSED_STATE_LABEL };
 };
 
 /**

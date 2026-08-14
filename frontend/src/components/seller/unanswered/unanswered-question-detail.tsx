@@ -19,6 +19,8 @@ import {
   UNANSWERED_ADD_ANSWER_LABEL,
   UNANSWERED_ANSWER_SECTION_TITLE,
   UNANSWERED_EDIT_ANSWER_LABEL,
+  UNANSWERED_FUTURE_ONLY_NOTE,
+  UNANSWERED_NOT_A_RULE_NOTE,
   UNANSWERED_OCCURRENCES_TITLE,
   UNANSWERED_OPEN_CONVERSATION_LABEL,
   UNANSWERED_SAVE_ANSWER_LABEL,
@@ -270,6 +272,9 @@ export function UnansweredQuestionDetail({
                     {savedAnswer}
                   </p>
                 ) : null}
+                <p className="text-[12.5px] leading-relaxed text-muted-foreground">
+                  {UNANSWERED_FUTURE_ONLY_NOTE} {UNANSWERED_NOT_A_RULE_NOTE}
+                </p>
                 {mayAnswer ? (
                   <div>
                     <Button

@@ -61,10 +61,14 @@ export function SettingsSection({
           {note}
         </div>
         <div className="max-w-xl space-y-5">{children}</div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        {/* Section-level save: anchored to the section with a quiet
+            hairline instead of floating alone in empty card space.
+            Still the one obvious primary action when dirty. */}
+        <div className="flex flex-col gap-2 border-t border-divider pt-3.5 sm:flex-row sm:items-center sm:gap-3">
           <Button
             type="button"
-            className="min-h-11"
+            size="sm"
+            className="min-h-11 sm:min-h-9"
             disabled={!canSave || isSaving}
             aria-busy={isSaving}
             onClick={onSave}

@@ -12,6 +12,21 @@ import { fileURLToPath } from "node:url";
 
 import {
   assistantHubDescription,
+  KNOWLEDGE_ACCEPTS_RETURNS_LABEL,
+  KNOWLEDGE_DAMAGE_REPLACEMENT_LABEL,
+  KNOWLEDGE_GLOBAL_SCOPE_NOTE,
+  KNOWLEDGE_INTERNATIONAL_LABEL,
+  KNOWLEDGE_PROCESSING_GROUP_LABEL,
+  KNOWLEDGE_PROCESSING_MAX_INPUT_LABEL,
+  KNOWLEDGE_PROCESSING_MIN_INPUT_LABEL,
+  KNOWLEDGE_PRODUCTS_HREF,
+  KNOWLEDGE_PRODUCTS_LINK_LABEL,
+  KNOWLEDGE_SAME_DAY_LABEL,
+  KNOWLEDGE_SAVED_ANSWERS_DESCRIPTION,
+  KNOWLEDGE_SAVED_ANSWERS_HREF,
+  KNOWLEDGE_SAVED_ANSWERS_TITLE,
+  KNOWLEDGE_WRONG_PRINT_REPLACEMENT_LABEL,
+  SETTINGS_TRISTATE_UNKNOWN_LABEL,
   choiceFromTriState,
   classifySettingsMutationFailure,
   formatBinaryChoiceLabel,
@@ -27,7 +42,6 @@ import {
   KNOWLEDGE_PRODUCT_SHARED_NOTE,
   KNOWLEDGE_RETURNS_DISABLED_NOTE,
   parseIntegerInput,
-  SETTINGS_CLEARABLE_UNSPECIFIED_LABEL,
   SETTINGS_CONFLICT_MESSAGE,
   SETTINGS_UNSPECIFIED_LABEL,
   SETTINGS_UNAVAILABLE_DESCRIPTION,
@@ -35,10 +49,13 @@ import {
   triStateFromChoice,
 } from "./assistant-settings-format.ts";
 
-test("unknown / missing values render as Henüz belirtilmedi, not Hayır", () => {
+test("unknown / missing values keep their own neutral label, not Hayır", () => {
   assert.equal(formatUnspecifiedValue(null), SETTINGS_UNSPECIFIED_LABEL);
   assert.equal(formatBinaryChoiceLabel(null), SETTINGS_UNSPECIFIED_LABEL);
-  assert.equal(formatTriStateLabel(null), SETTINGS_CLEARABLE_UNSPECIFIED_LABEL);
+  // Tri-state NULL is presented as the natural "Bilgi yok" — still a
+  // distinct third state, never collapsed into "Hayır".
+  assert.equal(formatTriStateLabel(null), SETTINGS_TRISTATE_UNKNOWN_LABEL);
+  assert.equal(SETTINGS_TRISTATE_UNKNOWN_LABEL, "Bilgi yok");
   assert.notEqual(formatBinaryChoiceLabel(null), "Hayır");
   assert.notEqual(formatTriStateLabel(null), "Hayır");
   assert.equal(formatTriStateLabel(false), "Hayır");
@@ -76,8 +93,11 @@ test("knowledge page copy is practical and truthful", () => {
     "Bu bilgiler şu anda tüm ürünler için ortak kullanılır.",
   );
   assert.doesNotMatch(KNOWLEDGE_PRODUCT_SHARED_NOTE, /Kupa|Termos|330|500/);
-  assert.equal(KNOWLEDGE_CUSTOM_TEXT_MAX_LABEL, "Özel yazı için maksimum karakter");
-  assert.equal(KNOWLEDGE_DISHWASHER_LABEL, "Bulaşık makinesine uygun");
+  assert.equal(
+    KNOWLEDGE_CUSTOM_TEXT_MAX_LABEL,
+    "Özel yazı en fazla kaç karakter olabilir?",
+  );
+  assert.equal(KNOWLEDGE_DISHWASHER_LABEL, "Bulaşık makinesine uygun mu?");
   assert.equal(KNOWLEDGE_ORDER_COLLECTION_HREF, "/seller/order-collection");
   assert.match(KNOWLEDGE_RETURNS_DISABLED_NOTE, /artık uygulanmaz/);
 });
@@ -156,5 +176,82 @@ test("Asistanın Bildikleri UI never offers unsupported clear actions", () => {
   assert.doesNotMatch(
     KNOWLEDGE_PAGE_DESCRIPTION,
     /knowledge base|eğitim|öğren|güven skoru/i,
+  );
+});
+
+/* ------------------------------------------------------------------ */
+/* Seller-facing label pass (business questions, not form fields)      */
+/* ------------------------------------------------------------------ */
+
+test("field labels read as clear business questions", () => {
+  assert.equal(KNOWLEDGE_ACCEPTS_RETURNS_LABEL, "İade kabul ediyor musunuz?");
+  assert.equal(
+    KNOWLEDGE_DAMAGE_REPLACEMENT_LABEL,
+    "Hasarlı ürünlerde değişim yapılıyor mu?",
+  );
+  assert.equal(
+    KNOWLEDGE_WRONG_PRINT_REPLACEMENT_LABEL,
+    "Yanlış baskıda değişim yapılıyor mu?",
+  );
+  assert.equal(KNOWLEDGE_SAME_DAY_LABEL, "Aynı gün gönderim yapılıyor mu?");
+  assert.equal(
+    KNOWLEDGE_INTERNATIONAL_LABEL,
+    "Yurt dışına gönderim yapılıyor mu?",
+  );
+});
+
+test("preparation time stays two backend fields under one seller concept", () => {
+  assert.equal(KNOWLEDGE_PROCESSING_GROUP_LABEL, "Hazırlık süresi");
+  assert.equal(KNOWLEDGE_PROCESSING_MIN_INPUT_LABEL, "En az");
+  assert.equal(KNOWLEDGE_PROCESSING_MAX_INPUT_LABEL, "En çok");
+});
+
+test("copy never leaks storage vocabulary", () => {
+  const touchedCopy = [
+    KNOWLEDGE_GLOBAL_SCOPE_NOTE,
+    KNOWLEDGE_SAVED_ANSWERS_DESCRIPTION,
+    KNOWLEDGE_ACCEPTS_RETURNS_LABEL,
+    KNOWLEDGE_DAMAGE_REPLACEMENT_LABEL,
+    KNOWLEDGE_WRONG_PRINT_REPLACEMENT_LABEL,
+    SETTINGS_TRISTATE_UNKNOWN_LABEL,
+  ].join(" ");
+  assert.doesNotMatch(
+    touchedCopy,
+    /null|kaydedilir|expected.?version|canonical|normalize|veritabanı/i,
+  );
+});
+
+/* ------------------------------------------------------------------ */
+/* Global / all-product scope                                          */
+/* ------------------------------------------------------------------ */
+
+test("the global scope note is explicit and links to Ürünler", () => {
+  assert.equal(
+    KNOWLEDGE_GLOBAL_SCOPE_NOTE,
+    "Bu bilgiler tüm ürünlerde ortak kullanılır. Ürüne özel bilgiler için Ürünler bölümünü kullanın.",
+  );
+  assert.equal(KNOWLEDGE_PRODUCTS_HREF, "/seller/products");
+  assert.equal(KNOWLEDGE_PRODUCTS_LINK_LABEL, "Ürünler bölümüne git");
+  // Never claims per-product values.
+  assert.doesNotMatch(KNOWLEDGE_GLOBAL_SCOPE_NOTE, /her ürün için ayrı/);
+});
+
+/* ------------------------------------------------------------------ */
+/* Saved customer answers (visibility link only)                       */
+/* ------------------------------------------------------------------ */
+
+test("saved customer answers link targets the answered Unanswered view", () => {
+  assert.equal(KNOWLEDGE_SAVED_ANSWERS_HREF, "/seller/unanswered?view=answered");
+  assert.equal(KNOWLEDGE_SAVED_ANSWERS_TITLE, "Kayıtlı müşteri cevapları");
+  assert.match(
+    KNOWLEDGE_SAVED_ANSWERS_DESCRIPTION,
+    /Cevaplanamayan Sorular/,
+  );
+  // States plainly that these answers do NOT become Rules, and makes
+  // no AI-learning claims.
+  assert.match(KNOWLEDGE_SAVED_ANSWERS_DESCRIPTION, /Kurallar bölümüne eklenmez/);
+  assert.doesNotMatch(
+    KNOWLEDGE_SAVED_ANSWERS_DESCRIPTION,
+    /öğren|eğit|yapay zeka|\bAI\b/i,
   );
 });

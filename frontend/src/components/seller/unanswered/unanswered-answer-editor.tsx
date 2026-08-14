@@ -13,6 +13,7 @@ import {
   UNANSWERED_ANSWER_LABEL,
   UNANSWERED_ANSWER_MAX_LENGTH,
   UNANSWERED_FUTURE_ONLY_NOTE,
+  UNANSWERED_NOT_A_RULE_NOTE,
 } from "@/lib/seller/unanswered-format";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 
@@ -125,7 +126,7 @@ export function UnansweredAnswerEditor({
       aria-label="Cevap kaydetme formu"
     >
       <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-        {UNANSWERED_FUTURE_ONLY_NOTE}
+        {UNANSWERED_FUTURE_ONLY_NOTE} {UNANSWERED_NOT_A_RULE_NOTE}
       </p>
       <div className="space-y-1.5">
         <label

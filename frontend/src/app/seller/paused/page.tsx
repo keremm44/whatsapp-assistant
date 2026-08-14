@@ -22,7 +22,7 @@ export default async function SellerPausedPage() {
       <PageHeader
         caption="Asistan"
         title="Yanıtı Durdurulanlar"
-        description="Asistanın şu anda yeni mesajlara yanıt vermediği konuşmaları görün."
+        description="Asistanın şu anda yanıt vermediği konuşmalar ve nedenleri. Yanıtları yönetmek için konuşmayı açın."
       />
 
       <div className="mt-8">

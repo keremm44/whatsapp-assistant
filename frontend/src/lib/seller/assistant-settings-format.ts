@@ -1,9 +1,12 @@
 /**
  * Presentation helpers for seller assistant settings.
  *
- * Pure, environment-neutral, zero-runtime-import so Node's built-in
- * test runner can verify copy, null labels, and mutation classification.
+ * Pure and environment-neutral (the only runtime import is the pure
+ * `unansweredWorkspaceHref` string builder) so Node's built-in test
+ * runner can verify copy, null labels, and mutation classification.
  */
+
+import { unansweredWorkspaceHref } from "./unanswered-format.ts";
 
 /* ------------------------------------------------------------------ */
 /* Shared copy                                                         */
@@ -20,6 +23,15 @@ export const SETTINGS_RETRY_LABEL = "Tekrar dene";
 
 export const SETTINGS_UNSPECIFIED_LABEL = "Henüz belirtilmedi";
 export const SETTINGS_CLEARABLE_UNSPECIFIED_LABEL = "Belirtilmedi";
+
+/**
+ * The tri-state third option, in seller language. It preserves the
+ * backend's true/false/NULL distinction exactly — null still means
+ * "no information", it is never collapsed into "Hayır" — but reads
+ * as a natural state instead of storage vocabulary. Used consistently
+ * by every tri-state control and by formatTriStateLabel.
+ */
+export const SETTINGS_TRISTATE_UNKNOWN_LABEL = "Bilgi yok";
 
 export const SETTINGS_YES_LABEL = "Evet";
 export const SETTINGS_NO_LABEL = "Hayır";
@@ -64,37 +76,51 @@ export const KNOWLEDGE_SIZE_ML_LABEL = "Hacim";
 export const KNOWLEDGE_SIZE_ML_UNIT = "ml";
 export const KNOWLEDGE_PRINT_METHOD_LABEL = "Baskı yöntemi";
 export const KNOWLEDGE_CUSTOM_TEXT_MAX_LABEL =
-  "Özel yazı için maksimum karakter";
+  "Özel yazı en fazla kaç karakter olabilir?";
 
 export const KNOWLEDGE_USAGE_TITLE = "Kullanım";
 export const KNOWLEDGE_USAGE_DESCRIPTION =
-  "Asistanın kullanım hakkında verebileceği bilgileri yönetin. Bilinmeyen bir değer için Belirtilmedi seçin.";
+  "Asistanın kullanım sorularına verebileceği cevapları yönetin. Emin olmadığınız bir değer için Bilgi yok seçeneğini kullanabilirsiniz.";
 
-export const KNOWLEDGE_MICROWAVE_LABEL = "Mikrodalgaya uygun";
-export const KNOWLEDGE_DISHWASHER_LABEL = "Bulaşık makinesine uygun";
-export const KNOWLEDGE_HAND_WASH_LABEL = "Elde yıkama öneriliyor";
-export const KNOWLEDGE_FOOD_SAFE_LABEL = "Gıda ile temasa uygun";
+export const KNOWLEDGE_MICROWAVE_LABEL = "Mikrodalgaya uygun mu?";
+export const KNOWLEDGE_DISHWASHER_LABEL = "Bulaşık makinesine uygun mu?";
+export const KNOWLEDGE_HAND_WASH_LABEL = "Elde yıkama öneriliyor mu?";
+export const KNOWLEDGE_FOOD_SAFE_LABEL = "Gıda ile temasa uygun mu?";
 
 export const KNOWLEDGE_SHIPPING_TITLE = "Kargo";
 export const KNOWLEDGE_SHIPPING_DESCRIPTION =
   "Hazırlık süresi ve gönderim bilgilerini yönetin.";
 
-export const KNOWLEDGE_PROCESSING_MIN_LABEL = "Minimum hazırlık süresi";
-export const KNOWLEDGE_PROCESSING_MAX_LABEL = "Maksimum hazırlık süresi";
+/**
+ * Hazırlık süresi is ONE seller concept backed by two backend fields
+ * (processing_days_min / processing_days_max). The UI groups the two
+ * inputs under a single legend; the payload shape never changes.
+ */
+export const KNOWLEDGE_PROCESSING_GROUP_LABEL = "Hazırlık süresi";
+export const KNOWLEDGE_PROCESSING_GROUP_HELP =
+  "Sınır yoksa boş bırakabilirsiniz.";
+export const KNOWLEDGE_PROCESSING_MIN_INPUT_LABEL = "En az";
+export const KNOWLEDGE_PROCESSING_MAX_INPUT_LABEL = "En çok";
+/** Full-sentence variants for conflict review / error messages. */
+export const KNOWLEDGE_PROCESSING_MIN_LABEL = "Hazırlık süresi (en az)";
+export const KNOWLEDGE_PROCESSING_MAX_LABEL = "Hazırlık süresi (en çok)";
 export const KNOWLEDGE_PROCESSING_UNIT = "gün";
-export const KNOWLEDGE_SAME_DAY_LABEL = "Aynı gün gönderim";
+export const KNOWLEDGE_SAME_DAY_LABEL = "Aynı gün gönderim yapılıyor mu?";
 export const KNOWLEDGE_COMPANY_LABEL = "Kargo firması";
-export const KNOWLEDGE_INTERNATIONAL_LABEL = "Yurt dışı gönderim";
+export const KNOWLEDGE_INTERNATIONAL_LABEL =
+  "Yurt dışına gönderim yapılıyor mu?";
 
 export const KNOWLEDGE_RETURNS_TITLE = "İade Politikası";
 export const KNOWLEDGE_RETURNS_DESCRIPTION =
   "Asistanın iade ve değişim hakkında söyleyebileceği bilgileri yönetin.";
 
-export const KNOWLEDGE_ACCEPTS_RETURNS_LABEL = "İade kabul ediliyor";
+export const KNOWLEDGE_ACCEPTS_RETURNS_LABEL = "İade kabul ediyor musunuz?";
 export const KNOWLEDGE_RETURN_PERIOD_LABEL = "İade süresi";
 export const KNOWLEDGE_RETURN_PERIOD_UNIT = "gün";
-export const KNOWLEDGE_DAMAGE_REPLACEMENT_LABEL = "Hasarlı ürün değişimi";
-export const KNOWLEDGE_WRONG_PRINT_REPLACEMENT_LABEL = "Yanlış baskı değişimi";
+export const KNOWLEDGE_DAMAGE_REPLACEMENT_LABEL =
+  "Hasarlı ürünlerde değişim yapılıyor mu?";
+export const KNOWLEDGE_WRONG_PRINT_REPLACEMENT_LABEL =
+  "Yanlış baskıda değişim yapılıyor mu?";
 
 export const KNOWLEDGE_RETURNS_DISABLED_NOTE =
   "İade kabul edilmediği için iade süresi artık uygulanmaz.";
@@ -102,6 +128,41 @@ export const KNOWLEDGE_RETURNS_DISABLED_NOTE =
 export const KNOWLEDGE_ORDER_COLLECTION_LINK_LABEL =
   "Sipariş Toplama bölümüne git";
 export const KNOWLEDGE_ORDER_COLLECTION_HREF = "/seller/order-collection";
+
+/* ------------------------------------------------------------------ */
+/* Global / all-product scope (must be unmistakable)                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The page-level scope note: everything on Asistanın Bildikleri is
+ * seller-wide. Product-specific configuration lives under Ürünler —
+ * the note links there so the two scopes are never confused.
+ */
+export const KNOWLEDGE_GLOBAL_SCOPE_NOTE =
+  "Bu bilgiler tüm ürünlerde ortak kullanılır. Ürüne özel bilgiler için Ürünler bölümünü kullanın.";
+export const KNOWLEDGE_PRODUCTS_LINK_LABEL = "Ürünler bölümüne git";
+export const KNOWLEDGE_PRODUCTS_HREF = "/seller/products";
+
+/* ------------------------------------------------------------------ */
+/* Saved customer answers (visibility link — no second source of truth) */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Compact secondary section on Asistanın Bildikleri that surfaces the
+ * EXISTING unanswered-questions mechanism in the knowledge mental
+ * model. It is navigation only: the answers live solely in
+ * Cevaplanamayan Sorular (they are never duplicated here and never
+ * merged into Kurallar).
+ */
+export const KNOWLEDGE_SAVED_ANSWERS_TITLE = "Kayıtlı müşteri cevapları";
+export const KNOWLEDGE_SAVED_ANSWERS_DESCRIPTION =
+  "Cevaplanamayan Sorular bölümünde kaydettiğiniz cevaplar, aynı soru tekrar geldiğinde kullanılabilir. Bu cevaplar Kurallar bölümüne eklenmez.";
+export const KNOWLEDGE_SAVED_ANSWERS_LINK_LABEL =
+  "Kayıtlı cevapları görüntüle";
+/** Built with the existing unanswered URL helper — never hand-rolled. */
+export const KNOWLEDGE_SAVED_ANSWERS_HREF = unansweredWorkspaceHref({
+  view: "answered",
+});
 
 /* ------------------------------------------------------------------ */
 /* Sipariş Toplama                                                     */
@@ -172,7 +233,9 @@ export const formatUnspecifiedValue = (value: string | number | null): string =>
 export const formatTriStateLabel = (value: boolean | null): string => {
   if (value === true) return SETTINGS_YES_LABEL;
   if (value === false) return SETTINGS_NO_LABEL;
-  return SETTINGS_CLEARABLE_UNSPECIFIED_LABEL;
+  // Backend NULL stays a distinct state — presented as "Bilgi yok",
+  // never collapsed into "Hayır".
+  return SETTINGS_TRISTATE_UNKNOWN_LABEL;
 };
 
 export const formatBinaryChoiceLabel = (value: boolean | null): string => {
