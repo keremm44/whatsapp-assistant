@@ -26,7 +26,7 @@ export default async function SellerPausedPage() {
       />
 
       <div className="mt-8">
-        <Surface className="mx-auto max-w-3xl overflow-hidden">
+        <Surface className="overflow-hidden">
           <PausedListPanel bootstrap={bootstrap} />
         </Surface>
       </div>

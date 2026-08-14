@@ -21,10 +21,10 @@ export const HUB_PRODUCTS_HREF = "/seller/products";
 export const HUB_PRODUCTS_DESCRIPTION =
   "Satışını yaptığınız ürünleri ve ürün bazlı toplanacak bilgileri yönetin.";
 
-export const HUB_RULES_TITLE = "Kurallar";
+export const HUB_RULES_TITLE = "Mesaja Göre Cevaplar";
 export const HUB_RULES_HREF = "/seller/rules";
 export const HUB_RULES_DESCRIPTION =
-  "Müşteri mesajlarında belirli ifadeler için kullanılacak satıcı tanımlı cevapları yönetin.";
+  "Müşteri mesajlarında belirli ifadeler geçtiğinde kullanılacak cevapları yönetin.";
 
 export const HUB_KNOWLEDGE_TITLE = "Asistanın Bildikleri";
 export const HUB_KNOWLEDGE_HREF = "/seller/assistant-knowledge";
@@ -84,9 +84,9 @@ export const summarizeActiveProducts = (count: number): string => {
 };
 
 export const summarizeActiveRules = (count: number): string => {
-  if (count === 0) return "Henüz etkin kural yok";
-  if (count === 1) return "1 etkin kural";
-  return `${count} etkin kural`;
+  if (count === 0) return "Henüz etkin cevap yok";
+  if (count === 1) return "1 etkin cevap";
+  return `${count} etkin cevap`;
 };
 
 const isSet = (value: unknown): boolean => value !== null && value !== undefined;

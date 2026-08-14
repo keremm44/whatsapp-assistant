@@ -54,8 +54,8 @@ import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
  *        as PriorityCard tiles. Right column holds "Bugün
  *        bakılabilecekler" as a compact list (SecondaryRow)
  *        and a QuietSummary side panel. The right column
- *        has a single shared chrome surface so the column
- *        reads as one composed block.
+ *        sits on the shared raised surface family so it
+ *        reads as one composed block within the workspace.
  *
  *     B) high>0, normal=0
  *        Single column at full content width. "Önce bunlar"
@@ -292,10 +292,18 @@ function PrimaryColumn({
 
 /**
  * The right-hand secondary panel (scenario A only). Renders
- * the section header and a chrome-toned surface containing
- * the secondary rows. The chrome surface has a thin
- * petrol top hairline so the column reads as a single,
- * branded block.
+ * the section header and a surface-family panel containing
+ * the secondary rows, with a thin petrol top hairline as the
+ * only framing accent.
+ *
+ * Surface discipline: the panel deliberately uses the SAME
+ * raised `surface` family as the rest of the dashboard cards
+ * — NOT the shell-level `chrome` tone, which read as an
+ * almost-black slab that visually detached "Bugün
+ * bakılabilecekler" from the workspace. The header gets one
+ * subtle `surface-2` half-step so the section stays
+ * recognizable as the supporting work area without shouting
+ * louder than "Önce bunlar".
  */
 function SecondaryPanel({
   id,
@@ -311,10 +319,9 @@ function SecondaryPanel({
   return (
     <section
       aria-labelledby={id}
-      className="relative overflow-hidden rounded-md border border-border bg-chrome"
+      className="relative overflow-hidden rounded-md border border-border bg-surface shadow-surface"
     >
       {/*
-       * The chrome panel that hosts the secondary list.
        * A thin petrol top hairline is the only framing
        * accent. The terracotta cue for this section
        * comes from the section heading rail (above) and
@@ -325,7 +332,7 @@ function SecondaryPanel({
         aria-hidden="true"
         className="absolute inset-x-0 top-0 h-px bg-primary"
       />
-      <header className="flex items-baseline gap-2 px-4 pb-2 pt-4 sm:px-5 sm:pt-5">
+      <header className="flex items-baseline gap-2 border-b border-divider bg-surface-2/60 px-4 py-3 sm:px-5">
         <h2
           id={id}
           className="font-heading text-[15px] font-semibold text-foreground sm:text-base"
@@ -339,7 +346,7 @@ function SecondaryPanel({
           · {count}
         </span>
       </header>
-      <ul role="list" className="bg-surface">
+      <ul role="list">
         {tasks.map((task) => (
           <SecondaryRow key={task.id} task={task} />
         ))}

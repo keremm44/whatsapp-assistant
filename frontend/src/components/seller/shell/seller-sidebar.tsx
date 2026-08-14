@@ -51,10 +51,12 @@ import { SellerIcon } from "./icon-map";
  *     `surface-2` token) on hover. Icons move from muted to
  *     foreground to communicate affordance.
  *
- *   - Bottom settings region. A small section at the bottom
- *     points at the existing /seller/settings surface with a
- *     neutral Settings icon — never a fabricated initial or
- *     unsupported profile/team/integration promise.
+ *   - There is deliberately NO bottom settings/account rail.
+ *     Settings is a single destination and already lives in
+ *     the normal navigation (Sistem → Ayarlar); a duplicate
+ *     terracotta footer pointing at the same route was
+ *     removed, and no profile/session menu is fabricated in
+ *     its place.
  */
 export function SellerSidebar() {
   const pathname = usePathname();
@@ -93,7 +95,6 @@ export function SellerSidebar() {
           ))}
         </ul>
       </nav>
-      <BottomRail />
     </aside>
   );
 }
@@ -179,38 +180,5 @@ const NavRow = ({
         <span>{label}</span>
       </Link>
     </li>
-  );
-};
-
-const BottomRail = () => {
-  /*
-   * Account / settings region. The terracotta-soft surface
-   * is the second visible brand color in the product. It
-   * sits at the bottom of the sidebar as a quiet
-   * "this is your workspace" surface, balancing the
-   * petrol brand mark at the top.
-   */
-  return (
-    <div className="border-t border-border bg-accent-muted/85 px-4 py-4">
-      <Link
-        href="/seller/settings"
-        className="flex items-center gap-3 rounded-md px-1 py-1 text-sm text-foreground/80 transition-colors hover:bg-surface/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-accent-muted"
-      >
-        <span
-          aria-hidden="true"
-          className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-foreground"
-        >
-          <SellerIcon name="Settings" size={16} />
-        </span>
-        <span className="flex flex-col leading-tight">
-          <span className="text-[13px] font-medium text-foreground">
-            Ayarlar
-          </span>
-          <span className="text-[11px] text-muted-foreground">
-            Oturum
-          </span>
-        </span>
-      </Link>
-    </div>
   );
 };

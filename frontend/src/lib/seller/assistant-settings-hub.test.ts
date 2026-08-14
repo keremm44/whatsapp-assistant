@@ -121,9 +121,9 @@ test("0 / 1 / n active products summaries are factual counts", () => {
 });
 
 test("0 / 1 / n active rules summaries do not use hit_count or AI wording", () => {
-  assert.equal(summarizeActiveRules(0), "Henüz etkin kural yok");
-  assert.equal(summarizeActiveRules(1), "1 etkin kural");
-  assert.equal(summarizeActiveRules(7), "7 etkin kural");
+  assert.equal(summarizeActiveRules(0), "Henüz etkin cevap yok");
+  assert.equal(summarizeActiveRules(1), "1 etkin cevap");
+  assert.equal(summarizeActiveRules(7), "7 etkin cevap");
   assert.doesNotMatch(summarizeActiveRules(3), /öğren|AI|hit/i);
 });
 
@@ -250,7 +250,7 @@ test("hub cards keep the four real destinations in seller mental order", () => {
   );
   assert.deepEqual(
     HUB_CARDS.map((card) => card.title),
-    ["Ürünler", "Kurallar", "Asistanın Bildikleri", "Sipariş Toplama"],
+    ["Ürünler", "Mesaja Göre Cevaplar", "Asistanın Bildikleri", "Sipariş Toplama"],
   );
 });
 

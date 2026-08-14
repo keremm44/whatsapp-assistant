@@ -38,7 +38,9 @@ import {
   RULE_MATCHING_HELP,
   RULE_RESPONSE_LABEL,
   RULE_TRIGGER_LABEL,
+  RULES_CREATE_DIALOG_TITLE,
   RULES_CREATE_LABEL,
+  RULES_EDIT_DIALOG_TITLE,
   RULES_DEACTIVATE_LABEL,
   RULES_REACTIVATE_LABEL,
 } from "@/lib/seller/rules-format";
@@ -110,7 +112,7 @@ export function RuleCreateDialog() {
           return;
         }
         if (kind === "validation") {
-          setError("Kural bilgileri geçersiz. Lütfen kontrol edip tekrar deneyin.");
+          setError("Cevap bilgileri geçersiz. Lütfen kontrol edip tekrar deneyin.");
           return;
         }
       }
@@ -142,7 +144,7 @@ export function RuleCreateDialog() {
           className="max-h-[90vh] max-w-lg overflow-y-auto"
           portalContainer={host}
         >
-          <DialogTitle>{RULES_CREATE_LABEL}</DialogTitle>
+          <DialogTitle>{RULES_CREATE_DIALOG_TITLE}</DialogTitle>
           <DialogDescription>{RULE_MATCHING_HELP}</DialogDescription>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
@@ -298,7 +300,7 @@ export function RuleEditDialog({ rule }: { rule: SellerRule }) {
           className="max-h-[90vh] max-w-lg overflow-y-auto"
           portalContainer={host}
         >
-          <DialogTitle>Kuralı düzenle</DialogTitle>
+          <DialogTitle>{RULES_EDIT_DIALOG_TITLE}</DialogTitle>
           <DialogDescription>{RULE_MATCHING_HELP}</DialogDescription>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
@@ -435,7 +437,7 @@ export function RuleStatusDialog({ rule }: { rule: SellerRule }) {
           <DialogDescription>
             {rule.isActive
               ? RULE_DEACTIVATE_EXPLANATION
-              : "Bu kural yeniden etkinleştirildiğinde yeni müşteri mesajlarında tekrar kullanılabilir."}
+              : "Bu cevap yeniden etkinleştirildiğinde yeni müşteri mesajlarında tekrar kullanılabilir."}
           </DialogDescription>
           {error ? (
             <p role="alert" className="text-[12.5px] leading-snug text-destructive">

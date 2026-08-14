@@ -117,7 +117,7 @@ export const assistantSubRoutes: NavigationItem[] = [
     childOf: "/seller/assistant-settings",
   },
   {
-    label: "Kurallar",
+    label: "Mesaja Göre Cevaplar",
     href: "/seller/rules",
     icon: "ScrollText",
     childOf: "/seller/assistant-settings",

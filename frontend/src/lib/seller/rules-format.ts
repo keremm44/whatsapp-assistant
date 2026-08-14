@@ -1,39 +1,51 @@
 /**
  * Presentation helpers for Seller Rules.
+ *
+ * Seller-facing product language: "Mesaja Göre Cevaplar". The seller
+ * mental model is a simple cause → response pair (müşteri mesajında
+ * geçerse → asistan şöyle cevap verir), never a rule/automation
+ * engine. Internal names, the /seller/rules route and the backend
+ * Rule contract stay unchanged — this is product language only, and
+ * matching semantics are untouched.
  */
 
 import type { RuleView, SellerRule } from "./rules.ts";
 
 export const RULES_PAGE_CAPTION = "Asistan Ayarları";
-export const RULES_PAGE_TITLE = "Kurallar";
+export const RULES_PAGE_TITLE = "Mesaja Göre Cevaplar";
 export const RULES_PAGE_DESCRIPTION =
-  "Müşteriler belirli ifadeleri kullandığında asistanın vereceği satıcı tanımlı cevapları yönetin.";
+  "Müşterinin mesajında belirli bir ifade geçtiğinde asistanın ne cevap vereceğini belirleyin.";
 
 export const RULES_BACK_LABEL = "← Asistan Ayarları";
 export const RULES_BACK_HREF = "/seller/assistant-settings";
 
-export const RULES_CREATE_LABEL = "Kural ekle";
+/** Primary CTA (short form). */
+export const RULES_CREATE_LABEL = "Yeni cevap ekle";
+/** Longer, more natural dialog title for the same action. */
+export const RULES_CREATE_DIALOG_TITLE = "Mesaja göre cevap ekle";
+export const RULES_EDIT_DIALOG_TITLE = "Cevabı düzenle";
 export const RULES_DEACTIVATE_LABEL = "Devre dışı bırak";
 export const RULES_REACTIVATE_LABEL = "Yeniden etkinleştir";
 
-export const RULE_TRIGGER_LABEL = "Müşteri mesajında geçen ifade";
-export const RULE_RESPONSE_LABEL = "Asistanın vereceği cevap";
-export const RULE_TRIGGER_HEADING = "Müşteri mesajında";
-export const RULE_RESPONSE_HEADING = "Asistanın cevabı";
+export const RULE_TRIGGER_LABEL = "Müşteri mesajında geçerse";
+export const RULE_RESPONSE_LABEL = "Asistan şöyle cevap verir";
+export const RULE_TRIGGER_HEADING = "Müşteri mesajında geçerse";
+export const RULE_RESPONSE_HEADING = "Asistan şöyle cevap verir";
 
 export const RULE_MATCHING_HELP =
   "Asistan, müşteri mesajında bu ifade geçtiğinde kayıtlı cevabı kullanabilir.";
 
 export const RULE_DEACTIVATE_EXPLANATION =
-  "Bu kural yeni müşteri mesajlarında kullanılmayacak. Geçmiş konuşmalar değişmez.";
+  "Bu cevap yeni müşteri mesajlarında kullanılmayacak. Geçmiş konuşmalar değişmez.";
 
 export const RULE_CONFLICT_MESSAGE =
-  "Bu kural başka bir işlemde değişmiş. Güncel halini kontrol edip tekrar deneyin.";
+  "Bu cevap başka bir işlemde değişmiş. Güncel halini kontrol edip tekrar deneyin.";
 
 export const RULE_DUPLICATE_MESSAGE =
-  "Aynı ifadeyi kullanan etkin bir kural zaten var.";
+  "Aynı ifadeyi kullanan etkin bir cevap zaten var.";
 
-export const RULES_UNAVAILABLE_TITLE = "Kurallar şu anda yüklenemedi.";
+export const RULES_UNAVAILABLE_TITLE =
+  "Mesaja göre cevaplar şu anda yüklenemedi.";
 export const RULES_UNAVAILABLE_DESCRIPTION =
   "Bağlantı kurulamadı. Liste boş değil; lütfen tekrar deneyin.";
 
@@ -73,16 +85,16 @@ export const rulesListEmptyCopy = (
 ): { title: string; description: string | null } => {
   if (view === "active") {
     return {
-      title: "Henüz etkin kural yok",
+      title: "Henüz etkin cevap yok",
       description:
-        "Tekrarlanan müşteri soruları için kendi hazır cevabınızı ekleyebilirsiniz.",
+        "Tekrarlanan müşteri mesajları için bir cevap ekleyebilirsiniz.",
     };
   }
   if (view === "inactive") {
-    return { title: "Devre dışı kural yok", description: null };
+    return { title: "Devre dışı cevap yok", description: null };
   }
   return {
-    title: "Henüz kural eklenmemiş",
+    title: "Henüz mesaja göre cevap eklenmemiş",
     description: null,
   };
 };

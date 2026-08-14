@@ -433,12 +433,12 @@ test("dismiss success routing follows the queue membership rules", () => {
 /* Rules distinction (saved answers are NOT Rules)                     */
 /* ------------------------------------------------------------------ */
 
-test("the Rules-distinction note says the answer is not added to Kurallar", () => {
+test("the Rules-distinction note says the answer is not added to Mesaja Göre Cevaplar", () => {
   assert.equal(
     UNANSWERED_NOT_A_RULE_NOTE,
-    "Bu cevap Kurallar bölümüne eklenmez; yalnızca bu soru için kayıtlı kalır.",
+    "Bu cevap Mesaja Göre Cevaplar bölümüne eklenmez; yalnızca bu soru için kayıtlı kalır.",
   );
-  assert.match(UNANSWERED_NOT_A_RULE_NOTE, /Kurallar/);
+  assert.match(UNANSWERED_NOT_A_RULE_NOTE, /Mesaja Göre Cevaplar/);
   assert.match(UNANSWERED_NOT_A_RULE_NOTE, /eklenmez/);
   // Seller language only — no technical vocabulary.
   assert.doesNotMatch(

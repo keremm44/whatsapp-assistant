@@ -351,3 +351,41 @@
     }
   }
 }
+
+@layer utilities {
+  /*
+   * Quiet contained-scroll scrollbar for the Conversations workbench.
+   *
+   * The desktop workbench intentionally uses independent internal
+   * scroll regions (queue / timeline / context rail). The native
+   * browser scrollbar renders as a bright white/light control that
+   * does not belong to the dark workshop environment, so contained
+   * regions opt into this utility instead.
+   *
+   * Token discipline: the thumb comes from the muted-foreground
+   * family (a neutral, non-status tone) over a transparent track, so
+   * the control is discoverable but quiet — never white, petrol or
+   * terracotta. Hover gets one subtle brighter neutral step.
+   * Scoped opt-in per region; this is NOT a global scrollbar
+   * restyle.
+   */
+  .scrollbar-quiet {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: rgb(var(--color-muted-foreground-rgb) / 0.35)
+      transparent; /* Firefox */
+  }
+  .scrollbar-quiet::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-quiet::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-quiet::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: rgb(var(--color-muted-foreground-rgb) / 0.35);
+  }
+  .scrollbar-quiet::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--color-muted-foreground-rgb) / 0.5);
+  }
+}

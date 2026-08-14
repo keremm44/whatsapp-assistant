@@ -159,7 +159,7 @@ export function ConversationDetailPanel({
                 Konuşma bağlamı
               </SheetTitle>
             </SheetHeader>
-            <div className="overflow-y-auto">{contextRail}</div>
+            <div className="scrollbar-quiet overflow-y-auto">{contextRail}</div>
           </SheetContent>
         </Sheet>
       ) : null}

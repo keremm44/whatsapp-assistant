@@ -291,14 +291,15 @@ export const UNANSWERED_FUTURE_ONLY_NOTE =
 
 /**
  * The Rules distinction, in seller language. The seller has two
- * knowledge-like mechanisms (Kurallar and these saved answers); this
- * one-liner states plainly that saving here does NOT create a Rule —
- * the answer stays on this question only. No technical vocabulary,
+ * knowledge-like mechanisms (Mesaja Göre Cevaplar and these saved
+ * answers); this one-liner states plainly that saving here does NOT
+ * create a message-based answer — the saved answer stays on this
+ * question only. No technical vocabulary,
  * no AI-learning claims. Rendered next to the form and next to the
  * saved-answer state.
  */
 export const UNANSWERED_NOT_A_RULE_NOTE =
-  "Bu cevap Kurallar bölümüne eklenmez; yalnızca bu soru için kayıtlı kalır.";
+  "Bu cevap Mesaja Göre Cevaplar bölümüne eklenmez; yalnızca bu soru için kayıtlı kalır.";
 
 /* Dismiss — a stored business state, never described as deletion. */
 export const UNANSWERED_DISMISS_TRIGGER_LABEL = "Bu soruyu görmezden gel";

@@ -14,7 +14,8 @@ import {
 import { resolveRuleListFromSession } from "@/lib/seller/rules-server";
 
 /**
- * Kurallar — seller-defined trigger/response pairs.
+ * Mesaja Göre Cevaplar — seller-defined trigger/response pairs
+ * (internal Rule contract; the /seller/rules route is unchanged).
  *
  * Server Component. View is URL-owned (`?view=active|inactive|all`).
  */

@@ -247,7 +247,7 @@ export function ConversationListPanel({
         </div>
       ) : (
         <>
-          <div className="min-h-0 flex-1 md:overflow-y-auto">
+          <div className="scrollbar-quiet min-h-0 flex-1 md:overflow-y-auto">
             <ul role="list" className="border-t border-divider">
               {rows.map((item) => (
                 <ConversationRow

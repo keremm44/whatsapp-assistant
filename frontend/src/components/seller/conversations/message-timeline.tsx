@@ -251,7 +251,7 @@ export function MessageTimeline({
   return (
     <div
       ref={scrollRef}
-      className="flex-1 space-y-2.5 px-0 py-4 md:min-h-0 md:overflow-y-auto md:px-4"
+      className="scrollbar-quiet flex-1 space-y-2.5 px-0 py-4 md:min-h-0 md:overflow-y-auto md:px-4"
       aria-label="Mesaj geçmişi"
     >
       {messagePage.hasMore ? (

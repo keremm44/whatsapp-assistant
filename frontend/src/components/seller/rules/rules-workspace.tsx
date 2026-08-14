@@ -101,7 +101,7 @@ export function RulesWorkspace({
 function RulesViewTabs({ activeView }: { activeView: RuleView }) {
   return (
     <nav
-      aria-label="Kural görünümü"
+      aria-label="Cevap görünümü"
       className="flex flex-wrap rounded-md border border-border bg-surface p-0.5"
     >
       {RULE_VIEW_TABS.map((tab) => (

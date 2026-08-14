@@ -144,7 +144,10 @@ test("hub descriptions stay restrained and label-specific", () => {
   );
   assert.match(assistantHubDescription("Sipariş Toplama"), /temel bilgileri/);
   assert.match(assistantHubDescription("Ürünler"), /ürün bazlı/);
-  assert.match(assistantHubDescription("Kurallar"), /satıcı tanımlı/);
+  assert.match(
+    assistantHubDescription("Mesaja Göre Cevaplar"),
+    /belirli ifadeler geçtiğinde/,
+  );
 });
 
 test("Asistanın Bildikleri UI never offers unsupported clear actions", () => {
@@ -249,7 +252,10 @@ test("saved customer answers link targets the answered Unanswered view", () => {
   );
   // States plainly that these answers do NOT become Rules, and makes
   // no AI-learning claims.
-  assert.match(KNOWLEDGE_SAVED_ANSWERS_DESCRIPTION, /Kurallar bölümüne eklenmez/);
+  assert.match(
+    KNOWLEDGE_SAVED_ANSWERS_DESCRIPTION,
+    /Mesaja Göre Cevaplar bölümüne eklenmez/,
+  );
   assert.doesNotMatch(
     KNOWLEDGE_SAVED_ANSWERS_DESCRIPTION,
     /öğren|eğit|yapay zeka|\bAI\b/i,

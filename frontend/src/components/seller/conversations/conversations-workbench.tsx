@@ -82,7 +82,7 @@ export function ConversationsWorkbench({
       </div>
       {hasContextRail ? (
         <aside
-          className="hidden min-h-0 flex-col overflow-y-auto border-l border-divider bg-surface xl:flex"
+          className="scrollbar-quiet hidden min-h-0 flex-col overflow-y-auto border-l border-divider bg-surface xl:flex"
           aria-label="Konuşma bağlamı"
         >
           {rail}

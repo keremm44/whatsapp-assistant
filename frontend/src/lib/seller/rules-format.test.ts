@@ -10,6 +10,15 @@ import { fileURLToPath } from "node:url";
 
 import {
   classifyRulesMutationFailure,
+  RULE_CONFLICT_MESSAGE,
+  RULE_DUPLICATE_MESSAGE,
+  RULE_RESPONSE_LABEL,
+  RULE_TRIGGER_LABEL,
+  RULES_CREATE_DIALOG_TITLE,
+  RULES_CREATE_LABEL,
+  RULES_EDIT_DIALOG_TITLE,
+  RULES_PAGE_DESCRIPTION,
+  RULES_PAGE_TITLE,
   getRuleHitCountLabel,
   isRuleDuplicateConflict,
   normalizeRuleViewParam,
@@ -37,9 +46,12 @@ test("hit_count presentation is factual, not conversion", () => {
 });
 
 test("empty states are distinct from unavailable", () => {
-  assert.equal(rulesListEmptyCopy("active").title, "Henüz etkin kural yok");
-  assert.equal(rulesListEmptyCopy("inactive").title, "Devre dışı kural yok");
-  assert.equal(rulesListEmptyCopy("all").title, "Henüz kural eklenmemiş");
+  assert.equal(rulesListEmptyCopy("active").title, "Henüz etkin cevap yok");
+  assert.equal(rulesListEmptyCopy("inactive").title, "Devre dışı cevap yok");
+  assert.equal(
+    rulesListEmptyCopy("all").title,
+    "Henüz mesaja göre cevap eklenmemiş",
+  );
   assert.notEqual(RULES_UNAVAILABLE_TITLE, rulesListEmptyCopy("all").title);
   assert.match(RULES_UNAVAILABLE_DESCRIPTION, /boş değil/i);
 });
@@ -81,4 +93,41 @@ test("Rules UI never uses Sil or AI-training wording", () => {
   ].join("\n");
   assert.doesNotMatch(sources, /["']Sil["']/);
   assert.doesNotMatch(sources, /fuzzy|anlamsal|öğrenir|eğitim/i);
+});
+
+/* ------------------------------------------------------------------ */
+/* Seller-facing product language: Mesaja Göre Cevaplar                */
+/* ------------------------------------------------------------------ */
+
+test("seller-facing language is cevap-based, never rule-engine wording", () => {
+  assert.equal(RULES_PAGE_TITLE, "Mesaja Göre Cevaplar");
+  assert.equal(
+    RULES_PAGE_DESCRIPTION,
+    "Müşterinin mesajında belirli bir ifade geçtiğinde asistanın ne cevap vereceğini belirleyin.",
+  );
+  assert.equal(RULES_CREATE_LABEL, "Yeni cevap ekle");
+  assert.equal(RULES_CREATE_DIALOG_TITLE, "Mesaja göre cevap ekle");
+  assert.equal(RULES_EDIT_DIALOG_TITLE, "Cevabı düzenle");
+  // Cause → response mental model.
+  assert.equal(RULE_TRIGGER_LABEL, "Müşteri mesajında geçerse");
+  assert.equal(RULE_RESPONSE_LABEL, "Asistan şöyle cevap verir");
+  // No seller-visible "kural" left in the approved copy set.
+  const sellerCopy = [
+    RULES_PAGE_TITLE,
+    RULES_PAGE_DESCRIPTION,
+    RULES_CREATE_LABEL,
+    RULES_CREATE_DIALOG_TITLE,
+    RULES_EDIT_DIALOG_TITLE,
+    RULE_TRIGGER_LABEL,
+    RULE_RESPONSE_LABEL,
+    RULE_MATCHING_HELP,
+    RULE_DEACTIVATE_EXPLANATION,
+    RULE_CONFLICT_MESSAGE,
+    RULE_DUPLICATE_MESSAGE,
+    RULES_UNAVAILABLE_TITLE,
+    rulesListEmptyCopy("active").title,
+    rulesListEmptyCopy("inactive").title,
+    rulesListEmptyCopy("all").title,
+  ].join(" ");
+  assert.doesNotMatch(sellerCopy, /kural/i);
 });

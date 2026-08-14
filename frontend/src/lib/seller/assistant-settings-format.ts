@@ -156,7 +156,7 @@ export const KNOWLEDGE_PRODUCTS_HREF = "/seller/products";
  */
 export const KNOWLEDGE_SAVED_ANSWERS_TITLE = "Kayıtlı müşteri cevapları";
 export const KNOWLEDGE_SAVED_ANSWERS_DESCRIPTION =
-  "Cevaplanamayan Sorular bölümünde kaydettiğiniz cevaplar, aynı soru tekrar geldiğinde kullanılabilir. Bu cevaplar Kurallar bölümüne eklenmez.";
+  "Cevaplanamayan Sorular bölümünde kaydettiğiniz cevaplar, aynı soru tekrar geldiğinde kullanılabilir. Bu cevaplar Mesaja Göre Cevaplar bölümüne eklenmez.";
 export const KNOWLEDGE_SAVED_ANSWERS_LINK_LABEL =
   "Kayıtlı cevapları görüntüle";
 /** Built with the existing unanswered URL helper — never hand-rolled. */
@@ -211,13 +211,13 @@ export const HUB_PRODUCTS_DESCRIPTION =
   "Satışını yaptığınız ürünleri ve ürün bazlı toplanacak bilgileri yönetin.";
 
 export const HUB_RULES_DESCRIPTION =
-  "Müşteri mesajlarında belirli ifadeler için kullanılacak satıcı tanımlı cevapları yönetin.";
+  "Müşteri mesajlarında belirli ifadeler geçtiğinde kullanılacak cevapları yönetin.";
 
 export const assistantHubDescription = (label: string): string => {
   if (label === "Asistanın Bildikleri") return HUB_KNOWLEDGE_DESCRIPTION;
   if (label === "Sipariş Toplama") return HUB_ORDER_COLLECTION_DESCRIPTION;
   if (label === "Ürünler") return HUB_PRODUCTS_DESCRIPTION;
-  if (label === "Kurallar") return HUB_RULES_DESCRIPTION;
+  if (label === "Mesaja Göre Cevaplar") return HUB_RULES_DESCRIPTION;
   return "";
 };
 
