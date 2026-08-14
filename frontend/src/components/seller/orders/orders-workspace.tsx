@@ -10,6 +10,7 @@ import { fetchOrderDetail } from "@/lib/seller/orders-api";
 import {
   normalizeOrderSelectionParam,
   ordersListHref,
+  shouldPushOrderSelection,
 } from "@/lib/seller/orders-format";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
@@ -29,7 +30,9 @@ import { OrdersListPanel } from "./orders-list-panel";
  *     back / copied links stay exact.
  *   - Selecting a row updates the URL via history.pushState (the App
  *     Router syncs useSearchParams) — NO server round-trip, so list
- *     pagination and scroll survive every selection.
+ *     pagination and scroll survive every selection. Re-clicking the
+ *     already-selected row pushes nothing (no duplicate history
+ *     entries; Back stays meaningful).
  *   - Filter navigations (view / search / product) go through real
  *     route pushes whose hrefs never carry `order`, so a selection
  *     that may no longer match the new filter is dropped by
@@ -69,13 +72,19 @@ export function OrdersWorkspace({
 
   const select = React.useCallback(
     (orderId: number) => {
+      // Re-clicking the already-selected row is a no-op: pushing the
+      // same URL again would fill browser history with duplicate
+      // entries and break Back for the user.
+      if (!shouldPushOrderSelection(selectedOrderId, orderId)) {
+        return;
+      }
       window.history.pushState(
         null,
         "",
         ordersListHref({ view, query, productId, orderId }),
       );
     },
-    [view, query, productId],
+    [view, query, productId, selectedOrderId],
   );
 
   const clearSelection = React.useCallback(() => {

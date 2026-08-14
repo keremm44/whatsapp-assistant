@@ -3,18 +3,30 @@
  * `GET /seller/me` access block (`aiEnabled`, `onboardingCompleted`,
  * `systemStatus`). No new backend semantics are invented here.
  *
- * The decision mirrors the backend's own auto-reply gate,
+ * The mapping is informed by the backend's auto-reply gate,
  * `chat_service.seller_lifecycle_block`, which blocks automatic
- * replies (messages are still recorded) in this exact precedence:
+ * replies (messages are still recorded) and checks, in order:
+ * emergency pause, ai_enabled, onboarding_completed, then
+ * system_status ∉ {"active", "beta_active"}.
  *
- *   1. ai_enabled is not True          → "ai_disabled"
- *   2. onboarding_completed not True   → "onboarding_incomplete"
- *   3. system_status not in
+ * IMPORTANT LIMIT: this module computes ONLY from the three fields
+ * the `/seller/me` access contract actually exposes. The backend's
+ * `emergency_paused` state is NOT exposed there, so the frontend
+ * deliberately has no notice kind for it — the notice can therefore
+ * lag behind the full backend gate, and it never claims to be an
+ * exact mirror. For the three exposed fields the check order below
+ * matches the backend's, so the notice names the same first blocking
+ * condition among them:
+ *
+ *   1. aiEnabled is not true           → "ai_disabled"
+ *   2. onboardingCompleted not true    → "onboarding_incomplete"
+ *   3. systemStatus not in
  *      {"active", "beta_active"}       → "inactive_status"
  *
- * When none of these hold, the assistant is operational and the shell
- * shows NOTHING — no green badge, no "her şey yolunda" chrome. The
- * notice exists only for genuinely non-normal backend states.
+ * When none of these hold, the assistant is operational as far as
+ * /seller/me can tell and the shell shows NOTHING — no green badge,
+ * no "her şey yolunda" chrome. The notice exists only for genuinely
+ * non-normal backend states.
  *
  * No CTA is offered anywhere: the current backend exposes no
  * seller-panel endpoint to re-enable AI, complete onboarding, or
@@ -75,9 +87,10 @@ export const getAssistantStatusNotice = (
     "aiEnabled" | "onboardingCompleted" | "systemStatus"
   >,
 ): AssistantStatusNotice | null => {
-  // Same precedence as chat_service.seller_lifecycle_block, so the
-  // notice always names the condition the backend actually blocks on
-  // first.
+  // Same check order as the backend gate uses for these three
+  // exposed fields, so among them the notice names the same first
+  // blocking condition. (emergency_paused is not exposed on
+  // /seller/me and is intentionally not represented here.)
   if (access.aiEnabled !== true) {
     return {
       kind: "ai_disabled",

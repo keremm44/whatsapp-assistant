@@ -18,6 +18,7 @@ import {
   getProductNameDisplay,
   normalizeOrderProductParam,
   normalizeOrderSelectionParam,
+  shouldPushOrderSelection,
   ORDER_NUMBER_PENDING_LABEL,
   ORDER_OPEN_CONVERSATION_LABEL,
   ORDER_SEARCH_PLACEHOLDER,
@@ -588,4 +589,13 @@ test("a not-yet-collected field value is pending — nothing is invented", () =>
     getOrderFieldValueDisplay({ options: [], value: null }),
     { kind: "pending" },
   );
+});
+
+test("re-selecting the already-selected order never pushes history", () => {
+  // Same selection again → no push (Back must not walk duplicates).
+  assert.equal(shouldPushOrderSelection(41, 41), false);
+  // A different order → push.
+  assert.equal(shouldPushOrderSelection(41, 42), true);
+  // First selection from the empty state → push.
+  assert.equal(shouldPushOrderSelection(null, 41), true);
 });

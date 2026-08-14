@@ -301,9 +301,14 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
 }
 
 /**
- * One production line: the seller's own field label on the left, the
- * collected snapshot value on the right. Image values open the
- * existing authenticated media-proxy preview; a not-yet-collected
+ * One production line: the seller's own field label with the
+ * collected snapshot value. Both sides are seller-defined content of
+ * unbounded length, so the composition is wrap-safe by construction:
+ * narrow viewports stack label above value; from sm up the compact
+ * two-sided "Label — Value" line returns, with both sides allowed to
+ * wrap (no rigid shrink-0 — a long label can never squeeze the value
+ * out of the viewport, and nothing is truncated). Image values open
+ * the existing authenticated media-proxy preview; a not-yet-collected
  * value shows the single waiting phrase only while the order is
  * truthfully still COLLECTING.
  */
@@ -320,11 +325,11 @@ function ProductionFieldRow({
   const [previewOpen, setPreviewOpen] = React.useState(false);
 
   return (
-    <div className="flex items-baseline justify-between gap-4">
-      <dt className="shrink-0 text-[12.5px] text-muted-foreground">
+    <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+      <dt className="min-w-0 break-words text-[12.5px] text-muted-foreground">
         {field.label}
       </dt>
-      <dd className="min-w-0 break-words text-right text-[13px]">
+      <dd className="min-w-0 break-words text-[13px] sm:text-right">
         {display.kind === "text" ? (
           <span className="whitespace-pre-wrap text-foreground">
             {display.text}
@@ -337,7 +342,7 @@ function ProductionFieldRow({
               onClick={() => setPreviewOpen(true)}
               aria-label={`${field.label} görselini aç`}
               className={cn(
-                "inline-flex min-h-11 items-center gap-1.5 rounded-sm px-1 text-[13px] font-medium text-primary-text transition-colors md:min-h-6",
+                "inline-flex min-h-11 items-center gap-1.5 rounded-sm px-1 text-[13px] font-medium text-primary-text transition-colors sm:min-h-6",
                 "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               )}
             >

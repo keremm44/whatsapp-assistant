@@ -134,6 +134,17 @@ export const normalizeOrderSelectionParam = (
 };
 
 /**
+ * Whether selecting `nextOrderId` should push a new history entry.
+ * Re-clicking the already-selected row must NOT push: repeated
+ * same-URL entries would make browser Back walk through duplicates
+ * of the identical selection state.
+ */
+export const shouldPushOrderSelection = (
+  currentSelectedId: number | null,
+  nextOrderId: number,
+): boolean => currentSelectedId !== nextOrderId;
+
+/**
  * Build the orders list URL. `offset` never appears: pagination is a
  * transient client concern, so switching view or search starts from the
  * first page (offset reset) by construction.

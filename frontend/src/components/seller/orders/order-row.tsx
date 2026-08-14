@@ -26,8 +26,11 @@ import { cn } from "@/lib/utils/cn";
  *   3. Ürün · telefon (secondary metadata)
  *   4. short production preview (image marker + truncated text) —
  *      the full verbatim content lives in the detail surface
- * Selection is communicated by aria-current + the chevron marker +
- * background, never color alone.
+ * The anchor carries NO explicit aria-label: its accessible name is
+ * its natural text content, so screen reader users hear the same
+ * order/product/customer/preview context sighted users see.
+ * Decorative icons stay aria-hidden. Selection is communicated by
+ * aria-current + the chevron marker + background, never color alone.
  */
 export function OrderRow({
   order,
@@ -66,11 +69,6 @@ export function OrderRow({
       <a
         href={href}
         aria-current={isSelected ? "true" : undefined}
-        aria-label={
-          number.isPending
-            ? `${number.text} — ${order.displayStatus}`
-            : `Sipariş ${number.text} — ${order.displayStatus}`
-        }
         onClick={(event) => {
           // Plain left-clicks select in place; modified clicks keep
           // native link behavior (new tab etc.).

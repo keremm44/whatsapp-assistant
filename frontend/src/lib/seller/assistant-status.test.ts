@@ -81,10 +81,12 @@ test("every non-operational system_status surfaces the generic safe notice", () 
   }
 });
 
-test("precedence mirrors the backend's own lifecycle gate", () => {
-  // chat_service.seller_lifecycle_block checks ai_enabled first, then
-  // onboarding, then system_status — the notice names the same first
-  // blocking condition.
+test("precedence follows the backend gate's order for the exposed fields", () => {
+  // For the three fields /seller/me exposes, the backend gate checks
+  // ai_enabled first, then onboarding, then system_status — the
+  // notice names the same first blocking condition among them.
+  // (emergency_paused is not exposed on /seller/me, so it has no
+  // frontend notice kind by design.)
   assert.equal(
     getAssistantStatusNotice(
       access({
