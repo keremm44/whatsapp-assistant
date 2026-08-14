@@ -6,25 +6,27 @@ import { Image as ImageIcon } from "lucide-react";
 import type { OrderSummary } from "@/lib/seller/orders";
 import {
   getPrintContent,
-  PRINT_CONTENT_PENDING_LABEL,
+  getPrintContentEmptyLabel,
   PRINT_IMAGE_ACTION_LABEL,
 } from "@/lib/seller/orders-format";
 
 import { OrderImagePreview } from "./order-image-preview";
 
 /**
- * "Baskı içeriği" — the single source area answering "Bu siparişte ne
- * basacağım?".
+ * "Baskı içeriği" — the detail surface's single source area answering
+ * "Bu siparişte ne basacağım?".
  *
  * Exactly four presentations (see getPrintContent):
  *   image        → [Görsel] action
  *   text         → the exact stored custom_text, quoted
  *   image + text → [Görsel] action + quoted text in one area
- *   none         → "Henüz alınmadı" (presentation fallback, not a state)
+ *   none         → the contextual empty label: "Baskı bilgisi
+ *                  bekleniyor" only while the backend is truthfully
+ *                  still COLLECTING, a neutral dash otherwise
  *
  * custom_text is production-critical: it renders verbatim (React
  * escaping + whitespace-pre-wrap), never trimmed, summarized or
- * clamped away behind a detail page.
+ * clamped away.
  */
 export function PrintContent({
   order,
@@ -35,6 +37,7 @@ export function PrintContent({
     | "imageMessageId"
     | "customText"
     | "externalOrderNumber"
+    | "status"
   >;
 }) {
   const content = getPrintContent(order);
@@ -61,7 +64,7 @@ export function PrintContent({
     <div className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1.5">
       {content.kind === "none" ? (
         <span className="text-[13.5px] text-muted-foreground">
-          {PRINT_CONTENT_PENDING_LABEL}
+          {getPrintContentEmptyLabel(order.status)}
         </span>
       ) : null}
 

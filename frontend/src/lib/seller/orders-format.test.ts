@@ -13,7 +13,12 @@ import type { OrderSummary } from "./orders.ts";
 import {
   DEFAULT_ORDER_VIEW,
   getOrderConversationHref,
+  getOrderFieldValueDisplay,
+  getPrintContentEmptyLabel,
   getProductNameDisplay,
+  normalizeOrderProductParam,
+  normalizeOrderSelectionParam,
+  ORDER_NUMBER_PENDING_LABEL,
   ORDER_OPEN_CONVERSATION_LABEL,
   ORDER_SEARCH_PLACEHOLDER,
   hasAnotherOrdersPage,
@@ -112,20 +117,53 @@ test("print content: business status is never consulted", () => {
 /* ------------------------------------------------------------------ */
 
 test("order number: present value renders verbatim", () => {
-  assert.deepEqual(getOrderNumberDisplay({ externalOrderNumber: "TR123456" }), {
-    text: "TR123456",
-    isPending: false,
-  });
+  assert.deepEqual(
+    getOrderNumberDisplay({
+      externalOrderNumber: "TR123456",
+      status: "COMPLETE",
+    }),
+    {
+      text: "TR123456",
+      isPending: false,
+    },
+  );
 });
 
-test("order number: missing while collecting falls back to Henüz alınmadı", () => {
+test("order number: waiting phrase only while truthfully collecting", () => {
   for (const externalOrderNumber of [null, "", "   "]) {
-    const display = getOrderNumberDisplay({ externalOrderNumber });
-    assert.equal(display.text, "Henüz alınmadı");
+    const display = getOrderNumberDisplay({
+      externalOrderNumber,
+      status: "COLLECTING",
+    });
+    assert.equal(display.text, "Sipariş numarası bekleniyor");
     assert.equal(display.isPending, true);
     // The internal order id is never substituted.
     assert.equal(display.text.includes("7"), false);
   }
+  // Any other status with a missing number: neutral dash, no claim
+  // that more information is on its way.
+  for (const status of ["COMPLETE", "SELLER_REVIEW_REQUIRED"] as const) {
+    const display = getOrderNumberDisplay({
+      externalOrderNumber: null,
+      status,
+    });
+    assert.equal(display.text, "—");
+    assert.equal(display.isPending, true);
+  }
+});
+
+test("print-content empty label is contextual, single-phrase", () => {
+  assert.equal(
+    getPrintContentEmptyLabel("COLLECTING"),
+    "Baskı bilgisi bekleniyor",
+  );
+  assert.equal(getPrintContentEmptyLabel("COMPLETE"), "—");
+  assert.equal(getPrintContentEmptyLabel("SELLER_REVIEW_REQUIRED"), "—");
+  // The number phrase and the print phrase never repeat each other.
+  assert.notEqual(
+    getPrintContentEmptyLabel("COLLECTING"),
+    ORDER_NUMBER_PENDING_LABEL,
+  );
 });
 
 test("phone: present value renders verbatim; missing falls back to dash", () => {
@@ -266,23 +304,44 @@ test("page merges dedupe by order id and keep backend ordering verbatim", () => 
 /* ------------------------------------------------------------------ */
 
 test("empty states match the approved copy per context", () => {
-  assert.equal(orderListEmptyCopy("all", false).title, "Henüz sipariş bilgisi yok.");
-  assert.ok(orderListEmptyCopy("all", false).description !== null);
+  const noFilters = { search: false, product: false };
   assert.equal(
-    orderListEmptyCopy("collecting", false).title,
+    orderListEmptyCopy("all", noFilters).title,
+    "Henüz sipariş bilgisi yok.",
+  );
+  assert.ok(orderListEmptyCopy("all", noFilters).description !== null);
+  assert.equal(
+    orderListEmptyCopy("collecting", noFilters).title,
     "Şu anda bilgisi toplanan sipariş yok.",
   );
   assert.equal(
-    orderListEmptyCopy("action_required", false).title,
+    orderListEmptyCopy("action_required", noFilters).title,
     "Şu anda incelemeniz gereken sipariş yok.",
   );
   // Search empty state wins over view copy in every view.
   for (const view of ["all", "collecting", "action_required"] as const) {
     assert.equal(
-      orderListEmptyCopy(view, true).title,
+      orderListEmptyCopy(view, { search: true, product: false }).title,
       "Bu sipariş numarasıyla eşleşen kayıt bulunamadı.",
     );
   }
+});
+
+test("product-filtered empty is distinct from true empty and mentions clearing", () => {
+  for (const view of ["all", "collecting", "action_required"] as const) {
+    const copy = orderListEmptyCopy(view, { search: false, product: true });
+    assert.equal(
+      copy.title,
+      "Bu ürün filtresiyle eşleşen sipariş bulunamadı.",
+    );
+    assert.match(copy.description ?? "", /Filtreyi kaldır/);
+    assert.notEqual(copy.title, orderListEmptyCopy(view, { search: false, product: false }).title);
+  }
+  // Exact search stays the most specific message when both are active.
+  assert.equal(
+    orderListEmptyCopy("all", { search: true, product: true }).title,
+    "Bu sipariş numarasıyla eşleşen kayıt bulunamadı.",
+  );
 });
 
 /* ------------------------------------------------------------------ */
@@ -402,4 +461,131 @@ test("absent or invalid customer id yields no conversation link", () => {
 test("search copy is neutral and teaches no fabricated number format", () => {
   assert.equal(ORDER_SEARCH_PLACEHOLDER, "Sipariş numarasıyla ara");
   assert.doesNotMatch(ORDER_SEARCH_PLACEHOLDER, /Örn\.|TR\d/);
+});
+
+/* ------------------------------------------------------------------ */
+/* Product filter + selected order (URL params, hrefs)                 */
+/* ------------------------------------------------------------------ */
+
+test("product param admits real positive ids only", () => {
+  assert.equal(normalizeOrderProductParam("12"), 12);
+  assert.equal(normalizeOrderProductParam(" 3 "), 3);
+  for (const junk of ["0", "-4", "1.5", "abc", "", undefined]) {
+    assert.equal(normalizeOrderProductParam(junk), null, String(junk));
+  }
+  assert.equal(normalizeOrderProductParam(["7", "9"]), 7);
+});
+
+test("order selection param is a positive integer or nothing", () => {
+  assert.equal(normalizeOrderSelectionParam("41"), 41);
+  for (const junk of ["0", "-1", "2.5", "id", "", undefined]) {
+    assert.equal(normalizeOrderSelectionParam(junk), null, String(junk));
+  }
+});
+
+test("href carries product and selection; filter hrefs drop the selection", () => {
+  assert.equal(
+    ordersListHref({ view: "all", query: null, productId: 12 }),
+    "/seller/orders?product=12",
+  );
+  assert.equal(
+    ordersListHref({
+      view: "collecting",
+      query: "TR1",
+      productId: 12,
+      orderId: 41,
+    }),
+    "/seller/orders?view=collecting&q=TR1&product=12&order=41",
+  );
+  // Filter navigations simply do not pass orderId: the selection is
+  // dropped by construction, never carried into a new filter state.
+  assert.equal(
+    ordersListHref({ view: "collecting", query: null, productId: 12 }).includes(
+      "order=",
+    ),
+    false,
+  );
+  // Invalid ids never appear in the URL.
+  assert.equal(
+    ordersListHref({ view: "all", query: null, productId: 0, orderId: -1 }),
+    "/seller/orders",
+  );
+});
+
+/* ------------------------------------------------------------------ */
+/* Dynamic-field snapshot value display                                */
+/* ------------------------------------------------------------------ */
+
+test("field values render per backend-normalized shape", () => {
+  assert.deepEqual(
+    getOrderFieldValueDisplay({
+      options: [],
+      value: { kind: "text", text: "Deniz" },
+    }),
+    { kind: "text", text: "Deniz" },
+  );
+  assert.deepEqual(
+    getOrderFieldValueDisplay({
+      options: [],
+      value: { kind: "number", value: 2 },
+    }),
+    { kind: "text", text: "2" },
+  );
+  assert.deepEqual(
+    getOrderFieldValueDisplay({
+      options: [],
+      value: { kind: "boolean", value: true },
+    }),
+    { kind: "text", text: "Evet" },
+  );
+  assert.deepEqual(
+    getOrderFieldValueDisplay({
+      options: [],
+      value: { kind: "boolean", value: false },
+    }),
+    { kind: "text", text: "Hayır" },
+  );
+  assert.deepEqual(
+    getOrderFieldValueDisplay({
+      options: [],
+      value: { kind: "image", messageId: 104 },
+    }),
+    { kind: "image", messageId: 104 },
+  );
+});
+
+test("choice values resolve to the snapshot's option label when present", () => {
+  const options = [
+    { value: "white", label: "Beyaz" },
+    { value: "black", label: null },
+  ];
+  assert.deepEqual(
+    getOrderFieldValueDisplay({
+      options,
+      value: { kind: "single_choice", value: "white" },
+    }),
+    { kind: "text", text: "Beyaz" },
+  );
+  // No label in the snapshot → the canonical value itself, verbatim.
+  assert.deepEqual(
+    getOrderFieldValueDisplay({
+      options,
+      value: { kind: "single_choice", value: "black" },
+    }),
+    { kind: "text", text: "black" },
+  );
+  assert.deepEqual(
+    getOrderFieldValueDisplay({
+      options,
+      value: { kind: "multi_choice", values: ["white", "black"] },
+    }),
+    { kind: "text", text: "Beyaz, black" },
+  );
+});
+
+test("a not-yet-collected field value is pending — nothing is invented", () => {
+  assert.deepEqual(
+    getOrderFieldValueDisplay({ options: [], value: null }),
+    { kind: "pending" },
+  );
 });

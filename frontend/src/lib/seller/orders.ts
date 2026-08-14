@@ -34,8 +34,15 @@
  *     trim/case-fold/paraphrase the stored value itself.
  *   - List ordering is the backend's own order; the frontend preserves
  *     it verbatim and never re-sorts.
- *   - `GET /seller/orders/{id}` detail is out of scope for this V1
- *     surface (no per-row detail fetches, no N+1).
+ *   - `GET /seller/orders/{id}` (`get_order_with_fields` +
+ *     `database.get_order_detail`) backs the selected-order detail
+ *     surface. It is fetched for ONE selected order at a time — never
+ *     per list row (no N+1).
+ *   - Detail `fields[]` are the order's dynamic-field SNAPSHOTS with
+ *     their collected values (`order_field_snapshots` +
+ *     `order_field_values`). Values are backend-normalized per
+ *     field_type (migration 014 CHECK) and parsed strictly here;
+ *     image values carry only the safe `{"message_id": n}` reference.
  */
 
 /* ------------------------------------------------------------------ */
@@ -148,6 +155,26 @@ export const ORDER_STATUSES = [
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+/**
+ * Migration 014 `order_field_definitions_type_check` — the only
+ * dynamic field types the backend can store (snapshots mirror the
+ * same CHECK via `field_type_snapshot`).
+ */
+export const ORDER_FIELD_TYPES = [
+  "short_text",
+  "long_text",
+  "number",
+  "single_choice",
+  "multi_choice",
+  "boolean",
+  "image",
+] as const;
+export type OrderFieldType = (typeof ORDER_FIELD_TYPES)[number];
+
+const isOrderFieldType = (value: unknown): value is OrderFieldType =>
+  typeof value === "string" &&
+  (ORDER_FIELD_TYPES as readonly string[]).includes(value);
+
 /* ------------------------------------------------------------------ */
 /* Typed contract (camelCase)                                          */
 /* ------------------------------------------------------------------ */
@@ -198,6 +225,93 @@ export type OrderListPage = {
   limit: number;
   offset: number;
   orders: OrderSummary[];
+};
+
+/* ------------------------------------------------------------------ */
+/* Detail contract (GET /seller/orders/{id})                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The detail's order block (`seller_order_detail` in
+ * protected_routes.py). Superset of the summary: adds the verbatim
+ * customer note and the closed timestamp. `seller_action_required`
+ * is not part of the detail payload; the backend derives it for
+ * summaries as `status == SELLER_REVIEW_REQUIRED`, and the detail
+ * exposes `status` directly. Internal message references
+ * (`created_from_message_id`, `last_source_message_id`) are not
+ * parsed — they are not user-facing.
+ */
+export type OrderDetailRecord = {
+  id: number;
+  externalOrderNumber: string | null;
+  productId: number | null;
+  productNameSnapshot: string | null;
+  customerId: number;
+  customerPhoneSnapshot: string | null;
+  /** Customer's own free-text note; rendered verbatim, never rewritten. */
+  customerNote: string | null;
+  imageMessageId: number | null;
+  /** Exact production text; null while not collected / not required. */
+  customText: string | null;
+  status: OrderStatus;
+  /** Backend-authoritative Turkish label; rendered verbatim. */
+  displayStatus: string;
+  reviewReasonCode: string | null;
+  reviewReasonNote: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  closedAt: string | null;
+};
+
+/** One `{value, label}` entry of a choice field's options snapshot. */
+export type OrderFieldOption = {
+  value: string;
+  label: string | null;
+};
+
+/**
+ * A collected dynamic-field value, discriminated by the snapshot's
+ * field_type. Shapes mirror the backend's own write-time
+ * normalization in `order_service._validate_field_value`:
+ *   short_text/long_text → string
+ *   number               → finite number (int or float)
+ *   single_choice        → canonical option value (string)
+ *   multi_choice         → non-empty list of canonical option values
+ *   boolean              → boolean
+ *   image                → safe `{message_id}` media-proxy reference
+ */
+export type OrderFieldValue =
+  | { kind: "text"; text: string }
+  | { kind: "number"; value: number }
+  | { kind: "single_choice"; value: string }
+  | { kind: "multi_choice"; values: string[] }
+  | { kind: "boolean"; value: boolean }
+  | { kind: "image"; messageId: number };
+
+/**
+ * One entry of the detail's `fields[]` — a dynamic-field snapshot
+ * plus its collected value. `completed === false` means the value
+ * has not been collected yet (`value` is null); the backend pairs
+ * `completed` with the presence of a value row.
+ */
+export type OrderDetailField = {
+  id: number;
+  fieldKey: string;
+  /** Seller-defined label snapshot; the production line's left side. */
+  label: string;
+  fieldType: OrderFieldType;
+  isRequired: boolean;
+  sortOrder: number;
+  options: OrderFieldOption[];
+  value: OrderFieldValue | null;
+  completed: boolean;
+};
+
+export type OrderDetail = {
+  order: OrderDetailRecord;
+  fields: OrderDetailField[];
 };
 
 /* ------------------------------------------------------------------ */
@@ -268,11 +382,163 @@ const parseOrderListPage = (raw: unknown): OrderListPage => {
   };
 };
 
+const parseOrderDetailRecord = (raw: unknown): OrderDetailRecord => {
+  if (!isPlainObject(raw)) throw contractError("detail_order");
+
+  const statusRaw = readRequiredString(raw, "status");
+  if (!(ORDER_STATUSES as readonly string[]).includes(statusRaw)) {
+    throw contractError("status");
+  }
+
+  return {
+    id: readRequiredPositiveInteger(raw, "id"),
+    externalOrderNumber: readNullableString(raw, "external_order_number"),
+    productId: readNullablePositiveInteger(raw, "product_id"),
+    productNameSnapshot: readNullableString(raw, "product_name_snapshot"),
+    customerId: readRequiredPositiveInteger(raw, "customer_id"),
+    customerPhoneSnapshot: readNullableString(raw, "customer_phone_snapshot"),
+    // Byte-exact customer text; presentation layers must not mutate it.
+    customerNote: readNullableString(raw, "customer_note"),
+    imageMessageId: readNullablePositiveInteger(raw, "image_message_id"),
+    customText: readNullableString(raw, "custom_text"),
+    status: statusRaw as OrderStatus,
+    displayStatus: readRequiredString(raw, "display_status"),
+    reviewReasonCode: readNullableString(raw, "review_reason_code"),
+    reviewReasonNote: readNullableString(raw, "review_reason_note"),
+    version: readRequiredPositiveInteger(raw, "version"),
+    createdAt: readRequiredString(raw, "created_at"),
+    updatedAt: readRequiredString(raw, "updated_at"),
+    completedAt: readNullableString(raw, "completed_at"),
+    closedAt: readNullableString(raw, "closed_at"),
+  };
+};
+
+/**
+ * Options snapshot: a lenient allowlist projection. Entries without a
+ * usable string `value` are skipped (the backend's own validators do
+ * the same when matching answers); `label` is kept when it is a
+ * non-empty string.
+ */
+const parseOrderFieldOptions = (raw: unknown): OrderFieldOption[] => {
+  if (raw === null || raw === undefined) return [];
+  if (!Array.isArray(raw)) throw contractError("field_options");
+  const options: OrderFieldOption[] = [];
+  for (const entry of raw) {
+    if (!isPlainObject(entry)) continue;
+    const value = entry.value;
+    if (typeof value !== "string" || value.trim().length === 0) continue;
+    const label = entry.label;
+    options.push({
+      value,
+      label:
+        typeof label === "string" && label.trim().length > 0 ? label : null,
+    });
+  }
+  return options;
+};
+
+/**
+ * Parse one collected value against its snapshot field_type. Shapes
+ * are guaranteed by the backend's write-time normalization
+ * (`order_service._validate_field_value`); anything else is a
+ * contract drift and fails closed.
+ */
+const parseOrderFieldValue = (
+  fieldType: OrderFieldType,
+  raw: unknown,
+): OrderFieldValue => {
+  switch (fieldType) {
+    case "short_text":
+    case "long_text": {
+      if (typeof raw !== "string") throw contractError("field_value_text");
+      return { kind: "text", text: raw };
+    }
+    case "number": {
+      if (typeof raw !== "number" || !Number.isFinite(raw)) {
+        throw contractError("field_value_number");
+      }
+      return { kind: "number", value: raw };
+    }
+    case "single_choice": {
+      if (typeof raw !== "string") throw contractError("field_value_choice");
+      return { kind: "single_choice", value: raw };
+    }
+    case "multi_choice": {
+      if (!Array.isArray(raw) || raw.some((item) => typeof item !== "string")) {
+        throw contractError("field_value_multi_choice");
+      }
+      return { kind: "multi_choice", values: raw as string[] };
+    }
+    case "boolean": {
+      if (typeof raw !== "boolean") throw contractError("field_value_boolean");
+      return { kind: "boolean", value: raw };
+    }
+    case "image": {
+      if (!isPlainObject(raw)) throw contractError("field_value_image");
+      const messageId = raw.message_id;
+      if (
+        typeof messageId !== "number" ||
+        !Number.isInteger(messageId) ||
+        messageId <= 0
+      ) {
+        throw contractError("field_value_image_message_id");
+      }
+      return { kind: "image", messageId };
+    }
+  }
+};
+
+const parseOrderDetailField = (raw: unknown): OrderDetailField => {
+  if (!isPlainObject(raw)) throw contractError("field");
+
+  const fieldTypeRaw = readKey(raw, "field_type");
+  if (!isOrderFieldType(fieldTypeRaw)) throw contractError("field_type");
+
+  const completed = readRequiredBoolean(raw, "completed");
+  const valueRaw = readKey(raw, "value");
+
+  // Backend invariant: `completed` mirrors the existence of a value
+  // row (`value_row is not None` in database.get_order_detail), so a
+  // completed field always carries a value payload.
+  if (completed && (valueRaw === null || valueRaw === undefined)) {
+    throw contractError("field_completed_without_value");
+  }
+
+  return {
+    id: readRequiredPositiveInteger(raw, "id"),
+    fieldKey: readRequiredString(raw, "field_key"),
+    label: readRequiredString(raw, "label"),
+    fieldType: fieldTypeRaw,
+    isRequired: readRequiredBoolean(raw, "is_required"),
+    sortOrder: readRequiredNonNegativeInteger(raw, "sort_order"),
+    options: parseOrderFieldOptions(readKey(raw, "options")),
+    value:
+      valueRaw === null || valueRaw === undefined
+        ? null
+        : parseOrderFieldValue(fieldTypeRaw, valueRaw),
+    completed,
+  };
+};
+
+const parseOrderDetail = (raw: unknown): OrderDetail => {
+  if (!isPlainObject(raw)) throw contractError("detail_response");
+  const fieldsRaw = readKey(raw, "fields");
+  if (!Array.isArray(fieldsRaw)) throw contractError("fields");
+  return {
+    order: parseOrderDetailRecord(readKey(raw, "order")),
+    // Backend already orders by sort_order_snapshot; preserved verbatim.
+    fields: fieldsRaw.map(parseOrderDetailField),
+  };
+};
+
 /* ------------------------------------------------------------------ */
 /* Parse entry points (used by orders-api.ts fetchers)                 */
 /* ------------------------------------------------------------------ */
 
 export const parseOrdersListResponse = (raw: unknown): OrderListPage =>
   parseOrderListPage(raw);
+
+export const parseOrderDetailResponse = (raw: unknown): OrderDetail =>
+  parseOrderDetail(raw);
 
 export const ORDERS_CONTRACT_ERROR_PREFIX = ORDERS_CONTRACT_PREFIX;

@@ -6,6 +6,7 @@
  * incremental loads). Contract parsing lives in `orders.ts`.
  *
  *   - `GET /seller/orders`                         (list)
+ *   - `GET /seller/orders/{order_id}`              (selected detail)
  *   - `GET /seller/messages/{message_id}/media`    (media proxy, blob)
  *
  * The media endpoint returns binary image content through the backend's
@@ -19,7 +20,9 @@ import {
 } from "@/lib/api/authenticated";
 import type { ApiBlobPayload } from "@/lib/api/client";
 import {
+  parseOrderDetailResponse,
   parseOrdersListResponse,
+  type OrderDetail,
   type OrderListPage,
   type OrderView,
 } from "@/lib/seller/orders";
@@ -28,6 +31,8 @@ export type FetchOrderListOptions = {
   view: OrderView;
   /** Exact marketplace order-number filter (backend equality match). */
   externalOrderNumber?: string | null;
+  /** Backend `product_id` filter (real product id; ge=1). */
+  productId?: number | null;
   /** 1..100; when omitted the backend default (20) applies. */
   limit?: number;
   offset?: number;
@@ -48,6 +53,13 @@ export const fetchOrderList = async (
   ) {
     query.set("external_order_number", options.externalOrderNumber);
   }
+  if (
+    typeof options.productId === "number" &&
+    Number.isInteger(options.productId) &&
+    options.productId > 0
+  ) {
+    query.set("product_id", String(options.productId));
+  }
   if (typeof options?.limit === "number") {
     query.set("limit", String(options.limit));
   }
@@ -60,6 +72,30 @@ export const fetchOrderList = async (
     { signal: options.signal, cache: options.cache ?? "no-store" },
   );
   return parseOrdersListResponse(raw);
+};
+
+export type FetchOrderDetailOptions = {
+  signal?: AbortSignal;
+  cache?: RequestCache;
+};
+
+/**
+ * Fetch and parse `GET /seller/orders/{order_id}` — the selected
+ * order's snapshot detail (order block + dynamic-field snapshots with
+ * their collected values). Called for ONE selected order at a time;
+ * never in a per-row loop.
+ */
+export const fetchOrderDetail = async (
+  accessToken: string,
+  orderId: number,
+  options?: FetchOrderDetailOptions,
+): Promise<OrderDetail> => {
+  const raw = await apiFetchWithAccessToken<unknown>(
+    `/seller/orders/${orderId}`,
+    accessToken,
+    { signal: options?.signal, cache: options?.cache ?? "no-store" },
+  );
+  return parseOrderDetailResponse(raw);
 };
 
 export type FetchOrderImageOptions = {

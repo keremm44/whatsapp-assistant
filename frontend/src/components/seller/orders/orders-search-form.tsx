@@ -24,9 +24,12 @@ import type { OrderView } from "@/lib/seller/orders";
 export function OrdersSearchForm({
   view,
   query,
+  productId,
 }: {
   view: OrderView;
   query: string | null;
+  /** Active product filter — preserved across search submits. */
+  productId: number | null;
 }) {
   const router = useRouter();
   const [value, setValue] = React.useState(query ?? "");
@@ -47,6 +50,7 @@ export function OrdersSearchForm({
         ordersListHref({
           view,
           query: normalized.length > 0 ? normalized : null,
+          productId,
         }) as Route,
       );
     });

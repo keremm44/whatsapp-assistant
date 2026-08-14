@@ -50,10 +50,18 @@ export function OrdersListPanel({
   bootstrap,
   view,
   query,
+  productId,
+  selectedOrderId,
+  onSelect,
 }: {
   bootstrap: OrderListBootstrap;
   view: OrderView;
   query: string | null;
+  /** Backend `product_id` filter — threaded into every page fetch. */
+  productId: number | null;
+  /** Currently selected order (detail surface); null = none. */
+  selectedOrderId: number | null;
+  onSelect: (orderId: number) => void;
 }) {
   const ready = bootstrap.state === "ready" ? bootstrap : null;
 
@@ -115,6 +123,7 @@ export function OrdersListPanel({
         const page = await fetchOrderList(accessToken, {
           view,
           externalOrderNumber: query,
+          productId,
           limit: ORDER_PAGE_SIZE,
           offset,
           signal: controller.signal,
@@ -159,7 +168,7 @@ export function OrdersListPanel({
 
   const freshness = (
     <SellerFreshnessNotice
-      key={`${view}:${query ?? ""}`}
+      key={`${view}:${query ?? ""}:${productId ?? ""}`}
       enabled={ready !== null}
       check={async (signal) => {
         const accessToken = await getBrowserAccessToken();
@@ -167,6 +176,7 @@ export function OrdersListPanel({
         const page = await fetchOrderList(accessToken, {
           view,
           externalOrderNumber: query,
+          productId,
           limit: ORDER_PAGE_SIZE,
           offset: 0,
           signal,
@@ -184,7 +194,10 @@ export function OrdersListPanel({
   }
 
   if (rows.length === 0) {
-    const empty = orderListEmptyCopy(view, query !== null);
+    const empty = orderListEmptyCopy(view, {
+      search: query !== null,
+      product: productId !== null,
+    });
     return (
       <div>
         {freshness}
@@ -205,7 +218,15 @@ export function OrdersListPanel({
       {freshness}
       <ul role="list">
         {rows.map((order) => (
-          <OrderRow key={order.id} order={order} />
+          <OrderRow
+            key={order.id}
+            order={order}
+            view={view}
+            query={query}
+            productId={productId}
+            isSelected={order.id === selectedOrderId}
+            onSelect={onSelect}
+          />
         ))}
       </ul>
 

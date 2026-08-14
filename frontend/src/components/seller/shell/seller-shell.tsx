@@ -1,4 +1,8 @@
 import * as React from "react";
+import { CircleAlert } from "lucide-react";
+
+import { PageContainer } from "@/components/shared/page-container";
+import type { AssistantStatusNotice } from "@/lib/seller/assistant-status";
 
 import { SellerMobileNav } from "./seller-mobile-nav";
 import { SellerSidebar } from "./seller-sidebar";
@@ -32,9 +36,21 @@ import { SellerTopbar } from "./seller-topbar";
 export function SellerShell({
   children,
   storeName,
+  assistantNotice = null,
 }: {
   children: React.ReactNode;
   storeName: string;
+  /**
+   * Global assistant status notice, computed by the layout from the
+   * real /seller/me access block. Null in the normal operational
+   * state — nothing is rendered then (no green badge, no decorative
+   * health chrome). Non-null only for genuinely non-normal backend
+   * states (ai disabled / onboarding incomplete / non-active
+   * system_status), shown as a calm informational band above the
+   * page content. No CTA: the backend exposes no seller-panel action
+   * for these states.
+   */
+  assistantNotice?: AssistantStatusNotice | null;
 }) {
   return (
     <div className="seller-theme min-h-screen bg-background text-foreground">
@@ -42,7 +58,32 @@ export function SellerShell({
         <SellerSidebar />
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <SellerTopbar storeName={storeName} />
-          <main className="flex-1 pb-20 md:pb-10">{children}</main>
+          <main className="flex-1 pb-20 md:pb-10">
+            {assistantNotice !== null ? (
+              <PageContainer size="wide" className="pt-4">
+                <div
+                  role="status"
+                  className="flex items-start gap-3 rounded-md border border-border border-l-2 border-l-accent bg-surface px-4 py-3 shadow-surface"
+                >
+                  <CircleAlert
+                    aria-hidden="true"
+                    size={16}
+                    strokeWidth={1.75}
+                    className="mt-0.5 shrink-0 text-accent-text"
+                  />
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-[13.5px] font-semibold leading-snug text-foreground">
+                      {assistantNotice.title}
+                    </p>
+                    <p className="text-[13px] leading-relaxed text-muted-foreground">
+                      {assistantNotice.description}
+                    </p>
+                  </div>
+                </div>
+              </PageContainer>
+            ) : null}
+            {children}
+          </main>
         </div>
       </div>
       <SellerMobileNav />

@@ -60,12 +60,17 @@ const isContractError = (error: unknown): boolean => {
 
 export const resolveOrderList = async (
   accessToken: string,
-  options: { view: OrderView; externalOrderNumber: string | null },
+  options: {
+    view: OrderView;
+    externalOrderNumber: string | null;
+    productId?: number | null;
+  },
 ): Promise<OrderListBootstrap> => {
   try {
     const page = await fetchOrderList(accessToken, {
       view: options.view,
       externalOrderNumber: options.externalOrderNumber,
+      productId: options.productId ?? null,
       cache: "no-store",
     });
     return { state: "ready", page };
@@ -100,6 +105,7 @@ const resolveAccessTokenFromSession = async (): Promise<string | null> => {
 export const resolveOrderListFromSession = async (options: {
   view: OrderView;
   externalOrderNumber: string | null;
+  productId?: number | null;
 }): Promise<OrderListBootstrap> => {
   const accessToken = await resolveAccessTokenFromSession();
   if (!accessToken) {

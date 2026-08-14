@@ -11,6 +11,7 @@ import { test } from "node:test";
 
 import {
   ORDERS_CONTRACT_ERROR_PREFIX,
+  parseOrderDetailResponse,
   parseOrdersListResponse,
   type OrderSummary,
 } from "./orders.ts";
@@ -215,4 +216,220 @@ test("keeps backend ordering verbatim (no client re-sort)", () => {
     page.orders.map((order) => order.id),
     [9, 3, 5],
   );
+});
+
+/* ------------------------------------------------------------------ */
+/* Detail contract (GET /seller/orders/{id})                           */
+/* ------------------------------------------------------------------ */
+
+const rawDetailOrder = (
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> => ({
+  id: 41,
+  external_order_number: "TR123456",
+  product_id: 3,
+  product_name_snapshot: "Kişiye Özel Kupa",
+  customer_id: 22,
+  customer_phone_snapshot: "+905321112233",
+  customer_note: "Hediye paketi olsun lütfen",
+  image_message_id: 104,
+  custom_text: "İyi ki doğdun Deniz",
+  status: "COMPLETE",
+  display_status: "Bilgiler tamamlandı",
+  review_reason_code: null,
+  review_reason_note: null,
+  created_from_message_id: 900,
+  last_source_message_id: 950,
+  version: 4,
+  created_at: "2026-08-10T12:00:00+00:00",
+  updated_at: "2026-08-10T12:30:00+00:00",
+  completed_at: "2026-08-10T12:30:00+00:00",
+  closed_at: null,
+  ...overrides,
+});
+
+const rawDetailField = (
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> => ({
+  id: 11,
+  source_definition_id: 5,
+  definition_version: 2,
+  field_key: "kupa_rengi",
+  label: "Kupa rengi",
+  field_type: "single_choice",
+  is_required: true,
+  sort_order: 0,
+  options: [{ value: "white", label: "Beyaz" }],
+  validation_config: {},
+  value: "white",
+  source_message_id: 940,
+  completed: true,
+  ...overrides,
+});
+
+test("parses a full detail: order block + dynamic-field snapshot values", () => {
+  const detail = parseOrderDetailResponse({
+    order: rawDetailOrder(),
+    fields: [
+      rawDetailField(),
+      rawDetailField({
+        id: 12,
+        field_key: "isim",
+        label: "Üzerine yazılacak isim",
+        field_type: "short_text",
+        sort_order: 1,
+        options: [],
+        value: "Deniz",
+      }),
+      rawDetailField({
+        id: 13,
+        field_key: "adet",
+        label: "Adet",
+        field_type: "number",
+        sort_order: 2,
+        options: [],
+        value: 2,
+      }),
+      rawDetailField({
+        id: 14,
+        field_key: "renkler",
+        label: "Renkler",
+        field_type: "multi_choice",
+        sort_order: 3,
+        options: [
+          { value: "white", label: "Beyaz" },
+          { value: "black", label: "Siyah" },
+        ],
+        value: ["white", "black"],
+      }),
+      rawDetailField({
+        id: 15,
+        field_key: "hediye",
+        label: "Hediye paketi",
+        field_type: "boolean",
+        sort_order: 4,
+        options: [],
+        value: true,
+      }),
+      rawDetailField({
+        id: 16,
+        field_key: "gorsel",
+        label: "Baskı görseli",
+        field_type: "image",
+        sort_order: 5,
+        options: [],
+        value: { message_id: 970 },
+      }),
+    ],
+  });
+
+  assert.equal(detail.order.id, 41);
+  assert.equal(detail.order.customerNote, "Hediye paketi olsun lütfen");
+  assert.equal(detail.order.customText, "İyi ki doğdun Deniz");
+  assert.equal(detail.order.closedAt, null);
+
+  assert.equal(detail.fields.length, 6);
+  assert.deepEqual(detail.fields[0]!.value, {
+    kind: "single_choice",
+    value: "white",
+  });
+  assert.deepEqual(detail.fields[0]!.options, [
+    { value: "white", label: "Beyaz" },
+  ]);
+  assert.deepEqual(detail.fields[1]!.value, { kind: "text", text: "Deniz" });
+  assert.deepEqual(detail.fields[2]!.value, { kind: "number", value: 2 });
+  assert.deepEqual(detail.fields[3]!.value, {
+    kind: "multi_choice",
+    values: ["white", "black"],
+  });
+  assert.deepEqual(detail.fields[4]!.value, { kind: "boolean", value: true });
+  assert.deepEqual(detail.fields[5]!.value, { kind: "image", messageId: 970 });
+});
+
+test("keeps backend field ordering verbatim and preserves pending fields", () => {
+  const detail = parseOrderDetailResponse({
+    order: rawDetailOrder({ status: "COLLECTING", display_status: "Bilgi toplanıyor", completed_at: null }),
+    fields: [
+      rawDetailField({ id: 21, sort_order: 2 }),
+      rawDetailField({
+        id: 22,
+        field_key: "isim",
+        field_type: "short_text",
+        sort_order: 0,
+        options: [],
+        value: null,
+        completed: false,
+      }),
+    ],
+  });
+  // No client re-sort: the backend already ordered by sort_order_snapshot.
+  assert.deepEqual(
+    detail.fields.map((field) => field.id),
+    [21, 22],
+  );
+  assert.equal(detail.fields[1]!.completed, false);
+  assert.equal(detail.fields[1]!.value, null);
+});
+
+test("image field values carry only the safe message reference", () => {
+  assert.throws(
+    () =>
+      parseOrderDetailResponse({
+        order: rawDetailOrder(),
+        fields: [
+          rawDetailField({
+            field_type: "image",
+            value: { url: "https://cdn.example/leak.jpg" },
+          }),
+        ],
+      }),
+    new RegExp(`^Error: ${ORDERS_CONTRACT_ERROR_PREFIX}`),
+  );
+});
+
+test("detail contract drifts fail closed", () => {
+  // completed=true must carry a value payload (backend invariant).
+  assert.throws(
+    () =>
+      parseOrderDetailResponse({
+        order: rawDetailOrder(),
+        fields: [rawDetailField({ value: null, completed: true })],
+      }),
+    new RegExp(`^Error: ${ORDERS_CONTRACT_ERROR_PREFIX}`),
+  );
+  // Unknown field types are rejected, never guessed at.
+  assert.throws(
+    () =>
+      parseOrderDetailResponse({
+        order: rawDetailOrder(),
+        fields: [rawDetailField({ field_type: "file_upload" })],
+      }),
+    new RegExp(`^Error: ${ORDERS_CONTRACT_ERROR_PREFIX}`),
+  );
+  // Value shape must match the declared type.
+  assert.throws(
+    () =>
+      parseOrderDetailResponse({
+        order: rawDetailOrder(),
+        fields: [rawDetailField({ field_type: "number", value: "iki" })],
+      }),
+    new RegExp(`^Error: ${ORDERS_CONTRACT_ERROR_PREFIX}`),
+  );
+  // Missing order block.
+  assert.throws(
+    () => parseOrderDetailResponse({ fields: [] }),
+    new RegExp(`^Error: ${ORDERS_CONTRACT_ERROR_PREFIX}`),
+  );
+});
+
+test("customer note and custom text arrive byte-exact in the detail", () => {
+  const detail = parseOrderDetailResponse({
+    order: rawDetailOrder({
+      customer_note: "  iki satır\nnot  ",
+      custom_text: "  Deniz ❤️  ",
+    }),
+    fields: [],
+  });
+  assert.equal(detail.order.customerNote, "  iki satır\nnot  ");
+  assert.equal(detail.order.customText, "  Deniz ❤️  ");
 });

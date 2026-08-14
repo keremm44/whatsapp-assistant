@@ -1,126 +1,161 @@
-import type { Route } from "next";
-import Link from "next/link";
-import { ArrowUpRight, Phone } from "lucide-react";
+import * as React from "react";
+import { ChevronRight, Image as ImageIcon } from "lucide-react";
 
-import type { OrderSummary } from "@/lib/seller/orders";
+import type { OrderSummary, OrderView } from "@/lib/seller/orders";
 import {
-  getOrderConversationHref,
   getOrderNumberDisplay,
   getPhoneDisplay,
+  getPrintContent,
   getProductNameDisplay,
-  getReviewNoteDisplay,
-  ORDER_OPEN_CONVERSATION_LABEL,
+  ordersListHref,
+  PRINT_IMAGE_ACTION_LABEL,
 } from "@/lib/seller/orders-format";
 import { cn } from "@/lib/utils/cn";
 
-import { PrintContent } from "./print-content";
-
 /**
- * One order in the production worklist — a compact work item, not a
- * spreadsheet line.
+ * One selectable summary row of the Orders master-detail workspace.
  *
- * Information hierarchy (contract-backed only):
- *   1. Sipariş  — external number, or the truthful pending state
- *   2. Ürün     — product_name_snapshot when present (never productId)
- *   3. Baskı    — custom text and/or the Görsel access action
- *   4. Durum    — backend displayStatus + review note when flagged
- *   5. Konuşma  — explicit "Konuşmayı aç" link via the real customerId
- * The phone is quiet secondary metadata next to the conversation link.
+ * The row is ONE interactive element: a real link whose href is the
+ * canonical `?order={id}` URL (middle-click / copy address work), with
+ * the click intercepted by the workspace so selection happens without
+ * a full server round-trip and without resetting list pagination.
  *
- * The row itself is NOT a link: it contains two independent controls
- * (the Görsel action and the conversation link), so wrapping the whole
- * row would nest interactive elements. Seller-review rows keep the
- * restrained terracotta rail and the backend's own review note — no
- * invented urgency, no fake actions.
+ * Summary hierarchy (list data only — no per-row detail fetch):
+ *   1. Sipariş numarası (or the single truthful pending phrase)
+ *   2. backend displayStatus
+ *   3. Ürün · telefon (secondary metadata)
+ *   4. short production preview (image marker + truncated text) —
+ *      the full verbatim content lives in the detail surface
+ * Selection is communicated by aria-current + the chevron marker +
+ * background, never color alone.
  */
-export function OrderRow({ order }: { order: OrderSummary }) {
+export function OrderRow({
+  order,
+  view,
+  query,
+  productId,
+  isSelected,
+  onSelect,
+}: {
+  order: OrderSummary;
+  view: OrderView;
+  query: string | null;
+  productId: number | null;
+  isSelected: boolean;
+  onSelect: (orderId: number) => void;
+}) {
   const number = getOrderNumberDisplay(order);
   const productName = getProductNameDisplay(order);
   const phone = getPhoneDisplay(order);
-  const reviewNote = getReviewNoteDisplay(order);
-  const conversationHref = getOrderConversationHref(order.customerId);
+  const content = getPrintContent(order);
   const needsReview = order.sellerActionRequired;
+
+  const href = ordersListHref({
+    view,
+    query,
+    productId,
+    orderId: order.id,
+  });
+
+  const metaParts = [productName, phone !== "—" ? phone : null].filter(
+    (part): part is string => part !== null,
+  );
 
   return (
     <li className="border-b border-divider last:border-b-0">
-      <div
+      <a
+        href={href}
+        aria-current={isSelected ? "true" : undefined}
+        aria-label={
+          number.isPending
+            ? `${number.text} — ${order.displayStatus}`
+            : `Sipariş ${number.text} — ${order.displayStatus}`
+        }
+        onClick={(event) => {
+          // Plain left-clicks select in place; modified clicks keep
+          // native link behavior (new tab etc.).
+          if (
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          ) {
+            return;
+          }
+          event.preventDefault();
+          onSelect(order.id);
+        }}
         className={cn(
-          "space-y-2.5 px-4 py-3.5 md:px-5",
+          "group flex min-h-11 items-center gap-3 px-4 py-3 transition-colors md:px-5",
+          "hover:bg-surface-2/60 focus-visible:bg-surface-2/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+          isSelected && "bg-surface-2",
           needsReview && "border-l-2 border-l-accent pl-[14px] md:pl-[18px]",
         )}
       >
-        {/* 1–2. Order identity + product, with the backend state line */}
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <div className="min-w-0">
-            <p
+        <span className="min-w-0 flex-1 space-y-1">
+          <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+            <span
               className={cn(
-                "break-words text-[13.5px] font-semibold leading-snug",
+                "min-w-0 truncate text-[13.5px] leading-snug",
                 number.isPending
                   ? "font-medium text-muted-foreground"
-                  : "text-foreground",
+                  : "font-semibold text-foreground",
               )}
             >
-              {number.isPending ? number.text : `Sipariş ${number.text}`}
-            </p>
-            {productName !== null ? (
-              <p className="mt-0.5 break-words text-[12.5px] leading-snug text-muted-foreground">
-                {productName}
-              </p>
-            ) : null}
-          </div>
-          <p
-            className={cn(
-              "shrink-0 text-[11.5px] font-medium leading-snug",
-              needsReview ? "text-accent-text" : "text-muted-foreground",
-            )}
-          >
-            {order.displayStatus}
-          </p>
-        </div>
-
-        {/* Review context — the backend's own note, calm terracotta */}
-        {needsReview && reviewNote !== null ? (
-          <p className="break-words text-[12px] leading-snug text-accent-text">
-            {reviewNote}
-          </p>
-        ) : null}
-
-        {/* 3. Baskı içeriği */}
-        <div>
-          <p
-            aria-hidden="true"
-            className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-          >
-            Baskı içeriği
-          </p>
-          <PrintContent order={order} />
-        </div>
-
-        {/* 4–5. Secondary metadata + explicit conversation action */}
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 pt-0.5">
-          <span className="inline-flex min-w-0 items-center gap-1.5 text-[12px] tabular-nums text-muted-foreground">
-            <Phone aria-hidden="true" size={12} strokeWidth={1.75} />
-            <span className="truncate">{phone}</span>
-          </span>
-          {conversationHref !== null ? (
-            <Link
-              href={conversationHref as Route}
-              aria-label={
-                number.isPending
-                  ? `${ORDER_OPEN_CONVERSATION_LABEL} — ${phone}`
-                  : `${ORDER_OPEN_CONVERSATION_LABEL} — Sipariş ${number.text}`
-              }
+              {number.text}
+            </span>
+            <span
               className={cn(
-                "inline-flex min-h-11 items-center gap-1 rounded-sm px-1 text-[12.5px] font-medium text-primary-text transition-colors md:min-h-8",
-                "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "shrink-0 text-[11.5px] font-medium leading-snug",
+                needsReview ? "text-accent-text" : "text-muted-foreground",
               )}
             >
-              <span>{ORDER_OPEN_CONVERSATION_LABEL}</span>
-              <ArrowUpRight aria-hidden="true" size={13} strokeWidth={1.75} />
-            </Link>
+              {order.displayStatus}
+            </span>
+          </span>
+
+          {metaParts.length > 0 ? (
+            <span className="block truncate text-[12.5px] leading-snug text-muted-foreground">
+              {metaParts.join(" · ")}
+            </span>
           ) : null}
-        </div>
-      </div>
+
+          {/* Compact production preview; full verbatim content is in
+              the detail surface. Nothing repeats the status line. */}
+          {content.kind !== "none" ? (
+            <span className="flex items-center gap-1.5 text-[12.5px] leading-snug text-muted-foreground">
+              {content.kind === "image" || content.kind === "image_text" ? (
+                <span className="inline-flex shrink-0 items-center gap-1">
+                  <ImageIcon aria-hidden="true" size={13} strokeWidth={1.75} />
+                  <span>{PRINT_IMAGE_ACTION_LABEL}</span>
+                  {content.kind === "image_text" ? (
+                    <span aria-hidden="true">·</span>
+                  ) : null}
+                </span>
+              ) : null}
+              {content.kind === "text" || content.kind === "image_text" ? (
+                <span className="min-w-0 truncate" title={content.text}>
+                  &ldquo;{content.text}&rdquo;
+                </span>
+              ) : null}
+            </span>
+          ) : null}
+        </span>
+
+        <ChevronRight
+          aria-hidden="true"
+          size={15}
+          strokeWidth={1.75}
+          className={cn(
+            "shrink-0 transition-colors",
+            isSelected
+              ? "text-foreground"
+              : "text-muted-foreground/50 group-hover:text-muted-foreground",
+          )}
+        />
+      </a>
     </li>
   );
 }

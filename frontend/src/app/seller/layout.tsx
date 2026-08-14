@@ -5,6 +5,7 @@ import {
   applySellerGuard,
   resolveServerAccess,
 } from "@/lib/auth/server-access";
+import { getAssistantStatusNotice } from "@/lib/seller/assistant-status";
 import {
   pickSellerDisplayName,
   resolveSellerBootstrapFromSession,
@@ -81,5 +82,17 @@ export default async function SellerLayout({
 
   const storeName = pickSellerDisplayName(bootstrap);
 
-  return <SellerShell storeName={storeName}>{children}</SellerShell>;
+  // Global assistant status: computed from the SAME /seller/me access
+  // block the bootstrap just resolved (no duplicate fetch, no duplicate
+  // model). Null in the normal operational state — the shell then
+  // renders no status chrome at all.
+  const assistantNotice = getAssistantStatusNotice(
+    bootstrap.identity.access,
+  );
+
+  return (
+    <SellerShell storeName={storeName} assistantNotice={assistantNotice}>
+      {children}
+    </SellerShell>
+  );
 }
