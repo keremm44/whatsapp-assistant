@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import type {
+  ConversationControlHistoryEntry,
   ConversationOrderDetail,
   ConversationReturnIssueDetail,
   ConversationUnansweredGroup,
@@ -25,14 +26,20 @@ import {
 } from "@/lib/seller/conversations-format";
 import { cn } from "@/lib/utils/cn";
 
+import { ControlHistorySection } from "./control-history-section";
+
 /**
  * Conditional context rail — the right region of the workbench.
  *
- * Rendered ONLY when the selected conversation actually carries work
- * context (an active order, an active return/issue, or one or more
- * open unanswered questions). Its appearance alone communicates
- * "there is relevant work context here"; when nothing exists the
- * region is removed entirely and the conversation expands.
+ * Rendered ONLY when the selected conversation actually carries
+ * context: an active order, an active return/issue, one or more open
+ * unanswered questions — or a non-empty control history (the
+ * read-only Konuşma geçmişi). Its appearance alone communicates
+ * "there is relevant context here"; when nothing exists the region
+ * is removed entirely and the conversation expands.
+ *
+ * Block order is deliberate: the actionable business context blocks
+ * come first; Konuşma geçmişi is supporting context and renders last.
  *
  * Each block is compact and read-only: the rail points the seller to
  * the real destination surfaces (/seller/orders, /seller/returns,
@@ -44,26 +51,26 @@ import { cn } from "@/lib/utils/cn";
  * static xl+ rail column and inside the compact/mobile context Sheet.
  */
 
-/** Whether the detail payload carries any actionable work context. */
-export const hasConversationContext = (detail: {
-  activeOrder: unknown | null;
-  activeReturnIssue: unknown | null;
-  openUnanswered: unknown[];
-}): boolean =>
-  detail.activeOrder !== null ||
-  detail.activeReturnIssue !== null ||
-  detail.openUnanswered.length > 0;
-
 export function ConversationContextRail({
   order,
   returnIssue,
   unanswered,
+  controlHistory,
+  renderedAt,
 }: {
   order: ConversationOrderDetail | null;
   returnIssue: ConversationReturnIssueDetail | null;
   unanswered: ConversationUnansweredGroup[];
+  /** Detail-bootstrap history (bounded, newest first) — no extra fetch. */
+  controlHistory: ConversationControlHistoryEntry[];
+  renderedAt: number;
 }) {
-  if (order === null && returnIssue === null && unanswered.length === 0) {
+  if (
+    order === null &&
+    returnIssue === null &&
+    unanswered.length === 0 &&
+    controlHistory.length === 0
+  ) {
     return null;
   }
 
@@ -74,6 +81,10 @@ export function ConversationContextRail({
       {unanswered.length > 0 ? (
         <UnansweredContextBlock groups={unanswered} />
       ) : null}
+      <ControlHistorySection
+        entries={controlHistory}
+        renderedAt={renderedAt}
+      />
     </div>
   );
 }

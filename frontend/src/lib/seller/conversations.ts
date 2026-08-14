@@ -349,8 +349,10 @@ export type ConversationUnansweredGroup = ConversationUnansweredContext & {
 };
 
 /**
- * One control audit entry. Parsed as part of the contract but NOT
- * rendered in V1 (visible control-history UI is a later step).
+ * One control audit entry. Rendered read-only as the "Konuşma
+ * geçmişi" section of the conversation context (transition + optional
+ * reason note + timestamp only; the technical fields are parsed for
+ * contract completeness but never seller-facing).
  * from_state / to_state are NOT NULL with CHECK constraints
  * (migration 013), so both are strict allowlist parse sites.
  */

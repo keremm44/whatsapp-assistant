@@ -6,17 +6,17 @@ import { AccessUnavailable } from "@/components/auth/access-unavailable";
 import { ConversationDetailPanel } from "@/components/seller/conversations/conversation-detail-panel";
 import { ConversationListPanel } from "@/components/seller/conversations/conversation-list-panel";
 import { ConversationsWorkbench } from "@/components/seller/conversations/conversations-workbench";
-import {
-  ConversationContextRail,
-  hasConversationContext,
-} from "@/components/seller/conversations/context-rail";
+import { ConversationContextRail } from "@/components/seller/conversations/context-rail";
 import { PageContainer } from "@/components/shared/page-container";
 
 import {
   resolveConversationListFromSession,
   resolveConversationWorkspaceFromSession,
 } from "@/lib/seller/conversations-server";
-import { conversationsListHref } from "@/lib/seller/conversations-format";
+import {
+  conversationsListHref,
+  hasConversationContext,
+} from "@/lib/seller/conversations-format";
 
 /**
  * Konuşmalar — selected conversation route.
@@ -73,6 +73,8 @@ export default async function SellerConversationDetailPage({
       order={detail.activeOrder}
       returnIssue={detail.activeReturnIssue}
       unanswered={detail.openUnanswered}
+      controlHistory={detail.controlHistory}
+      renderedAt={workspace.state === "ready" ? workspace.renderedAt : Date.now()}
     />
   ) : null;
 

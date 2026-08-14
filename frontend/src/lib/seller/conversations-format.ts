@@ -19,6 +19,7 @@ import type {
   ConversationAttentionReason,
   ConversationCapabilities,
   ConversationControlAction,
+  ConversationControlHistoryEntry,
   ConversationControlState,
   ConversationCustomerSummary,
   ConversationMessage,
@@ -325,3 +326,88 @@ export const conversationDetailHref = (
   attentionOnly
     ? `/seller/conversations/${customerId}?filter=attention`
     : `/seller/conversations/${customerId}`;
+
+/* ------------------------------------------------------------------ */
+/* Konuşma geçmişi (control history presentation)                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Seller-facing labels for the four backend control states, used by
+ * the read-only history log. Consistent with the product's existing
+ * language (Paused page, control chips). Raw enum values never render.
+ */
+export const CONTROL_STATE_HISTORY_LABELS: Record<
+  ConversationControlState,
+  string
+> = {
+  ASSISTANT_ACTIVE: "Asistan aktif",
+  SELLER_TAKEN_OVER: "Siz ilgileniyorsunuz",
+  RETURN_REVIEW: "İade incelemesi",
+  ASSISTANT_PAUSED: "Yanıtlar durduruldu",
+};
+
+export const CONTROL_HISTORY_TITLE = "Konuşma geçmişi";
+
+/** Compact by default; expansion is frontend-only over loaded data. */
+export const CONTROL_HISTORY_INITIAL_COUNT = 5;
+/**
+ * Deliberately NOT "Tüm geçmişi göster": the backend detail returns a
+ * bounded history collection, so the frontend never implies it holds
+ * the complete lifetime history.
+ */
+export const CONTROL_HISTORY_SHOW_MORE_LABEL = "Daha fazlasını göster";
+export const CONTROL_HISTORY_SHOW_LESS_LABEL = "Daha az göster";
+
+export type ControlHistoryEntryDisplay = {
+  /** "Asistan aktif → Siz ilgileniyorsunuz" — plain text, SR-readable. */
+  transition: string;
+  /** Seller-written reason, trimmed for presence; null when absent. */
+  note: string | null;
+};
+
+/**
+ * The ONLY seller-facing projection of a control-history entry: the
+ * state transition plus the optional human reason note. The pick is
+ * deliberately narrow — reasonCode, changedByProfileId, message ids
+ * and version fields are technical and can never leak through this
+ * helper. No actor identity is inferred or fabricated (the contract
+ * carries no verified actor name), and no reason is invented when the
+ * note is absent.
+ */
+export const getControlHistoryEntryDisplay = (
+  entry: Pick<
+    ConversationControlHistoryEntry,
+    "fromState" | "toState" | "reasonNote"
+  >,
+): ControlHistoryEntryDisplay => {
+  const note =
+    typeof entry.reasonNote === "string" && entry.reasonNote.trim().length > 0
+      ? entry.reasonNote.trim()
+      : null;
+  return {
+    transition: `${CONTROL_STATE_HISTORY_LABELS[entry.fromState]} → ${CONTROL_STATE_HISTORY_LABELS[entry.toState]}`,
+    note,
+  };
+};
+
+/* ------------------------------------------------------------------ */
+/* Context presence (rail / Bağlam sheet visibility)                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Whether the detail payload carries any conversation context worth a
+ * rail/sheet: an active order, an active return/issue, one or more
+ * open unanswered questions — or a non-empty control history (the
+ * read-only Konuşma geçmişi is valid context on its own; the rail
+ * must not disappear when history is the only content).
+ */
+export const hasConversationContext = (detail: {
+  activeOrder: unknown | null;
+  activeReturnIssue: unknown | null;
+  openUnanswered: unknown[];
+  controlHistory: unknown[];
+}): boolean =>
+  detail.activeOrder !== null ||
+  detail.activeReturnIssue !== null ||
+  detail.openUnanswered.length > 0 ||
+  detail.controlHistory.length > 0;
