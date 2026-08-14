@@ -123,13 +123,13 @@ function UnansweredDetailRegion({
 }) {
   if (bootstrap === null) {
     // Only visible from lg up: below that the region is hidden while
-    // there is no selection, and the queue owns the screen.
+    // there is no selection, and the queue owns the screen. The
+    // guidance sits near the top of the detail surface — quiet and
+    // secondary, not a large vertically-centered empty block (same
+    // treatment as the Orders / Returns idle detail).
     return (
-      <div
-        className="flex min-h-64 items-center justify-center px-6 py-16"
-        role="status"
-      >
-        <p className="max-w-56 text-center text-[13px] leading-relaxed text-muted-foreground">
+      <div className="px-4 py-6 md:px-5 md:py-7" role="status">
+        <p className="max-w-sm text-[13px] leading-relaxed text-muted-foreground">
           {UNANSWERED_DETAIL_EMPTY_GUIDANCE}
         </p>
       </div>

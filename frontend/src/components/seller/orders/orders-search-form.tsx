@@ -94,7 +94,7 @@ export function OrdersSearchForm({
           maxLength={100}
           placeholder={ORDER_SEARCH_PLACEHOLDER}
           aria-busy={isPending}
-          className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="h-11 w-full rounded-md border border-border bg-surface pl-9 pr-9 sm:h-10 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         />
         {value.trim().length > 0 ? (
           <button

@@ -89,7 +89,7 @@ export function ConversationDetailPanel({
               aria-label="Konuşmalara geri dön"
               title="Konuşmalara geri dön"
               className={cn(
-                "-ml-1 mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors md:hidden",
+                "-ml-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors md:hidden",
                 "hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               )}
             >
@@ -122,7 +122,7 @@ export function ConversationDetailPanel({
               aria-label="Konuşma bağlamını aç"
               aria-haspopup="dialog"
               className={cn(
-                "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-medium text-muted-foreground transition-colors xl:hidden",
+                "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-medium text-muted-foreground transition-colors xl:hidden",
                 "hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               )}
             >

@@ -99,7 +99,7 @@ const TabletNavSheet = () => {
       <SheetTrigger
         aria-label="Menüyü aç"
         className={cn(
-          "hidden h-9 w-9 items-center justify-center rounded-md bg-primary-muted text-primary-text transition-colors hover:bg-primary-muted/70 md:inline-flex lg:hidden",
+          "hidden h-11 w-11 items-center justify-center rounded-md bg-primary-muted text-primary-text transition-colors hover:bg-primary-muted/70 md:inline-flex lg:hidden",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
         )}
       >

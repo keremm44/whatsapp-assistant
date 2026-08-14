@@ -26,10 +26,12 @@ const buttonVariants = cva(
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
       },
       size: {
-        sm: "h-9 px-3",
-        md: "h-10 px-4",
+        // Mobile-first touch targets: 44px on touch-sized screens,
+        // returning to the existing compact desktop heights from sm up.
+        sm: "h-11 px-3 sm:h-9",
+        md: "h-11 px-4 sm:h-10",
         lg: "h-11 px-6 text-base",
-        icon: "h-10 w-10",
+        icon: "h-11 w-11 sm:h-10 sm:w-10",
       },
     },
     defaultVariants: {

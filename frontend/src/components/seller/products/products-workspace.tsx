@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { Route } from "next";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
@@ -79,17 +80,24 @@ export function ProductsWorkspace({
           onCreated={onCreated}
         />
       </div>
+      {/* Mobile pane decision follows the URL's EXPLICIT selection
+          intent (requestedProductId), never the server's default
+          fallback selection: without ?product the phone shows the
+          list only (the default detail stays a desktop convenience);
+          with an explicit ?product the phone shows the detail only.
+          Desktop (lg+) always renders both panes — server default
+          selection semantics are unchanged. */}
       <div
         className={cn(
           "min-w-0",
-          requestedProductId === null && "lg:block",
+          requestedProductId === null && "hidden lg:block",
         )}
       >
         {selected ? (
           <>
             {requestedProductId !== null ? (
               <div className="border-b border-divider px-4 py-2.5 md:px-5 lg:hidden">
-                <a
+                <Link
                   href={productsWorkspaceHref() as Route}
                   className={cn(
                     "inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted-foreground",
@@ -98,7 +106,7 @@ export function ProductsWorkspace({
                 >
                   <ArrowLeft aria-hidden="true" size={16} strokeWidth={1.75} />
                   <span>Listeye dön</span>
-                </a>
+                </Link>
               </div>
             ) : null}
             <ProductDetailPanel

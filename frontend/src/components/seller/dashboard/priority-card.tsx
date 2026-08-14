@@ -110,12 +110,17 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
         aria-hidden="true"
         className={`absolute inset-y-0 left-0 w-1 ${RAIL_CLASS[meta.rail]}`}
       />
-      <div className="flex items-start gap-4 p-4 pl-5 sm:gap-5 sm:p-5 sm:pl-6">
-        <div className="flex flex-col items-center gap-2 pt-0.5">
-          <IconField icon={Icon} tone={meta.tone} size={40} />
-        </div>
+      {/* Narrow mobile: icon + content own the full row width and the
+          CTA moves BELOW the content so long titles/summaries are
+          never squeezed by the reserved link width. From sm up the
+          familiar compact right-side CTA arrangement returns. */}
+      <div className="flex flex-col gap-3 p-4 pl-5 sm:flex-row sm:items-start sm:gap-5 sm:p-5 sm:pl-6">
+        <div className="flex min-w-0 items-start gap-4 sm:flex-1 sm:gap-5">
+          <div className="flex flex-col items-center gap-2 pt-0.5">
+            <IconField icon={Icon} tone={meta.tone} size={40} />
+          </div>
 
-        <div className="min-w-0 flex-1 space-y-2">
+          <div className="min-w-0 flex-1 space-y-2">
           <CategoryCaption label={meta.label} updatedAt={updatedAtLabel} />
           <h3
             className="font-heading text-[16px] font-medium leading-snug text-foreground sm:text-[17px]"
@@ -131,14 +136,15 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
               {task.summary}
             </p>
           ) : null}
-          {customerLine ? (
-            <p
-              className="pt-0.5 text-[13px] leading-relaxed text-foreground/70"
-              title={customerLine}
-            >
-              {customerLine}
-            </p>
-          ) : null}
+            {customerLine ? (
+              <p
+                className="pt-0.5 text-[13px] leading-relaxed text-foreground/70"
+                title={customerLine}
+              >
+                {customerLine}
+              </p>
+            ) : null}
+          </div>
         </div>
 
         <Link

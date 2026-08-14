@@ -80,7 +80,7 @@ export function OrdersProductFilter({
         value={productId !== null ? String(productId) : ""}
         onChange={(event) => onChange(event.target.value)}
         aria-busy={isPending}
-        className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm sm:h-10 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         <option value="">{ORDER_PRODUCT_FILTER_ALL_LABEL}</option>
         {productId !== null && !knownSelection ? (

@@ -28,7 +28,11 @@ const SheetOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-20 bg-foreground/30 backdrop-blur-[1px] data-[state=open]:animate-fade-in",
+      // Fixed dark scrim in BOTH themes (same principle as
+      // DialogOverlay): theme-relative foreground is near-white under
+      // the dark seller theme and washed the background pale gray
+      // instead of letting it recede.
+      "fixed inset-0 z-20 bg-black/60 backdrop-blur-[1px] data-[state=open]:animate-fade-in",
       className,
     )}
     {...props}
@@ -79,7 +83,9 @@ const SheetContent = React.forwardRef<
     >
       {children}
       <DialogPrimitive.Close
-        className="absolute right-4 top-4 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        // The X stays visually ~20px; the CONTROL gets a real touch
+        // target: 44px on mobile, compact 36px from sm up.
+        className="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:right-3 sm:top-3 sm:h-9 sm:w-9"
         aria-label="Kapat"
       >
         <X className="h-5 w-5" />
@@ -105,7 +111,7 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("font-heading text-lg text-foreground", className)}
+    className={cn("pr-8 font-heading text-lg text-foreground", className)}
     {...props}
   />
 ));
