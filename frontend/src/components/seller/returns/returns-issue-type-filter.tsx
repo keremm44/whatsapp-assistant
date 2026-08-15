@@ -64,7 +64,7 @@ export function ReturnsIssueTypeFilter({
           onChange={onChange}
           disabled={isPending}
           aria-busy={isPending}
-          className="h-10 w-full appearance-none rounded-md border border-border bg-surface pl-3 pr-9 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+          className="h-10 w-full appearance-none rounded-md border border-border bg-control pl-3 pr-9 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
         >
           <option value="">{RETURN_ISSUE_TYPE_FILTER_ALL_LABEL}</option>
           {RETURN_ISSUE_TYPE_OPTIONS.map((option) => (

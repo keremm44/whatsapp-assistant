@@ -72,8 +72,8 @@ export function ReturnRequestRow({
         aria-label={accessibleParts.join(" — ")}
         className={cn(
           "group block px-4 py-3 transition-colors",
-          "hover:bg-surface-2/60 focus-visible:bg-surface-2/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
-          isSelected && "bg-surface-2",
+          "hover:bg-selected/55 focus-visible:bg-selected/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+          isSelected && "bg-selected",
         )}
       >
         <span className="flex items-baseline justify-between gap-3">

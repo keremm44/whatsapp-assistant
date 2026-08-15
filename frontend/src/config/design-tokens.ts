@@ -16,11 +16,10 @@
  * `rgb` form those alpha modifiers are silently dropped in
  * Tailwind 3, which would erase the design's hierarchy.
  *
- * Surface hierarchy (four visible levels, top to bottom):
- *   1. background       — main warm cream canvas
- *   2. chrome           — persistent shell surfaces (sidebar, topbar, mobile nav)
- *   3. surface          — primary working surface (content, lists, cards)
- *   4. surface-2        — secondary low-emphasis surface
+ * Material hierarchy:
+ *   background — page canvas; chrome — persistent shell; surface — work plane;
+ *   surface-2 — neutral raised material; selected — active petrol plane;
+ *   control — inset form-control material.
  */
 
 const split = (hex: string): [number, number, number] => {
@@ -42,7 +41,9 @@ export const designTokens = {
     background: color("#F6F4EF", "linen"),
     chrome: color("#FAF8F3", "warm broken-white for persistent app chrome"),
     surface: color("#FFFFFF", "pure white working surface"),
-    surface2: color("#EEF2EF", "petrol-tinted secondary surface"),
+    surface2: color("#EEF2EF", "neutral raised surface"),
+    selected: color("#E7F0EE", "petrol-selected surface"),
+    control: color("#FFFFFF", "inset form-control surface"),
     border: color("#D9E0DC", "cool low-contrast hairline"),
     divider: color("#E4EAE6", "quiet hairline, slightly cooler than border"),
 

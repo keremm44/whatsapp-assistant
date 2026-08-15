@@ -47,9 +47,9 @@ import { SellerIcon } from "./icon-map";
  *     softens, and the typography gains a half-step of
  *     weight.
  *
- *   - Hover. Rows fade to a slightly darker linen (the
- *     `surface-2` token) on hover. Icons move from muted to
- *     foreground to communicate affordance.
+ *   - Hover. Rows receive a restrained wash of the dedicated
+ *     selected material. Icons move from muted to foreground to
+ *     communicate affordance.
  *
  *   - There is deliberately NO bottom settings/account rail.
  *     Settings is a single destination and already lives in
@@ -160,8 +160,8 @@ const NavRow = ({
           "relative flex h-10 items-center gap-3 rounded-md pl-4 pr-3 text-sm transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
           isActive
-            ? "bg-primary-muted font-semibold text-primary-text"
-            : "text-foreground hover:bg-surface-2",
+            ? "bg-selected font-semibold text-primary-text"
+            : "text-foreground hover:bg-selected/40",
         )}
       >
         {isActive ? (

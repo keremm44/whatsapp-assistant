@@ -149,14 +149,15 @@ test("quiet workshop uses tone instead of card borders and surface shadows", () 
   const css = read("../../app/globals.css");
   const sellerBlock = css.slice(css.indexOf(".seller-theme {"));
   assert.match(sellerBlock, /--shadow-surface: none/);
-  assert.match(sellerBlock, /--color-chrome-rgb: 14 17 16/);
-  assert.match(sellerBlock, /--color-background-rgb: 25 27 25/);
-  assert.match(sellerBlock, /--color-surface-rgb: 37 40 39/);
-  assert.match(sellerBlock, /--color-surface-2-rgb: 44 57 54/);
-  assert.match(sellerBlock, /--color-border-rgb: 60 64 62/);
-  assert.match(sellerBlock, /--color-divider-rgb: 50 53 50/);
-  assert.match(sellerBlock, /\.seller-theme :is\(/);
-  assert.match(sellerBlock, /background-color: rgb\(var\(--color-background-rgb\)\)/);
+  assert.match(sellerBlock, /--color-chrome-rgb: 15 20 26/);
+  assert.match(sellerBlock, /--color-background-rgb: 29 26 23/);
+  assert.match(sellerBlock, /--color-surface-rgb: 41 41 39/);
+  assert.match(sellerBlock, /--color-surface-2-rgb: 51 52 49/);
+  assert.match(sellerBlock, /--color-selected-rgb: 38 61 57/);
+  assert.match(sellerBlock, /--color-control-rgb: 23 31 34/);
+  assert.match(sellerBlock, /--color-border-rgb: 73 72 67/);
+  assert.match(sellerBlock, /--color-divider-rgb: 57 57 54/);
+  assert.doesNotMatch(sellerBlock, /\.seller-theme :is\(/);
 
   const workbench = read(
     "../../components/seller/conversations/conversations-workbench.tsx",
@@ -171,8 +172,12 @@ test("quiet workshop uses tone instead of card borders and surface shadows", () 
   assert.match(priority, /bg-accent/);
 
   // The three deliberate text roles stay distinct tokens.
-  assert.match(sellerBlock, /--color-muted-rgb: 192 194 188/);
-  assert.match(sellerBlock, /--color-muted-foreground-rgb: 158 161 155/);
+  assert.match(sellerBlock, /--color-muted-rgb: 201 194 183/);
+  assert.match(sellerBlock, /--color-muted-foreground-rgb: 162 164 159/);
+
+  const input = read("../../components/ui/input.tsx");
+  assert.match(input, /bg-control/);
+  assert.doesNotMatch(input, /bg-surface/);
 });
 
 test("selected conversation keeps a petrol rail plus a tonal lift", () => {
@@ -180,7 +185,8 @@ test("selected conversation keeps a petrol rail plus a tonal lift", () => {
     "../../components/seller/conversations/conversation-row.tsx",
   );
   assert.match(row, /aria-current=\{isSelected/);
-  assert.match(row, /isSelected && "bg-surface-2\/80"/);
+  assert.match(row, /isSelected && "bg-selected"/);
+  assert.doesNotMatch(row, /isSelected && "bg-surface-2/);
   assert.match(row, /rounded-r-full bg-primary/);
 });
 

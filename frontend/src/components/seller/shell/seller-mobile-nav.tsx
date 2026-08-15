@@ -78,7 +78,7 @@ const MobileNavLink = ({
     className={cn(
       "flex h-14 min-h-[44px] flex-col items-center justify-center gap-1 text-xs transition-colors",
       isActive
-        ? "bg-primary-muted font-semibold text-primary-text"
+        ? "bg-selected font-semibold text-primary-text"
         : "text-muted-foreground hover:text-foreground",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
     )}
@@ -142,8 +142,8 @@ const MobileSheetTrigger = ({
                   className={cn(
                     "relative flex h-12 min-h-[44px] items-center gap-3 rounded-md pl-4 pr-3 text-sm transition-colors",
                     entryActive
-                      ? "bg-primary-muted font-medium text-primary-text"
-                      : "text-foreground hover:bg-surface-2",
+                      ? "bg-selected font-medium text-primary-text"
+                      : "text-foreground hover:bg-selected/40",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
                   )}
                 >

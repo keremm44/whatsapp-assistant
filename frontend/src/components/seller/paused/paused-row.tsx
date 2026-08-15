@@ -64,7 +64,7 @@ export function PausedRow({
         aria-label={`${display.primary} — ${reason.label}. ${PAUSED_OPEN_CONVERSATION_LABEL}`}
         className={cn(
           "group flex min-h-11 items-start gap-3 px-4 py-3 transition-colors sm:px-5",
-          "hover:bg-surface-2/60 focus-visible:bg-surface-2/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+          "hover:bg-selected/45 focus-visible:bg-selected/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
         )}
       >
         <PausedReasonIcon kind={reason.kind} />

@@ -99,7 +99,7 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
   const accessibleName = `${meta.label} — ${task.title} — ${meta.cta}`;
 
   return (
-    <article className="group relative bg-surface transition-colors hover:bg-surface-2/60">
+    <article className="group relative bg-surface transition-colors hover:bg-selected/45">
       {/* Type rail — the single most visible brand cue on the page. */}
       <span
         aria-hidden="true"

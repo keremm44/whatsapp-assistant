@@ -24,7 +24,7 @@ export function OrdersViewTabs({
   return (
     <nav
       aria-label="Sipariş görünümü"
-      className="flex flex-wrap rounded-md border border-border bg-surface p-0.5"
+      className="flex flex-wrap rounded-md border border-border bg-control p-0.5"
     >
       {ORDER_VIEW_TABS.map((tab) => (
         <Link
@@ -35,7 +35,7 @@ export function OrdersViewTabs({
             "flex min-h-11 flex-1 items-center justify-center whitespace-nowrap rounded-sm px-3 py-1 text-center text-[12.5px] font-medium leading-tight transition-colors md:min-h-9",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
             tab.view === activeView
-              ? "bg-surface-2 text-foreground shadow-surface"
+              ? "bg-selected text-foreground"
               : "text-muted-foreground hover:text-foreground",
           )}
         >

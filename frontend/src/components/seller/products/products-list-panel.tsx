@@ -54,8 +54,8 @@ export function ProductsListPanel({
                     "flex min-h-11 items-center justify-between gap-3 px-4 py-3 transition-colors md:px-5",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
                     selected
-                      ? "bg-surface-2 text-foreground"
-                      : "text-foreground hover:bg-surface-2/60",
+                      ? "bg-selected text-foreground"
+                      : "text-foreground hover:bg-selected/45",
                   )}
                 >
                   <span className="min-w-0 truncate text-sm font-medium">

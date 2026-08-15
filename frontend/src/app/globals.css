@@ -33,11 +33,9 @@
   --font-body: "Source Sans 3", ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", "Helvetica Neue", sans-serif;
 
-  /* Surfaces — four-level warm cream hierarchy, calibrated to the
-   * Sakin Ustalık v2 visual identity: cooler linen background, pure
-   * white working surface, petrol-tinted secondary surface and
-   * cool hairlines. The hierarchy is unchanged (background →
-   * chrome → surface → surface-2); only the values were tuned.
+  /* Canonical light material hierarchy: canvas, persistent chrome,
+   * working surface, neutral raised surface, petrol selection, inset
+   * controls and quiet boundaries. The seller theme overrides each role.
    *
    * Each color is exposed in two forms:
    *   --color-<name>          the canonical hex value, kept for
@@ -57,6 +55,10 @@
   --color-surface-rgb: 255 255 255;
   --color-surface-2: #eef2ef;
   --color-surface-2-rgb: 238 242 239;
+  --color-selected: #e7f0ee;
+  --color-selected-rgb: 231 240 238;
+  --color-control: #ffffff;
+  --color-control-rgb: 255 255 255;
   --color-border: #d9e0dc;
   --color-border-rgb: 217 224 220;
   --color-divider: #e4eae6;
@@ -172,77 +174,65 @@
  * light theme; nothing outside the seller workspace reads these
  * variables.
  *
- * The override is the "Dark Workshop" / warm-atelier reading of
- * the same brand: warm charcoal + petrol + terracotta + warm
- * off-white. No pure black, no neon, no glassmorphism. The
- * workspace is layered (chrome → workspace → surface → surface-2)
- * with a slightly different charcoal value at each layer, which
- * gives the UI its tactile, workshop-material feel.
+ * Warm Canvas / Cool Workshop separates the shell, canvas, neutral work,
+ * active petrol and inset control materials by both temperature and value.
+ * Clay remains seller attention; warm off-white remains reading ink. No
+ * pure black, neon, glassmorphism or decorative effects.
  */
 .seller-theme {
-  /* Surfaces — six calm material roles built from the existing charcoal
-   * and petrol family. Chrome is deepest and neutral; background is the
-   * warm page canvas; surface is the clearer working plane; surface-2 is
-   * the subtly petrol-biased selected/raised step. Form controls use the
-   * inset background step below, while neutral boundaries stay quiet. */
-  --color-background: #191b19;
-  --color-background-rgb: 25 27 25;
-  --color-chrome: #0e1110;
-  --color-chrome-rgb: 14 17 16;
-  --color-surface: #252827;
-  --color-surface-rgb: 37 40 39;
-  --color-surface-2: #2c3936;
-  --color-surface-2-rgb: 44 57 54;
-  /* Boundaries are neutral rather than green. Border defines real control
-   * edges; divider is the softer internal rule between records/sections. */
-  --color-border: #3c403e;
-  --color-border-rgb: 60 64 62;
-  --color-divider: #323532;
-  --color-divider-rgb: 50 53 50;
+  /* Warm Canvas / Cool Workshop.
+   * Cool ink chrome frames a warm charcoal canvas. Neutral graphite
+   * carries ordinary work, surface-2 is raised but status-free, selected
+   * is the petrol-derived active plane, and control is a cool inset tool. */
+  --color-background: #1d1a17;
+  --color-background-rgb: 29 26 23;
+  --color-chrome: #0f141a;
+  --color-chrome-rgb: 15 20 26;
+  --color-surface: #292927;
+  --color-surface-rgb: 41 41 39;
+  --color-surface-2: #333431;
+  --color-surface-2-rgb: 51 52 49;
+  --color-selected: #263d39;
+  --color-selected-rgb: 38 61 57;
+  --color-control: #171f22;
+  --color-control-rgb: 23 31 34;
+  /* Mineral boundaries stay hue-neutral: border is the explicit edge used
+   * by controls/overlays; divider is the quieter record/section rule. */
+  --color-border: #494843;
+  --color-border-rgb: 73 72 67;
+  --color-divider: #393936;
+  --color-divider-rgb: 57 57 54;
 
-  /* Text — warm off-white, THREE deliberate roles (values unchanged):
-   *   foreground        #F2EEE6 — primary: titles, record identity,
-   *                     important values (≈12.9:1 on surface)
-   *   muted             #C0C2BC — secondary: neutral supporting copy
-   *                     the seller reads normally (≈8.3:1 on surface)
-   *   muted-foreground  #9EA19B — tertiary: timestamps and quiet
-   *                     auxiliary metadata (≈5.7:1 on surface),
-   *                     clearly below secondary while remaining AA */
+  /* Text roles: warm primary and secondary ink against neutral/cool
+   * materials; tertiary remains neutral and AA on the selected plane. */
   --color-foreground: #f2eee6;
   --color-foreground-rgb: 242 238 230;
-  --color-muted: #c0c2bc;
-  --color-muted-rgb: 192 194 188;
-  --color-muted-foreground: #9ea19b;
-  --color-muted-foreground-rgb: 158 161 155;
+  --color-muted: #c9c2b7;
+  --color-muted-rgb: 201 194 183;
+  --color-muted-foreground: #a2a49f;
+  --color-muted-foreground-rgb: 162 164 159;
 
   /* Primary (petrol) — brighter so it reads on dark surfaces */
-  --color-primary: #3f817a;
-  --color-primary-rgb: 63 129 122;
-  --color-primary-hover: #5a9a92;
-  --color-primary-hover-rgb: 90 154 146;
-  --color-primary-active: #2f635d;
-  --color-primary-active-rgb: 47 99 93;
-  --color-primary-muted: #24413d;
-  --color-primary-muted-rgb: 36 65 61;
+  --color-primary: #4a8b84;
+  --color-primary-rgb: 74 139 132;
+  --color-primary-hover: #60a29a;
+  --color-primary-hover-rgb: 96 162 154;
+  --color-primary-active: #356b65;
+  --color-primary-active-rgb: 53 107 101;
+  --color-primary-muted: #20433f;
+  --color-primary-muted-rgb: 32 67 63;
   --color-primary-foreground: #f2eee6;
   --color-primary-foreground-rgb: 242 238 230;
-  /* Petrol text role: the base petrol #3F817A is kept for
-   * structure (rails, marks, icon fields, hairlines) but measures
-   * 3.2:1–4.0:1 as small text on dark surfaces, and only 2.4:1 on
-   * primary-muted. `primary-text` is the same hue at a lighter
-   * value: 6.4:1 on surface, 7.4:1 on workspace, 4.9:1 on
-   * primary-muted — readable where the base petrol is structural. */
-  --color-primary-text: #7ab8b1;
-  --color-primary-text-rgb: 122 184 177;
-  /* Filled primary control role: base petrol with the warm
-   * off-white label measures 3.9:1 (below AA for normal text), so
-   * filled controls in the seller workspace use the darker petrol
-   * step (5.9:1). Hover lifts one small in-family step (5.1:1);
-   * pressed returns to the active step. No hue change. */
-  --color-primary-button: #2f635d;
-  --color-primary-button-rgb: 47 99 93;
-  --color-primary-button-hover: #356e67;
-  --color-primary-button-hover-rgb: 53 110 103;
+  /* Base petrol is structural (rails, marks and icons). The lighter
+   * primary-text role carries readable petrol copy on dark materials. */
+  --color-primary-text: #83c1ba;
+  --color-primary-text-rgb: 131 193 186;
+  /* Filled primary controls use a darker petrol step so warm foreground
+   * labels remain AA; hover lifts within the same restrained family. */
+  --color-primary-button: #2e625c;
+  --color-primary-button-rgb: 46 98 92;
+  --color-primary-button-hover: #376f69;
+  --color-primary-button-hover-rgb: 55 111 105;
 
   /* Accent (terracotta) — warm character, brighter for dark */
   --color-accent: #b85e42;
@@ -300,19 +290,6 @@
   --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.45);
   /* Shared work surfaces do not float. */
   --shadow-surface: none;
-}
-
-/* Textual controls are inset into the canvas tone instead of disappearing
- * into a surrounding work surface. Selection controls keep their native or
- * component-owned treatment. This remains seller-only and token-driven. */
-.seller-theme :is(
-    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
-        [type="file"]
-      ):not([type="hidden"]):not([type="button"]):not([type="submit"]),
-    select,
-    textarea
-  ) {
-  background-color: rgb(var(--color-background-rgb));
 }
 
 @layer base {

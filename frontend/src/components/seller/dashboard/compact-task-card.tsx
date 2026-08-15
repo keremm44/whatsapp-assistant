@@ -71,7 +71,7 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
   const accessibleName = `${meta.label} — ${task.title} — ${meta.cta}`;
 
   return (
-    <article className="group relative bg-surface transition-colors hover:bg-surface-2/60">
+    <article className="group relative bg-surface transition-colors hover:bg-selected/45">
       <span
         aria-hidden="true"
         className={`absolute inset-y-3 left-0 w-[3px] rounded-r-full ${RAIL_CLASS[meta.rail]}`}

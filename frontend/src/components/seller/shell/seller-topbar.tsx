@@ -177,8 +177,8 @@ function SidebarNavList({
                         "relative flex h-10 items-center gap-3 rounded-md pl-4 pr-3 text-sm transition-colors",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
                         isActive
-                          ? "bg-primary-muted font-semibold text-primary-text"
-                          : "text-foreground hover:bg-surface-2",
+                          ? "bg-selected font-semibold text-primary-text"
+                          : "text-foreground hover:bg-selected/40",
                       )}
                     >
                       {isActive ? (

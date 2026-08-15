@@ -51,7 +51,7 @@ export function AssistantSettingsHub({
                 "block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               )}
             >
-              <Surface className="flex h-full min-h-[11rem] flex-col justify-between gap-5 px-5 py-5 transition-colors hover:bg-surface-2">
+              <Surface className="flex h-full min-h-[11rem] flex-col justify-between gap-5 px-5 py-5 transition-colors hover:bg-selected/40">
                 <div className="space-y-3">
                   <SellerIcon
                     name={card.icon}

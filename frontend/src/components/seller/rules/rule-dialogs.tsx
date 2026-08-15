@@ -169,7 +169,7 @@ export function RuleCreateDialog() {
                 disabled={isSubmitting}
                 rows={5}
                 onChange={(event) => setResponseText(event.target.value)}
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+                className="w-full rounded-md border border-border bg-control px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
               />
             </div>
             {error ? (
@@ -356,7 +356,7 @@ export function RuleEditDialog({
                 disabled={isSubmitting}
                 rows={5}
                 onChange={(event) => setResponseText(event.target.value)}
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+                className="w-full rounded-md border border-border bg-control px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
               />
             </div>
             {error ? (

@@ -99,7 +99,7 @@ export function TriStateControl({
       <legend className="text-sm font-medium text-foreground">{legend}</legend>
       {/* Compact segments: full-width equal thirds on touch screens
           (>= 44px targets), a quiet inline pill group from sm up. */}
-      <div className="flex w-full flex-wrap gap-1 rounded-md border border-border bg-surface p-0.5 sm:inline-flex sm:w-auto">
+      <div className="flex w-full flex-wrap gap-1 rounded-md border border-border bg-control p-0.5 sm:inline-flex sm:w-auto">
         {options.map((option) => {
           const selected = value === option.next;
           return (
@@ -109,7 +109,7 @@ export function TriStateControl({
                 "inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-sm px-3 text-[12.5px] font-medium transition-colors sm:min-h-8 sm:flex-initial",
                 "focus-within:outline-none focus-within:ring-2 focus-within:ring-primary",
                 selected
-                  ? "bg-surface-2 text-foreground shadow-surface"
+                  ? "bg-selected text-foreground"
                   : "text-muted-foreground hover:text-foreground",
                 disabled && "cursor-not-allowed opacity-50",
               )}
@@ -157,7 +157,7 @@ export function BinaryChoiceControl({
       <legend className="text-sm font-medium text-foreground">{legend}</legend>
       {/* Compact segments: full-width equal thirds on touch screens
           (>= 44px targets), a quiet inline pill group from sm up. */}
-      <div className="flex w-full flex-wrap gap-1 rounded-md border border-border bg-surface p-0.5 sm:inline-flex sm:w-auto">
+      <div className="flex w-full flex-wrap gap-1 rounded-md border border-border bg-control p-0.5 sm:inline-flex sm:w-auto">
         {options.map((option) => {
           const selected = value === option.next;
           return (
@@ -167,7 +167,7 @@ export function BinaryChoiceControl({
                 "inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-sm px-3 text-[12.5px] font-medium transition-colors sm:min-h-8 sm:flex-initial",
                 "focus-within:outline-none focus-within:ring-2 focus-within:ring-primary",
                 selected
-                  ? "bg-surface-2 text-foreground shadow-surface"
+                  ? "bg-selected text-foreground"
                   : "text-muted-foreground hover:text-foreground",
                 disabled && "cursor-not-allowed opacity-50",
               )}
@@ -295,7 +295,7 @@ export function LabeledTextField({
           aria-describedby={[describedBy, errorId].filter(Boolean).join(" ") || undefined}
           onChange={(event) => onChange(event.target.value)}
           className={cn(
-            "flex min-h-11 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground",
+            "flex min-h-11 w-full rounded-md border border-border bg-control px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             "disabled:cursor-not-allowed disabled:opacity-50",
           )}
