@@ -163,8 +163,10 @@ const MobileSheetTrigger = ({
                   aria-current={entryActive ? "page" : undefined}
                   className={cn(
                     "relative flex h-12 min-h-[44px] items-center gap-3 rounded-control pl-4 pr-3 text-[15px] leading-[22px] transition-colors",
+                    // Neutral material + cyan rail (below), never a
+                    // cyan-filled navigation row.
                     entryActive
-                      ? "bg-primary-muted font-semibold text-foreground"
+                      ? "bg-selected font-semibold text-foreground"
                       : "text-foreground hover:bg-elevated",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
                   )}

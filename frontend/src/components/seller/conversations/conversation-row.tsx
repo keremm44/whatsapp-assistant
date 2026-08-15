@@ -34,11 +34,13 @@ import { cn } from "@/lib/utils/cn";
  * Two ORTHOGONAL visual semantics, which must be able to coexist on
  * the same row:
  *
- *   SELECTION  = interaction cyan. A 3px cyan structural edge on the
- *                leading side, an interaction-soft well, and a
- *                stronger identity weight. Announced with
- *                aria-current="page". Never colour alone: edge +
- *                fill + weight + aria-current.
+ *   SELECTION  = a NEUTRAL MATERIAL step plus a cyan SIGNAL. The row
+ *                lifts to the `selected` graphite material (never a
+ *                cyan-filled row — cyan is a signal, not a material),
+ *                and carries a 3px cyan structural rail on the
+ *                leading edge with brighter, semibold identity text.
+ *                Announced with aria-current="page". Never colour
+ *                alone: material + rail + weight + aria-current.
  *
  *   ATTENTION  = the backend's own reason, presented as a status
  *                flag line (oxide where the reason genuinely means
@@ -86,12 +88,15 @@ export function ConversationRow({
         className={cn(
           "group relative block py-3.5 pl-5 pr-4 transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+          // Neutral raised material for the selected row; hover is a
+          // lighter touch of the same family.
           isSelected
             ? "bg-selected"
             : "hover:bg-raised/70 focus-visible:bg-raised/70",
         )}
       >
-        {/* Selection: structural interaction-blue edge. */}
+        {/* Selection SIGNAL: a thin cyan structural rail. The row
+            itself stays neutral material. */}
         {isSelected ? (
           <span
             aria-hidden="true"

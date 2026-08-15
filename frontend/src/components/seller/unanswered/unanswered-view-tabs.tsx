@@ -20,7 +20,7 @@ export function UnansweredViewTabs({ activeView }: { activeView: UnansweredView 
   return (
     <nav
       aria-label="Cevaplanamayan soru görünümü"
-      className="flex flex-wrap rounded-md border border-border bg-control p-0.5"
+      className="flex flex-wrap gap-4 border-b border-boundary"
     >
       {UNANSWERED_VIEW_TABS.map((tab) => (
         <Link
@@ -28,11 +28,12 @@ export function UnansweredViewTabs({ activeView }: { activeView: UnansweredView 
           href={unansweredWorkspaceHref({ view: tab.view }) as Route}
           aria-current={tab.view === activeView ? "page" : undefined}
           className={cn(
-            "flex min-h-11 flex-1 items-center justify-center whitespace-nowrap rounded-sm px-3 py-1 text-center text-[12.5px] font-medium leading-tight transition-colors md:min-h-9",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            // Open underline tab: neutral background, cyan rule only.
+            "-mb-px flex min-h-11 items-center whitespace-nowrap border-b-2 border-transparent px-0.5 pb-2 pt-1 text-[12.5px] leading-tight transition-colors md:min-h-9",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
             tab.view === activeView
-              ? "bg-selected text-foreground"
-              : "text-muted-foreground hover:text-foreground",
+              ? "border-primary font-semibold text-foreground"
+              : "font-medium text-muted-foreground hover:text-foreground",
           )}
         >
           {tab.label}

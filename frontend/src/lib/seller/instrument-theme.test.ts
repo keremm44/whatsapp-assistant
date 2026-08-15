@@ -28,7 +28,7 @@
  */
 
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -171,7 +171,9 @@ test("interaction cyan and attention coral are distinct declared roles", () => {
   const block = sellerThemeBlock();
 
   assert.match(block, /--color-primary:\s*#4fb3c9/i);
-  assert.match(block, /--color-selected:\s*#173039/i);
+  // Selection is a NEUTRAL material, not a cyan fill (see the
+  // "cyan is a signal, not a material" invariant below).
+  assert.match(block, /--color-selected:\s*#262e3a/i);
   assert.match(block, /--color-attention:\s*#ea8266/i);
   assert.match(block, /--color-attention-soft:\s*#331d17/i);
 
@@ -824,4 +826,127 @@ test("the spine keeps its non-hue active cues and stays colour-disciplined", () 
   assert.match(sidebar, /export function SidebarSections/);
   const topbar = readCode("../../components/seller/shell/seller-topbar.tsx");
   assert.match(topbar, /SidebarSections/);
+});
+
+/* ------------------------------------------------------------------ */
+/* 11. Cyan is a SIGNAL, not a MATERIAL                                */
+/* ------------------------------------------------------------------ */
+
+test("the selection material is neutral graphite, not a cyan well", () => {
+  const block = sellerThemeBlock();
+  const value = (name: string) =>
+    block.match(new RegExp(`--color-${name}:\\s*(#[0-9a-f]{6})`, "i"))![1]!;
+
+  // Approximate chroma via channel spread: a neutral graphite step has
+  // a small spread, a cyan-tinted well has a large one.
+  const spread = (hex: string) => {
+    const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    return Math.max(...c) - Math.min(...c);
+  };
+
+  const selected = value("selected");
+  const primary = value("primary");
+
+  // The selection fill must be far closer to the neutral ladder than
+  // to the interaction hue.
+  assert.ok(
+    spread(selected) <= 24,
+    `selection must stay near-neutral (spread ${spread(selected)})`,
+  );
+  assert.ok(
+    spread(primary) > 60,
+    "interaction cyan must remain a saturated signal",
+  );
+
+  // And it must sit BETWEEN raised and hover on the ladder, so a
+  // selected row reads as lifted material.
+  const lum = (hex: string) => {
+    const lin = [1, 3, 5]
+      .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * lin[0]! + 0.7152 * lin[1]! + 0.0722 * lin[2]!;
+  };
+  assert.ok(lum(selected) > lum(value("raised")), "selected lifts above raised");
+  assert.ok(lum(selected) < lum(value("hover")), "selected stays under hover");
+});
+
+test("no seller surface fills a large region with cyan", () => {
+  // `bg-primary` / `bg-primary-muted` are permitted ONLY as small
+  // signals: a filled primary button (the shared Button primitive), or
+  // a 2-3px structural rail. They must never fill a row, bubble, tab,
+  // panel, navigation item or hover pad.
+  //
+  // This sweeps EVERY seller component rather than a hand-written
+  // list, so a new surface cannot quietly reintroduce a cyan slab.
+  const dir = path.dirname(fileURLToPath(import.meta.url));
+  const roots = [
+    path.resolve(dir, "../../components/seller"),
+    path.resolve(dir, "../../app/seller"),
+  ];
+  const walk = (target: string): string[] => {
+    const out: string[] = [];
+    for (const entry of readdirSync(target, { withFileTypes: true })) {
+      const full = path.join(target, entry.name);
+      if (entry.isDirectory()) out.push(...walk(full));
+      else if (entry.name.endsWith(".tsx")) out.push(full);
+    }
+    return out;
+  };
+
+  const offenders: string[] = [];
+  for (const file of roots.flatMap(walk)) {
+    const source = readFileSync(file, "utf8").replace(/\/\*[^]*?\*\//g, "");
+    const name = path.basename(file);
+    // Scan every class-bearing string literal, not just plain
+    // `className="..."`: most rows compose classes through cn(), and a
+    // sweep that missed those would pass vacuously.
+    for (const hit of source.match(/"[^"\n]*bg-primary[^"\n]*"/g) ?? []) {
+      const thinRail = /w-\[[123]px\]|h-\[[123]px\]/.test(hit);
+      if (/bg-primary-muted(?![-\w])/.test(hit)) {
+        offenders.push(`${name}: cyan wash -> ${hit.slice(0, 60)}`);
+      }
+      if (/bg-primary(?![-\w])/.test(hit) && !thinRail) {
+        offenders.push(`${name}: cyan fill -> ${hit.slice(0, 60)}`);
+      }
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `cyan must be a signal, not a material:\n${offenders.join("\n")}`,
+  );
+});
+
+test("conversations selection and outgoing messages stay neutral material", () => {
+  const row = readCode(
+    "../../components/seller/conversations/conversation-row.tsx",
+  );
+  // Selected row: neutral material + thin cyan rail + aria-current.
+  assert.match(row, /isSelected\s*\?\s*"bg-selected"/);
+  assert.match(row, /w-\[3px\] bg-primary/);
+  assert.match(row, /aria-current=\{isSelected \? "page" : undefined\}/);
+
+  const timeline = readCode(
+    "../../components/seller/conversations/message-timeline.tsx",
+  );
+  // Outgoing bubble is the neutral material, never a cyan fill...
+  assert.match(timeline, /:\s*"bg-selected"/);
+  assert.doesNotMatch(timeline, /bg-primary-muted/);
+  // ...while the evidence-gated assistant label keeps its cyan accent.
+  assert.match(timeline, /text-primary[^"]*">\s*\n?\s*Asistan yanıtı/);
+});
+
+test("view tabs use a cyan underline, not a cyan filled pill", () => {
+  for (const relative of [
+    "../../components/seller/orders/orders-view-tabs.tsx",
+    "../../components/seller/returns/returns-view-tabs.tsx",
+    "../../components/seller/unanswered/unanswered-view-tabs.tsx",
+  ]) {
+    const source = readCode(relative);
+    assert.match(source, /border-b-2 border-transparent/);
+    assert.match(source, /border-primary font-semibold/);
+    // The old filled-pill treatment must not return.
+    assert.doesNotMatch(source, /bg-selected text-foreground/);
+    assert.doesNotMatch(source, /bg-primary-muted/);
+  }
 });

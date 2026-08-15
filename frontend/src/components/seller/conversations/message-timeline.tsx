@@ -38,8 +38,12 @@ import { cn } from "@/lib/utils/cn";
  *   incoming  → the customer's side, left, a SUNKEN block (below the
  *               work sheet) with a structural cue on its leading
  *               edge. It reads as received material.
- *   outgoing  → the outgoing side, right, an interaction-soft cyan
- *               well. The backend stores no seller-authored send
+ *   outgoing  → the outgoing side, right, a NEUTRAL raised block.
+ *               Cyan is a signal, not a material, so the bubble is
+ *               never cyan-filled; only the `Asistan yanıtı` label
+ *               keeps the cyan accent. The two sides are separated
+ *               by DEPTH (sunken vs raised), not by two tints.
+ *               The backend stores no seller-authored send
  *               path, so an outgoing block is NEVER labelled
  *               "Satıcı". When `was_auto_replied` is true the
  *               backend proves assistant authorship, and ONLY then
@@ -342,6 +346,7 @@ function MessageBubble({
             "rounded-[5px] px-3.5 py-2.5 text-foreground",
             isIncoming
               ? "border-l-2 border-boundary bg-sunken"
+              // Neutral material — NOT a cyan bubble.
               : "bg-selected",
           )}
         >

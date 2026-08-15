@@ -27,7 +27,10 @@ export function SellerFreshnessBanner({
   return (
     <div
       role="status"
-      className="flex items-center justify-between gap-3 border-b border-divider bg-primary-muted px-4 py-2 md:px-5"
+      // Neutral band: this spans the full width of a work region, so a
+      // cyan wash here would read as a large tinted surface. Cyan stays
+      // on the action only.
+      className="flex items-center justify-between gap-3 border-b border-divider bg-overlay px-4 py-2 md:px-5"
     >
       <p className="type-row-secondary text-foreground">
         {SELLER_FRESHNESS_COPY.message}

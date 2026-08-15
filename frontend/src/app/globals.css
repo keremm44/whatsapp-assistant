@@ -369,14 +369,26 @@
   --color-primary-hover-rgb: 106 196 216;
   --color-primary-active: #3d97ab;
   --color-primary-active-rgb: 61 151 171;
-  /* Interaction-soft is the SELECTION FILL: a deep cyan-tinted well
-   * that separates from the work sheet (ΔE 8.7) while keeping primary
-   * ink, cyan AND coral above AA on top of it — that last constraint
-   * is what allows selection + attention to coexist on one row. */
+  /* CYAN IS A SIGNAL, NOT A MATERIAL.
+   *
+   * `primary-muted` is a deep cyan-tinted wash reserved for SMALL
+   * areas only — a link/action hover pad, a compact informational
+   * band. It must never fill a row, a bubble, a tab or a panel.
+   * Large cyan fills made the workspace read as a technical console
+   * rather than a place of work. */
   --color-primary-muted: #173039;
   --color-primary-muted-rgb: 23 48 57;
-  --color-selected: #173039;
-  --color-selected-rgb: 23 48 57;
+
+  /* SELECTION is a MATERIAL, not a colour. It is one neutral step of
+   * the graphite ladder (hue 270°, chroma 8.8 — the same family as
+   * canvas/raised/overlay), sitting between `raised` (ΔL* +5.6) and
+   * `hover` (ΔL* +3.3) so a selected row reads as lifted material
+   * while remaining distinguishable from a merely hovered one.
+   *
+   * Cyan still marks the selection, but only as a 3px structural
+   * rail + brighter/semibold ink + aria-current — signal, not fill. */
+  --color-selected: #262e3a;
+  --color-selected-rgb: 38 46 58;
   /* Filled primary controls: on a dark field the accessible move is
    * a bright fill with DARK ink, not white-on-mid-cyan. */
   --color-primary-foreground: #06222b;
@@ -426,6 +438,7 @@
    * cyan, and a second near-cyan would read as a new meaning. */
   --color-info: #4fb3c9;
   --color-info-rgb: 79 179 201;
+  /* Small informational bands only — never a panel fill. */
   --color-info-muted: #173039;
   --color-info-muted-rgb: 23 48 57;
   --color-warning: #e8a34d;

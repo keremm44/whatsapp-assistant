@@ -108,7 +108,7 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
         <Link
           href={href}
           aria-label={accessibleName}
-          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-control px-2 type-row-secondary font-semibold text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas sm:h-9"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-control px-2 type-row-secondary font-semibold text-primary transition-colors hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas sm:h-9"
         >
           <span>{meta.cta}</span>
           <ArrowUpRight aria-hidden="true" size={14} strokeWidth={1.9} />
