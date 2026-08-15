@@ -27,9 +27,9 @@ export function SellerFreshnessBanner({
   return (
     <div
       role="status"
-      className="flex items-center justify-between gap-3 border-b border-divider bg-primary-muted/50 px-4 py-2 md:px-5"
+      className="flex items-center justify-between gap-3 border-b border-divider bg-primary-muted px-4 py-2 md:px-5"
     >
-      <p className="text-[13px] text-foreground">
+      <p className="type-row-secondary text-foreground">
         {SELLER_FRESHNESS_COPY.message}
       </p>
       <Button
@@ -39,7 +39,7 @@ export function SellerFreshnessBanner({
         onClick={onRefresh}
         disabled={busy}
         aria-busy={busy}
-        className="shrink-0 text-primary-text"
+        className="shrink-0 font-semibold text-primary"
       >
         {SELLER_FRESHNESS_COPY.action}
       </Button>

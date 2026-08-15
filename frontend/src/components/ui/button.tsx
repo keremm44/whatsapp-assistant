@@ -5,25 +5,28 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Sakin Ustalık button.
+ * Working Ledger button.
  *
- * Default style uses petrol (--color-primary). Clay is reserved for warm
- * accents and is not used for primary CTAs. Destructive is reserved for
- * genuinely destructive actions.
+ * Geometry: controls use the 4px control radius so they read as
+ * crisp instruments against the softly-squared 6px work sheets.
+ *
+ * Color semantics: the filled default is INTERACTION BLUE (primary
+ * action). Oxide is never a button fill — it is a seller-attention
+ * state, not an action. Destructive is reserved for genuinely
+ * destructive actions.
  */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         primary:
           "bg-primary-button text-primary-foreground hover:bg-primary-button-hover active:bg-primary-active",
         secondary:
-          // A quiet filled step of the working material rather than a
-          // bare outlined rectangle; hover completes the fill and
-          // lifts the edge one small step.
-          "bg-surface-2/70 text-foreground hover:bg-surface-2",
-        ghost: "text-foreground hover:bg-surface-2",
+          // Recessed material against paper: a real control
+          // affordance without becoming a second primary action.
+          "bg-recessed text-foreground hover:bg-recessed/70",
+        ghost: "text-foreground hover:bg-recessed",
         link: "text-primary underline-offset-4 hover:underline",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",

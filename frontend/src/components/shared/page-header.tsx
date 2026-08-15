@@ -3,21 +3,19 @@ import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Standard page header rhythm used by every seller page in this macro pass.
+ * Standard page header rhythm — "The Working Ledger" pilot.
  *
- * The header has four deliberate layers:
- *   1. A quiet petrol eyebrow caption (e.g. "İşler") — small
- *      uppercase, matching the sidebar's section-label language so
- *      the page reads as part of the same product architecture.
- *   2. The page H1 (30-32px, semibold, tight line-height).
- *   3. A short description in the readable SECONDARY text role
- *      (text-muted) — supporting copy the seller actually reads, not
- *      washed-out metadata.
- *   4. A short petrol hairline that anchors the title to the page.
+ * Three layers, in order of weight:
+ *   1. An optional quiet caption in sentence case (metadata role).
+ *      It names the region; it is no longer an uppercase colored
+ *      eyebrow.
+ *   2. The page H1 in the serif title role (`type-page-title`):
+ *      38/42 desktop, 32/36 mobile.
+ *   3. A short description in the readable secondary ink role.
  *
- * There is intentionally no full-width page-header bottom border. The
- * hairline replaces its visual role without forcing a card-like end to
- * the header.
+ * The previous decorative colored hairline under the title is gone:
+ * it carried no state, and in this direction color must describe
+ * state, not ornament. Typographic weight anchors the header instead.
  */
 export function PageHeader({
   caption,
@@ -39,24 +37,14 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {caption ? (
-          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] leading-none text-primary-text">
-            {caption}
-          </p>
+          <p className="type-meta text-muted-foreground">{caption}</p>
         ) : null}
-        <h1 className="font-heading text-[30px] font-semibold leading-[1.15] text-foreground sm:text-[32px]">
-          {title}
-        </h1>
+        <h1 className="type-page-title text-foreground">{title}</h1>
         {description ? (
-          <p className="max-w-2xl text-[15px] leading-relaxed text-muted">
-            {description}
-          </p>
+          <p className="max-w-2xl type-body text-muted">{description}</p>
         ) : null}
-        <span
-          aria-hidden="true"
-          className="mt-2 block h-px w-7 bg-primary"
-        />
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </header>

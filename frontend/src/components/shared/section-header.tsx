@@ -22,11 +22,11 @@ export function SectionHeader({
 } & React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn("space-y-1", className)} {...rest}>
-      <h2 className="font-heading text-lg text-foreground sm:text-xl">
+      <h2 className="font-heading text-[18px] font-semibold leading-6 text-foreground sm:text-[20px] sm:leading-7">
         {title}
       </h2>
       {description ? (
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="type-row-secondary text-muted-foreground">{description}</p>
       ) : null}
     </div>
   );

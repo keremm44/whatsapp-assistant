@@ -11,6 +11,11 @@
  *   - Products mobile follows the list-OR-detail model;
  *   - Dashboard PriorityCard stacks its CTA below content on mobile.
  *
+ * The Working Ledger pilot's own art-direction invariants (palette,
+ * material roles, colour semantics, typography scale) live in
+ * `working-ledger.test.ts`; this file stays focused on responsive and
+ * accessibility structure.
+ *
  * Runs with Node's built-in test runner:
  *   node --test src/lib/seller/responsive-polish.test.ts
  * (via `npm test`)
@@ -142,22 +147,21 @@ test("priority card stacks the CTA below content on narrow mobile", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* 7. Dark-surface depth (visual refinement pass)                      */
+/* 7. Material discipline (Working Ledger pilot)                       */
 /* ------------------------------------------------------------------ */
 
-test("quiet workshop uses tone instead of card borders and surface shadows", () => {
+test("work surfaces use material and rules instead of card chrome", () => {
   const css = read("../../app/globals.css");
   const sellerBlock = css.slice(css.indexOf(".seller-theme {"));
+  // Ordinary work sheets stay flat; elevation is for floating objects.
   assert.match(sellerBlock, /--shadow-surface: none/);
-  assert.match(sellerBlock, /--color-chrome-rgb: 21 20 22/);
-  assert.match(sellerBlock, /--color-background-rgb: 33 26 32/);
-  assert.match(sellerBlock, /--color-surface-rgb: 42 38 42/);
-  assert.match(sellerBlock, /--color-surface-2-rgb: 53 48 53/);
-  assert.match(sellerBlock, /--color-selected-rgb: 36 62 57/);
-  assert.match(sellerBlock, /--color-control-rgb: 25 23 25/);
-  assert.match(sellerBlock, /--color-border-rgb: 71 65 70/);
-  assert.match(sellerBlock, /--color-divider-rgb: 57 52 57/);
+  // The seller theme scopes its override to the class, never to a
+  // descendant element selector sweep.
   assert.doesNotMatch(sellerBlock, /\.seller-theme :is\(/);
+  // The three deliberate text roles stay distinct tokens.
+  assert.match(sellerBlock, /--color-foreground:/);
+  assert.match(sellerBlock, /--color-muted:/);
+  assert.match(sellerBlock, /--color-muted-foreground:/);
 
   const workbench = read(
     "../../components/seller/conversations/conversations-workbench.tsx",
@@ -169,25 +173,20 @@ test("quiet workshop uses tone instead of card borders and surface shadows", () 
     "../../components/seller/dashboard/priority-card.tsx",
   );
   assert.doesNotMatch(priority, /border border-border bg-surface shadow-surface/);
-  assert.match(priority, /bg-accent/);
 
-  // The three deliberate text roles stay distinct tokens.
-  assert.match(sellerBlock, /--color-muted-rgb: 199 198 192/);
-  assert.match(sellerBlock, /--color-muted-foreground-rgb: 161 165 159/);
-
+  // Form controls keep their own inset material, distinct from paper.
   const input = read("../../components/ui/input.tsx");
   assert.match(input, /bg-control/);
   assert.doesNotMatch(input, /bg-surface/);
 });
 
-test("selected conversation keeps a petrol rail plus a tonal lift", () => {
+test("selected conversation keeps a structural rail plus a tonal lift", () => {
   const row = read(
     "../../components/seller/conversations/conversation-row.tsx",
   );
   assert.match(row, /aria-current=\{isSelected/);
-  assert.match(row, /isSelected && "bg-selected"/);
-  assert.doesNotMatch(row, /isSelected && "bg-surface-2/);
-  assert.match(row, /rounded-r-full bg-primary/);
+  assert.match(row, /isSelected\s*\?\s*"bg-selected"/);
+  assert.match(row, /bg-primary/);
 });
 
 /* ------------------------------------------------------------------ */

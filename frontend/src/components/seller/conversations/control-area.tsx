@@ -227,7 +227,7 @@ export function ConversationControlArea({
             displayName={readyView.control.displayName}
           />
         ) : (
-          <span className="text-xs text-muted-foreground">
+          <span className="type-meta text-muted-foreground">
             Kontrol bilgisi alınamadı
           </span>
         )}
@@ -275,7 +275,7 @@ export function ConversationControlArea({
       </div>
 
       {readyView && handoff ? (
-        <p className="max-w-[240px] text-xs leading-snug text-muted-foreground md:text-right">
+        <p className="max-w-[240px] type-meta text-muted-foreground md:text-right">
           {handoff.supporting}
         </p>
       ) : null}
@@ -283,7 +283,7 @@ export function ConversationControlArea({
       {errorMessage ? (
         <p
           role="alert"
-          className="max-w-[280px] text-xs leading-snug text-destructive md:text-right"
+          className="max-w-[280px] type-meta text-destructive md:text-right"
         >
           {errorMessage}
         </p>
@@ -307,7 +307,9 @@ function ControlChip({
   return (
     <span
       className={cn(
-        "inline-flex h-7 items-center gap-1.5 rounded-pill px-2.5 text-[11px] font-semibold",
+        // Control geometry (4px), not a pill: the chip is a state
+        // marker on the work sheet, not a decorative badge.
+        "inline-flex h-7 items-center gap-1.5 rounded-control px-2.5 type-meta font-semibold",
         tone.chipClassName,
       )}
     >

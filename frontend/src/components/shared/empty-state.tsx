@@ -29,13 +29,11 @@ export function EmptyState({
     return (
       <div className={cn("space-y-1.5 py-6", className)}>
         {caption ? (
-          <p className="text-[13px] font-medium text-primary-text">{caption}</p>
+          <p className="type-meta text-muted-foreground">{caption}</p>
         ) : null}
-        <p className="text-sm font-medium text-foreground">{title}</p>
+        <p className="type-row-primary text-foreground">{title}</p>
         {description ? (
-          <p className="max-w-md text-sm text-muted-foreground">
-            {description}
-          </p>
+          <p className="max-w-md type-body text-muted">{description}</p>
         ) : null}
       </div>
     );
@@ -49,11 +47,11 @@ export function EmptyState({
       )}
     >
       {caption ? (
-        <p className="text-[13px] font-medium text-primary-text">{caption}</p>
+        <p className="type-meta text-muted-foreground">{caption}</p>
       ) : null}
-      <p className="text-sm font-medium text-foreground">{title}</p>
+      <p className="type-row-primary text-foreground">{title}</p>
       {description ? (
-        <p className="max-w-md text-sm text-muted-foreground">{description}</p>
+        <p className="max-w-md type-body text-muted">{description}</p>
       ) : null}
     </div>
   );

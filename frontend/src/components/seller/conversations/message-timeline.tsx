@@ -26,14 +26,22 @@ import { cn } from "@/lib/utils/cn";
  * Message timeline — the operational work record of the selected
  * conversation.
  *
+ * "The Working Ledger" pilot deliberately does NOT imitate WhatsApp:
+ * no wallpaper, no tails, no avatars, no delivery/read receipts, no
+ * presence. What remains is a correspondence transcript of flat
+ * blocks with a modest radius, kept left/right so the direction of
+ * each entry is unambiguous.
+ *
  * Ownership model (never overclaimed):
- *   incoming  → the customer's side, left, neutral surface-2 bubble.
- *   outgoing  → the outgoing side, right, a quiet petrol-derived
- *               bubble. The backend stores no seller-authored send
- *               path, so an outgoing bubble is NEVER labelled
+ *   incoming  → the customer's side, left, a neutral recessed block
+ *               with a subtle structural cue on its leading edge.
+ *   outgoing  → the outgoing side, right, an interaction-blue-soft
+ *               block. The backend stores no seller-authored send
+ *               path, so an outgoing block is NEVER labelled
  *               "Satıcı". When `was_auto_replied` is true the
- *               backend proves assistant authorship, and only then a
- *               small "Asistan" overline appears inside the bubble.
+ *               backend proves assistant authorship, and ONLY then
+ *               the "Asistan yanıtı" overline appears. Other
+ *               outgoing messages remain neutral in authorship.
  *
  * What is deliberately absent (no backend contract exists for it):
  * read receipts, double ticks, delivery states, typing indicators,
@@ -238,10 +246,10 @@ export function MessageTimeline({
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 py-12 text-center">
-        <p className="text-sm font-medium text-foreground">
+        <p className="type-row-primary text-foreground">
           Bu WhatsApp konuşmasında henüz mesaj yok
         </p>
-        <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+        <p className="max-w-sm type-body text-muted">
           Mesajlar geldiğinde konuşma geçmişi burada görünür.
         </p>
       </div>
@@ -277,7 +285,7 @@ export function MessageTimeline({
         </div>
       ) : null}
       {olderError ? (
-        <p role="alert" className="pb-1 text-center text-xs text-destructive">
+        <p role="alert" className="pb-1 text-center type-meta text-destructive">
           {olderError}
         </p>
       ) : null}
@@ -296,8 +304,8 @@ export function MessageTimeline({
 }
 
 /**
- * One message bubble. Compact and record-like, not a consumer-chat
- * clone: no avatar, no receipts, no decorative tails.
+ * One correspondence block. Compact and record-like, not a
+ * consumer-chat clone: no avatar, no receipts, no decorative tails.
  */
 function MessageBubble({
   message,
@@ -326,22 +334,25 @@ function MessageBubble({
       >
         <div
           className={cn(
-            "rounded-md px-3.5 py-2.5",
+            // Flat correspondence block: modest radius, no shadow,
+            // no tail.
+            "rounded-[5px] px-3.5 py-2.5 text-foreground",
             isIncoming
-              ? "bg-surface-2/75 text-foreground"
-              : "border-r-2 border-primary bg-primary-muted/55 text-foreground",
+              ? "border-l-2 border-boundary bg-recessed"
+              : "bg-selected",
           )}
         >
+          {/* Evidence-gated authorship: rendered ONLY when the backend
+              proves the assistant wrote this message. */}
           {!isIncoming && message.wasAutoReplied ? (
-            <p className="pb-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-primary-text">
+            <p className="pb-0.5 type-meta font-semibold text-primary">
               Asistan yanıtı
             </p>
           ) : null}
           {message.mediaAvailable ? (
             <p
               className={cn(
-                "flex items-center gap-1.5 text-xs",
-                isIncoming ? "text-muted" : "text-primary-text/90",
+                "flex items-center gap-1.5 type-meta text-muted",
                 hasText ? "pb-1" : undefined,
               )}
             >
@@ -354,7 +365,7 @@ function MessageBubble({
             </p>
           ) : null}
           {hasText ? (
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+            <p className="whitespace-pre-wrap break-words type-body">
               {message.content}
             </p>
           ) : null}
@@ -362,7 +373,7 @@ function MessageBubble({
         {timePhrase ? (
           <p
             className={cn(
-              "mt-1 text-xs tabular-nums text-muted-foreground/80",
+              "mt-1 type-meta tabular-nums text-muted-foreground",
               isIncoming ? "text-left" : "text-right",
             )}
           >

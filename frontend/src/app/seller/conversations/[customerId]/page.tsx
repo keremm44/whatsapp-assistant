@@ -103,15 +103,15 @@ export default async function SellerConversationDetailPage({
             />
           ) : workspace.state === "not_found" ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-              <p className="text-sm font-medium text-foreground">
+              <p className="type-record-identity text-foreground">
                 Konuşma bulunamadı
               </p>
-              <p className="max-w-sm text-[13px] leading-relaxed text-muted-foreground">
+              <p className="max-w-sm type-body text-muted">
                 Bu konuşma mevcut değil ya da bu mağazaya ait değil.
               </p>
               <Link
                 href={conversationsListHref(attentionOnly) as Route}
-                className="mt-1 text-[13px] font-medium text-primary-text underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+                className="mt-1 inline-flex min-h-11 items-center rounded-control type-row-secondary font-semibold text-primary underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:min-h-0"
               >
                 Konuşmalara geri dön
               </Link>

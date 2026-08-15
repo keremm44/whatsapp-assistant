@@ -34,6 +34,12 @@ import { ConversationRow } from "./conversation-row";
 /**
  * Left region of the Conversations workbench: the calm work queue.
  *
+ * "The Working Ledger" pilot: the queue sits on RECESSED mineral
+ * material so it reads as the index of the correspondence desk, with
+ * the paper timeline beside it. The filter control is open underline
+ * tab language (not pills), matching the interaction-blue semantics
+ * used everywhere else for "active".
+ *
  *   Header  — the "Konuşmalar" title and the only two V1 filters,
  *             "Tümü" / "İlgilenmeniz gerekenler", which map 1:1 onto
  *             the backend's `attention_only` parameter. The filters
@@ -193,33 +199,34 @@ export function ConversationListPanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="space-y-3 px-4 pb-3 pt-4 md:pt-5">
-        <div className="space-y-1.5">
-          <p
-            className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-primary-text"
-            aria-label="Kanal: WhatsApp"
-          >
-            <MessageCircle aria-hidden="true" size={13} strokeWidth={1.75} />
-            <span>WhatsApp</span>
-          </p>
+      <header className="px-4 pb-0 pt-4 md:pt-5">
+        <div className="space-y-1">
           <div className="flex items-baseline justify-between gap-3">
-            <h1 className="font-heading text-base font-semibold text-foreground">
+            <h1 className="font-heading text-[19px] font-semibold leading-6 text-foreground">
               Konuşmalar
             </h1>
             {ready ? (
               <span
-                className="text-xs tabular-nums text-muted-foreground"
+                className="type-meta tabular-nums text-muted-foreground"
                 aria-label={`Toplam ${total} konuşma`}
               >
                 {total}
               </span>
             ) : null}
           </div>
+          {/* Explicit channel identity, kept truthful and un-branded. */}
+          <p
+            className="flex items-center gap-1.5 type-meta text-muted-foreground"
+            aria-label="Kanal: WhatsApp"
+          >
+            <MessageCircle aria-hidden="true" size={13} strokeWidth={1.75} />
+            <span>WhatsApp yazışmaları</span>
+          </p>
         </div>
 
         <nav
           aria-label="Konuşma listesi filtresi"
-          className="flex gap-1 border-b border-divider"
+          className="mt-3 flex gap-4 border-b border-boundary"
         >
           <FilterTab
             href={conversationsListHref(false)}
@@ -258,13 +265,13 @@ export function ConversationListPanel({
         <ListUnavailable />
       ) : rows.length === 0 ? (
         <div className="px-4 py-10">
-          <p className="text-sm font-medium text-foreground">
+          <p className="type-row-primary text-foreground">
             {attentionOnly
               ? "Şu anda ilgilenmeniz gereken konuşma yok."
               : "Henüz konuşma yok."}
           </p>
           {!attentionOnly ? (
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-1 type-row-secondary text-muted">
               Müşteriler WhatsApp üzerinden yazdığında konuşmalar burada
               listelenir.
             </p>
@@ -273,7 +280,7 @@ export function ConversationListPanel({
       ) : (
         <>
           <div className="scrollbar-quiet min-h-0 flex-1 md:overflow-y-auto">
-            <ul role="list" className="divide-y divide-divider/70">
+            <ul role="list" className="divide-y divide-divider">
               {rows.map((item) => (
                 <ConversationRow
                   key={item.customer.id}
@@ -309,7 +316,7 @@ export function ConversationListPanel({
                 </Button>
               ) : null}
               {loadMoreError ? (
-                <p role="alert" className="text-center text-xs text-destructive">
+                <p role="alert" className="text-center type-meta text-destructive">
                   {loadMoreError}
                 </p>
               ) : null}
@@ -335,10 +342,14 @@ function FilterTab({
       href={href as Route}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex min-h-11 flex-1 items-center justify-center border-b-2 border-transparent px-2 py-2 text-center text-xs font-medium leading-tight transition-colors md:min-h-9",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        // Open underline tab language — no pill, no fill. Active is
+        // a 2px interaction-blue rule PLUS a weight change, so the
+        // state never depends on hue alone, and aria-current carries
+        // it to assistive tech.
+        "-mb-px flex min-h-11 items-center border-b-2 border-transparent px-0.5 pb-2 pt-1 type-row-secondary transition-colors md:min-h-9",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
         isActive
-          ? "border-primary text-foreground"
+          ? "border-primary font-semibold text-foreground"
           : "text-muted-foreground hover:text-foreground",
       )}
     >
@@ -376,10 +387,10 @@ function ListUnavailable() {
 
   return (
     <div className="space-y-3 px-4 py-10" role="status">
-      <p className="text-sm font-medium text-foreground">
+      <p className="type-row-primary text-foreground">
         Konuşma listesi şu anda açılamadı
       </p>
-      <p className="text-sm leading-relaxed text-muted-foreground">
+      <p className="type-row-secondary text-muted">
         Bağlantı kurulamadı. Tekrar deneyebilirsiniz.
       </p>
       <Button

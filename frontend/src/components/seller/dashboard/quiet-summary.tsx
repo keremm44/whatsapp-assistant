@@ -15,9 +15,8 @@ import type { DashboardTaskPriority } from "@/lib/seller/dashboard-tasks";
  *     bottom of the page, no card chrome.
  *
  *   - Side panel (used in scenario A, where both groups
- *     have data and the side column is meaningful). A
- *     chrome-toned surface with a petrol top hairline,
- *     sits at the bottom of the side column.
+ *     have data and the side column is meaningful). A quiet
+ *     paper sheet at the bottom of the side column.
  *
  * When the fetched page is complete (`tasks.length === total`)
  * the three numbers are the truthful priority split plus the
@@ -57,12 +56,12 @@ export function QuietSummary({
     return (
       <section
         aria-labelledby="dashboard-quiet-summary"
-        className="rounded-md bg-surface px-4 py-4 sm:px-5"
+        className="rounded-sheet bg-paper px-4 py-4 sm:px-5"
       >
         <div>
           <h3
             id="dashboard-quiet-summary"
-            className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground"
+            className="type-meta font-semibold text-muted-foreground"
           >
             Özet
           </h3>
@@ -92,11 +91,11 @@ export function QuietSummary({
     >
       <h3
         id="dashboard-quiet-summary"
-        className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-text"
+        className="type-meta font-semibold text-muted-foreground"
       >
         Özet
       </h3>
-      <dl className="mt-3 flex flex-wrap items-center gap-x-8 gap-y-2 text-[13px]">
+      <dl className="mt-3 flex flex-wrap items-center gap-x-8 gap-y-2 type-row-secondary">
         {rows.map((row, index) => (
           <React.Fragment key={row.label}>
             {row.emphasize && index > 0 ? (
@@ -127,12 +126,12 @@ function Row({
   emphasize?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between text-[13px]">
+    <div className="flex items-center justify-between type-row-secondary">
       <dt
         className={
           emphasize
-            ? "font-medium text-foreground"
-            : "text-foreground/80"
+            ? "font-semibold text-foreground"
+            : "text-muted-foreground"
         }
       >
         {label}
@@ -140,8 +139,8 @@ function Row({
       <dd
         className={
           emphasize
-            ? "tabular-nums font-semibold text-primary-text"
-            : "tabular-nums text-foreground"
+            ? "tabular-nums font-semibold text-foreground"
+            : "tabular-nums text-muted"
         }
       >
         {value}
@@ -164,8 +163,8 @@ function InlineRow({
       <dt
         className={
           emphasize
-            ? "font-medium text-foreground"
-            : "text-foreground/80"
+            ? "font-semibold text-foreground"
+            : "text-muted-foreground"
         }
       >
         {label}
@@ -173,8 +172,8 @@ function InlineRow({
       <dd
         className={
           emphasize
-            ? "tabular-nums text-[14px] font-semibold text-primary-text"
-            : "tabular-nums text-foreground"
+            ? "tabular-nums text-[14px] font-semibold text-foreground"
+            : "tabular-nums text-muted"
         }
       >
         {value}

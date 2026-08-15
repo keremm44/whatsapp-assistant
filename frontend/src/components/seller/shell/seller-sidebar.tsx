@@ -12,51 +12,36 @@ import { cn } from "@/lib/utils/cn";
 import { SellerIcon } from "./icon-map";
 
 /**
- * Desktop sidebar.
+ * Desktop navigation spine — "The Working Ledger" pilot.
  *
- * Visual identity (this pass):
+ * The spine is the one dark ink surface in the seller workspace. It
+ * frames a light mineral canvas the way the spine of a ledger frames
+ * its pages: permanent, quiet, and unmistakably separate from the
+ * work.
  *
- *   - 232px wide. Linen canvas outside, chrome surface inside.
- *     The sidebar is the only chrome surface in the seller
- *     shell; everything else (topbar, dashboard) is linen.
- *     This makes the sidebar read as the persistent control
- *     surface of the product.
+ *   - 232px wide (unchanged; the information architecture is not
+ *     disturbed by this pilot). Spacing inside is slightly more
+ *     generous so the spine reads as intentional rather than dense.
  *
- *   - Brand mark area. A small petrol-soft square with a
- *     petrol `Store` glyph sits at the top-left. The square
- *     is the product's silent logo — a recognisable mark the
- *     user can identify without reading the wordmark. Next to
- *     it sits the wordmark ("WhatsApp Asistan") in Manrope,
- *     plus a small "Mağaza yönetimi" eyebrow underneath in
- *     muted ink. A 1px petrol hairline divides the brand
- *     block from navigation.
+ *   - Brand. The previous petrol square + decorative terracotta
+ *     appendage + two-segment brand hairline are gone. What remains
+ *     is the wordmark itself, set on chrome ink. No color is spent on
+ *     decoration, so the only colored things in the spine are the
+ *     active-destination markers.
  *
- *   - Section rhythm. Each group is separated by a quiet
- *     hairline (not a heavy band). Section labels are
- *     uppercase, petrol, tracking-wide, 11px. The label
- *     carries the petrol cue so the navigation reads as a
- *     branded product, not a generic admin menu.
+ *   - Section labels are sentence case in a quiet chrome ink, not
+ *     uppercase petrol micro-captions.
  *
- *   - Selected state. A combination of: 2px petrol rail on the
- *     left edge (rendered as a 2px-wide, 24px-tall vertical
- *     bar that sits flush against the row's left padding),
- *     petrol-soft background, petrol icon, petrol text,
- *     medium weight. This is intentionally more crafted than
- *     the previous "rounded rectangle with a 2px bar" — the
- *     bar now reads as an active marker, the row's background
- *     softens, and the typography gains a half-step of
- *     weight.
+ *   - Active destination is a PAPER INDEX TAB pressed into the dark
+ *     spine: paper material, dark semibold ink, an interaction-blue
+ *     icon and a blue marker rule on the leading edge. The state is
+ *     therefore carried by shape + luminance + weight + a marker,
+ *     never by hue alone, and it is announced with aria-current.
  *
- *   - Hover. Rows receive a restrained wash of the dedicated
- *     selected material. Icons move from muted to foreground to
- *     communicate affordance.
+ *   - Hover on inactive rows uses the chrome hover step only.
  *
- *   - There is deliberately NO bottom settings/account rail.
- *     Settings is a single destination and already lives in
- *     the normal navigation (Sistem → Ayarlar); a duplicate
- *     terracotta footer pointing at the same route was
- *     removed, and no profile/session menu is fabricated in
- *     its place.
+ *   - There is deliberately no bottom settings/account rail; Ayarlar
+ *     already lives in the normal navigation.
  */
 export function SellerSidebar() {
   const pathname = usePathname();
@@ -64,116 +49,110 @@ export function SellerSidebar() {
   return (
     <aside
       aria-label="Satıcı paneli gezinme menüsü"
-      className="hidden h-screen w-[232px] shrink-0 flex-col border-r border-border bg-chrome lg:sticky lg:top-0 lg:flex"
+      className="hidden h-screen w-[232px] shrink-0 flex-col bg-chrome text-chrome-foreground lg:sticky lg:top-0 lg:flex"
     >
       <BrandMark />
-      <nav className="flex-1 overflow-y-auto px-3 py-5">
-        <ul className="flex flex-col gap-1">
-          {sellerNavigation.map((section, index) => (
-            <li
-              key={section.title}
-              className={cn(
-                index > 0 &&
-                  "mt-1 border-t border-divider pt-4",
-              )}
-            >
-              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-text">
-                {section.title}
-              </p>
-              <ul className="flex flex-col gap-0.5">
-                {section.items.map((item) => (
-                  <NavRow
-                    key={item.href}
-                    href={item.href as Route}
-                    icon={item.icon}
-                    label={item.label}
-                    isActive={isSellerItemActive(pathname, item.href)}
-                  />
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
+      <nav className="flex-1 overflow-y-auto px-3 py-6">
+        <SidebarSections pathname={pathname} />
       </nav>
     </aside>
   );
 }
 
 const BrandMark = () => (
-  <div className="border-b border-border px-5 pb-5 pt-5">
+  <div className="px-5 pb-5 pt-6">
     <Link
       href="/seller"
-      className="group flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
+      className="block rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
     >
-      {/*
-       * Brand mark. The petrol square is the dominant brand
-       * surface; the small terracotta corner square is a
-       * restrained second brand character. Together they
-       * form the product's silent logo: petrol on the left,
-       * warm on the right.
-       */}
-      <span className="flex items-center" aria-hidden="true">
-        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <SellerIcon name="Store" size={18} strokeWidth={1.7} />
-        </span>
-        <span className="-ml-1.5 h-9 w-3 rounded-md rounded-l-none bg-accent" />
+      <span className="block font-heading text-[15px] font-semibold leading-tight tracking-[0.01em] text-chrome-foreground">
+        WhatsApp Asistan
       </span>
-      <span className="flex flex-col leading-tight">
-        <span className="font-heading text-[15px] font-semibold text-foreground">
-          WhatsApp Asistan
-        </span>
-        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-          Mağaza yönetimi
-        </span>
+      <span className="mt-0.5 block type-meta text-chrome-foreground/55">
+        Mağaza yönetimi
       </span>
     </Link>
-    {/*
-     * Brand hairline. Petrol is the control color; terracotta
-     * is the small warm signature. The two segments are
-     * deliberately thin and short so the detail reads as
-     * decorative brand identity, not as a status indicator.
-     */}
-    <span aria-hidden="true" className="mt-4 flex items-center gap-1">
-      <span className="block h-px w-7 bg-primary" />
-      <span className="block h-px w-2 bg-accent" />
-    </span>
   </div>
 );
+
+/**
+ * The shared navigation body. Rendered identically in the desktop
+ * spine and in the tablet navigation Sheet so the two can never
+ * drift apart.
+ */
+export function SidebarSections({
+  pathname,
+  onNavigate,
+}: {
+  pathname: string | null;
+  onNavigate?: () => void;
+}) {
+  return (
+    <ul className="flex flex-col gap-1">
+      {sellerNavigation.map((section, index) => (
+        <li
+          key={section.title}
+          className={cn(index > 0 && "mt-4 border-t border-white/10 pt-5")}
+        >
+          <p className="px-3 pb-2 type-meta font-medium text-chrome-foreground/50">
+            {section.title}
+          </p>
+          <ul className="flex flex-col gap-1">
+            {section.items.map((item) => (
+              <NavRow
+                key={item.href}
+                href={item.href as Route}
+                icon={item.icon}
+                label={item.label}
+                isActive={isSellerItemActive(pathname, item.href)}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 const NavRow = ({
   href,
   icon,
   label,
   isActive,
+  onNavigate,
 }: {
   href: Route;
   icon: React.ComponentProps<typeof SellerIcon>["name"];
   label: string;
   isActive: boolean;
+  onNavigate?: () => void;
 }) => {
   return (
     <li>
       <Link
         href={href}
+        onClick={onNavigate}
         aria-current={isActive ? "page" : undefined}
         className={cn(
-          "relative flex h-10 items-center gap-3 rounded-md pl-4 pr-3 text-sm transition-colors",
+          "relative flex h-10 items-center gap-3 rounded-control pl-4 pr-3 text-[14px] leading-5 transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
           isActive
-            ? "bg-selected font-semibold text-primary-text"
-            : "text-foreground hover:bg-selected/40",
+            ? // Paper index tab pressed into the dark spine.
+              "bg-paper font-semibold text-foreground"
+            : "text-chrome-foreground/85 hover:bg-chrome-hover hover:text-chrome-foreground",
         )}
       >
         {isActive ? (
           <span
             aria-hidden="true"
-            className="absolute inset-y-2.5 left-0 w-[2px] rounded-full bg-primary"
+            className="absolute inset-y-0 left-0 w-[3px] rounded-l-control bg-primary"
           />
         ) : null}
         <SellerIcon
           name={icon}
           className={cn(
-            isActive ? "text-primary" : "text-muted-foreground",
+            isActive ? "text-primary" : "text-chrome-foreground/60",
             "transition-colors",
           )}
         />

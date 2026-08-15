@@ -82,7 +82,7 @@ export function ConversationDetailPanel({
       {/* Portal host: keeps the context Sheet inside .seller-theme. */}
       <div ref={setPortalHost} className="contents" />
 
-      <header className="space-y-3 border-b border-divider px-0 py-4 md:px-5">
+      <header className="space-y-3 border-b border-boundary px-0 py-4 md:px-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-1">
             <Link
@@ -90,28 +90,30 @@ export function ConversationDetailPanel({
               aria-label="Konuşmalara geri dön"
               title="Konuşmalara geri dön"
               className={cn(
-                "-ml-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors md:hidden",
-                "hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "-ml-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-muted transition-colors md:hidden",
+                "hover:bg-recessed hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               )}
             >
               <ArrowLeft aria-hidden="true" size={18} strokeWidth={1.75} />
             </Link>
             <div className="min-w-0">
+              {/* Record identity: the serif identity role. */}
               <h2
-                className="truncate font-heading text-lg font-semibold leading-snug text-foreground"
+                className="truncate type-record-identity text-foreground"
                 title={display.primary}
               >
                 {display.primary}
               </h2>
+              {/* Explicit WhatsApp channel origin, retained in the header. */}
               <p
-                className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
+                className="mt-0.5 flex min-w-0 items-center gap-1.5 type-meta text-muted-foreground"
                 title={whatsappNumber ?? "WhatsApp"}
               >
                 <MessageCircle
                   aria-hidden="true"
                   size={13}
                   strokeWidth={1.75}
-                  className="shrink-0 text-primary-text"
+                  className="shrink-0 text-muted-foreground"
                 />
                 <span className="shrink-0 font-medium text-muted">WhatsApp</span>
                 {whatsappNumber ? (
@@ -122,7 +124,7 @@ export function ConversationDetailPanel({
                 ) : null}
               </p>
               {moderationNote ? (
-                <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                <p className="mt-0.5 type-meta text-muted-foreground">
                   {moderationNote}
                 </p>
               ) : null}
@@ -136,8 +138,8 @@ export function ConversationDetailPanel({
               aria-label="Konuşma bağlamını aç"
               aria-haspopup="dialog"
               className={cn(
-                "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors xl:hidden",
-                "hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-control px-2.5 type-row-secondary font-medium text-muted transition-colors xl:hidden",
+                "hover:bg-recessed hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               )}
             >
               <PanelRight aria-hidden="true" size={16} strokeWidth={1.75} />
@@ -177,7 +179,7 @@ export function ConversationDetailPanel({
             className="w-full max-w-sm gap-0 p-0"
           >
             <SheetHeader className="border-b border-divider px-5 pb-4 pt-5">
-              <SheetTitle className="text-base font-semibold">
+              <SheetTitle className="font-heading text-[17px] font-semibold leading-6">
                 Konuşma bağlamı
               </SheetTitle>
             </SheetHeader>

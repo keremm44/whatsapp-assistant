@@ -45,7 +45,21 @@ import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
  *   Tasks within each section keep the backend's order; the
  *   frontend never re-sorts.
  *
- * Adaptive composition (this pass):
+ * Working Ledger composition (this pass):
+ *
+ *   The dashboard is today's WORK DOCKET, not a set of widgets.
+ *   Each region is ONE contiguous paper work sheet whose entries are
+ *   separated by rules — never a gallery of individually bordered,
+ *   rounded, shadowed cards. Section identity comes from typography
+ *   and the sheet boundary, not from colour.
+ *
+ *   Colour discipline: type is communicated by icon + label; the only
+ *   colour a task row spends is OXIDE, and only where the backend
+ *   type genuinely means seller review / intervention (see
+ *   `task-presentation.ts`). Interaction blue belongs to the row's
+ *   destination action and to focus.
+ *
+ * Adaptive composition (preserved from the previous pass):
  *
  *   The page must look deliberate in all four data combinations:
  *
@@ -229,11 +243,11 @@ function NormalOnlyLayout({
           title="Bugün bakılabilecekler"
           count={normalTasks.length}
           description="Vakit varsa ilerleyebileceğiniz konular."
-          railTone="neutral"
         />
+        {/* Same single work sheet, quieter rows. */}
         <ul
           role="list"
-          className="overflow-hidden rounded-md bg-surface divide-y divide-divider"
+          className="divide-y divide-divider overflow-hidden rounded-sheet bg-paper"
         >
           {normalTasks.map((task) => (
             <li key={task.id}>
@@ -278,7 +292,12 @@ function PrimaryColumn({
         count={count}
         description="İncelemeniz gereken konular."
       />
-      <ul role="list" className="overflow-hidden rounded-md bg-surface divide-y divide-divider">
+      {/* ONE contiguous work sheet. The rows are separated by rules,
+          not by gutters — no per-task card. */}
+      <ul
+        role="list"
+        className="divide-y divide-divider overflow-hidden rounded-sheet bg-paper"
+      >
         {tasks.map((task) => (
           <li key={task.id}>
             <PriorityCard task={task} />
@@ -290,19 +309,12 @@ function PrimaryColumn({
 }
 
 /**
- * The right-hand secondary panel (scenario A only). Renders
- * the section header and a surface-family panel containing
- * the secondary rows, with a thin petrol top hairline as the
- * only framing accent.
- *
- * Surface discipline: the panel deliberately uses the SAME
- * raised `surface` family as the rest of the dashboard cards
- * — NOT the shell-level `chrome` tone, which read as an
- * almost-black slab that visually detached "Bugün
- * bakılabilecekler" from the workspace. The header gets one
- * subtle `surface-2` half-step so the section stays
- * recognizable as the supporting work area without shouting
- * louder than "Önce bunlar".
+ * The right-hand supporting region (scenario A only): one quiet
+ * paper work sheet with an internal rule under its compact heading.
+ * It uses the same paper material as "Önce bunlar" so the two read
+ * as two columns of the same ledger page, differentiated by
+ * typographic weight and row density rather than by material or
+ * colour.
  */
 function SecondaryPanel({
   id,
@@ -318,22 +330,20 @@ function SecondaryPanel({
   return (
     <section
       aria-labelledby={id}
-      className="overflow-hidden rounded-md bg-surface"
+      className="overflow-hidden rounded-sheet bg-paper"
     >
-      {/* Rows share one tonal ledger surface; only the internal rule
-          separates the compact section header from its work queue. */}
-      <header className="flex items-baseline gap-2 border-b border-divider px-4 py-3 sm:px-5">
+      <header className="flex items-baseline gap-2.5 border-b border-divider px-4 py-3.5 sm:px-5">
         <h2
           id={id}
-          className="font-heading text-[15px] font-semibold text-foreground sm:text-base"
+          className="font-heading text-[17px] font-semibold leading-6 text-foreground"
         >
           {title}
         </h2>
         <span
           aria-hidden="true"
-          className="text-xs tabular-nums text-muted-foreground"
+          className="type-meta tabular-nums text-muted-foreground"
         >
-          · {count}
+          {count}
         </span>
       </header>
       <ul role="list">

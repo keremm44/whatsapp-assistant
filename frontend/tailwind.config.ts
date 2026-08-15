@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Tailwind theme is wired to the canonical Sakin Ustalık design tokens
+ * Tailwind theme is wired to the canonical design tokens
  * defined in src/config/design-tokens.ts and exposed as CSS variables
  * via src/app/globals.css. Do not introduce raw hex values here — extend
  * the design tokens instead.
@@ -38,7 +38,22 @@ const config: Config = {
     extend: {
       colors: {
         background: "rgb(var(--color-background-rgb) / <alpha-value>)",
-        chrome: "rgb(var(--color-chrome-rgb) / <alpha-value>)",
+        /* Semantic material roles (Working Ledger). `canvas`,
+         * `paper`, `recessed`, `floating` and `boundary` are the
+         * canonical names; `background`, `surface`, `surface-2` and
+         * `border` remain as aliases so non-pilot routes keep
+         * working unchanged. */
+        canvas: "rgb(var(--color-canvas-rgb) / <alpha-value>)",
+        paper: "rgb(var(--color-paper-rgb) / <alpha-value>)",
+        recessed: "rgb(var(--color-recessed-rgb) / <alpha-value>)",
+        floating: "rgb(var(--color-floating-rgb) / <alpha-value>)",
+        boundary: "rgb(var(--color-boundary-rgb) / <alpha-value>)",
+        chrome: {
+          DEFAULT: "rgb(var(--color-chrome-rgb) / <alpha-value>)",
+          hover: "rgb(var(--color-chrome-hover-rgb) / <alpha-value>)",
+          foreground:
+            "rgb(var(--color-chrome-foreground-rgb) / <alpha-value>)",
+        },
         foreground: "rgb(var(--color-foreground-rgb) / <alpha-value>)",
         surface: "rgb(var(--color-surface-rgb) / <alpha-value>)",
         "surface-2": "rgb(var(--color-surface-2-rgb) / <alpha-value>)",
@@ -87,10 +102,20 @@ const config: Config = {
           muted: "rgb(var(--color-destructive-muted-rgb) / <alpha-value>)",
           foreground: "rgb(var(--color-destructive-foreground-rgb) / <alpha-value>)",
         },
+        /* Seller attention (oxide). Backend-supported review /
+         * intervention only — never decoration. */
+        attention: {
+          DEFAULT: "rgb(var(--color-attention-rgb) / <alpha-value>)",
+          soft: "rgb(var(--color-attention-soft-rgb) / <alpha-value>)",
+        },
         paused: "rgb(var(--color-paused-rgb) / <alpha-value>)",
         "paused-muted": "rgb(var(--color-paused-muted-rgb) / <alpha-value>)",
       },
       borderRadius: {
+        /* Geometry roles: control 4px, work sheet 6px, floating 10px. */
+        control: "var(--radius-control)",
+        sheet: "var(--radius-sheet)",
+        floating: "var(--radius-floating)",
         xs: "var(--radius-xs)",
         sm: "var(--radius-sm)",
         md: "var(--radius-md)",
@@ -98,6 +123,10 @@ const config: Config = {
         pill: "var(--radius-pill)",
       },
       fontFamily: {
+        /* `title` is the serif role (page titles + record identity).
+         * `heading` and `body` are the sans roles. See globals.css
+         * for the font-loading decision. */
+        title: ["var(--font-title)", "ui-serif", "Georgia", "serif"],
         heading: ["var(--font-heading)", "system-ui", "sans-serif"],
         body: ["var(--font-body)", "system-ui", "sans-serif"],
       },

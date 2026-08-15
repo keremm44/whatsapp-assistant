@@ -51,8 +51,8 @@ export function ControlHistorySection({
     : entries.slice(0, CONTROL_HISTORY_INITIAL_COUNT);
 
   return (
-    <section aria-label={CONTROL_HISTORY_TITLE} className="space-y-3 px-5 py-5">
-      <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+    <section aria-label={CONTROL_HISTORY_TITLE} className="space-y-2.5 px-5 py-5">
+      <h3 className="flex items-center gap-1.5 type-meta font-semibold text-muted-foreground">
         <History aria-hidden="true" size={14} strokeWidth={1.75} />
         <span>{CONTROL_HISTORY_TITLE}</span>
       </h3>
@@ -65,19 +65,19 @@ export function ControlHistorySection({
           );
           return (
             <li key={entry.id} className="space-y-0.5 py-2 first:pt-0 last:pb-0">
-              <p className="break-words text-xs leading-snug text-foreground">
+              <p className="break-words type-row-secondary text-foreground">
                 {display.transition}
               </p>
               {timePhrase ? (
                 <time
                   dateTime={entry.createdAt}
-                  className="block text-[11px] tabular-nums text-muted-foreground"
+                  className="block type-meta tabular-nums text-muted-foreground"
                 >
                   {timePhrase}
                 </time>
               ) : null}
               {display.note !== null ? (
-                <p className="whitespace-pre-wrap break-words text-xs leading-snug text-muted">
+                <p className="whitespace-pre-wrap break-words type-row-secondary text-muted">
                   {display.note}
                 </p>
               ) : null}
@@ -91,8 +91,8 @@ export function ControlHistorySection({
           aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
           className={cn(
-            "inline-flex min-h-11 items-center rounded-sm px-1 text-xs font-medium text-muted-foreground transition-colors md:min-h-8",
-            "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            "inline-flex min-h-11 items-center rounded-control px-1 type-row-secondary font-medium text-primary transition-colors md:min-h-8",
+            "hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           )}
         >
           {expanded

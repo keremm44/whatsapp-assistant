@@ -48,10 +48,10 @@ export default async function SellerConversationsPage({
         }
         center={
           <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-6 py-16 text-center">
-            <p className="text-sm font-medium text-foreground">
+            <p className="type-record-identity text-foreground">
               Bir WhatsApp konuşması seçin
             </p>
-            <p className="max-w-sm text-[13px] leading-relaxed text-muted-foreground">
+            <p className="max-w-sm type-body text-muted">
               Mesaj geçmişini, konuşmanın kimin sorumluluğunda olduğunu
               ve varsa ilgili sipariş veya iade bağlamını burada
               görebilirsiniz.

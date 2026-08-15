@@ -41,6 +41,17 @@ import { ControlHistorySection } from "./control-history-section";
  * Block order is deliberate: the actionable business context blocks
  * come first; Konuşma geçmişi is supporting context and renders last.
  *
+ * "The Working Ledger" pilot: the rail is a COMPACT DOSSIER, not a
+ * stack of mini-cards. Sections are separated by rules only — no
+ * per-section surface, border, radius or shadow — and business
+ * context (order, return/issue, unanswered) stays ABOVE the
+ * conversation history, which is supporting material.
+ *
+ * Section labels are sentence-case metadata in neutral ink; the only
+ * colour spent here is oxide, and only on the return/issue block,
+ * which is the one genuinely seller-review context. Interaction blue
+ * belongs to the destination links.
+ *
  * Each block is compact and read-only: the rail points the seller to
  * the real destination surfaces (/seller/orders, /seller/returns,
  * /seller/unanswered) instead of implementing order/return/unanswered
@@ -75,7 +86,7 @@ export function ConversationContextRail({
   }
 
   return (
-    <div className="flex flex-col divide-y divide-divider/80">
+    <div className="flex flex-col divide-y divide-divider">
       {order ? <OrderContextBlock order={order} /> : null}
       {returnIssue ? <ReturnIssueContextBlock issue={returnIssue} /> : null}
       {unanswered.length > 0 ? (
@@ -99,34 +110,35 @@ function ContextBlock({
 }: {
   icon: LucideIcon;
   label: string;
-  labelTone: "primary" | "accent" | "neutral";
+  /**
+   * `attention` is oxide and is reserved for the return/issue block
+   * (a genuine seller-review context). Everything else is neutral —
+   * type is carried by the icon and the label, never by colour.
+   */
+  labelTone: "attention" | "neutral";
   destination: Route;
   destinationLabel: string;
   children: React.ReactNode;
 }) {
   const toneClass =
-    labelTone === "primary"
-      ? "text-primary-text"
-      : labelTone === "accent"
-        ? "text-accent-text"
-        : "text-muted-foreground";
+    labelTone === "attention" ? "text-attention" : "text-muted-foreground";
   return (
-    <section className="space-y-3 px-5 py-5">
+    <section className="space-y-2.5 px-5 py-5">
       <p
         className={cn(
-          "flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]",
+          "flex items-center gap-1.5 type-meta font-semibold",
           toneClass,
         )}
       >
         <Icon aria-hidden="true" size={14} strokeWidth={1.75} />
         <span>{label}</span>
       </p>
-      <div className="space-y-1.5">{children}</div>
+      <div className="space-y-1">{children}</div>
       <Link
         href={destination}
         className={cn(
-          "inline-flex items-center gap-1 text-xs font-medium text-primary-text transition-colors hover:text-primary-hover",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm",
+          "inline-flex min-h-11 items-center gap-1 type-row-secondary font-semibold text-primary transition-colors hover:text-primary-hover md:min-h-0",
+          "rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         )}
       >
         <span>{destinationLabel}</span>
@@ -146,29 +158,29 @@ function OrderContextBlock({ order }: { order: ConversationOrderDetail }) {
     <ContextBlock
       icon={Package}
       label="Sipariş"
-      labelTone="primary"
+      labelTone="neutral"
       destination={conversationOrderDestination(order) as Route}
       destinationLabel="Sipariş bilgilerine git"
     >
       {order.externalOrderNumber ? (
-        <p className="text-base font-semibold text-foreground">
+        <p className="type-row-primary text-foreground">
           Sipariş {order.externalOrderNumber}
         </p>
       ) : null}
       {order.productNameSnapshot ? (
         <p
-          className="truncate text-xs text-muted-foreground"
+          className="truncate type-row-secondary text-muted-foreground"
           title={order.productNameSnapshot}
         >
           {order.productNameSnapshot}
         </p>
       ) : null}
-      <p className="text-xs text-muted-foreground">
+      <p className="type-row-secondary text-muted-foreground">
         {ORDER_STATUS_LABELS[order.status]}
       </p>
       {order.customText ? (
         <p
-          className="text-xs leading-snug text-muted"
+          className="type-row-secondary text-muted"
           title={order.customText}
         >
           Üzerine yazılacak: “{order.customText}”
@@ -176,7 +188,7 @@ function OrderContextBlock({ order }: { order: ConversationOrderDetail }) {
       ) : null}
       {order.status === "SELLER_REVIEW_REQUIRED" &&
       order.reviewReasonNote ? (
-        <p className="line-clamp-3 text-xs leading-snug text-muted">
+        <p className="line-clamp-3 type-row-secondary text-muted">
           {order.reviewReasonNote}
         </p>
       ) : null}
@@ -197,29 +209,29 @@ function ReturnIssueContextBlock({
   return (
     <ContextBlock
       icon={Undo2}
-      label="İade / Sorun"
-      labelTone="accent"
+      label="İade / sorun"
+      labelTone="attention"
       destination={conversationReturnDestination(issue) as Route}
       destinationLabel="İade ve sorunlara git"
     >
-      <p className="text-base font-semibold text-foreground">
+      <p className="type-row-primary text-foreground">
         {RETURN_ISSUE_TYPE_LABELS[issue.issueType]}
       </p>
       {issue.externalOrderNumberSnapshot ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="type-row-secondary text-muted-foreground">
           Sipariş {issue.externalOrderNumberSnapshot}
         </p>
       ) : null}
       {issue.productNameSnapshot ? (
         <p
-          className="truncate text-xs text-muted-foreground"
+          className="truncate type-row-secondary text-muted-foreground"
           title={issue.productNameSnapshot}
         >
           {issue.productNameSnapshot}
         </p>
       ) : null}
       {issue.reasonText ? (
-        <p className="line-clamp-3 text-xs leading-snug text-muted">
+        <p className="line-clamp-3 type-row-secondary text-muted">
           {issue.reasonText}
         </p>
       ) : null}
@@ -256,17 +268,17 @@ function UnansweredContextBlock({
       destinationLabel="Cevaplanamayan sorulara git"
     >
       {groups.length > 1 ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="type-row-secondary text-muted-foreground">
           Bu konuşmada {groups.length} açık soru var.
         </p>
       ) : null}
       {question.length > 0 ? (
-        <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+        <p className="line-clamp-2 type-row-primary text-foreground">
           “{question}”
         </p>
       ) : null}
       {latest && latest.occurrenceCount > 1 ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="type-row-secondary text-muted-foreground">
           {latest.occurrenceCount} kez soruldu
         </p>
       ) : null}

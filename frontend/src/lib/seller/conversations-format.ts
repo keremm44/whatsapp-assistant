@@ -131,10 +131,25 @@ export const MEDIA_MESSAGE_LABEL = "Medya mesajı";
  * The one restrained attention signal for a row: small dot + short
  * label. Labels are the approved presentation mapping for
  * backend-defined attention reasons — presentation only, never new
- * business semantics. Tones follow the dashboard's rail language:
- * return review = clay, order review = petrol, unanswered = neutral,
- * paused = slate. `seller_taken_over` is ownership, not an alarm, so
- * it shares the calm petrol text role without a loud dot treatment.
+ * business semantics.
+ *
+ * Tone follows the Working Ledger's colour semantics, where colour
+ * describes STATE and never content type:
+ *
+ *   OXIDE (attention) is spent ONLY on the two reasons whose
+ *   underlying record is genuinely in a seller-review state:
+ *   `return_review` and `order_review`. These are the same two the
+ *   dashboard flags, so the two surfaces agree.
+ *
+ *   `unanswered_question` is a queue item the seller can pick up, not
+ *   a record awaiting review, so it stays neutral ink.
+ *
+ *   `seller_taken_over` is OWNERSHIP, not an alarm — it is deliberately
+ *   neutral, and deliberately NOT interaction blue, because blue in
+ *   this direction means selected/active/navigation and would be
+ *   confused with the queue's selection state.
+ *
+ *   `assistant_paused` uses the truthful paused/neutral state role.
  */
 export const ATTENTION_REASON_META: Record<
   ConversationAttentionReason,
@@ -142,13 +157,13 @@ export const ATTENTION_REASON_META: Record<
 > = {
   return_review: {
     label: "İade incelemesi",
-    dotClassName: "bg-accent",
-    textClassName: "text-accent-text",
+    dotClassName: "bg-attention",
+    textClassName: "text-attention",
   },
   seller_taken_over: {
     label: "Siz ilgileniyorsunuz",
-    dotClassName: "bg-primary",
-    textClassName: "text-primary-text",
+    dotClassName: "bg-muted-foreground",
+    textClassName: "text-muted",
   },
   assistant_paused: {
     label: "Yanıtlar durduruldu",
@@ -157,13 +172,13 @@ export const ATTENTION_REASON_META: Record<
   },
   order_review: {
     label: "Sipariş incelemesi",
-    dotClassName: "bg-primary",
-    textClassName: "text-primary-text",
+    dotClassName: "bg-attention",
+    textClassName: "text-attention",
   },
   unanswered_question: {
     label: "Cevaplanamayan soru",
-    dotClassName: "bg-muted-foreground/60",
-    textClassName: "text-muted-foreground",
+    dotClassName: "bg-muted-foreground",
+    textClassName: "text-muted",
   },
 };
 
@@ -176,28 +191,34 @@ export const ATTENTION_REASON_META: Record<
  * never read from here — it comes from the control endpoint's
  * backend-owned `display_name`. Only the tone is a frontend concern.
  *
- * Measured contrast on the seller Dark Workshop surfaces:
- *   primary-text on primary-muted  4.91:1
- *   accent-text  on accent-muted   4.79:1
- *   foreground   on paused-muted  ~10.7:1   (the paused slate text
- *     itself measures only ~3.7:1 on paused-muted, so the paused chip
- *     keeps a foreground label with a slate dot instead)
+ * Working Ledger semantics:
+ *   ASSISTANT_ACTIVE / SELLER_TAKEN_OVER are the ordinary operating
+ *     states, so they stay NEUTRAL — reserving interaction blue for
+ *     selection/action and oxide for review keeps both meaningful.
+ *   RETURN_REVIEW is a genuine seller-review state, so it is the one
+ *     control state that earns oxide.
+ *   ASSISTANT_PAUSED uses the truthful paused/neutral role.
+ *
+ * Measured contrast on the light ledger materials:
+ *   foreground  on recessed        ~11.6:1
+ *   attention   on attention-soft   ~5.0:1
+ *   foreground  on paused-muted    ~11.0:1
  */
 export const CONTROL_STATE_CHIP_TONE: Record<
   ConversationControlState,
   { chipClassName: string; dotClassName: string }
 > = {
   ASSISTANT_ACTIVE: {
-    chipClassName: "bg-primary-muted text-primary-text",
-    dotClassName: "bg-primary",
+    chipClassName: "bg-recessed text-foreground",
+    dotClassName: "bg-muted-foreground",
   },
   SELLER_TAKEN_OVER: {
-    chipClassName: "bg-primary-muted text-primary-text",
-    dotClassName: "bg-primary",
+    chipClassName: "bg-recessed text-foreground",
+    dotClassName: "bg-muted-foreground",
   },
   RETURN_REVIEW: {
-    chipClassName: "bg-accent-muted text-accent-text",
-    dotClassName: "bg-accent",
+    chipClassName: "bg-attention-soft text-attention",
+    dotClassName: "bg-attention",
   },
   ASSISTANT_PAUSED: {
     chipClassName: "bg-paused-muted text-foreground",

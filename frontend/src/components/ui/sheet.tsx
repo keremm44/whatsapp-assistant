@@ -59,11 +59,11 @@ interface SheetContentProps
 
 const sideStyles: Record<SheetSide, string> = {
   right:
-    "inset-y-0 right-0 h-full w-full max-w-md border-l border-border data-[state=open]:animate-slide-in-right",
+    "inset-y-0 right-0 h-full w-full max-w-md border-l border-boundary data-[state=open]:animate-slide-in-right",
   left:
-    "inset-y-0 left-0 h-full w-full max-w-md border-r border-border data-[state=open]:animate-slide-in-left",
+    "inset-y-0 left-0 h-full w-full max-w-md border-r border-boundary data-[state=open]:animate-slide-in-left",
   bottom:
-    "inset-x-0 bottom-0 w-full max-h-[85vh] border-t border-border rounded-t-md data-[state=open]:animate-slide-in-bottom",
+    "inset-x-0 bottom-0 w-full max-h-[85vh] border-t border-boundary rounded-t-floating data-[state=open]:animate-slide-in-bottom",
 };
 
 const SheetContent = React.forwardRef<
@@ -75,7 +75,9 @@ const SheetContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-30 bg-surface p-6 shadow-2 focus-visible:outline-none",
+        // Floating material + real elevation: a Sheet genuinely lifts
+        // off the work sheet, unlike ordinary paper regions.
+        "fixed z-30 bg-floating p-6 shadow-2 focus-visible:outline-none",
         sideStyles[side],
         className,
       )}
@@ -111,7 +113,7 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("pr-8 font-heading text-lg text-foreground", className)}
+    className={cn("pr-8 font-heading text-[18px] font-semibold leading-6 text-foreground", className)}
     {...props}
   />
 ));

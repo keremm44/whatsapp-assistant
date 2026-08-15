@@ -27,11 +27,12 @@ import { SellerTopbar } from "./seller-topbar";
  * Theme:
  *   The root <div> carries the `seller-theme` class. The
  *   `.seller-theme` selector in `src/app/globals.css` overrides
- *   the canonical light-palette CSS variables so every Tailwind
- *   utility inside the seller workspace (e.g. `bg-primary`,
- *   `text-foreground`, `border-border`, `bg-surface`) resolves
- *   to a dark-warm value. Admin, auth, and public surfaces are
- *   outside this wrapper and stay on the light theme.
+ *   the canonical palette CSS variables so every Tailwind utility
+ *   inside the seller workspace resolves to a "Working Ledger"
+ *   value: a low-glare mineral canvas, soft paper work sheets, a
+ *   dark ink navigation spine, interaction blue and oxide seller
+ *   attention. Admin, auth and public surfaces sit outside this
+ *   wrapper and are untouched — the dark chrome is seller-only.
  */
 export function SellerShell({
   children,
@@ -53,7 +54,7 @@ export function SellerShell({
   assistantNotice?: AssistantStatusNotice | null;
 }) {
   return (
-    <div className="seller-theme min-h-screen bg-background text-foreground">
+    <div className="seller-theme min-h-screen bg-canvas text-foreground">
       <div className="flex">
         <SellerSidebar />
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
@@ -61,21 +62,24 @@ export function SellerShell({
           <main className="flex-1 pb-20 md:pb-10">
             {assistantNotice !== null ? (
               <PageContainer size="wide" className="pt-4">
+                {/* Oxide here is truthful: the notice only renders for a
+                    genuinely non-normal backend assistant state, which is
+                    exactly the "seller attention" semantic. */}
                 <div
                   role="status"
-                  className="flex items-start gap-3 rounded-md border border-border border-l-2 border-l-accent bg-surface px-4 py-3 shadow-surface"
+                  className="flex items-start gap-3 rounded-sheet border-l-[3px] border-l-attention bg-attention-soft px-4 py-3"
                 >
                   <CircleAlert
                     aria-hidden="true"
                     size={16}
                     strokeWidth={1.75}
-                    className="mt-0.5 shrink-0 text-accent-text"
+                    className="mt-0.5 shrink-0 text-attention"
                   />
                   <div className="min-w-0 space-y-0.5">
-                    <p className="text-[13.5px] font-semibold leading-snug text-foreground">
+                    <p className="type-row-primary text-foreground">
                       {assistantNotice.title}
                     </p>
-                    <p className="text-[13px] leading-relaxed text-muted-foreground">
+                    <p className="type-row-secondary text-muted">
                       {assistantNotice.description}
                     </p>
                   </div>

@@ -3,34 +3,56 @@
 @tailwind utilities;
 
 /*
- * Self-hosted font files (Manrope, Source Sans 3) live in /public/fonts.
- * Drop the WOFF2 files there and uncomment the rules below to switch from
- * the system fallback to the canonical typography. The system stack was
- * chosen to preserve the calm, humanist character of the Sakin Ustalık
- * design even when the real font files are not yet in place.
+ * TYPOGRAPHY / FONT LOADING DECISION — Working Ledger pilot
+ * --------------------------------------------------------
+ * The approved art direction asks for IBM Plex Serif (page titles,
+ * record identity) + IBM Plex Sans (everything else).
+ *
+ * There are currently NO trusted local font assets in this repo:
+ * `frontend/public/` does not exist, no WOFF2 files are vendored, and
+ * the project has no `next/font` integration. Per the pilot brief we
+ * therefore DO NOT fetch arbitrary font binaries and DO NOT add a
+ * remote @import (both are production risks: CDN dependency, FOUT,
+ * license/provenance ambiguity, offline build failure).
+ *
+ * What IS implemented here is the typography ROLE ARCHITECTURE and
+ * the macro SCALE, expressed through three families:
+ *
+ *   --font-title  serif stack   page H1 + major record identity only
+ *   --font-heading sans stack   section headings, UI headings
+ *   --font-body   sans stack    navigation, controls, body, lists
+ *
+ * Each stack names "IBM Plex Serif" / "IBM Plex Sans" FIRST, so the
+ * day real self-hosted assets land (drop WOFF2 into public/fonts and
+ * uncomment the @font-face rules below) the whole product upgrades
+ * with zero component changes. Until then the system fallbacks carry
+ * the same role split, so the macro typographic improvement is real
+ * even without the final assets.
  */
 /*
 @font-face {
-  font-family: "Manrope";
-  src: url("/fonts/Manrope-latin.woff2") format("woff2");
+  font-family: "IBM Plex Sans";
+  src: url("/fonts/IBMPlexSans-latin.woff2") format("woff2");
   font-weight: 400 700;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "Source Sans 3";
-  src: url("/fonts/SourceSans3-latin.woff2") format("woff2");
-  font-weight: 400 700;
+  font-family: "IBM Plex Serif";
+  src: url("/fonts/IBMPlexSerif-latin.woff2") format("woff2");
+  font-weight: 400 600;
   font-style: normal;
   font-display: swap;
 }
 */
 
 :root {
-  /* Typography */
-  --font-heading: "Manrope", ui-sans-serif, system-ui, -apple-system,
+  /* Typography — three roles, IBM Plex first, safe fallbacks after. */
+  --font-title: "IBM Plex Serif", ui-serif, Georgia, "Times New Roman",
+    "Noto Serif", serif;
+  --font-heading: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", "Helvetica Neue", sans-serif;
-  --font-body: "Source Sans 3", ui-sans-serif, system-ui, -apple-system,
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", "Helvetica Neue", sans-serif;
 
   /* Canonical light material hierarchy: canvas, persistent chrome,
@@ -142,12 +164,51 @@
   --color-paused-muted: #e6e9ec;
   --color-paused-muted-rgb: 230 233 236;
 
+  /*
+   * MATERIAL ROLES (canonical names used by the Working Ledger
+   * pilot). On the light root theme these alias the existing
+   * canonical values so admin / auth / public surfaces are
+   * unchanged; the seller theme gives each one a real material.
+   *
+   *   canvas    the page field the work sits on
+   *   paper     the ordinary work sheet
+   *   recessed  material that sits behind/below paper
+   *   floating  dialogs, sheets, media preview — real elevation
+   *   chrome    persistent navigation material
+   *   boundary  the one strong structural edge
+   */
+  --color-canvas: #f6f4ef;
+  --color-canvas-rgb: 246 244 239;
+  --color-paper: #ffffff;
+  --color-paper-rgb: 255 255 255;
+  --color-recessed: #eef2ef;
+  --color-recessed-rgb: 238 242 239;
+  --color-floating: #ffffff;
+  --color-floating-rgb: 255 255 255;
+  --color-chrome-hover: #f2efe8;
+  --color-chrome-hover-rgb: 242 239 232;
+  --color-chrome-foreground: #24302e;
+  --color-chrome-foreground-rgb: 36 48 46;
+  --color-boundary: #c8d0cb;
+  --color-boundary-rgb: 200 208 203;
+  /* Seller-attention (oxide) role. On light root it aliases the
+   * existing clay family; the seller theme owns the real oxide. */
+  --color-attention: #9a4f3a;
+  --color-attention-rgb: 154 79 58;
+  --color-attention-soft: #eed8cf;
+  --color-attention-soft-rgb: 238 216 207;
+
   /* Radius */
   --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-pill: 999px;
+  /* Working Ledger geometry: controls are crisp, work sheets are
+   * softly squared, only genuinely floating objects get more. */
+  --radius-control: 4px;
+  --radius-sheet: 6px;
+  --radius-floating: 10px;
 
   /* Shadows */
   --shadow-none: none;
@@ -165,128 +226,187 @@
 }
 
 /*
- * SELLER WORKSPACE — SESSİZ ATÖLYE / QUIET WORKSHOP OVERRIDE
+ * SELLER WORKSPACE — THE WORKING LEDGER / İŞ DEFTERİ (pilot)
  *
  * The seller workspace lives under `.seller-theme` (set on the root
  * <div> in `seller-shell.tsx`). Every value here overrides the
- * canonical Sakin Ustalık v2 light palette ONLY for the seller
- * subtree. Admin, auth, public, and shared surfaces stay on the
- * light theme; nothing outside the seller workspace reads these
- * variables.
+ * canonical light palette ONLY for the seller subtree. Admin, auth,
+ * public and shared surfaces stay on the root theme; nothing outside
+ * the seller workspace reads these variables. In particular the DARK
+ * navigation chrome below is seller-only — the root `--color-chrome`
+ * remains a light value.
  *
- * Carbon Plum uses one low-chroma carbon family for shell, canvas, neutral
- * work and inset controls. Its character belongs to the whole field, never
- * one decorative panel. Petrol remains active; clay remains seller attention.
+ * The model is a contemporary merchant's working ledger:
+ *
+ *   1. a dark ink navigation spine        (chrome)
+ *   2. a low-glare mineral canvas          (canvas / background)
+ *   3. soft paper work sheets              (paper / surface)
+ *   4. blue interaction and selection      (primary)
+ *   5. oxide seller-attention flags        (attention / accent)
+ *
+ * Color describes STATE, never content type. Blue means selected /
+ * active / navigation / focus / primary action. Oxide means
+ * backend-supported seller attention. Success, paused and
+ * destructive appear only where the backend truthfully supports them.
  */
 .seller-theme {
-  /* Carbon Plum pilot.
-   * Near-neutral plum carbon gains value as material comes forward; no panel
-   * is chromatic enough to read as mauve. Only selected gains petrol chroma. */
-  --color-background: #211a20;
-  --color-background-rgb: 33 26 32;
-  --color-chrome: #151416;
-  --color-chrome-rgb: 21 20 22;
-  --color-surface: #2a262a;
-  --color-surface-rgb: 42 38 42;
-  --color-surface-2: #353035;
-  --color-surface-2-rgb: 53 48 53;
-  --color-selected: #243e39;
-  --color-selected-rgb: 36 62 57;
-  --color-control: #191719;
-  --color-control-rgb: 25 23 25;
-  /* Carbon-neutral boundaries are explicit only where controls/overlays need
-   * an edge; divider is the quieter record and section rule. */
-  --color-border: #474146;
-  --color-border-rgb: 71 65 70;
-  --color-divider: #393439;
-  --color-divider-rgb: 57 52 57;
+  /* --- Material ------------------------------------------------- */
+  /* Canvas: low-glare mineral field, deliberately below paper so the
+   * work sheets read as objects laid on a desk. */
+  --color-canvas: #ecece7;
+  --color-canvas-rgb: 236 236 231;
+  --color-background: #ecece7;
+  --color-background-rgb: 236 236 231;
 
-  /* Text roles stay warm-neutral against the cohesive mineral materials;
-   * tertiary remains neutral and AA on the selected plane. */
-  --color-foreground: #f2eee6;
-  --color-foreground-rgb: 242 238 230;
-  --color-muted: #c7c6c0;
-  --color-muted-rgb: 199 198 192;
-  --color-muted-foreground: #a1a59f;
-  --color-muted-foreground-rgb: 161 165 159;
+  /* Paper: the ordinary work sheet. Warm off-white, never pure white,
+   * so long sessions do not glare. */
+  --color-paper: #f8f7f3;
+  --color-paper-rgb: 248 247 243;
+  --color-surface: #f8f7f3;
+  --color-surface-rgb: 248 247 243;
 
-  /* Primary (petrol) — brighter so it reads on dark surfaces */
-  --color-primary: #4a8b84;
-  --color-primary-rgb: 74 139 132;
-  --color-primary-hover: #60a29a;
-  --color-primary-hover-rgb: 96 162 154;
-  --color-primary-active: #356b65;
-  --color-primary-active-rgb: 53 107 101;
-  --color-primary-muted: #20433f;
-  --color-primary-muted-rgb: 32 67 63;
-  --color-primary-foreground: #f2eee6;
-  --color-primary-foreground-rgb: 242 238 230;
-  /* Base petrol is structural (rails, marks and icons). The lighter
-   * primary-text role carries readable petrol copy on dark materials. */
-  --color-primary-text: #83c1ba;
-  --color-primary-text-rgb: 131 193 186;
-  /* Filled primary controls use a darker petrol step so warm foreground
-   * labels remain AA; hover lifts within the same restrained family. */
-  --color-primary-button: #2e625c;
-  --color-primary-button-rgb: 46 98 92;
-  --color-primary-button-hover: #376f69;
-  --color-primary-button-hover-rgb: 55 111 105;
+  /* Recessed: material that sits behind paper (the conversation
+   * queue, inset regions, quiet fills). */
+  --color-recessed: #e4e6e4;
+  --color-recessed-rgb: 228 230 228;
+  --color-surface-2: #e4e6e4;
+  --color-surface-2-rgb: 228 230 228;
 
-  /* Accent (terracotta) — warm character, brighter for dark */
-  --color-accent: #b85e42;
-  --color-accent-rgb: 184 94 66;
-  --color-accent-dark: #cf7354;
-  --color-accent-dark-rgb: 207 115 84;
-  --color-accent-muted: #3b2923;
-  --color-accent-muted-rgb: 59 41 35;
-  --color-accent-foreground: #f2eee6;
-  --color-accent-foreground-rgb: 242 238 230;
-  /* Clay text role: small terracotta copy on dark clay surfaces
-   * (e.g. seller-attention copy on accent-muted) measures ~4.3:1
-   * with accent-dark, just below AA. accent-text is the same clay at
-   * a brighter value: ~5.0:1 on accent-muted surfaces. Terracotta's
-   * hue and structural tones are unchanged. */
-  --color-accent-text: #d9825f;
-  --color-accent-text-rgb: 217 130 95;
+  /* Floating: dialogs, Sheets, media preview. The only pure white in
+   * the workspace, and only for things that genuinely lift. */
+  --color-floating: #ffffff;
+  --color-floating-rgb: 255 255 255;
 
-  /* Functional states tuned for dark readability */
-  --color-success: #5fa37f;
-  --color-success-rgb: 95 163 127;
-  --color-success-muted: #1f3a2c;
-  --color-success-muted-rgb: 31 58 44;
-  --color-info: #6f93c0;
-  --color-info-rgb: 111 147 192;
-  --color-info-muted: #1d2e44;
-  --color-info-muted-rgb: 29 46 68;
-  --color-warning: #d49a4f;
-  --color-warning-rgb: 212 154 79;
-  --color-warning-muted: #3a2d18;
-  --color-warning-muted-rgb: 58 45 24;
-  /* The `review` semantic state visually joins the main clay
-   * family in the dark workshop: the previous #B56F5A sat only
-   * ~13 ΔE from the terracotta accent, so two near-identical clay
-   * tones carried no extra meaning. One warm clay family now owns
-   * the semantics; the semantic role name is preserved. */
-  --color-review: #b85e42;
-  --color-review-rgb: 184 94 66;
-  --color-review-muted: #3b2923;
-  --color-review-muted-rgb: 59 41 35;
-  --color-destructive: #d36767;
-  --color-destructive-rgb: 211 103 103;
-  --color-destructive-muted: #3a1f1f;
-  --color-destructive-muted-rgb: 58 31 31;
-  --color-destructive-foreground: #f2eee6;
-  --color-destructive-foreground-rgb: 242 238 230;
-  --color-paused: #7d8a96;
-  --color-paused-rgb: 125 138 150;
-  --color-paused-muted: #2b3138;
-  --color-paused-muted-rgb: 43 49 56;
+  /* Chrome: the dark ink navigation spine. Seller-only. */
+  --color-chrome: #202830;
+  --color-chrome-rgb: 32 40 48;
+  --color-chrome-hover: #2a3540;
+  --color-chrome-hover-rgb: 42 53 64;
+  --color-chrome-foreground: #f4f1ea;
+  --color-chrome-foreground-rgb: 244 241 234;
 
-  /* Elevation is reserved for overlays and genuinely forward objects.
-   * Ordinary work surfaces remain flat and derive depth from tone. */
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.45);
-  /* Shared work surfaces do not float. */
+  /* Controls sit on floating white against paper so an input reads as
+   * a place to type, not as another sheet. */
+  --color-control: #ffffff;
+  --color-control-rgb: 255 255 255;
+
+  /* --- Structure ------------------------------------------------- */
+  /* Divider is the ordinary rule between records and sections;
+   * boundary/border is the single strong structural edge. */
+  --color-divider: #d5d7d2;
+  --color-divider-rgb: 213 215 210;
+  --color-boundary: #b8bdb8;
+  --color-boundary-rgb: 184 189 184;
+  --color-border: #b8bdb8;
+  --color-border-rgb: 184 189 184;
+
+  /* --- Ink -------------------------------------------------------- */
+  --color-foreground: #20272d;
+  --color-foreground-rgb: 32 39 45;
+  --color-muted: #56616a;
+  --color-muted-rgb: 86 97 106;
+  /* Tertiary ink is perceptually tuned from the #667178 baseline to
+   * #5E686F: the baseline measured 3.99:1 on recessed material and
+   * ~4.1:1 on the selected fill, i.e. below AA for the 12px metadata
+   * role that actually uses it. #5E686F holds >= 4.5:1 on canvas,
+   * paper, recessed AND selected while staying the same neutral hue. */
+  --color-muted-foreground: #5e686f;
+  --color-muted-foreground-rgb: 94 104 111;
+
+  /* --- Interaction (blue) ----------------------------------------- */
+  /* Selected, active, navigation, focus, primary action. Nothing
+   * else. */
+  --color-primary: #285b82;
+  --color-primary-rgb: 40 91 130;
+  --color-primary-hover: #204866;
+  --color-primary-hover-rgb: 32 72 102;
+  --color-primary-active: #1a3b55;
+  --color-primary-active-rgb: 26 59 85;
+  /* Interaction-soft tuned from #DDEAF2 to #D9E7F1: against the
+   * RECESSED queue material the baseline separated by only ΔE 6.4,
+   * so a selected row read as a rendering artefact rather than a
+   * state. #D9E7F1 reaches ΔE 7.4 while every ink role on it
+   * (including oxide, which must be able to coexist with selection)
+   * still measures >= 4.5:1. */
+  --color-primary-muted: #d9e7f1;
+  --color-primary-muted-rgb: 217 231 241;
+  --color-primary-foreground: #ffffff;
+  --color-primary-foreground-rgb: 255 255 255;
+  /* On the light ledger the readable text step and the filled control
+   * step are the same blue: it measures ~7:1 on paper and ~7.3:1
+   * under white, so no separate step is needed. */
+  --color-primary-text: #285b82;
+  --color-primary-text-rgb: 40 91 130;
+  --color-primary-button: #285b82;
+  --color-primary-button-rgb: 40 91 130;
+  --color-primary-button-hover: #204866;
+  --color-primary-button-hover-rgb: 32 72 102;
+  /* Interaction-soft: the fill of a selected row / assistant block. */
+  --color-selected: #d9e7f1;
+  --color-selected-rgb: 217 231 241;
+
+  /* --- Seller attention (oxide) ------------------------------------ */
+  /* Oxide is reserved for backend-supported seller attention,
+   * review and intervention. It is never a logo color, a hairline,
+   * a section label or an ordinary icon tint. */
+  --color-attention: #a9432c;
+  --color-attention-rgb: 169 67 44;
+  --color-attention-soft: #f3e1da;
+  --color-attention-soft-rgb: 243 225 218;
+  /* The existing `accent` and `review` token families are the same
+   * single oxide semantic; the names are preserved so no route
+   * outside the pilot has to change. */
+  --color-accent: #a9432c;
+  --color-accent-rgb: 169 67 44;
+  --color-accent-dark: #8f3724;
+  --color-accent-dark-rgb: 143 55 36;
+  --color-accent-muted: #f3e1da;
+  --color-accent-muted-rgb: 243 225 218;
+  --color-accent-foreground: #ffffff;
+  --color-accent-foreground-rgb: 255 255 255;
+  --color-accent-text: #8f3724;
+  --color-accent-text-rgb: 143 55 36;
+  --color-review: #a9432c;
+  --color-review-rgb: 169 67 44;
+  --color-review-muted: #f3e1da;
+  --color-review-muted-rgb: 243 225 218;
+
+  /* --- Truthful functional states ---------------------------------- */
+  --color-success: #2e6b4c;
+  --color-success-rgb: 46 107 76;
+  --color-success-muted: #deece3;
+  --color-success-muted-rgb: 222 236 227;
+  /* `info` is deliberately the interaction blue family: the ledger has
+   * one blue, and a second near-blue would read as a new meaning. */
+  --color-info: #285b82;
+  --color-info-rgb: 40 91 130;
+  --color-info-muted: #d9e7f1;
+  --color-info-muted-rgb: 217 231 241;
+  --color-warning: #8a6320;
+  --color-warning-rgb: 138 99 32;
+  --color-warning-muted: #f0e7d6;
+  --color-warning-muted-rgb: 240 231 214;
+  --color-destructive: #b1383e;
+  --color-destructive-rgb: 177 56 62;
+  --color-destructive-muted: #f2dedf;
+  --color-destructive-muted-rgb: 242 222 223;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-foreground-rgb: 255 255 255;
+  /* Paused tuned from #68717A to #5E6770: the baseline measured
+   * 4.00:1 on its own soft surface, just under AA; this step
+   * measures 4.63:1 while staying the same neutral slate. */
+  --color-paused: #5e6770;
+  --color-paused-rgb: 94 103 112;
+  --color-paused-muted: #e4e7ea;
+  --color-paused-muted-rgb: 228 231 234;
+
+  /* --- Elevation ---------------------------------------------------- */
+  /* Ordinary work sheets are flat: they are separated by material and
+   * rules, not by shadow. Elevation is reserved for genuinely
+   * floating objects (dialogs, Sheets, previews). */
+  --shadow-1: 0 1px 2px rgba(32, 39, 45, 0.06);
+  --shadow-2: 0 16px 40px rgba(32, 39, 45, 0.18),
+    0 2px 6px rgba(32, 39, 45, 0.08);
   --shadow-surface: none;
 }
 
@@ -315,6 +435,13 @@
     line-height: 1.25;
   }
 
+  /*
+   * The ledger keeps a real serif/sans role split. Serif is applied
+   * explicitly (via `font-title` or the `.type-page-title` /
+   * `.type-record-identity` roles), never blanket-applied to every
+   * heading — section headings and UI headings stay sans.
+   */
+
   /* Visible focus ring for keyboard users. Never remove without replacement. */
   :focus-visible {
     outline: 2px solid var(--color-primary);
@@ -337,15 +464,89 @@
   }
 }
 
+@layer components {
+  /*
+   * TYPOGRAPHY ROLE ARCHITECTURE — the Working Ledger scale.
+   *
+   * These are semantic ROLES, not ad-hoc sizes. Components reference
+   * the role; the role owns size, leading, weight and family. That is
+   * what lets IBM Plex land later without touching components.
+   *
+   *   type-page-title       page H1            38/42 desktop, 32/36 mobile, serif
+   *   type-section          major section      24/30 sans
+   *   type-record-identity  record/detail id   20/26 serif
+   *   type-body             UI body copy       15/22 sans
+   *   type-row-primary      dense row primary  14/20 semibold sans
+   *   type-row-secondary    dense row support  13/19 sans
+   *   type-meta             metadata           12/17 sans
+   *
+   * Sentence case is the default everywhere; uppercase micro-captions
+   * are deliberately not part of this scale.
+   */
+  .type-page-title {
+    font-family: var(--font-title);
+    font-size: 32px;
+    line-height: 36px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  @media (min-width: 640px) {
+    .type-page-title {
+      font-size: 38px;
+      line-height: 42px;
+    }
+  }
+
+  .type-section {
+    font-family: var(--font-heading);
+    font-size: 24px;
+    line-height: 30px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+
+  .type-record-identity {
+    font-family: var(--font-title);
+    font-size: 20px;
+    line-height: 26px;
+    font-weight: 600;
+  }
+
+  .type-body {
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 22px;
+  }
+
+  .type-row-primary {
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+  }
+
+  .type-row-secondary {
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 19px;
+  }
+
+  .type-meta {
+    font-family: var(--font-body);
+    font-size: 12px;
+    line-height: 17px;
+  }
+}
+
 @layer utilities {
   /*
    * Quiet contained-scroll scrollbar for the Conversations workbench.
    *
    * The desktop workbench intentionally uses independent internal
    * scroll regions (queue / timeline / context rail). The native
-   * browser scrollbar renders as a bright white/light control that
-   * does not belong to the dark workshop environment, so contained
-   * regions opt into this utility instead.
+   * default browser scrollbar renders as a heavy control that pulls
+   * attention away from the work, so contained regions opt into this
+   * quieter one instead.
    *
    * Token discipline: the thumb comes from the muted-foreground
    * family (a neutral, non-status tone) over a transparent track, so

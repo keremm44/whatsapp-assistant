@@ -1,5 +1,5 @@
 /**
- * Sakin Ustalık design tokens — canonical source of truth.
+ * Design tokens — canonical source of truth.
  *
  * These constants are referenced from tailwind.config.ts (via CSS
  * variables declared in src/app/globals.css). Do not duplicate hex
@@ -108,7 +108,69 @@ export const designTokens = {
     },
   },
 
+  /**
+   * SELLER WORKSPACE — "The Working Ledger / İş Defteri" pilot.
+   *
+   * These are the seller-only material and semantic roles applied by
+   * the `.seller-theme` override in src/app/globals.css. They are
+   * recorded here as the art-direction source of truth; components
+   * consume them through Tailwind semantic classes (bg-canvas,
+   * bg-paper, bg-recessed, bg-chrome, text-attention, …), never as
+   * raw hex.
+   */
+  sellerLedger: {
+    material: {
+      canvas: color("#ECECE7", "low-glare mineral canvas"),
+      paper: color("#F8F7F3", "primary work sheet"),
+      floating: color("#FFFFFF", "dialogs / sheets / preview only"),
+      recessed: color("#E4E6E4", "material behind paper"),
+    },
+    chrome: {
+      DEFAULT: color("#202830", "dark ink navigation spine"),
+      hover: color("#2A3540"),
+      foreground: color("#F4F1EA"),
+    },
+    ink: {
+      primary: color("#20272D"),
+      secondary: color("#56616A"),
+      // Perceptually tuned from the #667178 baseline so the 12px
+      // metadata role clears AA on recessed and selected material.
+      tertiary: color("#5E686F"),
+    },
+    structure: {
+      divider: color("#D5D7D2", "ordinary record/section rule"),
+      boundary: color("#B8BDB8", "one strong structural edge"),
+    },
+    /** Blue = selected / active / navigation / focus / primary action. */
+    interaction: {
+      DEFAULT: color("#285B82"),
+      hover: color("#204866"),
+      // Tuned from the #DDEAF2 baseline so a selected row separates
+      // from the recessed queue material (ΔE 6.4 -> 7.4).
+      soft: color("#D9E7F1"),
+    },
+    /** Oxide = backend-supported seller attention / review only. */
+    attention: {
+      DEFAULT: color("#A9432C"),
+      soft: color("#F3E1DA"),
+    },
+    state: {
+      success: color("#2E6B4C"),
+      successSoft: color("#DEECE3"),
+      // Tuned from the #68717A baseline to clear AA on paused-soft.
+      paused: color("#5E6770"),
+      pausedSoft: color("#E4E7EA"),
+      destructive: color("#B1383E"),
+      destructiveSoft: color("#F2DEDF"),
+    },
+  },
+
   radius: {
+    /** Geometry roles: crisp controls, softly squared work sheets,
+     *  and real radius only for genuinely floating objects. */
+    control: "4px",
+    sheet: "6px",
+    floating: "10px",
     xs: "6px",
     sm: "8px",
     md: "12px",
@@ -131,9 +193,29 @@ export const designTokens = {
     12: "96px",
   },
 
+  /**
+   * Typography roles. IBM Plex Serif carries page titles and record
+   * identity; IBM Plex Sans carries everything operational. See the
+   * font-loading decision at the top of src/app/globals.css — no real
+   * Plex assets are vendored yet, so the stacks fall back safely
+   * while the role architecture and scale are already in force.
+   */
   font: {
-    heading: "Manrope",
-    body: "Source Sans 3",
+    title: "IBM Plex Serif",
+    heading: "IBM Plex Sans",
+    body: "IBM Plex Sans",
+  },
+
+  /** Macro type scale (px / line-height px). */
+  typeScale: {
+    pageTitleDesktop: { size: 38, leading: 42 },
+    pageTitleMobile: { size: 32, leading: 36 },
+    section: { size: 24, leading: 30 },
+    recordIdentity: { size: 20, leading: 26 },
+    body: { size: 15, leading: 22 },
+    rowPrimary: { size: 14, leading: 20 },
+    rowSecondary: { size: 13, leading: 19 },
+    meta: { size: 12, leading: 17 },
   },
 
   fontSize: {
