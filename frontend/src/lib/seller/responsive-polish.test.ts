@@ -149,6 +149,14 @@ test("quiet workshop uses tone instead of card borders and surface shadows", () 
   const css = read("../../app/globals.css");
   const sellerBlock = css.slice(css.indexOf(".seller-theme {"));
   assert.match(sellerBlock, /--shadow-surface: none/);
+  assert.match(sellerBlock, /--color-chrome-rgb: 14 17 16/);
+  assert.match(sellerBlock, /--color-background-rgb: 25 27 25/);
+  assert.match(sellerBlock, /--color-surface-rgb: 37 40 39/);
+  assert.match(sellerBlock, /--color-surface-2-rgb: 44 57 54/);
+  assert.match(sellerBlock, /--color-border-rgb: 60 64 62/);
+  assert.match(sellerBlock, /--color-divider-rgb: 50 53 50/);
+  assert.match(sellerBlock, /\.seller-theme :is\(/);
+  assert.match(sellerBlock, /background-color: rgb\(var\(--color-background-rgb\)\)/);
 
   const workbench = read(
     "../../components/seller/conversations/conversations-workbench.tsx",

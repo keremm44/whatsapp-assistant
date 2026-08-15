@@ -180,36 +180,34 @@
  * gives the UI its tactile, workshop-material feel.
  */
 .seller-theme {
-  /* Surfaces — one warm charcoal field with three meaningful depths.
-   * Chrome is the deepest shell, background is the continuous work canvas,
-   * surface groups related records, and surface-2 marks hover/selection.
-   * The steps are intentionally close: typography, spacing and quiet rules
-   * do most of the organizing instead of outlined floating cards. */
-  --color-background: #151a18;
-  --color-background-rgb: 21 26 24;
-  --color-chrome: #101513;
-  --color-chrome-rgb: 16 21 19;
-  --color-surface: #1c2320;
-  --color-surface-rgb: 28 35 32;
-  --color-surface-2: #252e2a;
-  --color-surface-2-rgb: 37 46 42;
-  /* Boundaries — deliberately quiet. The border marks a real
-   * component edge without competing with content (selected/hover
-   * states still lift via border-primary/40 etc.); the divider is a
-   * visibly softer internal separator, never a second outline. */
-  --color-border: #39443f;
-  --color-border-rgb: 57 68 63;
-  --color-divider: #2b3430;
-  --color-divider-rgb: 43 52 48;
+  /* Surfaces — six calm material roles built from the existing charcoal
+   * and petrol family. Chrome is deepest and neutral; background is the
+   * warm page canvas; surface is the clearer working plane; surface-2 is
+   * the subtly petrol-biased selected/raised step. Form controls use the
+   * inset background step below, while neutral boundaries stay quiet. */
+  --color-background: #191b19;
+  --color-background-rgb: 25 27 25;
+  --color-chrome: #0e1110;
+  --color-chrome-rgb: 14 17 16;
+  --color-surface: #252827;
+  --color-surface-rgb: 37 40 39;
+  --color-surface-2: #2c3936;
+  --color-surface-2-rgb: 44 57 54;
+  /* Boundaries are neutral rather than green. Border defines real control
+   * edges; divider is the softer internal rule between records/sections. */
+  --color-border: #3c403e;
+  --color-border-rgb: 60 64 62;
+  --color-divider: #323532;
+  --color-divider-rgb: 50 53 50;
 
-  /* Text — warm off-white, THREE deliberate roles:
+  /* Text — warm off-white, THREE deliberate roles (values unchanged):
    *   foreground        #F2EEE6 — primary: titles, record identity,
-   *                     important values (≈13.9:1 on surface)
+   *                     important values (≈12.9:1 on surface)
    *   muted             #C0C2BC — secondary: neutral supporting copy
-   *                     the seller reads normally (≈8.9:1 on surface)
+   *                     the seller reads normally (≈8.3:1 on surface)
    *   muted-foreground  #9EA19B — tertiary: timestamps and quiet
-   *                     auxiliary metadata (≈6.1:1 on surface),
-   *                     lighter but still clearly below secondary */
+   *                     auxiliary metadata (≈5.7:1 on surface),
+   *                     clearly below secondary while remaining AA */
   --color-foreground: #f2eee6;
   --color-foreground-rgb: 242 238 230;
   --color-muted: #c0c2bc;
@@ -302,6 +300,19 @@
   --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.45);
   /* Shared work surfaces do not float. */
   --shadow-surface: none;
+}
+
+/* Textual controls are inset into the canvas tone instead of disappearing
+ * into a surrounding work surface. Selection controls keep their native or
+ * component-owned treatment. This remains seller-only and token-driven. */
+.seller-theme :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+        [type="file"]
+      ):not([type="hidden"]):not([type="button"]):not([type="submit"]),
+    select,
+    textarea
+  ) {
+  background-color: rgb(var(--color-background-rgb));
 }
 
 @layer base {
