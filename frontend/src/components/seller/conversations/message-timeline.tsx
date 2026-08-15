@@ -239,7 +239,7 @@ export function MessageTimeline({
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 py-12 text-center">
         <p className="text-sm font-medium text-foreground">
-          Bu konuşmada henüz mesaj yok
+          Bu WhatsApp konuşmasında henüz mesaj yok
         </p>
         <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
           Mesajlar geldiğinde konuşma geçmişi burada görünür.
@@ -334,7 +334,7 @@ function MessageBubble({
         >
           {!isIncoming && message.wasAutoReplied ? (
             <p className="pb-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-primary-text">
-              Asistan
+              Asistan yanıtı
             </p>
           ) : null}
           {message.mediaAvailable ? (

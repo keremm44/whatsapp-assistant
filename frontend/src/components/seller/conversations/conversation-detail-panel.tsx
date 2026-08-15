@@ -3,7 +3,7 @@
 import * as React from "react";
 import type { Route } from "next";
 import Link from "next/link";
-import { ArrowLeft, PanelRight } from "lucide-react";
+import { ArrowLeft, MessageCircle, PanelRight } from "lucide-react";
 
 import {
   Sheet,
@@ -70,6 +70,7 @@ export function ConversationDetailPanel({
   );
 
   const display = getConversationCustomerDisplay(detail.customer);
+  const whatsappNumber = detail.customer.whatsappNumber?.trim() || null;
   const moderationNote = detail.customer.isBlocked
     ? "Bu numara sistem tarafından engellenmiş durumda."
     : detail.customer.isMuted
@@ -102,11 +103,24 @@ export function ConversationDetailPanel({
               >
                 {display.primary}
               </h2>
-              {display.secondary ? (
-                <p className="truncate text-xs text-muted-foreground">
-                  {display.secondary}
-                </p>
-              ) : null}
+              <p
+                className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
+                title={whatsappNumber ?? "WhatsApp"}
+              >
+                <MessageCircle
+                  aria-hidden="true"
+                  size={13}
+                  strokeWidth={1.75}
+                  className="shrink-0 text-primary-text"
+                />
+                <span className="shrink-0 font-medium text-muted">WhatsApp</span>
+                {whatsappNumber ? (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span className="truncate tabular-nums">{whatsappNumber}</span>
+                  </>
+                ) : null}
+              </p>
               {moderationNote ? (
                 <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
                   {moderationNote}

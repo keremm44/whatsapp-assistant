@@ -18,7 +18,7 @@ import { resolveConversationListFromSession } from "@/lib/seller/conversations-s
  * param) is the default "Tümü" view (attention_only=false). The
  * backend owns the ordering; the frontend never re-sorts.
  *
- * On desktop the center column shows the calm "Bir konuşma seçin"
+ * On desktop the center column shows the calm "Bir WhatsApp konuşması seçin"
  * state; on mobile this route is the queue itself and the detail
  * lives at /seller/conversations/[customerId].
  */
@@ -49,7 +49,7 @@ export default async function SellerConversationsPage({
         center={
           <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-6 py-16 text-center">
             <p className="text-sm font-medium text-foreground">
-              Bir konuşma seçin
+              Bir WhatsApp konuşması seçin
             </p>
             <p className="max-w-sm text-[13px] leading-relaxed text-muted-foreground">
               Mesaj geçmişini, konuşmanın kimin sorumluluğunda olduğunu

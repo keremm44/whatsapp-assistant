@@ -175,3 +175,44 @@ test("selected conversation keeps a petrol rail plus a tonal lift", () => {
   assert.match(row, /isSelected && "bg-surface-2\/80"/);
   assert.match(row, /rounded-r-full bg-primary/);
 });
+
+/* ------------------------------------------------------------------ */
+/* 8. Conversations channel identity                                  */
+/* ------------------------------------------------------------------ */
+
+test("conversation queue and detail header identify WhatsApp without a brand logo", () => {
+  const queue = read(
+    "../../components/seller/conversations/conversation-list-panel.tsx",
+  );
+  const detail = read(
+    "../../components/seller/conversations/conversation-detail-panel.tsx",
+  );
+
+  assert.match(queue, /aria-label="Kanal: WhatsApp"/);
+  assert.match(queue, /<MessageCircle[^>]*aria-hidden="true"/);
+  assert.match(detail, />WhatsApp<\/span>/);
+  assert.match(detail, /detail\.customer\.whatsappNumber\?\.trim\(\)/);
+  assert.match(detail, /\{whatsappNumber\}/);
+  // The channel line is part of the shared detail header, not hidden on mobile.
+  assert.doesNotMatch(detail, /WhatsApp<\/span>[^]*md:hidden/);
+});
+
+test("conversation orientation states name the WhatsApp channel", () => {
+  const indexPage = read("../../app/seller/conversations/page.tsx");
+  const timeline = read(
+    "../../components/seller/conversations/message-timeline.tsx",
+  );
+
+  assert.match(indexPage, /Bir WhatsApp konuşması seçin/);
+  assert.match(timeline, /Bu WhatsApp konuşmasında henüz mesaj yok/);
+});
+
+test("assistant authorship remains evidence-gated and never invents a seller", () => {
+  const timeline = read(
+    "../../components/seller/conversations/message-timeline.tsx",
+  );
+
+  assert.match(timeline, /!isIncoming && message\.wasAutoReplied \? \(/);
+  assert.match(timeline, /Asistan yanıtı/);
+  assert.doesNotMatch(timeline, />\s*Satıcı\s*</);
+});

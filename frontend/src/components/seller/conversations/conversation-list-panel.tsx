@@ -4,6 +4,7 @@ import * as React from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { MessageCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -193,18 +194,27 @@ export function ConversationListPanel({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="space-y-3 px-4 pb-3 pt-4 md:pt-5">
-        <div className="flex items-baseline justify-between gap-3">
-          <h1 className="font-heading text-base font-semibold text-foreground">
-            Konuşmalar
-          </h1>
-          {ready ? (
-            <span
-              className="text-xs tabular-nums text-muted-foreground"
-              aria-label={`Toplam ${total} konuşma`}
-            >
-              {total}
-            </span>
-          ) : null}
+        <div className="space-y-1.5">
+          <p
+            className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-primary-text"
+            aria-label="Kanal: WhatsApp"
+          >
+            <MessageCircle aria-hidden="true" size={13} strokeWidth={1.75} />
+            <span>WhatsApp</span>
+          </p>
+          <div className="flex items-baseline justify-between gap-3">
+            <h1 className="font-heading text-base font-semibold text-foreground">
+              Konuşmalar
+            </h1>
+            {ready ? (
+              <span
+                className="text-xs tabular-nums text-muted-foreground"
+                aria-label={`Toplam ${total} konuşma`}
+              >
+                {total}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <nav
