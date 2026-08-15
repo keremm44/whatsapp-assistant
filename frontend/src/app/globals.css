@@ -174,43 +174,42 @@
  * light theme; nothing outside the seller workspace reads these
  * variables.
  *
- * Warm Canvas / Cool Workshop separates the shell, canvas, neutral work,
- * active petrol and inset control materials by both temperature and value.
- * Clay remains seller attention; warm off-white remains reading ink. No
- * pure black, neon, glassmorphism or decorative effects.
+ * Smoked Mineral Workshop uses one low-chroma charcoal family for shell,
+ * canvas, neutral work and inset controls. Petrol remains active state;
+ * clay remains seller attention. No pure black, navy/brown split, neon,
+ * glassmorphism or decorative effects.
  */
 .seller-theme {
-  /* Warm Canvas / Cool Workshop.
-   * Cool ink chrome frames a warm charcoal canvas. Neutral graphite
-   * carries ordinary work, surface-2 is raised but status-free, selected
-   * is the petrol-derived active plane, and control is a cool inset tool. */
-  --color-background: #1d1a17;
-  --color-background-rgb: 29 26 23;
-  --color-chrome: #0f141a;
-  --color-chrome-rgb: 15 20 26;
-  --color-surface: #292927;
-  --color-surface-rgb: 41 41 39;
-  --color-surface-2: #333431;
-  --color-surface-2-rgb: 51 52 49;
-  --color-selected: #263d39;
-  --color-selected-rgb: 38 61 57;
-  --color-control: #171f22;
-  --color-control-rgb: 23 31 34;
+  /* Smoked Mineral Workshop.
+   * Deep neutral chrome frames a quiet mineral canvas. Each forward layer
+   * gains value within the same undertone; only selected gains petrol chroma. */
+  --color-background: #191d1b;
+  --color-background-rgb: 25 29 27;
+  --color-chrome: #121513;
+  --color-chrome-rgb: 18 21 19;
+  --color-surface: #252a28;
+  --color-surface-rgb: 37 42 40;
+  --color-surface-2: #303734;
+  --color-surface-2-rgb: 48 55 52;
+  --color-selected: #243e39;
+  --color-selected-rgb: 36 62 57;
+  --color-control: #1b2321;
+  --color-control-rgb: 27 35 33;
   /* Mineral boundaries stay hue-neutral: border is the explicit edge used
    * by controls/overlays; divider is the quieter record/section rule. */
-  --color-border: #494843;
-  --color-border-rgb: 73 72 67;
-  --color-divider: #393936;
-  --color-divider-rgb: 57 57 54;
+  --color-border: #454a46;
+  --color-border-rgb: 69 74 70;
+  --color-divider: #353a37;
+  --color-divider-rgb: 53 58 55;
 
-  /* Text roles: warm primary and secondary ink against neutral/cool
-   * materials; tertiary remains neutral and AA on the selected plane. */
+  /* Text roles stay warm-neutral against the cohesive mineral materials;
+   * tertiary remains neutral and AA on the selected plane. */
   --color-foreground: #f2eee6;
   --color-foreground-rgb: 242 238 230;
-  --color-muted: #c9c2b7;
-  --color-muted-rgb: 201 194 183;
-  --color-muted-foreground: #a2a49f;
-  --color-muted-foreground-rgb: 162 164 159;
+  --color-muted: #c7c6c0;
+  --color-muted-rgb: 199 198 192;
+  --color-muted-foreground: #a1a59f;
+  --color-muted-foreground-rgb: 161 165 159;
 
   /* Primary (petrol) — brighter so it reads on dark surfaces */
   --color-primary: #4a8b84;
