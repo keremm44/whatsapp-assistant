@@ -204,19 +204,18 @@
 
   /* Text — warm off-white, THREE deliberate roles:
    *   foreground        #F2EEE6 — primary: titles, record identity,
-   *                     important values (≈12.9:1 on surface)
-   *   muted             #B3BDB8 — secondary: supporting copy the
-   *                     seller reads normally (≈7.6:1 on surface)
-   *   muted-foreground  #8D9994 — tertiary: timestamps and quiet
-   *                     auxiliary metadata (≈4.8:1 on surface —
-   *                     lifted slightly from #87938E so tertiary is
-   *                     quiet, never washed out) */
+   *                     important values (≈13.9:1 on surface)
+   *   muted             #C0C2BC — secondary: neutral supporting copy
+   *                     the seller reads normally (≈8.9:1 on surface)
+   *   muted-foreground  #9EA19B — tertiary: timestamps and quiet
+   *                     auxiliary metadata (≈6.1:1 on surface),
+   *                     lighter but still clearly below secondary */
   --color-foreground: #f2eee6;
   --color-foreground-rgb: 242 238 230;
-  --color-muted: #b3bdb8;
-  --color-muted-rgb: 179 189 184;
-  --color-muted-foreground: #8d9994;
-  --color-muted-foreground-rgb: 141 153 148;
+  --color-muted: #c0c2bc;
+  --color-muted-rgb: 192 194 188;
+  --color-muted-foreground: #9ea19b;
+  --color-muted-foreground-rgb: 158 161 155;
 
   /* Primary (petrol) — brighter so it reads on dark surfaces */
   --color-primary: #3f817a;

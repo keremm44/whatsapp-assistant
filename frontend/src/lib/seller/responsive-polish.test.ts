@@ -163,8 +163,8 @@ test("quiet workshop uses tone instead of card borders and surface shadows", () 
   assert.match(priority, /bg-accent/);
 
   // The three deliberate text roles stay distinct tokens.
-  assert.match(sellerBlock, /--color-muted-rgb: 179 189 184/);
-  assert.match(sellerBlock, /--color-muted-foreground-rgb: 141 153 148/);
+  assert.match(sellerBlock, /--color-muted-rgb: 192 194 188/);
+  assert.match(sellerBlock, /--color-muted-foreground-rgb: 158 161 155/);
 });
 
 test("selected conversation keeps a petrol rail plus a tonal lift", () => {
