@@ -62,17 +62,19 @@ export function ProductsListPanel({
                   <span className="min-w-0 truncate text-sm font-medium">
                     {product.name}
                   </span>
-                  {/* Business state, not an interaction: active uses
-                      the success role and inactive the paused role.
-                      Interaction cyan is reserved for selection /
-                      focus / links. The label always renders, so the
-                      state never depends on colour alone. */}
+                  {/* Business state, not an interaction. Active is the
+                      normal operating state -> neutral ink; only
+                      "Devre dışı" is tinted (paused slate). Success
+                      green stays reserved for completed states, and
+                      cyan for selection / focus / links. The label
+                      always renders, so the state never depends on
+                      colour alone. */}
                   <span
                     className={cn(
                       "shrink-0 text-[12px] font-medium",
-                      getProductStatusTone(product.isActive) === "success"
-                        ? "text-success"
-                        : "text-paused",
+                      getProductStatusTone(product.isActive) === "paused"
+                        ? "text-paused"
+                        : "text-foreground",
                     )}
                   >
                     {getProductStatusLabel(product.isActive)}

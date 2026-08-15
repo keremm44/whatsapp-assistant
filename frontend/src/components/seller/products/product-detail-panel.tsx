@@ -66,13 +66,15 @@ export function ProductDetailPanel({
           <h2 className="type-record-identity text-foreground">
             {product.name}
           </h2>
-          {/* Business state, not an interaction. Label always present. */}
+          {/* Business state, not an interaction. Active is the normal
+              operating state -> neutral ink; only a disabled product is
+              tinted. Label always present. */}
           <p
             className={cn(
               "type-row-secondary font-medium",
-              getProductStatusTone(product.isActive) === "success"
-                ? "text-success"
-                : "text-paused",
+              getProductStatusTone(product.isActive) === "paused"
+                ? "text-paused"
+                : "text-foreground",
             )}
           >
             {getProductStatusLabel(product.isActive)}
@@ -398,11 +400,13 @@ function FieldRow({
             {" · "}
             {getFieldRequiredLabel(field.isRequired)}
             {" · "}
-            {/* Business state, not an interaction. */}
+            {/* Business state, not an interaction. An enabled field is
+                the normal case -> neutral ink; only a disabled field is
+                tinted (paused slate). */}
             <span
               className={cn(
                 "font-medium",
-                field.isActive ? "text-success" : "text-paused",
+                field.isActive ? "text-foreground" : "text-paused",
               )}
             >
               {getFieldStatusLabel(field.isActive)}

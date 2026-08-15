@@ -87,7 +87,9 @@ export function RulesWorkspace({
  *   4. actions — quiet utilities aligned to the end of the meta line
  *
  * No per-rule card, no per-rule icon, no colour-coding by rule type.
- * The only colour is the truthful active/inactive state.
+ * Active is the normal operating state and stays neutral; only a
+ * disabled rule is tinted (paused slate). Success green is reserved
+ * for genuinely completed states elsewhere in the product.
  */
 function RuleRow({ rule }: { rule: SellerRule }) {
   const statusTone = getRuleStatusTone(rule.isActive);
@@ -115,7 +117,7 @@ function RuleRow({ rule }: { rule: SellerRule }) {
             <span
               className={cn(
                 "font-medium",
-                statusTone === "success" ? "text-success" : "text-paused",
+                statusTone === "paused" ? "text-paused" : "text-foreground",
               )}
             >
               {getRuleStatusLabel(rule.isActive)}

@@ -32,6 +32,8 @@ import {
   getProductStatusTone,
 } from "./products-format.ts";
 import { UNANSWERED_STATUS_DISPLAY } from "./unanswered-format.ts";
+import { RETURN_STATUS_DISPLAY } from "./returns-format.ts";
+import { getOrderStatusTone } from "./orders-format.ts";
 
 const read = (relative: string): string => {
   const dir = path.dirname(fileURLToPath(import.meta.url));
@@ -118,16 +120,29 @@ test("rule rows preserve every existing data point and action", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* 3. Business state is success/paused, never interaction cyan         */
+/* 3. ACTIVE is normal (neutral); only INACTIVE is tinted              */
 /* ------------------------------------------------------------------ */
 
-test("active/inactive is a business state, mapped to success/paused", () => {
-  // Rules.
-  assert.equal(getRuleStatusTone(true), "success");
+test("active/enabled is the normal state and maps to neutral, not success", () => {
+  // ACTIVE is the ordinary operating state, NOT an achievement, so it
+  // must never claim the success role. Green is reserved for truthful
+  // terminal completion (COMPLETE / ANSWERED / HANDLED).
+  assert.equal(getRuleStatusTone(true), "neutral");
+  assert.equal(getProductStatusTone(true), "neutral");
+
+  // INACTIVE is deliberately disabled -> paused slate.
   assert.equal(getRuleStatusTone(false), "paused");
-  // Products (shared by the list, the detail header and the field rows).
-  assert.equal(getProductStatusTone(true), "success");
   assert.equal(getProductStatusTone(false), "paused");
+
+  // Neither helper may emit success for an enabled record.
+  for (const tone of [
+    getRuleStatusTone(true),
+    getRuleStatusTone(false),
+    getProductStatusTone(true),
+    getProductStatusTone(false),
+  ]) {
+    assert.notEqual(tone, "success");
+  }
 
   // Labels are unchanged business language.
   assert.equal(getRuleStatusLabel(true), "Aktif");
@@ -136,6 +151,31 @@ test("active/inactive is a business state, mapped to success/paused", () => {
   assert.equal(getProductStatusLabel(false), "Devre dışı");
   assert.equal(getFieldStatusLabel(true), "Aktif");
   assert.equal(getFieldStatusLabel(false), "Devre dışı");
+});
+
+test("no Rules/Products surface paints an enabled record green", () => {
+  // Success green must not appear anywhere in these workspaces: none
+  // of them expresses a completed outcome.
+  for (const relative of [RULES, PRODUCT_LIST, PRODUCT_DETAIL]) {
+    const source = readCode(relative);
+    assert.doesNotMatch(
+      source,
+      /text-success/,
+      `${relative} must not use success green for an enabled state`,
+    );
+    assert.doesNotMatch(
+      source,
+      /isActive \? "text-success/,
+      `${relative} must not tint an active record as completed`,
+    );
+  }
+
+  // The field ledger specifically: enabled -> neutral, disabled -> paused.
+  const detail = readCode(PRODUCT_DETAIL);
+  assert.match(
+    detail,
+    /field\.isActive \? "text-foreground" : "text-paused"/,
+  );
 });
 
 test("no touched surface expresses status with interaction cyan", () => {
@@ -150,12 +190,37 @@ test("no touched surface expresses status with interaction cyan", () => {
     assert.doesNotMatch(source, /text-primary-text/);
   }
 
-  // And the status colour always ships with its label, so state is
-  // never communicated by colour alone.
+  // The status colour always ships with its label, so state is never
+  // communicated by colour alone — and the disabled tint is present.
   const list = readCode(PRODUCT_LIST);
   assert.match(list, /getProductStatusLabel\(product\.isActive\)/);
-  assert.match(list, /text-success/);
+  assert.match(list, /text-foreground/);
   assert.match(list, /text-paused/);
+});
+
+test("success green still marks the genuinely completed states", () => {
+  // This correction must NOT drain green from real completions.
+  assert.equal(RETURN_STATUS_DISPLAY.HANDLED.tone, "success");
+  assert.equal(UNANSWERED_STATUS_DISPLAY.ANSWERED.tone, "success");
+  assert.equal(
+    getOrderStatusTone({ status: "COMPLETE", sellerActionRequired: false }),
+    "success",
+  );
+
+  // ...and the in-progress / attention states stay distinct from it.
+  assert.equal(RETURN_STATUS_DISPLAY.COLLECTING.tone, "muted");
+  assert.equal(UNANSWERED_STATUS_DISPLAY.DISMISSED.tone, "paused");
+  assert.equal(
+    getOrderStatusTone({ status: "COLLECTING", sellerActionRequired: false }),
+    "muted",
+  );
+  assert.equal(
+    getOrderStatusTone({
+      status: "SELLER_REVIEW_REQUIRED",
+      sellerActionRequired: true,
+    }),
+    "attention",
+  );
 });
 
 /* ------------------------------------------------------------------ */

@@ -80,19 +80,24 @@ export const getRuleStatusLabel = (isActive: boolean): string =>
 /**
  * Semantic tone for a rule's active/inactive state.
  *
- * "Aktif" is a truthful, backend-proven operating state (the rule is
- * live for new customer messages), so it uses the success role.
- * "Devre dışı" is a deliberately disabled state, which is exactly what
- * the paused role means. Interaction cyan is NOT used here: being
- * active is a business state, not an interaction.
+ * "Aktif" is the NORMAL OPERATING STATE, not an achievement: the rule
+ * is simply live for new customer messages. It therefore renders in
+ * neutral foreground ink. Success green is reserved for truthful
+ * terminal completion (COMPLETE / ANSWERED / HANDLED); spending it on
+ * every enabled record would drain the colour of meaning.
  *
- * The LABEL still comes from `getRuleStatusLabel`, so status is never
- * communicated by colour alone.
+ * "Devre dışı" is deliberately disabled, which is exactly what the
+ * paused role means.
+ *
+ * Interaction cyan is never used here — being active is a business
+ * state, not an interaction. The LABEL always comes from
+ * `getRuleStatusLabel`, so status is never communicated by colour
+ * alone.
  */
-export type RuleStatusTone = "success" | "paused";
+export type RuleStatusTone = "neutral" | "paused";
 
 export const getRuleStatusTone = (isActive: boolean): RuleStatusTone =>
-  isActive ? "success" : "paused";
+  isActive ? "neutral" : "paused";
 
 export const getRuleHitCountLabel = (hitCount: number): string =>
   hitCount === 0 ? "Henüz kullanılmadı" : `${hitCount} kez kullanıldı`;
