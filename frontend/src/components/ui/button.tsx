@@ -22,7 +22,7 @@ const buttonVariants = cva(
           // A quiet filled step of the working material rather than a
           // bare outlined rectangle; hover completes the fill and
           // lifts the edge one small step.
-          "border border-border/80 bg-surface-2/50 text-foreground hover:border-border hover:bg-surface-2",
+          "bg-surface-2/70 text-foreground hover:bg-surface-2",
         ghost: "text-foreground hover:bg-surface-2",
         link: "text-primary underline-offset-4 hover:underline",
         destructive:

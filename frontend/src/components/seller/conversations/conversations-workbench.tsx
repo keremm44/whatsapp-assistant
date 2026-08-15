@@ -59,14 +59,14 @@ export function ConversationsWorkbench({
         // 40px bottom padding (md:pb-10). The regions inside scroll
         // independently instead of stretching the page.
         "md:h-[calc(100dvh-8rem)]",
-        "md:overflow-hidden md:rounded-md md:border md:border-border md:bg-surface md:shadow-surface",
+        "md:overflow-hidden md:rounded-md md:bg-surface",
         "lg:grid-cols-[300px_minmax(0,1fr)]",
         hasContextRail && "xl:grid-cols-[300px_minmax(0,1fr)_320px]",
       )}
     >
       <div
         className={cn(
-          "flex flex-col bg-chrome md:min-h-0 md:border-r md:border-divider",
+          "flex flex-col bg-chrome md:min-h-0",
           mobileView === "detail" && "hidden md:flex",
         )}
       >
@@ -74,7 +74,7 @@ export function ConversationsWorkbench({
       </div>
       <div
         className={cn(
-          "flex min-w-0 flex-col bg-background md:min-h-0",
+          "flex min-w-0 flex-col bg-background md:min-h-0 md:ring-1 md:ring-inset md:ring-divider/60",
           mobileView === "list" && "hidden md:flex",
         )}
       >
@@ -82,7 +82,7 @@ export function ConversationsWorkbench({
       </div>
       {hasContextRail ? (
         <aside
-          className="scrollbar-quiet hidden min-h-0 flex-col overflow-y-auto border-l border-divider bg-surface xl:flex"
+          className="scrollbar-quiet hidden min-h-0 flex-col overflow-y-auto bg-surface xl:flex"
           aria-label="Konuşma bağlamı"
         >
           {rail}

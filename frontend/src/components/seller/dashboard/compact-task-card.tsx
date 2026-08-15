@@ -13,7 +13,6 @@ import type { DashboardTask, DashboardTaskType } from "@/lib/seller/dashboard-ta
 import { dashboardTaskHref } from "@/lib/seller/dashboard-destinations";
 import { composeCustomerLine, formatUpdatedAt } from "@/lib/seller/dashboard-format";
 
-import { IconField, type IconFieldTone } from "./icon-field";
 
 /**
  * Compact task card used by the dashboard's "Bugün
@@ -32,7 +31,6 @@ const TYPE_META: Record<
   {
     label: string;
     icon: LucideIcon;
-    tone: IconFieldTone;
     rail: "primary" | "review" | "neutral";
     cta: string;
   }
@@ -40,21 +38,18 @@ const TYPE_META: Record<
   return_review: {
     label: "İade incelemesi",
     icon: Undo2,
-    tone: "review",
     rail: "review",
     cta: "İade listesine git",
   },
   order_review: {
     label: "Sipariş incelemesi",
     icon: Package,
-    tone: "primary",
     rail: "primary",
     cta: "Sipariş listesine git",
   },
   unanswered_question: {
     label: "Yanıt bekleyen soru",
     icon: MessagesSquare,
-    tone: "neutral",
     rail: "neutral",
     cta: "Sorulara git",
   },
@@ -76,13 +71,13 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
   const accessibleName = `${meta.label} — ${task.title} — ${meta.cta}`;
 
   return (
-    <article className="group relative overflow-hidden rounded-md border border-border bg-surface shadow-surface transition-colors hover:border-primary/40">
+    <article className="group relative bg-surface transition-colors hover:bg-surface-2/60">
       <span
         aria-hidden="true"
-        className={`absolute inset-y-0 left-0 w-1 ${RAIL_CLASS[meta.rail]}`}
+        className={`absolute inset-y-3 left-0 w-[3px] rounded-r-full ${RAIL_CLASS[meta.rail]}`}
       />
       <div className="flex items-start gap-3.5 p-3.5 pl-4.5 sm:p-4 sm:pl-5">
-        <IconField icon={Icon} tone={meta.tone} size={40} />
+        <Icon aria-hidden="true" size={18} strokeWidth={1.6} className="mt-1 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1 space-y-1.5">
           <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-text">
             <span>{meta.label}</span>
@@ -99,14 +94,14 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
             ) : null}
           </p>
           <h3
-            className="font-heading text-[15px] font-medium leading-snug text-foreground sm:text-[16px]"
+            className="font-heading text-base font-semibold leading-snug text-foreground"
             title={task.title}
           >
             {task.title}
           </h3>
           {hasSummary ? (
             <p
-              className="line-clamp-2 text-[13px] leading-relaxed text-muted-foreground"
+              className="line-clamp-2 text-sm leading-relaxed text-muted"
               title={task.summary}
             >
               {task.summary}
@@ -114,7 +109,7 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
           ) : null}
           {customerLine ? (
             <p
-              className="truncate pt-0.5 text-[12.5px] leading-relaxed text-foreground/70"
+              className="truncate pt-0.5 text-xs leading-relaxed text-muted-foreground"
               title={customerLine}
             >
               {customerLine}
@@ -124,7 +119,7 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
         <Link
           href={href}
           aria-label={accessibleName}
-          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-md border border-border bg-surface px-3 text-[12.5px] font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary-muted hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:h-9"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-sm px-2 text-xs font-medium text-foreground transition-colors hover:bg-primary-muted/70 hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:h-9"
         >
           <span className="hidden sm:inline">{meta.cta}</span>
           <ArrowUpRight

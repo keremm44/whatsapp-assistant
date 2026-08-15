@@ -57,16 +57,12 @@ export function QuietSummary({
     return (
       <section
         aria-labelledby="dashboard-quiet-summary"
-        className="relative overflow-hidden rounded-md border border-accent/30 bg-accent-muted/85"
+        className="rounded-md bg-surface px-4 py-4 sm:px-5"
       >
-        <span
-          aria-hidden="true"
-          className="absolute inset-x-0 top-0 h-px bg-accent"
-        />
-        <div className="p-4 sm:p-5">
+        <div>
           <h3
             id="dashboard-quiet-summary"
-            className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent-text"
+            className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground"
           >
             Özet
           </h3>
@@ -74,7 +70,7 @@ export function QuietSummary({
             {rows.map((row, index) => (
               <React.Fragment key={row.label}>
                 {row.emphasize && index > 0 ? (
-                  <div className="my-1.5 h-px bg-accent/15" aria-hidden="true" />
+                  <div className="my-1.5 h-px bg-divider" aria-hidden="true" />
                 ) : null}
                 <Row
                   label={row.label}

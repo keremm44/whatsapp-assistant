@@ -61,22 +61,27 @@ export function ConversationRow({
   }
 
   return (
-    <li className="border-b border-divider last:border-b-0">
+    <li>
       <Link
         href={conversationDetailHref(item.customer.id, attentionOnly) as Route}
         aria-current={isSelected ? "page" : undefined}
         aria-label={accessibleParts.join(" — ")}
         className={cn(
-          "group block px-4 py-3 transition-colors",
+          "group relative block px-4 py-3.5 transition-colors",
           "hover:bg-surface-2/60 focus-visible:bg-surface-2/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
-          isSelected && "bg-surface-2",
+          isSelected && "bg-surface-2/80",
         )}
       >
+        {isSelected ? (
+          <span aria-hidden="true" className="absolute inset-y-3 left-0 w-[3px] rounded-r-full bg-primary" />
+        ) : attentionMeta ? (
+          <span aria-hidden="true" className="absolute inset-y-4 left-0 w-0.5 rounded-r-full bg-accent" />
+        ) : null}
         <span className="flex items-baseline justify-between gap-3">
           <span className="min-w-0">
             <span
               className={cn(
-                "block truncate text-[13.5px] leading-snug",
+                "block truncate text-sm leading-snug",
                 isSelected
                   ? "font-semibold text-foreground"
                   : "font-medium text-foreground",
@@ -98,7 +103,7 @@ export function ConversationRow({
           ) : null}
         </span>
 
-        <span className="mt-0.5 flex items-center gap-1.5 text-[12.5px] leading-snug text-muted-foreground">
+        <span className="mt-0.5 flex items-center gap-1.5 text-xs leading-snug text-muted-foreground">
           {preview.isMedia ? (
             <span className="inline-flex shrink-0 items-center gap-1">
               <ImageIcon
@@ -131,7 +136,7 @@ export function ConversationRow({
             />
             <span
               className={cn(
-                "text-[11.5px] font-medium leading-none",
+                "text-xs font-medium leading-none",
                 attentionMeta.textClassName,
               )}
             >

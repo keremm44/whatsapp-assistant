@@ -62,7 +62,7 @@ export function DashboardHeader({
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary-text">
           {caption}
         </p>
-        <h1 className="font-heading text-[30px] font-medium leading-[1.1] text-foreground sm:text-[34px]">
+        <h1 className="font-heading text-3xl font-semibold leading-tight text-foreground">
           {title}
         </h1>
         {description ? (
@@ -71,20 +71,14 @@ export function DashboardHeader({
           </p>
         ) : null}
         {/*
-         * Brand motif: a long petrol stroke followed by a
-         * shorter but visibly chunky terracotta stroke.
-         * The two segments share a baseline and a 6px gap
-         * so they read as one composed signature, not as
-         * two unrelated ticks. The motif is decorative
-         * brand architecture: it does not imply urgency,
-         * status, priority, or unread state.
+         * Brand motif: one restrained petrol rule. It anchors the title without
+         * introducing decorative status colour.
          */}
         <span
           aria-hidden="true"
           className="mt-1 flex items-center gap-1.5"
         >
           <span className="block h-[2px] w-14 rounded-full bg-primary" />
-          <span className="block h-[2px] w-6 rounded-full bg-accent" />
         </span>
       </div>
       {total > 0 ? <CountBadge total={total} /> : null}
@@ -106,7 +100,7 @@ function CountBadge({ total }: { total: number }) {
     <div
       role="status"
       aria-label={`İlgilenmeniz gereken ${total} konu`}
-      className="flex w-fit items-center gap-3 self-start rounded-md border border-primary/20 bg-primary-muted px-4 py-2.5 sm:self-auto"
+      className="flex w-fit items-center gap-3 self-start rounded-md bg-primary-muted/70 px-4 py-2.5 sm:self-auto"
     >
       <span
         aria-hidden="true"

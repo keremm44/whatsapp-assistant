@@ -194,12 +194,12 @@ export function ConversationListPanel({
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="space-y-3 px-4 pb-3 pt-4 md:pt-5">
         <div className="flex items-baseline justify-between gap-3">
-          <h1 className="font-heading text-[15px] font-semibold text-foreground">
+          <h1 className="font-heading text-base font-semibold text-foreground">
             Konuşmalar
           </h1>
           {ready ? (
             <span
-              className="text-[12px] tabular-nums text-muted-foreground"
+              className="text-xs tabular-nums text-muted-foreground"
               aria-label={`Toplam ${total} konuşma`}
             >
               {total}
@@ -209,7 +209,7 @@ export function ConversationListPanel({
 
         <nav
           aria-label="Konuşma listesi filtresi"
-          className="flex rounded-md border border-border bg-background p-0.5"
+          className="flex gap-1 border-b border-divider"
         >
           <FilterTab
             href={conversationsListHref(false)}
@@ -254,7 +254,7 @@ export function ConversationListPanel({
               : "Henüz konuşma yok."}
           </p>
           {!attentionOnly ? (
-            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
               Müşteriler WhatsApp üzerinden yazdığında konuşmalar burada
               listelenir.
             </p>
@@ -263,7 +263,7 @@ export function ConversationListPanel({
       ) : (
         <>
           <div className="scrollbar-quiet min-h-0 flex-1 md:overflow-y-auto">
-            <ul role="list" className="border-t border-divider">
+            <ul role="list" className="divide-y divide-divider/70">
               {rows.map((item) => (
                 <ConversationRow
                   key={item.customer.id}
@@ -299,7 +299,7 @@ export function ConversationListPanel({
                 </Button>
               ) : null}
               {loadMoreError ? (
-                <p role="alert" className="text-center text-[12px] text-destructive">
+                <p role="alert" className="text-center text-xs text-destructive">
                   {loadMoreError}
                 </p>
               ) : null}
@@ -325,10 +325,10 @@ function FilterTab({
       href={href as Route}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex min-h-8 flex-1 items-center justify-center rounded-sm px-2 py-1 text-center text-[12.5px] font-medium leading-tight transition-colors",
+        "flex min-h-11 flex-1 items-center justify-center border-b-2 border-transparent px-2 py-2 text-center text-xs font-medium leading-tight transition-colors md:min-h-9",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         isActive
-          ? "bg-surface text-foreground shadow-surface"
+          ? "border-primary text-foreground"
           : "text-muted-foreground hover:text-foreground",
       )}
     >
@@ -369,7 +369,7 @@ function ListUnavailable() {
       <p className="text-sm font-medium text-foreground">
         Konuşma listesi şu anda açılamadı
       </p>
-      <p className="text-[13px] leading-relaxed text-muted-foreground">
+      <p className="text-sm leading-relaxed text-muted-foreground">
         Bağlantı kurulamadı. Tekrar deneyebilirsiniz.
       </p>
       <Button

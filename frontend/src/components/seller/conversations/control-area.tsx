@@ -227,7 +227,7 @@ export function ConversationControlArea({
             displayName={readyView.control.displayName}
           />
         ) : (
-          <span className="text-[12px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             Kontrol bilgisi alınamadı
           </span>
         )}
@@ -275,7 +275,7 @@ export function ConversationControlArea({
       </div>
 
       {readyView && handoff ? (
-        <p className="max-w-[240px] text-[11.5px] leading-snug text-muted-foreground md:text-right">
+        <p className="max-w-[240px] text-xs leading-snug text-muted-foreground md:text-right">
           {handoff.supporting}
         </p>
       ) : null}
@@ -283,7 +283,7 @@ export function ConversationControlArea({
       {errorMessage ? (
         <p
           role="alert"
-          className="max-w-[280px] text-[12px] leading-snug text-destructive md:text-right"
+          className="max-w-[280px] text-xs leading-snug text-destructive md:text-right"
         >
           {errorMessage}
         </p>

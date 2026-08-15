@@ -103,7 +103,7 @@ export function SecondaryRow({ task }: { task: DashboardTask }) {
           </p>
           {customerLine ? (
             <p
-              className="truncate text-[12.5px] text-muted-foreground"
+              className="truncate text-xs text-muted-foreground"
               title={customerLine}
             >
               {customerLine}

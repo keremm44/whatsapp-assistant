@@ -13,7 +13,6 @@ import type { DashboardTask, DashboardTaskType } from "@/lib/seller/dashboard-ta
 import { dashboardTaskHref } from "@/lib/seller/dashboard-destinations";
 import { composeCustomerLine, formatUpdatedAt } from "@/lib/seller/dashboard-format";
 
-import { IconField, type IconFieldTone } from "./icon-field";
 
 /**
  * The high-priority task card.
@@ -60,7 +59,6 @@ const TYPE_META: Record<
   {
     label: string;
     icon: LucideIcon;
-    tone: IconFieldTone;
     rail: "primary" | "review" | "neutral";
     cta: string;
   }
@@ -68,21 +66,18 @@ const TYPE_META: Record<
   return_review: {
     label: "İade incelemesi",
     icon: Undo2,
-    tone: "review",
     rail: "review",
     cta: "İade listesine git",
   },
   order_review: {
     label: "Sipariş incelemesi",
     icon: Package,
-    tone: "primary",
     rail: "primary",
     cta: "Sipariş listesine git",
   },
   unanswered_question: {
     label: "Yanıt bekleyen soru",
     icon: MessagesSquare,
-    tone: "neutral",
     rail: "neutral",
     cta: "Sorulara git",
   },
@@ -104,11 +99,11 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
   const accessibleName = `${meta.label} — ${task.title} — ${meta.cta}`;
 
   return (
-    <article className="group relative overflow-hidden rounded-md border border-border bg-surface shadow-surface transition-colors hover:border-primary/40">
+    <article className="group relative bg-surface transition-colors hover:bg-surface-2/60">
       {/* Type rail — the single most visible brand cue on the page. */}
       <span
         aria-hidden="true"
-        className={`absolute inset-y-0 left-0 w-1 ${RAIL_CLASS[meta.rail]}`}
+        className={`absolute inset-y-4 left-0 w-[3px] rounded-r-full ${RAIL_CLASS[meta.rail]}`}
       />
       {/* Narrow mobile: icon + content own the full row width and the
           CTA moves BELOW the content so long titles/summaries are
@@ -116,14 +111,12 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
           familiar compact right-side CTA arrangement returns. */}
       <div className="flex flex-col gap-3 p-4 pl-5 sm:flex-row sm:items-start sm:gap-5 sm:p-5 sm:pl-6">
         <div className="flex min-w-0 items-start gap-4 sm:flex-1 sm:gap-5">
-          <div className="flex flex-col items-center gap-2 pt-0.5">
-            <IconField icon={Icon} tone={meta.tone} size={40} />
-          </div>
+          <Icon aria-hidden="true" size={20} strokeWidth={1.6} className="mt-1 shrink-0 text-muted-foreground" />
 
           <div className="min-w-0 flex-1 space-y-2">
           <CategoryCaption label={meta.label} updatedAt={updatedAtLabel} />
           <h3
-            className="font-heading text-[16px] font-medium leading-snug text-foreground sm:text-[17px]"
+            className="font-heading text-base font-semibold leading-snug text-foreground"
             title={task.title}
           >
             {task.title}
@@ -150,7 +143,7 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
         <Link
           href={href}
           aria-label={accessibleName}
-          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-md border border-border bg-surface px-3.5 text-[13px] font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary-muted hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:h-9"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-sm px-2 text-[13px] font-medium text-foreground transition-colors hover:bg-primary-muted/70 hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:h-9"
         >
           <span>{meta.cta}</span>
           <ArrowUpRight

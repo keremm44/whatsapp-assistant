@@ -23,7 +23,7 @@ export function EmptyAttention() {
     <section
       role="status"
       aria-live="polite"
-      className="flex flex-col items-center gap-4 rounded-md border border-border bg-surface px-6 py-16 text-center shadow-surface sm:py-20"
+      className="flex flex-col items-center gap-4 rounded-md bg-surface px-6 py-16 text-center sm:py-20"
     >
       <span
         aria-hidden="true"

@@ -163,7 +163,7 @@
 }
 
 /*
- * SELLER WORKSPACE — DARK WORKSHOP / WARM ATELIER OVERRIDE
+ * SELLER WORKSPACE — SESSİZ ATÖLYE / QUIET WORKSHOP OVERRIDE
  *
  * The seller workspace lives under `.seller-theme` (set on the root
  * <div> in `seller-shell.tsx`). Every value here overrides the
@@ -180,37 +180,27 @@
  * gives the UI its tactile, workshop-material feel.
  */
 .seller-theme {
-  /* Surfaces — warm charcoal, layered.
-   * The depth stack is now visibly separated into three
-   * steps:
-   *     shell    #0F1513 (L≈5)  — sidebar, topbar, mobile nav
-   *     workspace #111715 (L≈6)  — main page canvas
-   *     surface   #232C29 (L≈14) — cards, panels
-   *     surface-2 #293431 (L≈16) — secondary raised
-   *     border    #333F3B (L≈18) — quiet component boundary
-   *     divider   #2B3532 (L≈16) — softer internal separation
-   * The shell-to-workspace step is a subtle ~2 RGB units
-   * but a clear L* step. The workspace-to-surface step
-   * is the dramatic one (~+18 RGB) so cards visibly
-   * float above the canvas. Cards are NOT darkened;
-   * only the canvas and shell move deeper, which is
-   * what increases BACKGROUND ↔ CARD contrast. */
-  --color-background: #111715;
-  --color-background-rgb: 17 23 21;
-  --color-chrome: #0f1513;
-  --color-chrome-rgb: 15 21 19;
-  --color-surface: #232c29;
-  --color-surface-rgb: 35 44 41;
-  --color-surface-2: #293431;
-  --color-surface-2-rgb: 41 52 49;
+  /* Surfaces — one warm charcoal field with three meaningful depths.
+   * Chrome is the deepest shell, background is the continuous work canvas,
+   * surface groups related records, and surface-2 marks hover/selection.
+   * The steps are intentionally close: typography, spacing and quiet rules
+   * do most of the organizing instead of outlined floating cards. */
+  --color-background: #151a18;
+  --color-background-rgb: 21 26 24;
+  --color-chrome: #101513;
+  --color-chrome-rgb: 16 21 19;
+  --color-surface: #1c2320;
+  --color-surface-rgb: 28 35 32;
+  --color-surface-2: #252e2a;
+  --color-surface-2-rgb: 37 46 42;
   /* Boundaries — deliberately quiet. The border marks a real
    * component edge without competing with content (selected/hover
    * states still lift via border-primary/40 etc.); the divider is a
    * visibly softer internal separator, never a second outline. */
-  --color-border: #333f3b;
-  --color-border-rgb: 51 63 59;
-  --color-divider: #2b3532;
-  --color-divider-rgb: 43 53 50;
+  --color-border: #39443f;
+  --color-border-rgb: 57 68 63;
+  --color-divider: #2b3430;
+  --color-divider-rgb: 43 52 48;
 
   /* Text — warm off-white, THREE deliberate roles:
    *   foreground        #F2EEE6 — primary: titles, record identity,
@@ -267,7 +257,7 @@
   --color-accent-foreground: #f2eee6;
   --color-accent-foreground-rgb: 242 238 230;
   /* Clay text role: small terracotta copy on dark clay surfaces
-   * (e.g. the quiet-summary heading on accent-muted) measures ~4.3:1
+   * (e.g. seller-attention copy on accent-muted) measures ~4.3:1
    * with accent-dark, just below AA. accent-text is the same clay at
    * a brighter value: ~5.0:1 on accent-muted surfaces. Terracotta's
    * hue and structural tones are unchanged. */
@@ -307,19 +297,12 @@
   --color-paused-muted: #2b3138;
   --color-paused-muted-rgb: 43 49 56;
 
-  /* Shadows — dark surfaces need a different shadow recipe.
-   * The light-theme shadows are nearly invisible on dark
-   * backgrounds. Replace with a subtle 1px inner hairline
-   * plus a tight drop shadow tinted toward black so cards
-   * still feel "lifted" without using heavy elevation. */
+  /* Elevation is reserved for overlays and genuinely forward objects.
+   * Ordinary work surfaces remain flat and derive depth from tone. */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.45);
-  /* No 1px ring here: Surface already draws its own border, and the
-   * old border-colored ring double-stroked every card into an
-   * outlined box. A tight two-step black lift keeps the material
-   * feeling layered instead of outlined. */
-  --shadow-surface: 0 1px 2px rgba(0, 0, 0, 0.3),
-    0 6px 20px rgba(0, 0, 0, 0.16);
+  /* Shared work surfaces do not float. */
+  --shadow-surface: none;
 }
 
 @layer base {

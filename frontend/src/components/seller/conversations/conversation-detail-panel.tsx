@@ -81,7 +81,7 @@ export function ConversationDetailPanel({
       {/* Portal host: keeps the context Sheet inside .seller-theme. */}
       <div ref={setPortalHost} className="contents" />
 
-      <header className="space-y-2 border-b border-divider px-0 py-3.5 md:px-4">
+      <header className="space-y-3 border-b border-divider px-0 py-4 md:px-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-1">
             <Link
@@ -97,18 +97,18 @@ export function ConversationDetailPanel({
             </Link>
             <div className="min-w-0">
               <h2
-                className="truncate font-heading text-[15px] font-semibold leading-snug text-foreground"
+                className="truncate font-heading text-lg font-semibold leading-snug text-foreground"
                 title={display.primary}
               >
                 {display.primary}
               </h2>
               {display.secondary ? (
-                <p className="truncate text-[12px] text-muted-foreground">
+                <p className="truncate text-xs text-muted-foreground">
                   {display.secondary}
                 </p>
               ) : null}
               {moderationNote ? (
-                <p className="mt-0.5 text-[11.5px] leading-snug text-muted-foreground">
+                <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
                   {moderationNote}
                 </p>
               ) : null}
@@ -122,7 +122,7 @@ export function ConversationDetailPanel({
               aria-label="Konuşma bağlamını aç"
               aria-haspopup="dialog"
               className={cn(
-                "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-medium text-muted-foreground transition-colors xl:hidden",
+                "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors xl:hidden",
                 "hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               )}
             >
@@ -162,8 +162,8 @@ export function ConversationDetailPanel({
             portalContainer={portalHost}
             className="w-full max-w-sm gap-0 p-0"
           >
-            <SheetHeader className="border-b border-divider px-4 pb-3 pt-4">
-              <SheetTitle className="text-[15px] font-semibold">
+            <SheetHeader className="border-b border-divider px-5 pb-4 pt-5">
+              <SheetTitle className="text-base font-semibold">
                 Konuşma bağlamı
               </SheetTitle>
             </SheetHeader>

@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils/cn";
  * information". The shell uses the linen cream as the surrounding
  * background so these surfaces read as working areas.
  *
- * A 1px warm border plus a very subtle surface shadow keep the
- * hierarchy perceptible without becoming a floating card.
+ * Tone and spacing establish the region. Borders and elevation belong to
+ * components that genuinely need a hard boundary, not every work area.
  */
 export function Surface({
   as: Tag = "div",
@@ -26,7 +26,7 @@ export function Surface({
   return (
     <Component
       className={cn(
-        "rounded-md border border-border bg-surface shadow-surface",
+        "rounded-md bg-surface",
         className,
       )}
     >

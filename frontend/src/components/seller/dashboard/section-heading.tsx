@@ -45,7 +45,7 @@ export function SectionHeading({
    * primary work section; `accent` (terracotta) for the
    * supporting section. Never used to imply a state.
    */
-  railTone?: "primary" | "accent";
+  railTone?: "primary" | "accent" | "neutral";
   /**
    * Whether the brand motif renders below the description.
    * Off by default so the page header is the only place
@@ -55,7 +55,11 @@ export function SectionHeading({
   className?: string;
 }) {
   const railClass =
-    railTone === "primary" ? "bg-primary" : "bg-accent";
+    railTone === "primary"
+      ? "bg-primary"
+      : railTone === "accent"
+        ? "bg-accent"
+        : "bg-muted-foreground/50";
   return (
     <header className={cn("space-y-2", className)}>
       <div className="flex items-center gap-3">

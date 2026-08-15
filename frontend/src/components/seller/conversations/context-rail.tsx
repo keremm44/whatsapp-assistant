@@ -75,7 +75,7 @@ export function ConversationContextRail({
   }
 
   return (
-    <div className="flex flex-col divide-y divide-divider">
+    <div className="flex flex-col divide-y divide-divider/80">
       {order ? <OrderContextBlock order={order} /> : null}
       {returnIssue ? <ReturnIssueContextBlock issue={returnIssue} /> : null}
       {unanswered.length > 0 ? (
@@ -111,7 +111,7 @@ function ContextBlock({
         ? "text-accent-text"
         : "text-muted-foreground";
   return (
-    <section className="space-y-2.5 px-4 py-4">
+    <section className="space-y-3 px-5 py-5">
       <p
         className={cn(
           "flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]",
@@ -125,7 +125,7 @@ function ContextBlock({
       <Link
         href={destination}
         className={cn(
-          "inline-flex items-center gap-1 text-[12.5px] font-medium text-primary-text transition-colors hover:text-primary-hover",
+          "inline-flex items-center gap-1 text-xs font-medium text-primary-text transition-colors hover:text-primary-hover",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm",
         )}
       >
@@ -151,24 +151,24 @@ function OrderContextBlock({ order }: { order: ConversationOrderDetail }) {
       destinationLabel="Sipariş bilgilerine git"
     >
       {order.externalOrderNumber ? (
-        <p className="text-[13.5px] font-medium text-foreground">
+        <p className="text-base font-semibold text-foreground">
           Sipariş {order.externalOrderNumber}
         </p>
       ) : null}
       {order.productNameSnapshot ? (
         <p
-          className="truncate text-[12.5px] text-muted-foreground"
+          className="truncate text-xs text-muted-foreground"
           title={order.productNameSnapshot}
         >
           {order.productNameSnapshot}
         </p>
       ) : null}
-      <p className="text-[12px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         {ORDER_STATUS_LABELS[order.status]}
       </p>
       {order.customText ? (
         <p
-          className="text-[12px] leading-snug text-muted"
+          className="text-xs leading-snug text-muted"
           title={order.customText}
         >
           Üzerine yazılacak: “{order.customText}”
@@ -176,7 +176,7 @@ function OrderContextBlock({ order }: { order: ConversationOrderDetail }) {
       ) : null}
       {order.status === "SELLER_REVIEW_REQUIRED" &&
       order.reviewReasonNote ? (
-        <p className="line-clamp-3 text-[12px] leading-snug text-muted">
+        <p className="line-clamp-3 text-xs leading-snug text-muted">
           {order.reviewReasonNote}
         </p>
       ) : null}
@@ -202,24 +202,24 @@ function ReturnIssueContextBlock({
       destination={conversationReturnDestination(issue) as Route}
       destinationLabel="İade ve sorunlara git"
     >
-      <p className="text-[13.5px] font-medium text-foreground">
+      <p className="text-base font-semibold text-foreground">
         {RETURN_ISSUE_TYPE_LABELS[issue.issueType]}
       </p>
       {issue.externalOrderNumberSnapshot ? (
-        <p className="text-[12.5px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Sipariş {issue.externalOrderNumberSnapshot}
         </p>
       ) : null}
       {issue.productNameSnapshot ? (
         <p
-          className="truncate text-[12.5px] text-muted-foreground"
+          className="truncate text-xs text-muted-foreground"
           title={issue.productNameSnapshot}
         >
           {issue.productNameSnapshot}
         </p>
       ) : null}
       {issue.reasonText ? (
-        <p className="line-clamp-3 text-[12px] leading-snug text-muted">
+        <p className="line-clamp-3 text-xs leading-snug text-muted">
           {issue.reasonText}
         </p>
       ) : null}
@@ -256,17 +256,17 @@ function UnansweredContextBlock({
       destinationLabel="Cevaplanamayan sorulara git"
     >
       {groups.length > 1 ? (
-        <p className="text-[12px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Bu konuşmada {groups.length} açık soru var.
         </p>
       ) : null}
       {question.length > 0 ? (
-        <p className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground">
+        <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
           “{question}”
         </p>
       ) : null}
       {latest && latest.occurrenceCount > 1 ? (
-        <p className="text-[12px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {latest.occurrenceCount} kez soruldu
         </p>
       ) : null}

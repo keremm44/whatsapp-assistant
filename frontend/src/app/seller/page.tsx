@@ -229,12 +229,11 @@ function NormalOnlyLayout({
           title="Bugün bakılabilecekler"
           count={normalTasks.length}
           description="Vakit varsa ilerleyebileceğiniz konular."
-          railTone="accent"
-          motif
+          railTone="neutral"
         />
         <ul
           role="list"
-          className="grid grid-cols-1 gap-3 lg:grid-cols-2"
+          className="overflow-hidden rounded-md bg-surface divide-y divide-divider"
         >
           {normalTasks.map((task) => (
             <li key={task.id}>
@@ -279,7 +278,7 @@ function PrimaryColumn({
         count={count}
         description="İncelemeniz gereken konular."
       />
-      <ul role="list" className="space-y-3">
+      <ul role="list" className="overflow-hidden rounded-md bg-surface divide-y divide-divider">
         {tasks.map((task) => (
           <li key={task.id}>
             <PriorityCard task={task} />
@@ -319,20 +318,11 @@ function SecondaryPanel({
   return (
     <section
       aria-labelledby={id}
-      className="relative overflow-hidden rounded-md border border-border bg-surface shadow-surface"
+      className="overflow-hidden rounded-md bg-surface"
     >
-      {/*
-       * A thin petrol top hairline is the only framing
-       * accent. The terracotta cue for this section
-       * comes from the section heading rail (above) and
-       * from the QuietSummary side panel below, so the
-       * panel itself stays neutral.
-       */}
-      <span
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-px bg-primary"
-      />
-      <header className="flex items-baseline gap-2 border-b border-divider bg-surface-2/60 px-4 py-3 sm:px-5">
+      {/* Rows share one tonal ledger surface; only the internal rule
+          separates the compact section header from its work queue. */}
+      <header className="flex items-baseline gap-2 border-b border-divider px-4 py-3 sm:px-5">
         <h2
           id={id}
           className="font-heading text-[15px] font-semibold text-foreground sm:text-base"
@@ -341,7 +331,7 @@ function SecondaryPanel({
         </h2>
         <span
           aria-hidden="true"
-          className="text-[12.5px] tabular-nums text-muted-foreground"
+          className="text-xs tabular-nums text-muted-foreground"
         >
           · {count}
         </span>

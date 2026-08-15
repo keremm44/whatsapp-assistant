@@ -241,7 +241,7 @@ export function MessageTimeline({
         <p className="text-sm font-medium text-foreground">
           Bu konuşmada henüz mesaj yok
         </p>
-        <p className="max-w-sm text-[13px] leading-relaxed text-muted-foreground">
+        <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
           Mesajlar geldiğinde konuşma geçmişi burada görünür.
         </p>
       </div>
@@ -251,7 +251,7 @@ export function MessageTimeline({
   return (
     <div
       ref={scrollRef}
-      className="scrollbar-quiet flex-1 space-y-2.5 px-0 py-4 md:min-h-0 md:overflow-y-auto md:px-4"
+      className="scrollbar-quiet flex-1 px-0 py-5 md:min-h-0 md:overflow-y-auto md:px-6"
       aria-label="Mesaj geçmişi"
     >
       {messagePage.hasMore ? (
@@ -277,12 +277,12 @@ export function MessageTimeline({
         </div>
       ) : null}
       {olderError ? (
-        <p role="alert" className="pb-1 text-center text-[12px] text-destructive">
+        <p role="alert" className="pb-1 text-center text-xs text-destructive">
           {olderError}
         </p>
       ) : null}
 
-      <ol className="space-y-2.5">
+      <ol className="space-y-4">
         {messages.map((message) => (
           <MessageBubble
             key={message.id}
@@ -320,27 +320,27 @@ function MessageBubble({
     >
       <div
         className={cn(
-          "max-w-[88%] sm:max-w-[75%] md:max-w-[70%]",
+          "max-w-[92%] sm:max-w-[78%] md:max-w-[72%]",
           isIncoming ? "mr-auto" : "ml-auto",
         )}
       >
         <div
           className={cn(
-            "rounded-lg px-3 py-2",
+            "rounded-md px-3.5 py-2.5",
             isIncoming
-              ? "border border-divider bg-surface-2 text-foreground"
-              : "bg-primary-muted text-foreground",
+              ? "bg-surface-2/75 text-foreground"
+              : "border-r-2 border-primary bg-primary-muted/55 text-foreground",
           )}
         >
           {!isIncoming && message.wasAutoReplied ? (
-            <p className="pb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary-text">
+            <p className="pb-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-primary-text">
               Asistan
             </p>
           ) : null}
           {message.mediaAvailable ? (
             <p
               className={cn(
-                "flex items-center gap-1.5 text-[12px]",
+                "flex items-center gap-1.5 text-xs",
                 isIncoming ? "text-muted" : "text-primary-text/90",
                 hasText ? "pb-1" : undefined,
               )}
@@ -354,7 +354,7 @@ function MessageBubble({
             </p>
           ) : null}
           {hasText ? (
-            <p className="whitespace-pre-wrap break-words text-[13.5px] leading-relaxed">
+            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
               {message.content}
             </p>
           ) : null}
@@ -362,7 +362,7 @@ function MessageBubble({
         {timePhrase ? (
           <p
             className={cn(
-              "mt-1 text-[10.5px] tabular-nums text-muted-foreground/80",
+              "mt-1 text-xs tabular-nums text-muted-foreground/80",
               isIncoming ? "text-left" : "text-right",
             )}
           >

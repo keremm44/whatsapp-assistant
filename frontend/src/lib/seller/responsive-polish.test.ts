@@ -145,15 +145,33 @@ test("priority card stacks the CTA below content on narrow mobile", () => {
 /* 7. Dark-surface depth (visual refinement pass)                      */
 /* ------------------------------------------------------------------ */
 
-test("seller surfaces lift with a soft shadow, not a second border ring", () => {
+test("quiet workshop uses tone instead of card borders and surface shadows", () => {
   const css = read("../../app/globals.css");
   const sellerBlock = css.slice(css.indexOf(".seller-theme {"));
-  // Cards draw ONE border; the surface shadow must never reintroduce
-  // the border-colored 1px ring that double-stroked every Surface
-  // into an outlined box.
-  assert.match(sellerBlock, /--shadow-surface: 0 1px 2px/);
-  assert.doesNotMatch(sellerBlock, /--shadow-surface: 0 0 0 1px/);
+  assert.match(sellerBlock, /--shadow-surface: none/);
+
+  const workbench = read(
+    "../../components/seller/conversations/conversations-workbench.tsx",
+  );
+  assert.doesNotMatch(workbench, /md:border md:border-border/);
+  assert.doesNotMatch(workbench, /md:shadow-surface/);
+
+  const priority = read(
+    "../../components/seller/dashboard/priority-card.tsx",
+  );
+  assert.doesNotMatch(priority, /border border-border bg-surface shadow-surface/);
+  assert.match(priority, /bg-accent/);
+
   // The three deliberate text roles stay distinct tokens.
   assert.match(sellerBlock, /--color-muted-rgb: 179 189 184/);
   assert.match(sellerBlock, /--color-muted-foreground-rgb: 141 153 148/);
+});
+
+test("selected conversation keeps a petrol rail plus a tonal lift", () => {
+  const row = read(
+    "../../components/seller/conversations/conversation-row.tsx",
+  );
+  assert.match(row, /aria-current=\{isSelected/);
+  assert.match(row, /isSelected && "bg-surface-2\/80"/);
+  assert.match(row, /rounded-r-full bg-primary/);
 });
