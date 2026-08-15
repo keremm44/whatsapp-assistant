@@ -409,6 +409,37 @@ export const getOrderRowReviewReason = (
 };
 
 /* ------------------------------------------------------------------ */
+/* Row status tone (truthful backend states only)                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Semantic tone for a row's backend `displayStatus` line.
+ *
+ * The LABEL always stays the backend's own `display_status` string,
+ * rendered verbatim — this helper only decides how loudly it is drawn.
+ * Exactly three truthful outcomes, mapped from the backend enum:
+ *
+ *   SELLER_REVIEW_REQUIRED -> attention  (oxide/coral: you must act)
+ *   COMPLETE               -> success    (terminal completion)
+ *   COLLECTING             -> muted      (in progress; nothing to say)
+ *
+ * No content type is colour-coded here: an order and a return with the
+ * same lifecycle state get the same tone.
+ */
+export type OrderStatusTone = "attention" | "success" | "muted";
+
+export const getOrderStatusTone = (
+  order: Pick<OrderSummary, "status" | "sellerActionRequired">,
+): OrderStatusTone => {
+  // The backend's explicit action flag wins: it is the authoritative
+  // "seller must intervene" signal.
+  if (order.sellerActionRequired === true) return "attention";
+  if (order.status === "SELLER_REVIEW_REQUIRED") return "attention";
+  if (order.status === "COMPLETE") return "success";
+  return "muted";
+};
+
+/* ------------------------------------------------------------------ */
 /* Row quick actions (copy order number / inline image)                */
 /* ------------------------------------------------------------------ */
 

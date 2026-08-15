@@ -166,8 +166,9 @@ export function UnansweredQuestionDetail({
               className={cn(
                 "text-[11.5px] font-medium leading-none",
                 statusDisplay.tone === "accent" && "text-accent-text",
-                statusDisplay.tone === "resolved" && "text-primary-text",
-                statusDisplay.tone === "muted" && "text-muted-foreground",
+                statusDisplay.tone === "success" && "text-success",
+                statusDisplay.tone === "paused" && "text-paused",
+            statusDisplay.tone === "muted" && "text-muted-foreground",
               )}
             >
               {statusDisplay.label}

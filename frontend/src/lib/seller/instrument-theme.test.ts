@@ -172,7 +172,7 @@ test("interaction cyan and attention coral are distinct declared roles", () => {
 
   assert.match(block, /--color-primary:\s*#4fb3c9/i);
   assert.match(block, /--color-selected:\s*#173039/i);
-  assert.match(block, /--color-attention:\s*#e4785c/i);
+  assert.match(block, /--color-attention:\s*#ea8266/i);
   assert.match(block, /--color-attention-soft:\s*#331d17/i);
 
   const interaction = block.match(/--color-primary:\s*(#[0-9a-f]{6})/i)![1]!;
@@ -654,4 +654,174 @@ test("geometry roles separate controls, work sheets and floating objects", () =>
   // Controls use the crisp control radius.
   assert.match(read("../../components/ui/button.tsx"), /rounded-control/);
   assert.match(read("../../components/ui/input.tsx"), /rounded-control/);
+});
+
+/* ------------------------------------------------------------------ */
+/* 9. Semantic colour rhythm (supporting roles)                        */
+/* ------------------------------------------------------------------ */
+
+test("supporting semantic roles are declared and mutually distinguishable", () => {
+  const block = sellerThemeBlock();
+
+  // The three supporting roles that break the monochrome field.
+  assert.match(block, /--color-success:\s*#5ec59a/i);
+  assert.match(block, /--color-warning:\s*#e8a34d/i);
+  assert.match(block, /--color-paused:\s*#949dac/i);
+
+  const value = (name: string) =>
+    block.match(new RegExp(`--color-${name}:\\s*(#[0-9a-f]{6})`, "i"))![1]!;
+
+  // All five signals must remain distinct values: if any two collapse,
+  // a state stops being readable as its own meaning.
+  const signals = ["primary", "attention", "success", "warning", "paused"].map(
+    (name) => value(name).toLowerCase(),
+  );
+  assert.equal(
+    new Set(signals).size,
+    signals.length,
+    "every semantic signal must be a distinct value",
+  );
+
+  // `paused` must stay NEAR-NEUTRAL: it means "deliberately inactive",
+  // so it may not become a sixth saturated accent competing for
+  // attention. Chroma is approximated by max channel spread.
+  const paused = value("paused");
+  const channels = [1, 3, 5].map((i) => parseInt(paused.slice(i, i + 2), 16));
+  const spread = Math.max(...channels) - Math.min(...channels);
+  assert.ok(spread <= 40, `paused must stay near-neutral (spread ${spread})`);
+});
+
+test("every semantic role clears AA on the surfaces it is used on", () => {
+  const block = sellerThemeBlock();
+  const value = (name: string) =>
+    block.match(new RegExp(`--color-${name}:\\s*(#[0-9a-f]{6})`, "i"))![1]!;
+
+  const relLum = (hex: string) => {
+    const lin = [1, 3, 5]
+      .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * lin[0]! + 0.7152 * lin[1]! + 0.0722 * lin[2]!;
+  };
+  const contrast = (a: string, b: string) => {
+    const [hi, lo] = [relLum(a), relLum(b)].sort((x, y) => y - x);
+    return (hi! + 0.05) / (lo! + 0.05);
+  };
+
+  // Status text lands on work surfaces and on hovered/selected rows.
+  const surfaces = ["chrome", "sunken", "canvas", "raised", "hover", "selected"];
+  for (const role of ["success", "warning", "paused", "attention", "primary"]) {
+    for (const surface of surfaces) {
+      assert.ok(
+        contrast(value(role), value(surface)) >= 4.5,
+        `${role} must clear AA on ${surface}`,
+      );
+    }
+  }
+  // Soft-fill pairings used by chips/notices.
+  assert.ok(contrast(value("paused"), value("paused-muted")) >= 4.5);
+  assert.ok(contrast(value("warning"), value("warning-muted")) >= 4.5);
+  assert.ok(contrast(value("success"), value("success-muted")) >= 4.5);
+});
+
+test("truthful terminal states use success, not neutral gray", () => {
+  // Returns: HANDLED is a completion, distinct from COLLECTING.
+  const returns = read("./returns-format.ts");
+  assert.match(returns, /HANDLED:\s*\{\s*label:\s*"İlgilenildi",\s*tone:\s*"success"/);
+  assert.match(returns, /COLLECTING:[^}]*tone:\s*"muted"/);
+
+  // Unanswered: ANSWERED is a completion; DISMISSED is inactive.
+  const unanswered = read("./unanswered-format.ts");
+  assert.match(unanswered, /ANSWERED:\s*\{\s*label:\s*"Cevaplandı",\s*tone:\s*"success"/);
+  assert.match(unanswered, /DISMISSED:[^}]*tone:\s*"paused"/);
+
+  // Orders: COMPLETE is a completion; review wins over everything.
+  const orders = read("./orders-format.ts");
+  assert.match(orders, /getOrderStatusTone/);
+  assert.match(orders, /order\.status === "COMPLETE"\) return "success"/);
+});
+
+test("interaction cyan never expresses a status outcome", () => {
+  // The regression this pass fixed: `resolved` -> text-primary-text
+  // leaked the selection colour into a state meaning.
+  for (const relative of [
+    "../../components/seller/unanswered/unanswered-question-row.tsx",
+    "../../components/seller/unanswered/unanswered-question-detail.tsx",
+  ]) {
+    const source = readCode(relative);
+    assert.doesNotMatch(source, /tone === "resolved"/);
+    assert.doesNotMatch(source, /tone === "success" && "text-primary/);
+  }
+});
+
+test("system-degraded notices use warning, keeping coral for record review", () => {
+  const shell = readCode("../../components/seller/shell/seller-shell.tsx");
+  assert.match(shell, /border-l-warning/);
+  assert.match(shell, /bg-warning-muted/);
+  assert.match(shell, /text-warning/);
+  // The shell notice must NOT claim per-record seller attention.
+  assert.doesNotMatch(shell, /border-l-attention/);
+});
+
+test("colour is not used to code content type", () => {
+  // Orders/Returns/Conversations must not each get their own hue: the
+  // tone maps key on lifecycle STATE only.
+  const orders = read("./orders-format.ts");
+  const toneFn = orders.slice(
+    orders.indexOf("export const getOrderStatusTone"),
+    orders.indexOf("/* ---", orders.indexOf("export const getOrderStatusTone")),
+  );
+  // The function may only branch on status / action flag.
+  assert.doesNotMatch(toneFn, /type|kind|Orders|Returns/);
+  assert.match(toneFn, /sellerActionRequired/);
+  assert.match(toneFn, /order\.status/);
+});
+
+/* ------------------------------------------------------------------ */
+/* 10. Sidebar authorship                                              */
+/* ------------------------------------------------------------------ */
+
+test("the spine has a brand plate, banded sections and a pinned system foot", () => {
+  const sidebar = readCode("../../components/seller/shell/seller-sidebar.tsx");
+
+  // Brand: a real monogram tile built from workspace materials.
+  assert.match(sidebar, /BrandPlate/);
+  assert.match(sidebar, /name="Store"/);
+  assert.match(sidebar, /bg-raised text-primary/);
+
+  // Vertical rhythm: work sections scroll, the system group is pinned
+  // to the foot with its own boundary.
+  assert.match(sidebar, /sellerNavigation\.slice\(0, -1\)/);
+  assert.match(sidebar, /systemSection/);
+  assert.match(sidebar, /flex-1 overflow-y-auto/);
+  assert.match(sidebar, /border-t border-boundary\/40/);
+
+  // Section labels are titled bands (leading rule + eyebrow).
+  assert.match(sidebar, /SectionLabel/);
+  assert.match(sidebar, /type-eyebrow/);
+
+  // Dividers use the real boundary token, not a near-invisible white.
+  assert.doesNotMatch(sidebar, /border-white\/\[0\.07\]/);
+  assert.match(sidebar, /border-boundary\/30/);
+
+  // Icons get a fixed slot so labels share one x-axis.
+  assert.match(sidebar, /flex w-5 shrink-0 justify-center/);
+});
+
+test("the spine keeps its non-hue active cues and stays colour-disciplined", () => {
+  const sidebar = readCode("../../components/seller/shell/seller-sidebar.tsx");
+
+  // Four cues: material lift + cyan edge + weight/ink + aria-current.
+  assert.match(sidebar, /aria-current=\{isActive \? "page" : undefined\}/);
+  assert.match(sidebar, /bg-raised font-semibold text-foreground/);
+  assert.match(sidebar, /w-\[3px\] rounded-l-control bg-primary/);
+
+  // Nav items are NOT colour-coded per destination, and the spine
+  // gains no decorative palette.
+  assert.doesNotMatch(sidebar, /text-success|text-warning|text-attention/);
+  assert.doesNotMatch(sidebar, /gradient|blur|shadow-\[|drop-shadow/);
+
+  // Desktop and tablet render the SAME section list component.
+  assert.match(sidebar, /export function SidebarSections/);
+  const topbar = readCode("../../components/seller/shell/seller-topbar.tsx");
+  assert.match(topbar, /SidebarSections/);
 });

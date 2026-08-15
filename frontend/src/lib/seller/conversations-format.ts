@@ -220,8 +220,12 @@ export const CONTROL_STATE_CHIP_TONE: Record<
     chipClassName: "bg-attention-soft text-attention",
     dotClassName: "bg-attention",
   },
+  // Paused is the one control state that is neither ordinary operation
+  // nor seller review: the assistant is deliberately silent. The
+  // near-neutral paused role says that without competing with cyan
+  // (interaction) or coral (attention).
   ASSISTANT_PAUSED: {
-    chipClassName: "bg-paused-muted text-foreground",
+    chipClassName: "bg-paused-muted text-paused",
     dotClassName: "bg-paused",
   },
 };

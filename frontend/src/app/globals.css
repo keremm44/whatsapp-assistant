@@ -274,11 +274,24 @@
  * SIGNALS
  *   interaction  #4FB3C9  cyan   selected / active / nav / focus /
  *                                primary action
- *   attention    #E4785C  coral  backend-supported seller review
+ *   attention    #EA8266  coral  backend-supported seller review
  *
- *   They are 180 deg apart in hue (ΔE 82) and both clear AA on every
- *   material in the ladder, so "this row is selected" and "this row
- *   needs you" can coexist on ONE row without ambiguity.
+ *   They are ~180 deg apart in hue and both clear AA on every material
+ *   in the ladder, so "this row is selected" and "this row needs you"
+ *   can coexist on ONE row without ambiguity.
+ *
+ * SUPPORTING SEMANTIC ROLES (small, controlled areas only)
+ *   success   #5EC59A  green  truthful terminal completion
+ *                             (HANDLED / ANSWERED / COMPLETE)
+ *   warning   #E8A34D  amber  system-degraded assistant notices
+ *   paused    #949DAC  slate  deliberately inactive; near-neutral by
+ *                             design so it never becomes a 6th accent
+ *
+ *   These exist so the workspace is not one continuous blue-gray
+ *   field. They appear ONLY where the backend already proves the
+ *   state — status text, one icon accent, a chip dot, a notice rail.
+ *   Content TYPE is never colour-coded: an order and a return with the
+ *   same lifecycle state get the same tone.
  */
 .seller-theme {
   color-scheme: dark;
@@ -379,24 +392,28 @@
   /* Reserved for backend-supported seller review / intervention.
    * Never a logo colour, a hairline, a section label or an ordinary
    * icon tint. */
-  --color-attention: #e4785c;
-  --color-attention-rgb: 228 120 92;
+  /* Tuned from #E4785C, which measured 4.20:1 on the full `hover`
+   * material — coral status text and hovered rows genuinely co-occur
+   * (e.g. dashboard attention rows). #EA8266 is the SAME hue (41°) one
+   * step brighter, clearing AA on every surface including hover. */
+  --color-attention: #ea8266;
+  --color-attention-rgb: 234 130 102;
   --color-attention-soft: #331d17;
   --color-attention-soft-rgb: 51 29 23;
   /* The legacy `accent` / `review` families are the SAME single
    * attention semantic, preserved so non-pilot routes keep working. */
-  --color-accent: #e4785c;
-  --color-accent-rgb: 228 120 92;
-  --color-accent-dark: #f0917a;
-  --color-accent-dark-rgb: 240 145 122;
+  --color-accent: #ea8266;
+  --color-accent-rgb: 234 130 102;
+  --color-accent-dark: #f1937a;
+  --color-accent-dark-rgb: 241 147 122;
   --color-accent-muted: #331d17;
   --color-accent-muted-rgb: 51 29 23;
   --color-accent-foreground: #2a1009;
   --color-accent-foreground-rgb: 42 16 9;
-  --color-accent-text: #e4785c;
-  --color-accent-text-rgb: 228 120 92;
-  --color-review: #e4785c;
-  --color-review-rgb: 228 120 92;
+  --color-accent-text: #ea8266;
+  --color-accent-text-rgb: 234 130 102;
+  --color-review: #ea8266;
+  --color-review-rgb: 234 130 102;
   --color-review-muted: #331d17;
   --color-review-muted-rgb: 51 29 23;
 
@@ -421,8 +438,13 @@
   --color-destructive-muted-rgb: 58 26 30;
   --color-destructive-foreground: #2b0c10;
   --color-destructive-foreground-rgb: 43 12 16;
-  --color-paused: #8b95a5;
-  --color-paused-rgb: 139 149 165;
+  /* Tuned up from #8B95A5, which measured 4.08:1 on the `hover`
+   * material — below AA for the small status text that now uses it.
+   * #949DAC clears 4.5:1 on every surface while staying near-neutral
+   * (chroma 8.9), so "paused" reads as deliberately inactive rather
+   * than as another coloured signal. */
+  --color-paused: #949dac;
+  --color-paused-rgb: 148 157 172;
   --color-paused-muted: #1e242e;
   --color-paused-muted-rgb: 30 36 46;
 

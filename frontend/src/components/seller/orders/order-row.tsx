@@ -12,6 +12,7 @@ import {
   getPrintContent,
   getProductNameDisplay,
   getRowImageActionLabel,
+  getOrderStatusTone,
   getRowImageMessageId,
   ordersListHref,
   ORDER_NUMBER_COPIED_LABEL,
@@ -87,6 +88,7 @@ export function OrderRow({
   const phone = getPhoneDisplay(order);
   const content = getPrintContent(order);
   const needsReview = order.sellerActionRequired;
+  const statusTone = getOrderStatusTone(order);
   const reviewReason = getOrderRowReviewReason(order);
 
   const [previewOpen, setPreviewOpen] = React.useState(false);
@@ -186,7 +188,9 @@ export function OrderRow({
             <span
               className={cn(
                 "shrink-0 text-[11.5px] font-medium leading-snug",
-                needsReview ? "text-accent-text" : "text-muted-foreground",
+                statusTone === "attention" && "text-accent-text",
+                statusTone === "success" && "text-success",
+                statusTone === "muted" && "text-muted-foreground",
               )}
             >
               {order.displayStatus}

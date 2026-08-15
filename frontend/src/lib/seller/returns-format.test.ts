@@ -235,9 +235,12 @@ test("one locked state line per canonical status; terracotta only for action", (
     label: "Asistan bilgi topluyor",
     tone: "muted",
   });
+  // HANDLED is a terminal completion. It previously shared the
+  // `muted` tone with COLLECTING, so a finished request looked
+  // identical to one still in progress; success is the truthful role.
   assert.deepEqual(RETURN_STATUS_DISPLAY.HANDLED, {
     label: "İlgilenildi",
-    tone: "muted",
+    tone: "success",
   });
 });
 

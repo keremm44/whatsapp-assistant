@@ -62,18 +62,22 @@ export function SellerShell({
           <main className="flex-1 pb-20 md:pb-10">
             {assistantNotice !== null ? (
               <PageContainer size="wide" className="pt-4">
-                {/* Oxide here is truthful: the notice only renders for a
-                    genuinely non-normal backend assistant state, which is
-                    exactly the "seller attention" semantic. */}
+                {/* The notice renders ONLY for a genuinely non-normal
+                    backend assistant state (ai disabled / onboarding
+                    incomplete / non-active system status). That is a
+                    SYSTEM-degraded condition, not a per-record seller
+                    review, so it uses the warning role. Keeping coral
+                    exclusively for "a customer record needs you" stops
+                    the two from blurring into one alarm colour. */}
                 <div
                   role="status"
-                  className="flex items-start gap-3 rounded-sheet border-l-[3px] border-l-attention bg-attention-soft px-4 py-3"
+                  className="flex items-start gap-3 rounded-sheet border-l-[3px] border-l-warning bg-warning-muted px-4 py-3"
                 >
                   <CircleAlert
                     aria-hidden="true"
                     size={16}
                     strokeWidth={1.75}
-                    className="mt-0.5 shrink-0 text-attention"
+                    className="mt-0.5 shrink-0 text-warning"
                   />
                   <div className="min-w-0 space-y-0.5">
                     <p className="type-row-primary text-foreground">

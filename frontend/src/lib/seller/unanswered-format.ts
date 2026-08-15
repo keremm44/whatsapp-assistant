@@ -129,11 +129,18 @@ export const unansweredWorkspaceHref = (input: {
  */
 export const UNANSWERED_STATUS_DISPLAY: Record<
   UnansweredStatus,
-  { label: string; tone: "accent" | "resolved" | "muted" }
+  { label: string; tone: "accent" | "success" | "paused" | "muted" }
 > = {
   OPEN: { label: "Cevap bekliyor", tone: "accent" },
-  ANSWERED: { label: "Cevaplandı", tone: "resolved" },
-  DISMISSED: { label: "Görmezden gelindi", tone: "muted" },
+  // `resolved` used to render in INTERACTION CYAN, which leaked the
+  // selection/action colour into a state meaning. Answered is a
+  // completion, so it now uses the success role and cyan goes back to
+  // meaning "selected / actionable" only.
+  ANSWERED: { label: "Cevaplandı", tone: "success" },
+  // Dismissed is deliberately inactive — not a failure, not a
+  // completion. The near-neutral paused role says that without
+  // adding another saturated signal.
+  DISMISSED: { label: "Görmezden gelindi", tone: "paused" },
 };
 
 /* ------------------------------------------------------------------ */

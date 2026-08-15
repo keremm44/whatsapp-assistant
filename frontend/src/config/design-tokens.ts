@@ -157,7 +157,7 @@ export const designTokens = {
     },
     /** Coral = backend-supported seller attention only. 180° from cyan. */
     attention: {
-      DEFAULT: color("#E4785C"),
+      DEFAULT: color("#EA8266", "AA on every surface incl. hover"),
       soft: color("#331D17"),
     },
     state: {
@@ -165,7 +165,7 @@ export const designTokens = {
       successSoft: color("#14332A"),
       warning: color("#E8A34D"),
       warningSoft: color("#33260F"),
-      paused: color("#8B95A5"),
+      paused: color("#949DAC", "AA on every surface incl. hover"),
       pausedSoft: color("#1E242E"),
       destructive: color("#F2717A"),
       destructiveSoft: color("#3A1A1E"),

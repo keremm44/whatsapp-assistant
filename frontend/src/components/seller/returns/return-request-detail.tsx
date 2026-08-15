@@ -224,9 +224,9 @@ export function ReturnRequestDetail({
             <span
               className={cn(
                 "text-[11.5px] font-medium leading-none",
-                statusDisplay.tone === "accent"
-                  ? "text-accent-text"
-                  : "text-muted-foreground",
+                statusDisplay.tone === "accent" && "text-accent-text",
+                statusDisplay.tone === "success" && "text-success",
+                statusDisplay.tone === "muted" && "text-muted-foreground",
               )}
             >
               {statusDisplay.label}

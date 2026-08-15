@@ -130,12 +130,18 @@ export function PausedRow({
 }
 
 /**
- * Restrained reason differentiation: a small muted line icon per
- * mapped category. Deliberately no red/alarm treatment — the design
- * system reserves that for genuine destructive/error surfaces.
+ * Restrained reason differentiation: a small line icon per mapped
+ * category, tinted with the PAUSED role.
+ *
+ * Every row on this queue is paused by definition, so the icon is the
+ * one place the state is expressed as colour — near-neutral slate,
+ * which reads as "deliberately inactive" rather than as an alarm.
+ * Deliberately no red/alarm treatment: the design system reserves
+ * that for genuine destructive/error surfaces, and a security pause
+ * is a state, not an emergency.
  */
 function PausedReasonIcon({ kind }: { kind: PausedReasonKind }) {
-  const className = "mt-0.5 shrink-0 text-muted-foreground";
+  const className = "mt-0.5 shrink-0 text-paused";
   if (kind === "security") {
     return (
       <Shield aria-hidden="true" size={16} strokeWidth={1.75} className={className} />

@@ -101,7 +101,8 @@ export function UnansweredQuestionRow({
           className={cn(
             "mt-1 block text-[11.5px] font-medium leading-none",
             statusDisplay.tone === "accent" && "text-accent-text",
-            statusDisplay.tone === "resolved" && "text-primary-text",
+            statusDisplay.tone === "success" && "text-success",
+            statusDisplay.tone === "paused" && "text-paused",
             statusDisplay.tone === "muted" && "text-muted-foreground",
           )}
         >

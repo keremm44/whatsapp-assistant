@@ -214,11 +214,16 @@ export const returnsWorkspaceHref = (input: {
  */
 export const RETURN_STATUS_DISPLAY: Record<
   ReturnStatus,
-  { label: string; tone: "accent" | "muted" }
+  { label: string; tone: "accent" | "success" | "muted" }
 > = {
   SELLER_REVIEW_REQUIRED: { label: "Sizden bekleniyor", tone: "accent" },
   COLLECTING: { label: "Asistan bilgi topluyor", tone: "muted" },
-  HANDLED: { label: "İlgilenildi", tone: "muted" },
+  // HANDLED is a TERMINAL, backend-owned completion. It previously
+  // shared the `muted` tone with COLLECTING, so a finished request
+  // looked identical to one still being worked. Success is the
+  // truthful role for it — and it keeps the queue from reading as one
+  // undifferentiated gray list.
+  HANDLED: { label: "İlgilenildi", tone: "success" },
 };
 
 /* ------------------------------------------------------------------ */

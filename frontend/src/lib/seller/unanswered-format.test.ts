@@ -146,18 +146,36 @@ test("tab navigation drops the selection by construction", () => {
 /* ------------------------------------------------------------------ */
 
 test("one locked state line per canonical status", () => {
+  // Labels are backend-facing language and must not drift.
   assert.deepEqual(UNANSWERED_STATUS_DISPLAY.OPEN, {
     label: "Cevap bekliyor",
     tone: "accent",
   });
+  // `resolved` used to render in INTERACTION CYAN. Answered is a
+  // completion, not an interaction, so it now carries the success
+  // role — this keeps cyan meaning "selected / actionable" only.
   assert.deepEqual(UNANSWERED_STATUS_DISPLAY.ANSWERED, {
     label: "Cevaplandı",
-    tone: "resolved",
+    tone: "success",
   });
+  // Dismissed is deliberately inactive: neither failure nor success.
   assert.deepEqual(UNANSWERED_STATUS_DISPLAY.DISMISSED, {
     label: "Görmezden gelindi",
-    tone: "muted",
+    tone: "paused",
   });
+});
+
+test("interaction cyan is never used to express a status outcome", () => {
+  // Regression lock for the semantic leak fixed in this pass: cyan is
+  // reserved for selection/action, so no status tone may resolve to it.
+  const tones = Object.values(UNANSWERED_STATUS_DISPLAY).map((s) => s.tone);
+  assert.ok(!tones.includes("resolved" as never));
+  for (const tone of tones) {
+    assert.ok(
+      ["accent", "success", "paused", "muted"].includes(tone),
+      `unexpected status tone: ${tone}`,
+    );
+  }
 });
 
 test("occurrence count renders the real number verbatim", () => {
