@@ -91,13 +91,13 @@ export function ConversationDetailPanel({
               title="Konuşmalara geri dön"
               className={cn(
                 "-ml-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-muted transition-colors md:hidden",
-                "hover:bg-recessed hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "hover:bg-elevated hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               )}
             >
               <ArrowLeft aria-hidden="true" size={18} strokeWidth={1.75} />
             </Link>
             <div className="min-w-0">
-              {/* Record identity: the serif identity role. */}
+              {/* Record identity: the display role, tracked in. */}
               <h2
                 className="truncate type-record-identity text-foreground"
                 title={display.primary}
@@ -139,7 +139,7 @@ export function ConversationDetailPanel({
               aria-haspopup="dialog"
               className={cn(
                 "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-control px-2.5 type-row-secondary font-medium text-muted transition-colors xl:hidden",
-                "hover:bg-recessed hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "hover:bg-elevated hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               )}
             >
               <PanelRight aria-hidden="true" size={16} strokeWidth={1.75} />

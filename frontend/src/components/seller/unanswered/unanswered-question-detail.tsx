@@ -222,7 +222,7 @@ export function UnansweredQuestionDetail({
                       {occurredLabel !== null ? (
                         <time
                           dateTime={occurrence.occurredAt}
-                          className="text-[11.5px] tabular-nums text-muted-foreground"
+                          className="text-[11.5px] type-figure text-muted-foreground"
                         >
                           {occurredLabel}
                         </time>

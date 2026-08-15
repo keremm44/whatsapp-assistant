@@ -5,8 +5,8 @@ import * as React from "react";
  *
  * "The Working Ledger" pilot:
  *
- *   - The H1 is the page's serif title role (38/42 desktop, 32/36
- *     mobile). It, not a badge, is what gives the page its weight.
+ *   - The H1 is the page's display role (40/46 desktop, 34/40 mobile),
+ *     tracked in. It, not a badge, gives the page its weight.
  *
  *   - The task count is now TYPOGRAPHIC, not a decorative badge: the
  *     numeral is set large in tabular figures on the same line of
@@ -55,7 +55,7 @@ function WorkloadCount({ total }: { total: number }) {
     >
       <span
         aria-hidden="true"
-        className="font-title text-[30px] font-semibold leading-none tabular-nums text-foreground"
+        className="type-figure font-display text-[32px] font-semibold leading-none tracking-[-0.02em] text-foreground"
       >
         {total}
       </span>

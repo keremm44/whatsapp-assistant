@@ -37,7 +37,7 @@ export function SectionHeading({
         {typeof count === "number" ? (
           <span
             aria-hidden="true"
-            className="type-row-secondary tabular-nums text-muted-foreground"
+            className="type-row-secondary type-figure text-muted-foreground"
           >
             {count}
           </span>

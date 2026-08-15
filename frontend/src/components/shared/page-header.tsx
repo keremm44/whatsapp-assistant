@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils/cn";
  *   1. An optional quiet caption in sentence case (metadata role).
  *      It names the region; it is no longer an uppercase colored
  *      eyebrow.
- *   2. The page H1 in the serif title role (`type-page-title`):
- *      38/42 desktop, 32/36 mobile.
+ *   2. The page H1 in the display role (`type-page-title`):
+ *      40/46 desktop, 34/40 mobile, tracked in.
  *   3. A short description in the readable secondary ink role.
  *
  * The previous decorative colored hairline under the title is gone:

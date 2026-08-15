@@ -44,6 +44,10 @@ const config: Config = {
          * `border` remain as aliases so non-pilot routes keep
          * working unchanged. */
         canvas: "rgb(var(--color-canvas-rgb) / <alpha-value>)",
+        sunken: "rgb(var(--color-sunken-rgb) / <alpha-value>)",
+        raised: "rgb(var(--color-raised-rgb) / <alpha-value>)",
+        overlay: "rgb(var(--color-overlay-rgb) / <alpha-value>)",
+        elevated: "rgb(var(--color-hover-rgb) / <alpha-value>)",
         paper: "rgb(var(--color-paper-rgb) / <alpha-value>)",
         recessed: "rgb(var(--color-recessed-rgb) / <alpha-value>)",
         floating: "rgb(var(--color-floating-rgb) / <alpha-value>)",
@@ -126,9 +130,14 @@ const config: Config = {
         /* `title` is the serif role (page titles + record identity).
          * `heading` and `body` are the sans roles. See globals.css
          * for the font-loading decision. */
-        title: ["var(--font-title)", "ui-serif", "Georgia", "serif"],
+        /* One grotesque family, two roles. `title` is kept as an
+         * alias of the display role so existing callers keep working
+         * — it is no longer a serif. */
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
+        title: ["var(--font-display)", "system-ui", "sans-serif"],
         heading: ["var(--font-heading)", "system-ui", "sans-serif"],
         body: ["var(--font-body)", "system-ui", "sans-serif"],
+        numeric: ["var(--font-numeric)", "ui-monospace", "monospace"],
       },
       fontSize: {
         xs: ["0.75rem", { lineHeight: "1.4" }],

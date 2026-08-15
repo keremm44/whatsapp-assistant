@@ -26,17 +26,20 @@ import { cn } from "@/lib/utils/cn";
  * Message timeline — the operational work record of the selected
  * conversation.
  *
- * "The Working Ledger" pilot deliberately does NOT imitate WhatsApp:
- * no wallpaper, no tails, no avatars, no delivery/read receipts, no
+ * This direction deliberately does NOT imitate WhatsApp: no
+ * wallpaper, no tails, no avatars, no delivery/read receipts, no
  * presence. What remains is a correspondence transcript of flat
  * blocks with a modest radius, kept left/right so the direction of
  * each entry is unambiguous.
  *
- * Ownership model (never overclaimed):
- *   incoming  → the customer's side, left, a neutral recessed block
- *               with a subtle structural cue on its leading edge.
- *   outgoing  → the outgoing side, right, an interaction-blue-soft
- *               block. The backend stores no seller-authored send
+ * On dark material the two sides are separated by DEPTH rather than
+ * by two competing tints:
+ *
+ *   incoming  → the customer's side, left, a SUNKEN block (below the
+ *               work sheet) with a structural cue on its leading
+ *               edge. It reads as received material.
+ *   outgoing  → the outgoing side, right, an interaction-soft cyan
+ *               well. The backend stores no seller-authored send
  *               path, so an outgoing block is NEVER labelled
  *               "Satıcı". When `was_auto_replied` is true the
  *               backend proves assistant authorship, and ONLY then
@@ -338,7 +341,7 @@ function MessageBubble({
             // no tail.
             "rounded-[5px] px-3.5 py-2.5 text-foreground",
             isIncoming
-              ? "border-l-2 border-boundary bg-recessed"
+              ? "border-l-2 border-boundary bg-sunken"
               : "bg-selected",
           )}
         >
@@ -373,7 +376,7 @@ function MessageBubble({
         {timePhrase ? (
           <p
             className={cn(
-              "mt-1 type-meta tabular-nums text-muted-foreground",
+              "mt-1 type-meta type-figure text-muted-foreground",
               isIncoming ? "text-left" : "text-right",
             )}
           >

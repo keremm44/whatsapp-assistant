@@ -16,22 +16,21 @@ import { SellerIcon } from "./icon-map";
 import { SidebarSections } from "./seller-sidebar";
 
 /**
- * Topbar — the slim paper workspace rail.
+ * Topbar — the slim workspace rail.
  *
- * "The Working Ledger" pilot turns the topbar into a thin light rail
- * that belongs to the work, not to the navigation chrome. The dark
- * ink is reserved for the spine; the rail is paper with a single
- * structural rule under it.
+ * The rail belongs to the WORK, not to the navigation frame, so it
+ * sits on the canvas material (one step above the spine) with a
+ * single structural rule beneath it. It stays deliberately thin:
+ * every pixel it takes is a pixel the ledger does not get.
  *
  *   - Left: the seller's real bootstrap identity (the store name from
- *     `GET /seller/me`). The previous decorative "Mağaza" chip was
- *     purely presentational — it restated in a badge what the label
- *     next to it already says, and it carried no backend state — so
- *     it is removed. No truthful business identity or data is lost.
+ *     `GET /seller/me`). The decorative "Mağaza" chip stays removed —
+ *     it restated the adjacent label and carried no backend state.
+ *     No truthful business identity or data is lost.
  *
  *   - Tablet only (md to lg): a Menu trigger opens the same
- *     navigation in a Sheet. The Sheet renders the dark spine
- *     material and the identical section list as the desktop spine
+ *     navigation in a Sheet, rendering the spine material and the
+ *     identical section list as the desktop spine
  *     (`SidebarSections`), so tablet and desktop can never drift.
  *
  *   - No fabricated utility chrome: no notifications, no
@@ -51,7 +50,7 @@ export function SellerTopbar({
   storeName: string;
 }) {
   return (
-    <header className="sticky top-0 z-10 border-b border-divider bg-paper">
+    <header className="sticky top-0 z-10 border-b border-divider bg-canvas">
       <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
         <TabletNavSheet />
         <p
@@ -74,8 +73,8 @@ const TabletNavSheet = () => {
       <SheetTrigger
         aria-label="Menüyü aç"
         className={cn(
-          "-ml-2 hidden h-11 w-11 items-center justify-center rounded-control text-muted transition-colors hover:bg-recessed hover:text-foreground md:inline-flex lg:hidden",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+          "-ml-2 hidden h-11 w-11 items-center justify-center rounded-control text-muted transition-colors hover:bg-elevated hover:text-foreground md:inline-flex lg:hidden",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
         )}
       >
         <SellerIcon name="Menu" size={18} />
@@ -91,10 +90,10 @@ const TabletNavSheet = () => {
         )}
       >
         <SheetHeader className="px-5 pb-4 pt-6">
-          <SheetTitle className="font-heading text-[15px] font-semibold text-chrome-foreground">
+          <SheetTitle className="font-display text-[15px] font-semibold tracking-[-0.012em] text-chrome-foreground">
             WhatsApp Asistan
           </SheetTitle>
-          <span className="type-meta text-chrome-foreground/55">
+          <span className="type-meta text-chrome-foreground/50">
             Mağaza yönetimi
           </span>
         </SheetHeader>

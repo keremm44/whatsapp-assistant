@@ -1,5 +1,5 @@
 /**
- * "The Working Ledger / İş Defteri" pilot invariants.
+ * "Instrument" dark seller workspace invariants.
  *
  * These are deliberate regression locks for the pilot's art-direction
  * decisions that have no dependency-free runtime logic to unit-test.
@@ -8,21 +8,22 @@
  * snapshots, so ordinary visual refinement stays possible while the
  * product rules below cannot silently regress:
  *
- *   1. the seller theme is a light mineral canvas (not a dark
- *      workspace) and dark chrome stays seller-only;
- *   2. interaction (blue) and seller attention (oxide) are separate
- *      semantic roles;
+ *   1. the seller theme is a dark blue-graphite workspace whose
+ *      material ladder cannot collapse, and it stays seller-only;
+ *   2. interaction (cyan) and seller attention (coral) are separate
+ *      semantic roles that can coexist on one row;
  *   3. the Dashboard does not regress to a card-stack grammar;
  *   4. the Conversations selected row keeps aria-current plus a
  *      non-colour cue, and can coexist with an attention flag;
  *   5. `Asistan yanıtı` stays evidence-gated and no `Satıcı`
  *      authorship is fabricated;
  *   6. mobile touch-target discipline is intact;
- *   7. the typography role architecture exists and no unsafe font
+ *   7. the typography role architecture exists, is single-family
+ *      (no serif-led editorial voice), and no unsafe font
  *      integration (remote import / unvendored @font-face) shipped.
  *
  * Runs with Node's built-in test runner:
- *   node --test src/lib/seller/working-ledger.test.ts
+ *   node --test src/lib/seller/instrument-theme.test.ts
  * (via `npm test`)
  */
 
@@ -63,55 +64,90 @@ const sellerThemeBlock = (): string => {
 /* 1. Light mineral workspace                                          */
 /* ------------------------------------------------------------------ */
 
-test("seller theme is a light mineral canvas, not a dark workspace", () => {
+test("seller workspace is a dark blue-graphite field", () => {
   const block = sellerThemeBlock();
 
-  // Canvas / paper / recessed are the approved light ledger materials.
-  assert.match(block, /--color-canvas:\s*#ecece7/i);
-  assert.match(block, /--color-background:\s*#ecece7/i);
-  assert.match(block, /--color-paper:\s*#f8f7f3/i);
-  assert.match(block, /--color-surface:\s*#f8f7f3/i);
-  assert.match(block, /--color-recessed:\s*#e4e6e4/i);
-  assert.match(block, /--color-floating:\s*#ffffff/i);
+  // The measured material ladder.
+  assert.match(block, /--color-chrome:\s*#06090d/i);
+  assert.match(block, /--color-sunken:\s*#0d1117/i);
+  assert.match(block, /--color-canvas:\s*#12171f/i);
+  assert.match(block, /--color-raised:\s*#1c222c/i);
+  assert.match(block, /--color-overlay:\s*#242b37/i);
+  assert.match(block, /--color-hover:\s*#2d3542/i);
+  assert.match(block, /color-scheme:\s*dark/);
 
-  // Ink is dark ON light material (the inverse of the previous pass).
-  assert.match(block, /--color-foreground:\s*#20272d/i);
+  // Ink is LIGHT on dark material (the inverse of the light pilot).
+  assert.match(block, /--color-foreground:\s*#e8ecf2/i);
 
-  // The previous Carbon Plum / dark workspace values must not return.
-  for (const dead of ["#211a20", "#151416", "#2a262a", "#353035", "#f2eee6"]) {
+  // The previous light-paper direction must not return.
+  for (const dead of ["#ecece7", "#f8f7f3", "#e4e6e4", "#20272d"]) {
     assert.ok(
       !block.toLowerCase().includes(dead),
-      `the Carbon Plum value ${dead} must not return to the seller theme`,
+      `the light-paper value ${dead} must not return to the seller theme`,
     );
   }
 
-  // Luminance check, so a future edit cannot quietly darken the field:
-  // every core work material must be a LIGHT value.
+  // Every core material must be a genuinely DARK value, so a future
+  // edit cannot quietly reintroduce a light surface.
   const channelSum = (hex: string) =>
     [1, 3, 5].reduce((sum, i) => sum + parseInt(hex.slice(i, i + 2), 16), 0);
-  for (const role of ["canvas", "paper", "recessed", "floating"]) {
+  for (const role of ["chrome", "sunken", "canvas", "raised", "overlay"]) {
     const match = block.match(
       new RegExp(`--color-${role}:\\s*(#[0-9a-f]{6})`, "i"),
     );
     assert.ok(match, `--color-${role} must be declared`);
     assert.ok(
-      channelSum(match![1]!) > 600,
-      `--color-${role} must be a light material`,
+      channelSum(match![1]!) < 220,
+      `--color-${role} must be a dark material`,
     );
   }
 });
 
-test("dark ink chrome is scoped to the seller workspace only", () => {
+test("the material ladder is ordered and cannot collapse", () => {
+  const block = sellerThemeBlock();
+  const value = (role: string) =>
+    block.match(new RegExp(`--color-${role}:\\s*(#[0-9a-f]{6})`, "i"))![1]!;
+
+  // CIE L*: near-black values differ by tiny absolute luminance but
+  // are perceptually far apart, so the ladder must be judged in L*.
+  const lightness = (hex: string) => {
+    const chan = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const lin = chan.map((c) =>
+      c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4,
+    );
+    const y = 0.2126 * lin[0]! + 0.7152 * lin[1]! + 0.0722 * lin[2]!;
+    return y > 0.008856 ? 116 * y ** (1 / 3) - 16 : 903.3 * y;
+  };
+
+  // Strictly increasing luminance up the ladder.
+  const ladder = ["chrome", "sunken", "canvas", "raised", "overlay", "hover"];
+  const lums = ladder.map((role) => lightness(value(role)));
+  for (let i = 0; i < lums.length - 1; i += 1) {
+    assert.ok(
+      lums[i + 1]! > lums[i]!,
+      `${ladder[i + 1]} must sit above ${ladder[i]} in the ladder`,
+    );
+  }
+
+  // And each step must be perceptible (>= 2 L*), not a rounding
+  // difference — this is the guard against a collapsed dark theme.
+  for (let i = 0; i < lums.length - 1; i += 1) {
+    assert.ok(
+      lums[i + 1]! - lums[i]! >= 2,
+      `the ${ladder[i]} -> ${ladder[i + 1]} step must be perceptible`,
+    );
+  }
+});
+
+test("the dark workspace is scoped to the seller subtree only", () => {
   const css = globals();
   const block = sellerThemeBlock();
 
-  // The dark spine belongs to the seller theme...
-  assert.match(block, /--color-chrome:\s*#202830/i);
-  assert.match(block, /--color-chrome-hover:\s*#2a3540/i);
-  assert.match(block, /--color-chrome-foreground:\s*#f4f1ea/i);
+  assert.match(block, /--color-chrome:\s*#06090d/i);
+  assert.match(block, /--color-chrome-foreground:\s*#e8ecf2/i);
 
-  // ...and the ROOT theme's chrome stays light, so admin / auth /
-  // public surfaces never inherit the seller spine.
+  // The ROOT theme stays light, so admin / auth / public never
+  // inherit the seller workspace.
   const root = css.slice(css.indexOf(":root {"), css.indexOf(".seller-theme {"));
   const rootChrome = root.match(/--color-chrome:\s*(#[0-9a-f]{6})/i);
   assert.ok(rootChrome, "root --color-chrome must be declared");
@@ -123,20 +159,21 @@ test("dark ink chrome is scoped to the seller workspace only", () => {
 
   // The dark material is applied through the theme class, never by a
   // global element selector.
-  assert.doesNotMatch(css, /^html\s*\{[^}]*#202830/im);
+  assert.doesNotMatch(css, /^html\s*\{[^}]*#0b0e13/im);
+  assert.doesNotMatch(css, /^body\s*\{[^}]*#12171f/im);
 });
 
 /* ------------------------------------------------------------------ */
 /* 2. Interaction vs seller attention are separate semantic roles      */
 /* ------------------------------------------------------------------ */
 
-test("interaction blue and oxide attention are distinct declared roles", () => {
+test("interaction cyan and attention coral are distinct declared roles", () => {
   const block = sellerThemeBlock();
 
-  assert.match(block, /--color-primary:\s*#285b82/i);
-  assert.match(block, /--color-selected:\s*#d9e7f1/i);
-  assert.match(block, /--color-attention:\s*#a9432c/i);
-  assert.match(block, /--color-attention-soft:\s*#f3e1da/i);
+  assert.match(block, /--color-primary:\s*#4fb3c9/i);
+  assert.match(block, /--color-selected:\s*#173039/i);
+  assert.match(block, /--color-attention:\s*#e4785c/i);
+  assert.match(block, /--color-attention-soft:\s*#331d17/i);
 
   const interaction = block.match(/--color-primary:\s*(#[0-9a-f]{6})/i)![1]!;
   const attention = block.match(/--color-attention:\s*(#[0-9a-f]{6})/i)![1]!;
@@ -151,8 +188,36 @@ test("interaction blue and oxide attention are distinct declared roles", () => {
     [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
   const [ir, , ib] = channels(interaction);
   const [ar, , ab] = channels(attention);
-  assert.ok(ib! > ir!, "interaction must read as blue (B > R)");
-  assert.ok(ar! > ab!, "attention must read as oxide (R > B)");
+  assert.ok(ib! > ir!, "interaction must read as cyan (B > R)");
+  assert.ok(ar! > ab!, "attention must read as coral (R > B)");
+});
+
+test("selection and attention stay legible on the SAME row", () => {
+  // The defining constraint of the two-signal model: a selected row
+  // that also needs attention must keep BOTH signals readable, so
+  // the coral flag is measured against the cyan selection well.
+  const block = sellerThemeBlock();
+  const value = (name: string) =>
+    block.match(new RegExp(`--color-${name}:\\s*(#[0-9a-f]{6})`, "i"))![1]!;
+
+  const relLum = (hex: string) => {
+    const lin = [1, 3, 5]
+      .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * lin[0]! + 0.7152 * lin[1]! + 0.0722 * lin[2]!;
+  };
+  const contrast = (a: string, b: string) => {
+    const [hi, lo] = [relLum(a), relLum(b)].sort((x, y) => y - x);
+    return (hi! + 0.05) / (lo! + 0.05);
+  };
+
+  const selection = value("selected");
+  for (const role of ["attention", "primary", "foreground", "muted"]) {
+    assert.ok(
+      contrast(value(role), selection) >= 4.5,
+      `${role} must stay AA on the selection fill`,
+    );
+  }
 });
 
 test("attention roles are exposed as tokens, not raw hex in components", () => {
@@ -240,7 +305,7 @@ test("dashboard groups tasks into one work sheet, not individual cards", () => {
 
   // Each region is ONE paper sheet whose entries are divided by rules.
   const sheets = page.match(
-    /divide-y divide-divider overflow-hidden rounded-sheet bg-paper/g,
+    /divide-y divide-divider overflow-hidden rounded-sheet bg-raised/g,
   );
   assert.ok(
     sheets && sheets.length >= 2,
@@ -256,14 +321,14 @@ test("dashboard groups tasks into one work sheet, not individual cards", () => {
     assert.doesNotMatch(source, /rounded-(md|lg|sheet|floating)/);
     assert.doesNotMatch(source, /shadow-(1|2|surface)/);
     assert.doesNotMatch(source, /border border-(border|boundary)/);
-    assert.doesNotMatch(source, /bg-(paper|surface|floating)\b/);
+    assert.doesNotMatch(source, /bg-(raised|surface|overlay|paper)\b/);
   }
 });
 
 test("dashboard header states the count typographically, not as a badge", () => {
   const header = read("../../components/seller/dashboard/dashboard-header.tsx");
   assert.match(header, /type-page-title/);
-  assert.match(header, /tabular-nums/);
+  assert.match(header, /type-figure/);
   // The accessible phrase for the backend aggregate is preserved.
   assert.match(header, /aria-label=\{`İlgilenmeniz gereken \$\{total\} konu`\}/);
   // Zero still hides the statement rather than showing an empty badge.
@@ -331,9 +396,11 @@ test("conversations workbench is edge-aligned regions, not one big card", () => 
   // The old rounded outer-card treatment must not return.
   assert.doesNotMatch(workbench, /md:rounded-(md|lg|sheet|floating)/);
   assert.doesNotMatch(workbench, /md:shadow-/);
-  // Honest per-region materials separated by structural rules.
-  assert.match(workbench, /bg-recessed/);
-  assert.match(workbench, /bg-paper/);
+  // Honest per-region materials separated by structural rules: the
+  // queue sits BELOW the work sheet, the context beside it.
+  assert.match(workbench, /bg-sunken/);
+  assert.match(workbench, /bg-raised/);
+  assert.match(workbench, /bg-canvas/);
   assert.match(workbench, /md:border-r md:border-boundary/);
   // Height containment and the conditional rail behaviour are intact.
   assert.match(workbench, /md:h-\[calc\(100dvh-/);
@@ -365,7 +432,10 @@ test("timeline is a flat correspondence transcript, not a WhatsApp clone", () =>
   );
   // Incoming = neutral block with a structural cue; outgoing =
   // interaction-blue-soft.
-  assert.match(timeline, /isIncoming\s*\?\s*"border-l-2 border-boundary bg-recessed"/);
+  assert.match(
+    timeline,
+    /isIncoming\s*\?\s*"border-l-2 border-boundary bg-sunken"/,
+  );
   assert.match(timeline, /:\s*"bg-selected"/);
   // Left/right direction distinction preserved.
   assert.match(timeline, /isIncoming \? "justify-start" : "justify-end"/);
@@ -425,15 +495,16 @@ test("assistant authorship remains evidence-gated and no Satıcı is invented", 
 /* 6. Mobile touch-target discipline                                   */
 /* ------------------------------------------------------------------ */
 
-test("mobile navigation keeps 44px targets, paper material and a rule", () => {
+test("mobile navigation keeps 44px targets, spine material and a rule", () => {
   const nav = readCode("../../components/seller/shell/seller-mobile-nav.tsx");
 
-  // Paper bar with a strong top divider — not a dark bar, not a wash.
-  assert.match(nav, /border-t border-boundary bg-paper/);
-  // Active state: blue top rule + weight + aria-current, no fill wash.
+  // Spine material with a strong top boundary, so the mobile frame is
+  // the same object as the desktop spine.
+  assert.match(nav, /border-t border-boundary bg-chrome/);
+  // Active state: cyan top rule + weight + aria-current, no fill wash.
   assert.match(nav, /aria-current=\{isActive \? "page" : undefined\}/);
   assert.match(nav, /inset-x-0 top-0 h-\[2px\] bg-primary/);
-  assert.match(nav, /font-semibold text-foreground/);
+  assert.match(nav, /font-semibold text-chrome-foreground/);
   assert.doesNotMatch(nav, /isActive\s*\n?\s*\?\s*"bg-selected/);
   // Touch targets and safe area preserved.
   const targets = nav.match(/min-h-\[44px\]/g);
@@ -477,9 +548,9 @@ test("priority row still stacks its action below content on narrow mobile", () =
 test("typography roles exist as a scale, not ad-hoc sizes", () => {
   const css = globals();
   const expected: [string, string, string][] = [
-    ["type-page-title", "32px", "36px"],
-    ["type-section", "24px", "30px"],
-    ["type-record-identity", "20px", "26px"],
+    ["type-page-title", "34px", "40px"],
+    ["type-section", "22px", "28px"],
+    ["type-record-identity", "19px", "26px"],
     ["type-body", "15px", "22px"],
     ["type-row-primary", "14px", "20px"],
     ["type-row-secondary", "13px", "19px"],
@@ -492,41 +563,74 @@ test("typography roles exist as a scale, not ad-hoc sizes", () => {
     assert.match(body, new RegExp(`font-size:\\s*${size}`));
     assert.match(body, new RegExp(`line-height:\\s*${leading}`));
   }
-  // The page title scales up on desktop per the approved scale.
-  assert.match(css, /\.type-page-title \{\s*font-size: 38px;\s*line-height: 42px;/);
-  // Serif is the identity role; sans carries the operational UI.
-  assert.match(css, /\.type-page-title \{[^}]*font-family: var\(--font-title\)/s);
+  // The page title scales up on desktop.
   assert.match(
     css,
-    /\.type-record-identity \{[^}]*font-family: var\(--font-title\)/s,
+    /\.type-page-title \{\s*font-size: 40px;\s*line-height: 46px;/,
   );
-  assert.match(css, /\.type-body \{[^}]*font-family: var\(--font-body\)/s);
+  // Tabular figures are a codified role, so dense rows cannot jitter.
+  assert.match(css, /\.type-figure \{[^}]*tabular-nums/s);
+});
+
+test("hierarchy is single-family: no serif-led editorial voice", () => {
+  const css = globals();
+
+  // Every display/body role resolves to the SAME grotesque family.
+  assert.match(css, /--font-display:\s*"Inter"/);
+  assert.match(css, /--font-body:\s*"Inter"/);
+  assert.match(css, /--font-heading:\s*var\(--font-display\)/);
+
+  // No serif stack anywhere in the theme, and no serif token.
+  assert.doesNotMatch(css, /--font-title:/);
+  assert.doesNotMatch(css, /ui-serif|Georgia|"Times New Roman"|Plex Serif/);
+
+  // Display roles earn their weight through tracking, not a typeface
+  // swap — so the tracked-in treatment must be present.
+  for (const role of ["type-page-title", "type-section", "type-record-identity"]) {
+    const body = css
+      .slice(css.indexOf(`.${role} {`))
+      .slice(0, css.slice(css.indexOf(`.${role} {`)).indexOf("}"));
+    assert.match(body, /font-family: var\(--font-display\)/);
+    assert.match(body, /letter-spacing: -0\./);
+  }
+
+  // Tailwind exposes the display + numeric roles, and `title` is now
+  // an alias of the grotesque rather than a serif.
+  const tailwind = read("../../../tailwind.config.ts");
+  assert.match(tailwind, /display: \["var\(--font-display\)"/);
+  assert.match(tailwind, /numeric: \["var\(--font-numeric\)"/);
+  assert.doesNotMatch(tailwind, /"ui-serif"/);
+
+  // No component may reach for a serif role.
+  for (const relative of [
+    "../../components/seller/dashboard/dashboard-header.tsx",
+    "../../components/seller/conversations/conversation-detail-panel.tsx",
+    "../../components/shared/page-header.tsx",
+  ]) {
+    assert.doesNotMatch(read(relative), /font-title|font-serif/);
+  }
 });
 
 test("no unsafe font integration ships: no remote imports, no dangling faces", () => {
   const css = globals();
 
-  // IBM Plex is named FIRST in each stack so vendored assets take over
-  // automatically once they land.
-  assert.match(css, /--font-title:\s*"IBM Plex Serif"/);
-  assert.match(css, /--font-heading:\s*"IBM Plex Sans"/);
-  assert.match(css, /--font-body:\s*"IBM Plex Sans"/);
-  // ...but every stack still terminates in a real system fallback.
-  assert.match(css, /--font-title:[^;]*serif;/s);
+  // The intended family is named first, and every stack still
+  // terminates in a real system fallback.
+  assert.match(css, /--font-display:\s*"Inter"/);
   assert.match(css, /--font-body:[^;]*sans-serif;/s);
+  assert.match(css, /--font-numeric:[^;]*monospace;/s);
 
   // No remote CSS import and no remote font URL.
   assert.doesNotMatch(css, /@import\s+url\(/);
   assert.doesNotMatch(css, /https?:\/\/fonts\./);
 
-  // Any @font-face must be commented out until real local assets are
-  // vendored, so the build can never reference a missing binary.
+  // Any @font-face must stay commented out until real local assets
+  // are vendored, so the build can never reference a missing binary.
   const live = css.replace(/\/\*[^]*?\*\//g, "");
   assert.doesNotMatch(live, /@font-face/);
 
   // And the app must not have adopted next/font behind our back.
-  const layout = read("../../app/layout.tsx");
-  assert.doesNotMatch(layout, /next\/font/);
+  assert.doesNotMatch(read("../../app/layout.tsx"), /next\/font/);
 });
 
 /* ------------------------------------------------------------------ */
@@ -540,8 +644,11 @@ test("geometry roles separate controls, work sheets and floating objects", () =>
   assert.match(css, /--radius-floating:\s*10px/);
 
   // Floating surfaces are the only ones with real elevation.
-  assert.match(read("../../components/ui/dialog.tsx"), /rounded-floating[^"]*bg-floating[^"]*shadow-2/);
-  assert.match(read("../../components/ui/sheet.tsx"), /bg-floating p-6 shadow-2/);
+  assert.match(
+    read("../../components/ui/dialog.tsx"),
+    /rounded-floating[^"]*bg-overlay[^"]*shadow-2/,
+  );
+  assert.match(read("../../components/ui/sheet.tsx"), /bg-overlay p-6 shadow-2/);
   // Ordinary seller work sheets stay flat.
   assert.match(sellerThemeBlock(), /--shadow-surface:\s*none/);
   // Controls use the crisp control radius.

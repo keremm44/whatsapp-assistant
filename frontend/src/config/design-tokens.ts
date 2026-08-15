@@ -109,59 +109,66 @@ export const designTokens = {
   },
 
   /**
-   * SELLER WORKSPACE — "The Working Ledger / İş Defteri" pilot.
+   * SELLER WORKSPACE — "Instrument" (dark).
    *
-   * These are the seller-only material and semantic roles applied by
-   * the `.seller-theme` override in src/app/globals.css. They are
-   * recorded here as the art-direction source of truth; components
-   * consume them through Tailwind semantic classes (bg-canvas,
-   * bg-paper, bg-recessed, bg-chrome, text-attention, …), never as
-   * raw hex.
+   * Applied by the `.seller-theme` override in src/app/globals.css.
+   * Recorded here as the art-direction source of truth; components
+   * consume these through Tailwind semantic classes (bg-canvas,
+   * bg-raised, bg-sunken, text-attention, ...), never as raw hex.
+   *
+   * Carried over from the Working Ledger pilot: ledger row
+   * discipline, reduced-card grammar, separated selection/attention
+   * semantics, strong hierarchy. Dropped: light paper surfaces and
+   * the serif-led editorial voice.
    */
-  sellerLedger: {
+  sellerInstrument: {
+    /**
+     * Measured material ladder. Every adjacent step is >= ~3.4 ΔE
+     * apart so surfaces cannot collapse on a dim display, and the
+     * whole ladder holds one blue-graphite hue (chroma 5-9) so it
+     * reads as a designed material rather than neutral gray.
+     */
     material: {
-      canvas: color("#ECECE7", "low-glare mineral canvas"),
-      paper: color("#F8F7F3", "primary work sheet"),
-      floating: color("#FFFFFF", "dialogs / sheets / preview only"),
-      recessed: color("#E4E6E4", "material behind paper"),
-    },
-    chrome: {
-      DEFAULT: color("#202830", "dark ink navigation spine"),
-      hover: color("#2A3540"),
-      foreground: color("#F4F1EA"),
+      chrome: color("#06090D", "navigation spine — deepest material"),
+      sunken: color("#0D1117", "recessed wells, queue, inset regions"),
+      canvas: color("#12171F", "the field the work sits on"),
+      raised: color("#1C222C", "ordinary work sheet"),
+      overlay: color("#242B37", "dialogs / sheets — real elevation"),
+      hover: color("#2D3542", "interactive top step"),
     },
     ink: {
-      primary: color("#20272D"),
-      secondary: color("#56616A"),
-      // Perceptually tuned from the #667178 baseline so the 12px
-      // metadata role clears AA on recessed and selected material.
-      tertiary: color("#5E686F"),
+      // Each level is validated against the WORST material it can
+      // legally land on (hover + selection fill), not just canvas.
+      primary: color("#E8ECF2"),
+      secondary: color("#A8B2C1"),
+      tertiary: color("#939DAC", "tuned up from #7E8899 for AA"),
     },
     structure: {
-      divider: color("#D5D7D2", "ordinary record/section rule"),
-      boundary: color("#B8BDB8", "one strong structural edge"),
+      // On dark material a rule must be LIGHTER than its host.
+      divider: color("#262D38", "ordinary record/section rule"),
+      boundary: color("#38404D", "one strong structural edge"),
     },
-    /** Blue = selected / active / navigation / focus / primary action. */
+    /** Cyan = selected / active / navigation / focus / primary action. */
     interaction: {
-      DEFAULT: color("#285B82"),
-      hover: color("#204866"),
-      // Tuned from the #DDEAF2 baseline so a selected row separates
-      // from the recessed queue material (ΔE 6.4 -> 7.4).
-      soft: color("#D9E7F1"),
+      DEFAULT: color("#4FB3C9"),
+      hover: color("#6AC4D8"),
+      soft: color("#173039", "selection fill"),
+      foreground: color("#06222B", "dark ink on a bright fill"),
     },
-    /** Oxide = backend-supported seller attention / review only. */
+    /** Coral = backend-supported seller attention only. 180° from cyan. */
     attention: {
-      DEFAULT: color("#A9432C"),
-      soft: color("#F3E1DA"),
+      DEFAULT: color("#E4785C"),
+      soft: color("#331D17"),
     },
     state: {
-      success: color("#2E6B4C"),
-      successSoft: color("#DEECE3"),
-      // Tuned from the #68717A baseline to clear AA on paused-soft.
-      paused: color("#5E6770"),
-      pausedSoft: color("#E4E7EA"),
-      destructive: color("#B1383E"),
-      destructiveSoft: color("#F2DEDF"),
+      success: color("#5EC59A"),
+      successSoft: color("#14332A"),
+      warning: color("#E8A34D"),
+      warningSoft: color("#33260F"),
+      paused: color("#8B95A5"),
+      pausedSoft: color("#1E242E"),
+      destructive: color("#F2717A"),
+      destructiveSoft: color("#3A1A1E"),
     },
   },
 
@@ -194,24 +201,25 @@ export const designTokens = {
   },
 
   /**
-   * Typography roles. IBM Plex Serif carries page titles and record
-   * identity; IBM Plex Sans carries everything operational. See the
-   * font-loading decision at the top of src/app/globals.css — no real
-   * Plex assets are vendored yet, so the stacks fall back safely
-   * while the role architecture and scale are already in force.
+   * Typography roles. ONE grotesque family carries every role;
+   * hierarchy comes from size, weight, tracking and ink level rather
+   * than from a second typeface. See the font-loading decision at the
+   * top of src/app/globals.css — no real assets are vendored yet, so
+   * the stacks fall back to system grotesques while the role
+   * architecture and scale are already in force.
    */
   font: {
-    title: "IBM Plex Serif",
-    heading: "IBM Plex Sans",
-    body: "IBM Plex Sans",
+    display: "Inter",
+    heading: "Inter",
+    body: "Inter",
   },
 
   /** Macro type scale (px / line-height px). */
   typeScale: {
-    pageTitleDesktop: { size: 38, leading: 42 },
-    pageTitleMobile: { size: 32, leading: 36 },
-    section: { size: 24, leading: 30 },
-    recordIdentity: { size: 20, leading: 26 },
+    pageTitleDesktop: { size: 40, leading: 46 },
+    pageTitleMobile: { size: 34, leading: 40 },
+    section: { size: 22, leading: 28 },
+    recordIdentity: { size: 19, leading: 26 },
     body: { size: 15, leading: 22 },
     rowPrimary: { size: 14, leading: 20 },
     rowSecondary: { size: 13, leading: 19 },

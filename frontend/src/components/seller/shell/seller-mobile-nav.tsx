@@ -29,15 +29,16 @@ import { SellerIcon } from "./icon-map";
  * Genel, Konuşmalar, İşler, Diğer. "İşler" and "Diğer" open a Sheet
  * rather than navigating to a single URL.
  *
- * "The Working Ledger" pilot: the bar is PAPER (not the dark spine —
- * the spine is a desktop object) with a strong top divider, so it
- * reads as the bottom edge of the work sheet rather than a floating
- * app bar.
+ * "Instrument": the bar is the SPINE material (the deepest step), so
+ * on mobile the navigation frame reads as the same object it is on
+ * desktop, and the work above it stays the brightest thing on screen.
+ * A strong top boundary separates it from the canvas.
  *
- * Active destination is expressed with a blue top rule + a semibold
- * label + a stronger interaction-blue icon. There is deliberately no
- * large active color wash, and the state never relies on hue alone
- * (rule + weight + aria-current). Safe-area behavior is preserved.
+ * Active destination is expressed with a cyan top rule + a semibold
+ * label + a brighter interaction-cyan icon. There is deliberately no
+ * large active colour wash, and the state never relies on hue alone
+ * (rule + weight + ink level + aria-current). Safe-area behaviour is
+ * preserved.
  */
 export function SellerMobileNav() {
   const pathname = usePathname();
@@ -46,7 +47,7 @@ export function SellerMobileNav() {
   return (
     <nav
       aria-label="Alt gezinme"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-boundary bg-paper md:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-boundary bg-chrome md:hidden"
     >
       <ul className="grid grid-cols-4">
         {mobileBottomNav.map((item) => (
@@ -85,8 +86,8 @@ const MobileNavLink = ({
     className={cn(
       "relative flex h-14 min-h-[44px] flex-col items-center justify-center gap-1 type-meta transition-colors",
       isActive
-        ? "font-semibold text-foreground"
-        : "text-muted-foreground hover:text-foreground",
+        ? "font-semibold text-chrome-foreground"
+        : "text-chrome-foreground/55 hover:text-chrome-foreground",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
     )}
   >
@@ -100,7 +101,7 @@ const MobileNavLink = ({
       name={item.icon}
       size={20}
       strokeWidth={isActive ? 2 : 1.75}
-      className={isActive ? "text-primary" : "text-muted-foreground"}
+      className={isActive ? "text-primary" : "text-chrome-foreground/50"}
     />
     <span>{item.label}</span>
   </Link>
@@ -125,8 +126,8 @@ const MobileSheetTrigger = ({
         className={cn(
           "relative flex h-14 min-h-[44px] w-full flex-col items-center justify-center gap-1 type-meta transition-colors",
           active
-            ? "font-semibold text-foreground"
-            : "text-muted-foreground hover:text-foreground",
+            ? "font-semibold text-chrome-foreground"
+            : "text-chrome-foreground/55 hover:text-chrome-foreground",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
         )}
       >
@@ -140,13 +141,13 @@ const MobileSheetTrigger = ({
           name={item.icon}
           size={20}
           strokeWidth={active ? 2 : 1.75}
-          className={active ? "text-primary" : "text-muted-foreground"}
+          className={active ? "text-primary" : "text-chrome-foreground/50"}
         />
         <span>{item.label}</span>
       </SheetTrigger>
       <SheetContent
         side="bottom"
-        className="max-h-[80vh] rounded-t-floating bg-floating"
+        className="max-h-[80vh] rounded-t-floating bg-overlay"
       >
         <SheetHeader>
           <SheetTitle>{item.label}</SheetTitle>
@@ -164,7 +165,7 @@ const MobileSheetTrigger = ({
                     "relative flex h-12 min-h-[44px] items-center gap-3 rounded-control pl-4 pr-3 text-[15px] leading-[22px] transition-colors",
                     entryActive
                       ? "bg-primary-muted font-semibold text-foreground"
-                      : "text-foreground hover:bg-recessed",
+                      : "text-foreground hover:bg-elevated",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
                   )}
                 >

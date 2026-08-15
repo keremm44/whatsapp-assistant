@@ -82,7 +82,7 @@ export function PausedRow({
                 dateTime={timestampIso ?? undefined}
                 title={`Son mesaj · ${timePhrase}`}
                 aria-label={`Son mesaj · ${timePhrase}`}
-                className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
+                className="shrink-0 text-[11px] type-figure text-muted-foreground"
               >
                 {timePhrase}
               </time>

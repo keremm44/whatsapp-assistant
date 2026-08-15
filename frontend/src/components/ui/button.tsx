@@ -25,8 +25,8 @@ const buttonVariants = cva(
         secondary:
           // Recessed material against paper: a real control
           // affordance without becoming a second primary action.
-          "bg-recessed text-foreground hover:bg-recessed/70",
-        ghost: "text-foreground hover:bg-recessed",
+          "bg-recessed text-foreground hover:bg-elevated/70",
+        ghost: "text-foreground hover:bg-elevated",
         link: "text-primary underline-offset-4 hover:underline",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",

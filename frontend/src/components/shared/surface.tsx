@@ -24,7 +24,7 @@ export function Surface({
   return (
     <Component
       className={cn(
-        "rounded-sheet bg-paper",
+        "rounded-sheet bg-raised",
         className,
       )}
     >

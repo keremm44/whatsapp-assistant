@@ -93,7 +93,7 @@ export function ReturnRequestRow({
               dateTime={request.updatedAt}
               title={`Son güncelleme · ${updatedLabel}`}
               aria-label={`Son güncelleme · ${updatedLabel}`}
-              className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
+              className="shrink-0 text-[11px] type-figure text-muted-foreground"
             >
               {updatedLabel}
             </time>

@@ -39,7 +39,7 @@ export function SecondaryRow({ task }: { task: DashboardTask }) {
       <Link
         href={href}
         aria-label={accessibleName}
-        className="group flex min-h-[60px] items-start gap-3 px-4 py-3.5 transition-colors hover:bg-recessed/50 focus-visible:bg-recessed/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset sm:px-5"
+        className="group flex min-h-[60px] items-start gap-3 px-4 py-3.5 transition-colors hover:bg-elevated/50 focus-visible:bg-elevated/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset sm:px-5"
       >
         <Icon
           aria-hidden="true"

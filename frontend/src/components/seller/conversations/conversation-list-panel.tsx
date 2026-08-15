@@ -207,7 +207,7 @@ export function ConversationListPanel({
             </h1>
             {ready ? (
               <span
-                className="type-meta tabular-nums text-muted-foreground"
+                className="type-meta type-figure text-muted-foreground"
                 aria-label={`Toplam ${total} konuşma`}
               >
                 {total}

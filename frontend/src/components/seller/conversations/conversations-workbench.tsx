@@ -5,14 +5,14 @@ import { cn } from "@/lib/utils/cn";
 /**
  * Conversations workbench — the correspondence desk.
  *
- * "The Working Ledger" pilot removes the heavy rounded outer-card
- * feeling. The workbench is no longer a single floating rounded block
- * containing three sub-panels; it is a set of EDGE-ALIGNED REGIONS
- * separated by structural rules, each with its own honest material:
+ * The workbench is not a card and not three sub-cards: it is a set of
+ * EDGE-ALIGNED REGIONS separated by structural rules, each sitting on
+ * an honest step of the material ladder. Depth does the work that
+ * borders and shadows would do in a light theme:
  *
- *   LEFT    conversation queue        recessed / mineral
- *   CENTER  selected conversation     paper
- *   RIGHT   conditional context rail  paper, one tonal step down
+ *   LEFT    conversation queue        sunken   (below the work)
+ *   CENTER  selected conversation     raised   (the work sheet)
+ *   RIGHT   conditional context rail  canvas   (a margin beside it)
  *
  * Only ONE boundary frames the whole desk (a top/bottom rule plus the
  * vertical rules between regions), so the eye reads columns of one
@@ -69,29 +69,29 @@ export function ConversationsWorkbench({
         hasContextRail && "xl:grid-cols-[300px_minmax(0,1fr)_320px]",
       )}
     >
-      {/* Queue — recessed mineral material: it sits behind the work. */}
+      {/* Queue — sunken: the index sits BELOW the work surface. */}
       <div
         className={cn(
-          "flex flex-col bg-recessed md:min-h-0 md:border-r md:border-boundary",
+          "flex flex-col bg-sunken md:min-h-0 md:border-r md:border-boundary",
           mobileView === "detail" && "hidden md:flex",
         )}
       >
         {list}
       </div>
-      {/* Timeline — paper: this is the work surface. */}
+      {/* Timeline — raised: this is the work surface. */}
       <div
         className={cn(
-          "flex min-w-0 flex-col bg-paper md:min-h-0",
+          "flex min-w-0 flex-col bg-raised md:min-h-0",
           mobileView === "list" && "hidden md:flex",
         )}
       >
         {center}
       </div>
-      {/* Context — paper, one tonal step differentiated by its own
-          left rule so the dossier reads as a margin, not a card. */}
+      {/* Context — canvas, one step down from the work sheet, with its
+          own left rule so the dossier reads as a margin, not a card. */}
       {hasContextRail ? (
         <aside
-          className="scrollbar-quiet hidden min-h-0 flex-col overflow-y-auto bg-paper xl:flex xl:border-l xl:border-boundary"
+          className="scrollbar-quiet hidden min-h-0 flex-col overflow-y-auto bg-canvas xl:flex xl:border-l xl:border-boundary"
           aria-label="Konuşma bağlamı"
         >
           {rail}

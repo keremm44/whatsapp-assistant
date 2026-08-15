@@ -71,7 +71,7 @@ export function ControlHistorySection({
               {timePhrase ? (
                 <time
                   dateTime={entry.createdAt}
-                  className="block type-meta tabular-nums text-muted-foreground"
+                  className="block type-meta type-figure text-muted-foreground"
                 >
                   {timePhrase}
                 </time>

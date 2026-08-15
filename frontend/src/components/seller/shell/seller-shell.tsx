@@ -28,11 +28,11 @@ import { SellerTopbar } from "./seller-topbar";
  *   The root <div> carries the `seller-theme` class. The
  *   `.seller-theme` selector in `src/app/globals.css` overrides
  *   the canonical palette CSS variables so every Tailwind utility
- *   inside the seller workspace resolves to a "Working Ledger"
- *   value: a low-glare mineral canvas, soft paper work sheets, a
- *   dark ink navigation spine, interaction blue and oxide seller
- *   attention. Admin, auth and public surfaces sit outside this
- *   wrapper and are untouched — the dark chrome is seller-only.
+ *   inside the seller workspace resolves to an "Instrument" value:
+ *   a cool blue-graphite material ladder, interaction cyan and
+ *   coral seller attention. Admin, auth and public surfaces sit
+ *   outside this wrapper and stay on the light root theme — the
+ *   dark workspace is seller-only.
  */
 export function SellerShell({
   children,

@@ -12,31 +12,33 @@ import { cn } from "@/lib/utils/cn";
 import { SellerIcon } from "./icon-map";
 
 /**
- * Desktop navigation spine — "The Working Ledger" pilot.
+ * Desktop navigation spine — "Instrument".
  *
- * The spine is the one dark ink surface in the seller workspace. It
- * frames a light mineral canvas the way the spine of a ledger frames
- * its pages: permanent, quiet, and unmistakably separate from the
- * work.
+ * The spine is the DEEPEST material in the workspace (#0B0E13): the
+ * frame the instrument is mounted in. Because the whole product is
+ * now dark, the spine can no longer be "the dark thing" — it earns
+ * its separation by sitting one full step below the canvas and by
+ * carrying a single structural edge.
  *
- *   - 232px wide (unchanged; the information architecture is not
- *     disturbed by this pilot). Spacing inside is slightly more
- *     generous so the spine reads as intentional rather than dense.
+ *   - 232px wide (unchanged; this direction does not disturb the
+ *     information architecture).
  *
- *   - Brand. The previous petrol square + decorative terracotta
- *     appendage + two-segment brand hairline are gone. What remains
- *     is the wordmark itself, set on chrome ink. No color is spent on
- *     decoration, so the only colored things in the spine are the
- *     active-destination markers.
+ *   - Brand: the wordmark only. No decorative mark, no coloured
+ *     appendage, no brand hairline. The only saturated things in the
+ *     spine are the active-destination markers, so colour keeps
+ *     meaning something.
  *
- *   - Section labels are sentence case in a quiet chrome ink, not
- *     uppercase petrol micro-captions.
+ *   - Section labels use the one codified uppercase role
+ *     (`type-eyebrow`) — in a dim field the wide tracking genuinely
+ *     separates groups rather than decorating them.
  *
- *   - Active destination is a PAPER INDEX TAB pressed into the dark
- *     spine: paper material, dark semibold ink, an interaction-blue
- *     icon and a blue marker rule on the leading edge. The state is
- *     therefore carried by shape + luminance + weight + a marker,
- *     never by hue alone, and it is announced with aria-current.
+ *   - ACTIVE DESTINATION inverts the light-theme "paper tab" idea:
+ *     on dark material the active row is the one that EMITS light.
+ *     It combines four cues, so it never depends on hue alone:
+ *       1. a raised material step (the row lifts out of the spine)
+ *       2. a 3px interaction-cyan edge on the leading side
+ *       3. brighter, semibold ink + a cyan icon
+ *       4. aria-current="page"
  *
  *   - Hover on inactive rows uses the chrome hover step only.
  *
@@ -49,7 +51,7 @@ export function SellerSidebar() {
   return (
     <aside
       aria-label="Satıcı paneli gezinme menüsü"
-      className="hidden h-screen w-[232px] shrink-0 flex-col bg-chrome text-chrome-foreground lg:sticky lg:top-0 lg:flex"
+      className="hidden h-screen w-[232px] shrink-0 flex-col border-r border-boundary/70 bg-chrome text-chrome-foreground lg:sticky lg:top-0 lg:flex"
     >
       <BrandMark />
       <nav className="flex-1 overflow-y-auto px-3 py-6">
@@ -65,10 +67,10 @@ const BrandMark = () => (
       href="/seller"
       className="block rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
     >
-      <span className="block font-heading text-[15px] font-semibold leading-tight tracking-[0.01em] text-chrome-foreground">
+      <span className="block font-display text-[15px] font-semibold leading-tight tracking-[-0.012em] text-chrome-foreground">
         WhatsApp Asistan
       </span>
-      <span className="mt-0.5 block type-meta text-chrome-foreground/55">
+      <span className="mt-0.5 block type-meta text-chrome-foreground/50">
         Mağaza yönetimi
       </span>
     </Link>
@@ -92,9 +94,9 @@ export function SidebarSections({
       {sellerNavigation.map((section, index) => (
         <li
           key={section.title}
-          className={cn(index > 0 && "mt-4 border-t border-white/10 pt-5")}
+          className={cn(index > 0 && "mt-4 border-t border-white/[0.07] pt-5")}
         >
-          <p className="px-3 pb-2 type-meta font-medium text-chrome-foreground/50">
+          <p className="px-3 pb-2 type-eyebrow text-chrome-foreground/40">
             {section.title}
           </p>
           <ul className="flex flex-col gap-1">
@@ -138,9 +140,10 @@ const NavRow = ({
           "relative flex h-10 items-center gap-3 rounded-control pl-4 pr-3 text-[14px] leading-5 transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-chrome",
           isActive
-            ? // Paper index tab pressed into the dark spine.
-              "bg-paper font-semibold text-foreground"
-            : "text-chrome-foreground/85 hover:bg-chrome-hover hover:text-chrome-foreground",
+            ? // On dark material the active row EMITS: it lifts to the
+              // raised step and its ink brightens to full strength.
+              "bg-raised font-semibold text-foreground"
+            : "text-chrome-foreground/70 hover:bg-chrome-hover hover:text-chrome-foreground",
         )}
       >
         {isActive ? (
@@ -152,7 +155,7 @@ const NavRow = ({
         <SellerIcon
           name={icon}
           className={cn(
-            isActive ? "text-primary" : "text-chrome-foreground/60",
+            isActive ? "text-primary" : "text-chrome-foreground/45",
             "transition-colors",
           )}
         />

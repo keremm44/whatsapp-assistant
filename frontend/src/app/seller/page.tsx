@@ -247,7 +247,7 @@ function NormalOnlyLayout({
         {/* Same single work sheet, quieter rows. */}
         <ul
           role="list"
-          className="divide-y divide-divider overflow-hidden rounded-sheet bg-paper"
+          className="divide-y divide-divider overflow-hidden rounded-sheet bg-raised"
         >
           {normalTasks.map((task) => (
             <li key={task.id}>
@@ -296,7 +296,7 @@ function PrimaryColumn({
           not by gutters — no per-task card. */}
       <ul
         role="list"
-        className="divide-y divide-divider overflow-hidden rounded-sheet bg-paper"
+        className="divide-y divide-divider overflow-hidden rounded-sheet bg-raised"
       >
         {tasks.map((task) => (
           <li key={task.id}>
@@ -330,7 +330,7 @@ function SecondaryPanel({
   return (
     <section
       aria-labelledby={id}
-      className="overflow-hidden rounded-sheet bg-paper"
+      className="overflow-hidden rounded-sheet bg-raised"
     >
       <header className="flex items-baseline gap-2.5 border-b border-divider px-4 py-3.5 sm:px-5">
         <h2
@@ -341,7 +341,7 @@ function SecondaryPanel({
         </h2>
         <span
           aria-hidden="true"
-          className="type-meta tabular-nums text-muted-foreground"
+          className="type-meta type-figure text-muted-foreground"
         >
           {count}
         </span>

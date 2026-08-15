@@ -77,7 +77,7 @@ const SheetContent = React.forwardRef<
       className={cn(
         // Floating material + real elevation: a Sheet genuinely lifts
         // off the work sheet, unlike ordinary paper regions.
-        "fixed z-30 bg-floating p-6 shadow-2 focus-visible:outline-none",
+        "fixed z-30 bg-overlay p-6 shadow-2 focus-visible:outline-none",
         sideStyles[side],
         className,
       )}

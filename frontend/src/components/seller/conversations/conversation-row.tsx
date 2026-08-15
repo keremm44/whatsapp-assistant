@@ -34,8 +34,8 @@ import { cn } from "@/lib/utils/cn";
  * Two ORTHOGONAL visual semantics, which must be able to coexist on
  * the same row:
  *
- *   SELECTION  = interaction blue. A 3px blue structural edge on the
- *                leading side, an interaction-soft fill, and a
+ *   SELECTION  = interaction cyan. A 3px cyan structural edge on the
+ *                leading side, an interaction-soft well, and a
  *                stronger identity weight. Announced with
  *                aria-current="page". Never colour alone: edge +
  *                fill + weight + aria-current.
@@ -88,7 +88,7 @@ export function ConversationRow({
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
           isSelected
             ? "bg-selected"
-            : "hover:bg-paper/70 focus-visible:bg-paper/70",
+            : "hover:bg-raised/70 focus-visible:bg-raised/70",
         )}
       >
         {/* Selection: structural interaction-blue edge. */}
@@ -116,7 +116,7 @@ export function ConversationRow({
               dateTime={timestampIso ?? undefined}
               title={`Son mesaj · ${timePhrase}`}
               aria-label={`Son mesaj · ${timePhrase}`}
-              className="shrink-0 type-meta tabular-nums text-muted-foreground"
+              className="shrink-0 type-meta type-figure text-muted-foreground"
             >
               {timePhrase}
             </time>
