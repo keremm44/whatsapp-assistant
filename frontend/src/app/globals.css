@@ -174,33 +174,32 @@
  * light theme; nothing outside the seller workspace reads these
  * variables.
  *
- * Smoked Mineral Workshop uses one low-chroma charcoal family for shell,
- * canvas, neutral work and inset controls. Petrol remains active state;
- * clay remains seller attention. No pure black, navy/brown split, neon,
- * glassmorphism or decorative effects.
+ * Carbon Plum uses one low-chroma carbon family for shell, canvas, neutral
+ * work and inset controls. Its character belongs to the whole field, never
+ * one decorative panel. Petrol remains active; clay remains seller attention.
  */
 .seller-theme {
-  /* Smoked Mineral Workshop.
-   * Deep neutral chrome frames a quiet mineral canvas. Each forward layer
-   * gains value within the same undertone; only selected gains petrol chroma. */
-  --color-background: #191d1b;
-  --color-background-rgb: 25 29 27;
-  --color-chrome: #121513;
-  --color-chrome-rgb: 18 21 19;
-  --color-surface: #252a28;
-  --color-surface-rgb: 37 42 40;
-  --color-surface-2: #303734;
-  --color-surface-2-rgb: 48 55 52;
+  /* Carbon Plum pilot.
+   * Near-neutral plum carbon gains value as material comes forward; no panel
+   * is chromatic enough to read as mauve. Only selected gains petrol chroma. */
+  --color-background: #211a20;
+  --color-background-rgb: 33 26 32;
+  --color-chrome: #151416;
+  --color-chrome-rgb: 21 20 22;
+  --color-surface: #2a262a;
+  --color-surface-rgb: 42 38 42;
+  --color-surface-2: #353035;
+  --color-surface-2-rgb: 53 48 53;
   --color-selected: #243e39;
   --color-selected-rgb: 36 62 57;
-  --color-control: #1b2321;
-  --color-control-rgb: 27 35 33;
-  /* Mineral boundaries stay hue-neutral: border is the explicit edge used
-   * by controls/overlays; divider is the quieter record/section rule. */
-  --color-border: #454a46;
-  --color-border-rgb: 69 74 70;
-  --color-divider: #353a37;
-  --color-divider-rgb: 53 58 55;
+  --color-control: #191719;
+  --color-control-rgb: 25 23 25;
+  /* Carbon-neutral boundaries are explicit only where controls/overlays need
+   * an edge; divider is the quieter record and section rule. */
+  --color-border: #474146;
+  --color-border-rgb: 71 65 70;
+  --color-divider: #393439;
+  --color-divider-rgb: 57 52 57;
 
   /* Text roles stay warm-neutral against the cohesive mineral materials;
    * tertiary remains neutral and AA on the selected plane. */

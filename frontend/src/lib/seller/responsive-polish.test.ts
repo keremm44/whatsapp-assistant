@@ -149,14 +149,14 @@ test("quiet workshop uses tone instead of card borders and surface shadows", () 
   const css = read("../../app/globals.css");
   const sellerBlock = css.slice(css.indexOf(".seller-theme {"));
   assert.match(sellerBlock, /--shadow-surface: none/);
-  assert.match(sellerBlock, /--color-chrome-rgb: 18 21 19/);
-  assert.match(sellerBlock, /--color-background-rgb: 25 29 27/);
-  assert.match(sellerBlock, /--color-surface-rgb: 37 42 40/);
-  assert.match(sellerBlock, /--color-surface-2-rgb: 48 55 52/);
+  assert.match(sellerBlock, /--color-chrome-rgb: 21 20 22/);
+  assert.match(sellerBlock, /--color-background-rgb: 33 26 32/);
+  assert.match(sellerBlock, /--color-surface-rgb: 42 38 42/);
+  assert.match(sellerBlock, /--color-surface-2-rgb: 53 48 53/);
   assert.match(sellerBlock, /--color-selected-rgb: 36 62 57/);
-  assert.match(sellerBlock, /--color-control-rgb: 27 35 33/);
-  assert.match(sellerBlock, /--color-border-rgb: 69 74 70/);
-  assert.match(sellerBlock, /--color-divider-rgb: 53 58 55/);
+  assert.match(sellerBlock, /--color-control-rgb: 25 23 25/);
+  assert.match(sellerBlock, /--color-border-rgb: 71 65 70/);
+  assert.match(sellerBlock, /--color-divider-rgb: 57 52 57/);
   assert.doesNotMatch(sellerBlock, /\.seller-theme :is\(/);
 
   const workbench = read(
