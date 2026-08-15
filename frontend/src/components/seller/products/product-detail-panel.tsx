@@ -35,6 +35,7 @@ import {
   getFieldStatusLabel,
   getFieldTypeLabel,
   getProductStatusLabel,
+  getProductStatusTone,
 } from "@/lib/seller/products-format";
 import type { ProductFieldsBootstrap } from "@/lib/seller/products-server";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
@@ -62,10 +63,18 @@ export function ProductDetailPanel({
     <div className="flex h-full min-h-0 flex-col">
       <div className="space-y-4 border-b border-divider px-4 py-4 md:px-5">
         <div className="space-y-1">
-          <h2 className="font-heading text-xl font-medium text-foreground">
+          <h2 className="type-record-identity text-foreground">
             {product.name}
           </h2>
-          <p className="text-[12.5px] text-muted-foreground">
+          {/* Business state, not an interaction. Label always present. */}
+          <p
+            className={cn(
+              "type-row-secondary font-medium",
+              getProductStatusTone(product.isActive) === "success"
+                ? "text-success"
+                : "text-paused",
+            )}
+          >
             {getProductStatusLabel(product.isActive)}
           </p>
         </div>
@@ -285,10 +294,16 @@ function FieldList({
           {notice}
         </p>
       ) : null}
-      <ul className="space-y-3" aria-busy={mutationLocked}>
+      {/* One production-specification ledger: fields are separated by
+          rules inside a single sheet, never by individual cards. */}
+      <ul
+        role="list"
+        className="divide-y divide-divider overflow-hidden rounded-sheet bg-raised"
+        aria-busy={mutationLocked}
+      >
         {definitions.map((field, index) => (
           <li key={field.id}>
-            <FieldCard
+            <FieldRow
               field={field}
               canMoveUp={index > 0}
               canMoveDown={index < definitions.length - 1}
@@ -341,7 +356,20 @@ function FieldsUnavailable() {
   );
 }
 
-function FieldCard({
+/**
+ * One row of the production-specification ledger.
+ *
+ * Previously each field was its own `rounded-md border bg-surface`
+ * card, which made the configuration read as a settings stack. It is
+ * now a ruled row inside one sheet: identity first, then a single
+ * spec line (type · required · status), then choice options when the
+ * backend actually provides them.
+ *
+ * Ordering controls stay QUIET utilities on the trailing edge. None of
+ * the mutation lifecycle changes: the same `mutationLocked` flag, the
+ * same disabled boundaries, the same handlers.
+ */
+function FieldRow({
   field,
   canMoveUp,
   canMoveDown,
@@ -361,25 +389,27 @@ function FieldCard({
   onMove: (fieldId: number, direction: "up" | "down") => void;
 }) {
   return (
-    <article className="rounded-md border border-border bg-surface px-4 py-3">
+    <article className="px-4 py-3.5 transition-colors hover:bg-elevated/40 md:px-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <p className="text-sm font-medium text-foreground">{field.label}</p>
-          <p className="text-[12.5px] text-muted-foreground">
+          <p className="type-row-primary text-foreground">{field.label}</p>
+          <p className="type-row-secondary text-muted-foreground">
             {getFieldTypeLabel(field.fieldType)}
             {" · "}
             {getFieldRequiredLabel(field.isRequired)}
             {" · "}
+            {/* Business state, not an interaction. */}
             <span
               className={cn(
-                field.isActive ? "text-primary-text" : "text-muted-foreground",
+                "font-medium",
+                field.isActive ? "text-success" : "text-paused",
               )}
             >
               {getFieldStatusLabel(field.isActive)}
             </span>
           </p>
           {isChoiceFieldType(field.fieldType) && field.options.length > 0 ? (
-            <p className="text-[12.5px] leading-relaxed text-muted-foreground">
+            <p className="break-words type-row-secondary text-muted">
               {field.options.map((option) => option.label).join(", ")}
             </p>
           ) : null}

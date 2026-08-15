@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import type { Product } from "@/lib/seller/products";
 import {
   getProductStatusLabel,
+  getProductStatusTone,
   PRODUCTS_EMPTY_DESCRIPTION,
   PRODUCTS_EMPTY_TITLE,
   productsWorkspaceHref,
@@ -55,18 +56,23 @@ export function ProductsListPanel({
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
                     selected
                       ? "bg-selected text-foreground"
-                      : "text-foreground hover:bg-selected/45",
+                      : "text-foreground hover:bg-elevated/40",
                   )}
                 >
                   <span className="min-w-0 truncate text-sm font-medium">
                     {product.name}
                   </span>
+                  {/* Business state, not an interaction: active uses
+                      the success role and inactive the paused role.
+                      Interaction cyan is reserved for selection /
+                      focus / links. The label always renders, so the
+                      state never depends on colour alone. */}
                   <span
                     className={cn(
                       "shrink-0 text-[12px] font-medium",
-                      product.isActive
-                        ? "text-primary-text"
-                        : "text-muted-foreground",
+                      getProductStatusTone(product.isActive) === "success"
+                        ? "text-success"
+                        : "text-paused",
                     )}
                   >
                     {getProductStatusLabel(product.isActive)}

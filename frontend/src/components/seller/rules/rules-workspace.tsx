@@ -12,6 +12,7 @@ import type { RuleView, SellerRule } from "@/lib/seller/rules";
 import {
   getRuleHitCountLabel,
   getRuleStatusLabel,
+  getRuleStatusTone,
   RULE_RESPONSE_HEADING,
   RULE_TRIGGER_HEADING,
   RULES_UNAVAILABLE_DESCRIPTION,
@@ -57,37 +58,16 @@ export function RulesWorkspace({
           description={empty.description ?? undefined}
         />
       ) : (
-        <ul className="space-y-3">
+        // One contiguous response register: rules are separated by
+        // rules, not by individual cards. The sheet carries the only
+        // boundary; each entry is a ruled row inside it.
+        <ul
+          role="list"
+          className="divide-y divide-divider overflow-hidden rounded-sheet bg-raised"
+        >
           {rules.map((rule) => (
             <li key={rule.id}>
-              <article className="rounded-md border border-border bg-surface px-4 py-4 md:px-5">
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[12px] font-medium text-muted-foreground">
-                      {RULE_TRIGGER_HEADING}
-                    </p>
-                    <p className="mt-1 break-words text-sm font-medium text-foreground">
-                      {rule.triggerText}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[12px] font-medium text-muted-foreground">
-                      {RULE_RESPONSE_HEADING}
-                    </p>
-                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">
-                      {rule.responseText}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-[12.5px] text-muted-foreground">
-                      {getRuleStatusLabel(rule.isActive)}
-                      {" · "}
-                      {getRuleHitCountLabel(rule.hitCount)}
-                    </p>
-                    <RuleRowActions rule={rule} />
-                  </div>
-                </div>
-              </article>
+              <RuleRow rule={rule} />
             </li>
           ))}
         </ul>
@@ -96,11 +76,74 @@ export function RulesWorkspace({
   );
 }
 
+/**
+ * One entry in the response register.
+ *
+ * Hierarchy (all existing data and wording preserved):
+ *   1. trigger phrase — the strong identity line, the thing a seller
+ *      scans for
+ *   2. response text — secondary but fully readable, never clamped
+ *   3. status · hit count — quiet metadata
+ *   4. actions — quiet utilities aligned to the end of the meta line
+ *
+ * No per-rule card, no per-rule icon, no colour-coding by rule type.
+ * The only colour is the truthful active/inactive state.
+ */
+function RuleRow({ rule }: { rule: SellerRule }) {
+  const statusTone = getRuleStatusTone(rule.isActive);
+  return (
+    <article className="px-4 py-4 transition-colors hover:bg-elevated/40 md:px-5">
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <p className="type-meta text-muted-foreground">
+            {RULE_TRIGGER_HEADING}
+          </p>
+          <p className="break-words type-row-primary text-foreground">
+            {rule.triggerText}
+          </p>
+        </div>
+        <div className="space-y-1">
+          <p className="type-meta text-muted-foreground">
+            {RULE_RESPONSE_HEADING}
+          </p>
+          <p className="whitespace-pre-wrap break-words type-body text-muted">
+            {rule.responseText}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-0.5">
+          <p className="type-row-secondary text-muted-foreground">
+            <span
+              className={cn(
+                "font-medium",
+                statusTone === "success" ? "text-success" : "text-paused",
+              )}
+            >
+              {getRuleStatusLabel(rule.isActive)}
+            </span>
+            {" · "}
+            {getRuleHitCountLabel(rule.hitCount)}
+          </p>
+          <RuleRowActions rule={rule} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/**
+ * The three approved rule views, in the same open underline grammar
+ * already used by Orders / Returns / Unanswered: neutral background,
+ * one structural bottom rule, and an active state carried by a cyan
+ * underline + stronger weight + aria-current. No filled tab, no cyan
+ * fill — cyan stays a signal.
+ *
+ * Labels, routes and view behaviour are unchanged.
+ */
 function RulesViewTabs({ activeView }: { activeView: RuleView }) {
   return (
     <nav
       aria-label="Cevap görünümü"
-      className="flex flex-wrap rounded-md border border-border bg-control p-0.5"
+      className="flex flex-wrap gap-4 border-b border-boundary"
     >
       {RULE_VIEW_TABS.map((tab) => (
         <Link
@@ -108,11 +151,12 @@ function RulesViewTabs({ activeView }: { activeView: RuleView }) {
           href={rulesWorkspaceHref(tab.view) as Route}
           aria-current={tab.view === activeView ? "page" : undefined}
           className={cn(
-            "flex min-h-11 flex-1 items-center justify-center whitespace-nowrap rounded-sm px-3 py-1 text-center text-[12.5px] font-medium leading-tight transition-colors md:min-h-9",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            // Open underline tab: neutral background, cyan rule only.
+            "-mb-px flex min-h-11 items-center whitespace-nowrap border-b-2 border-transparent px-0.5 pb-2 pt-1 text-[12.5px] leading-tight transition-colors md:min-h-9",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
             tab.view === activeView
-              ? "bg-selected text-foreground"
-              : "text-muted-foreground hover:text-foreground",
+              ? "border-primary font-semibold text-foreground"
+              : "font-medium text-muted-foreground hover:text-foreground",
           )}
         >
           {tab.label}

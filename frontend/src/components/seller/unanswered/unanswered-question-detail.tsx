@@ -158,7 +158,7 @@ export function UnansweredQuestionDetail({
           <div className="flex items-baseline justify-between gap-3">
             <h2
               id="unanswered-detail-question"
-              className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground"
+              className="type-meta text-muted-foreground"
             >
               Soru
             </h2>
@@ -168,13 +168,13 @@ export function UnansweredQuestionDetail({
                 statusDisplay.tone === "accent" && "text-accent-text",
                 statusDisplay.tone === "success" && "text-success",
                 statusDisplay.tone === "paused" && "text-paused",
-            statusDisplay.tone === "muted" && "text-muted-foreground",
+                statusDisplay.tone === "muted" && "text-muted-foreground",
               )}
             >
               {statusDisplay.label}
             </span>
           </div>
-          <p className="mt-2 whitespace-pre-wrap break-words font-heading text-lg font-medium leading-snug text-foreground">
+          <p className="mt-2 whitespace-pre-wrap break-words type-record-identity text-foreground">
             {question.canonicalQuestion}
           </p>
           <dl className="mt-3 space-y-1.5">
@@ -202,7 +202,7 @@ export function UnansweredQuestionDetail({
           <section aria-labelledby="unanswered-detail-occurrences">
             <h2
               id="unanswered-detail-occurrences"
-              className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground"
+              className="type-meta text-muted-foreground"
             >
               {UNANSWERED_OCCURRENCES_TITLE}
             </h2>
@@ -251,13 +251,16 @@ export function UnansweredQuestionDetail({
 
         {/* C. Doğru cevap / kayıtlı cevap / dismissed state */}
         {question.status === "OPEN" ? (
+          // OPEN is the one state that genuinely needs a bounded work
+          // region: it hosts an interactive editor. It uses a neutral
+          // sunken well (a place to type), not a generic card.
           <section
             aria-labelledby="unanswered-detail-answer"
-            className="space-y-3 rounded-md border border-divider bg-surface-2/40 p-4"
+            className="space-y-3 rounded-sheet bg-sunken p-4"
           >
             <h2
               id="unanswered-detail-answer"
-              className="text-[13px] font-semibold text-foreground"
+              className="type-row-primary text-foreground"
             >
               {UNANSWERED_ANSWER_SECTION_TITLE}
             </h2>
@@ -266,13 +269,16 @@ export function UnansweredQuestionDetail({
         ) : null}
 
         {question.status === "ANSWERED" ? (
+          // ANSWERED is a saved RECORD, not a form: a ruled section
+          // with the answer set as real content. The previous
+          // card -> inner answer box nesting is gone.
           <section
             aria-labelledby="unanswered-detail-saved"
-            className="space-y-3 rounded-md border border-divider bg-surface-2/40 p-4"
+            className="space-y-3 border-t border-divider pt-4"
           >
             <h2
               id="unanswered-detail-saved"
-              className="text-[13px] font-semibold text-foreground"
+              className="type-row-primary text-foreground"
             >
               {UNANSWERED_SAVED_ANSWER_TITLE}
             </h2>
@@ -280,8 +286,11 @@ export function UnansweredQuestionDetail({
               answerForm
             ) : (
               <>
+                {/* The saved answer is the content of this section, so
+                    it is set as text with a quiet structural rule —
+                    not wrapped in a second box inside the section. */}
                 {savedAnswer !== null ? (
-                  <p className="whitespace-pre-wrap break-words rounded-sm bg-surface px-3 py-2.5 text-sm leading-relaxed text-foreground">
+                  <p className="whitespace-pre-wrap break-words border-l-2 border-boundary pl-3 type-body text-foreground">
                     {savedAnswer}
                   </p>
                 ) : null}
@@ -306,13 +315,16 @@ export function UnansweredQuestionDetail({
         ) : null}
 
         {question.status === "DISMISSED" ? (
+          // DISMISSED is a quiet state section: a rule, a heading with
+          // the truthful paused tone, the note, and the recovery
+          // action. No generic card.
           <section
             aria-labelledby="unanswered-detail-dismissed"
-            className="space-y-3 rounded-md border border-divider bg-surface-2/40 p-4"
+            className="space-y-3 border-t border-divider pt-4"
           >
             <h2
               id="unanswered-detail-dismissed"
-              className="text-[13px] font-semibold text-foreground"
+              className="type-row-primary text-paused"
             >
               {UNANSWERED_STATUS_DISPLAY.DISMISSED.label}
             </h2>
@@ -322,10 +334,8 @@ export function UnansweredQuestionDetail({
               <>
                 {dismissNote !== null ? (
                   <div className="space-y-1">
-                    <p className="text-[12px] font-medium text-muted-foreground">
-                      Not
-                    </p>
-                    <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-foreground">
+                    <p className="type-meta text-muted-foreground">Not</p>
+                    <p className="whitespace-pre-wrap break-words border-l-2 border-boundary pl-3 type-row-secondary text-foreground">
                       {dismissNote}
                     </p>
                   </div>

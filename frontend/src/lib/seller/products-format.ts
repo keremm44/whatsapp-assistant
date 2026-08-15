@@ -104,6 +104,24 @@ export const getProductStatusLabel = (isActive: boolean): string =>
 export const getFieldStatusLabel = (isActive: boolean): string =>
   isActive ? "Aktif" : "Devre dışı";
 
+/**
+ * Semantic tone shared by the product list, the product detail header
+ * and the custom-field ledger.
+ *
+ * "Aktif" is a truthful business state (the record is live), so it
+ * uses the success role; "Devre dışı" is deliberately disabled, which
+ * is what the paused role means. Interaction cyan is deliberately NOT
+ * used: an active product is a business state, not an interaction, and
+ * cyan must stay reserved for selection/focus/links.
+ *
+ * The label always renders alongside the tone, so status is never
+ * communicated by colour alone.
+ */
+export type ProductStatusTone = "success" | "paused";
+
+export const getProductStatusTone = (isActive: boolean): ProductStatusTone =>
+  isActive ? "success" : "paused";
+
 /* ------------------------------------------------------------------ */
 /* Selection / URL                                                     */
 /* ------------------------------------------------------------------ */

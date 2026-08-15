@@ -77,6 +77,23 @@ export const rulesWorkspaceHref = (view: RuleView): string => {
 export const getRuleStatusLabel = (isActive: boolean): string =>
   isActive ? "Aktif" : "Devre dışı";
 
+/**
+ * Semantic tone for a rule's active/inactive state.
+ *
+ * "Aktif" is a truthful, backend-proven operating state (the rule is
+ * live for new customer messages), so it uses the success role.
+ * "Devre dışı" is a deliberately disabled state, which is exactly what
+ * the paused role means. Interaction cyan is NOT used here: being
+ * active is a business state, not an interaction.
+ *
+ * The LABEL still comes from `getRuleStatusLabel`, so status is never
+ * communicated by colour alone.
+ */
+export type RuleStatusTone = "success" | "paused";
+
+export const getRuleStatusTone = (isActive: boolean): RuleStatusTone =>
+  isActive ? "success" : "paused";
+
 export const getRuleHitCountLabel = (hitCount: number): string =>
   hitCount === 0 ? "Henüz kullanılmadı" : `${hitCount} kez kullanıldı`;
 
