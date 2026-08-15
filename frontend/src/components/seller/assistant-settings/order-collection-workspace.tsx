@@ -5,7 +5,6 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { Surface } from "@/components/shared/surface";
 import { Button } from "@/components/ui/button";
 import {
   buildOrderSectionPatch,
@@ -121,7 +120,7 @@ function OrderCollectionEditor({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="divide-y divide-divider [&>*]:py-8 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
       <OrderSection
         key={`order-${epoch}`}
         settings={editor.settings}
@@ -192,6 +191,7 @@ function OrderSection({
     <SettingsSection
       title={ORDER_COLLECTION_QUANTITY_TITLE}
       description={ORDER_COLLECTION_QUANTITY_DESCRIPTION}
+      measure="wide"
       canSave={canSave}
       status={status}
       onSave={() => {
@@ -300,11 +300,10 @@ function OrderSection({
 
 function ProductFieldsCrossLink() {
   return (
-    <Surface className="px-4 py-5 md:px-5">
       <section className="space-y-2" aria-labelledby="product-fields-heading">
         <h2
           id="product-fields-heading"
-          className="font-heading text-lg text-foreground sm:text-xl"
+          className="type-section text-foreground"
         >
           {ORDER_PRODUCT_FIELDS_TITLE}
         </h2>
@@ -320,7 +319,6 @@ function ProductFieldsCrossLink() {
           </Link>
         </p>
       </section>
-    </Surface>
   );
 }
 

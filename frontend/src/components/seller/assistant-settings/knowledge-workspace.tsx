@@ -216,7 +216,9 @@ function KnowledgeEditor({
   };
 
   return (
-    <div className="space-y-4">
+    // Sections are separated by generous space + a divider rule rather
+    // than by four competing card enclosures.
+    <div className="divide-y divide-divider [&>*]:py-8 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
       <ProductSection
         key={`product-${productEpoch}`}
         settings={editor.settings}
@@ -543,6 +545,7 @@ function ShippingSection({
         if (!canSave) return;
         void onSave(draft);
       }}
+      measure="wide"
     >
       {/* Hazırlık süresi — ONE seller concept over the two backend
           fields (processing_days_min / processing_days_max). Grouping

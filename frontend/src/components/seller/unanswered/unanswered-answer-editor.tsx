@@ -166,44 +166,42 @@ export function UnansweredAnswerEditor({
       }}
       aria-label="Cevap kaydetme formu"
     >
-      <p className="text-[12.5px] leading-relaxed text-muted-foreground">
+      {/* Business explanation, verbatim: the answer is not sent to past
+          conversations, may be reused for the same question later, and
+          is NOT added to "Mesaja Göre Cevaplar". */}
+      <p className="max-w-prose type-row-secondary text-muted">
         {UNANSWERED_FUTURE_ONLY_NOTE} {UNANSWERED_NOT_A_RULE_NOTE}
       </p>
       <div className="space-y-1.5">
         <label
           htmlFor="unanswered-answer"
-          className="block text-[12px] font-medium text-muted-foreground"
+          className="block type-meta font-medium text-muted-foreground"
         >
           {UNANSWERED_ANSWER_LABEL}
         </label>
         <textarea
           id="unanswered-answer"
           name="answer"
-          rows={5}
+          rows={4}
           value={answer}
           disabled={isSubmitting}
           maxLength={UNANSWERED_ANSWER_MAX_LENGTH}
           onChange={(event) => setAnswer(event.target.value)}
-          className="w-full rounded-md border border-border bg-control px-3 py-2 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+          className="w-full min-h-[7.5rem] max-w-prose resize-y rounded-control border border-boundary bg-control px-3 py-2 type-body text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:opacity-50"
         />
       </div>
       {wasConflict ? (
-        <p
-          role="status"
-          className="text-[12.5px] leading-snug text-muted-foreground"
-        >
+        <p role="status" className="type-row-secondary text-muted-foreground">
           Bu soru başka bir işlemle güncellendi; güncel hali getirildi.
         </p>
       ) : null}
       {actionError !== null ? (
-        <p
-          role="alert"
-          className="text-[12.5px] leading-snug text-destructive"
-        >
+        <p role="alert" className="type-row-secondary text-destructive">
           {actionError}
         </p>
       ) : null}
-      <div className="flex items-center gap-2">
+      {/* Save is the one primary action in OPEN. */}
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           type="submit"
           variant="primary"

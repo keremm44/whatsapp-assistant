@@ -251,12 +251,14 @@ export function UnansweredQuestionDetail({
 
         {/* C. Doğru cevap / kayıtlı cevap / dismissed state */}
         {question.status === "OPEN" ? (
-          // OPEN is the one state that genuinely needs a bounded work
-          // region: it hosts an interactive editor. It uses a neutral
-          // sunken well (a place to type), not a generic card.
+          // OPEN belongs to the SAME record-detail language as ANSWERED
+          // and DISMISSED: a ruled section, not a bounded form card
+          // dropped into the panel. The enclosing sunken slab is gone —
+          // the only bounded material left is the textarea itself,
+          // which is genuinely a place to type.
           <section
             aria-labelledby="unanswered-detail-answer"
-            className="space-y-3 rounded-sheet bg-sunken p-4"
+            className="space-y-3 border-t border-divider pt-4"
           >
             <h2
               id="unanswered-detail-answer"

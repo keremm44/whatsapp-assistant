@@ -314,11 +314,24 @@ test("answer states drop the generic card / nested box grammar", () => {
   // ...nor the saved answer nested in a second box inside its section.
   assert.doesNotMatch(source, /rounded-sm bg-surface px-3 py-2\.5/);
 
-  // ANSWERED and DISMISSED are ruled sections.
-  assert.match(source, /space-y-3 border-t border-divider pt-4/);
-  // OPEN keeps a bounded work region because it hosts a real editor,
-  // but as a neutral well rather than a card.
-  assert.match(source, /rounded-sheet bg-sunken p-4/);
+  // OPEN, ANSWERED and DISMISSED are now ALL ruled sections in the
+  // same record-detail language — OPEN no longer sits inside its own
+  // bounded slab, so the editor belongs to the record rather than
+  // reading as an inserted admin form.
+  const ruled = source.match(/space-y-3 border-t border-divider pt-4/g);
+  assert.ok(
+    ruled !== null && ruled.length >= 3,
+    "OPEN / ANSWERED / DISMISSED must share the ruled-section grammar",
+  );
+  assert.doesNotMatch(source, /rounded-sheet bg-sunken/);
+
+  // The only bounded material left in OPEN is the textarea itself,
+  // which is genuinely a place to type.
+  const editor = readCode(
+    "../../components/seller/unanswered/unanswered-answer-editor.tsx",
+  );
+  assert.match(editor, /<textarea/);
+  assert.match(editor, /bg-control/);
 });
 
 test("unanswered status semantics stay truthful", () => {
@@ -359,4 +372,164 @@ test("mobile touch targets survive the convergence", () => {
   assert.match(readCode(RULES), /min-h-11/);
   assert.match(readCode(PRODUCT_LIST), /min-h-11/);
   assert.match(readCode(UNANSWERED_DETAIL), /min-h-11/);
+});
+
+/* ------------------------------------------------------------------ */
+/* 7. Assistant Settings hub — index, not a feature-card grid          */
+/* ------------------------------------------------------------------ */
+
+const HUB = "../../components/seller/assistant-settings/assistant-settings-hub.tsx";
+const SETTINGS_SECTION =
+  "../../components/seller/assistant-settings/settings-section.tsx";
+const ANSWER_EDITOR =
+  "../../components/seller/unanswered/unanswered-answer-editor.tsx";
+
+test("the settings hub is a contiguous register, not four feature cards", () => {
+  const source = readCode(HUB);
+
+  // One sheet, destinations divided by rules.
+  assert.match(
+    source,
+    /divide-y divide-divider overflow-hidden rounded-sheet bg-raised/,
+  );
+  // The oversized equal-height card grid must not return.
+  assert.doesNotMatch(source, /min-h-\[11rem\]/);
+  assert.doesNotMatch(source, /sm:grid-cols-2/);
+  assert.doesNotMatch(source, /<Surface/);
+});
+
+test("hub destinations keep their content, routes and whole-row target", () => {
+  const source = readCode(HUB);
+  // Every information layer survives.
+  for (const token of [
+    "card.title",
+    "card.description",
+    "{summary}",
+    "card.href",
+    "card.icon",
+  ]) {
+    assert.ok(source.includes(token), `hub rows must still render ${token}`);
+  }
+  // The LINK is the row, not a tiny arrow-only target.
+  assert.match(source, /<Link[^>]*\n?\s*href=\{card\.href as Route\}/);
+  assert.match(source, /className="group flex items-start/);
+  // The chevron is decorative only.
+  assert.match(source, /<ChevronRight\s*\n?\s*aria-hidden="true"/);
+  // Keyboard focus is preserved on the row.
+  assert.match(source, /focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/);
+});
+
+test("hub icons stay small neutral utility glyphs", () => {
+  const source = readCode(HUB);
+  assert.match(source, /size=\{18\}/);
+  assert.match(source, /text-muted-foreground/);
+  // No coloured discs, no per-destination colour, no big icon cards.
+  assert.doesNotMatch(source, /rounded-full/);
+  assert.doesNotMatch(source, /bg-(primary|success|attention|warning)/);
+});
+
+/* ------------------------------------------------------------------ */
+/* 8. Settings sections — deliberate measure, no full-width slabs      */
+/* ------------------------------------------------------------------ */
+
+test("a settings section is a ruled region with a deliberate form measure", () => {
+  const source = readCode(SETTINGS_SECTION);
+
+  // The full-width raised card enclosure is gone...
+  assert.doesNotMatch(source, /<Surface/);
+  // ...replaced by an explicit content measure.
+  assert.match(source, /max-w-\[34rem\]/);
+  assert.match(source, /max-w-\[46rem\]/);
+  assert.match(source, /measure/);
+});
+
+test("settings save ownership and feedback are unchanged", () => {
+  const source = readCode(SETTINGS_SECTION);
+  // Exactly one primary save, still anchored to its own section.
+  assert.match(source, /border-t border-divider pt-3\.5/);
+  assert.match(source, /disabled=\{!canSave \|\| isSaving\}/);
+  assert.match(source, /aria-busy=\{isSaving\}/);
+  assert.match(source, /onClick=\{onSave\}/);
+  // Saving / saved / error / conflict feedback all survive.
+  assert.match(source, /SETTINGS_SAVING_LABEL/);
+  assert.match(source, /SETTINGS_SAVED_LABEL/);
+  assert.match(source, /role="status"/);
+  assert.match(source, /status\.kind === "conflict"/);
+  // Mobile target discipline on the save control.
+  assert.match(source, /min-h-11 sm:min-h-9/);
+});
+
+test("settings workspaces separate sections with rules, not card stacks", () => {
+  for (const relative of [
+    "../../components/seller/assistant-settings/knowledge-workspace.tsx",
+    "../../components/seller/assistant-settings/order-collection-workspace.tsx",
+  ]) {
+    const source = readCode(relative);
+    assert.match(
+      source,
+      /divide-y divide-divider \[&>\*\]:py-8/,
+      `${relative} must separate sections with rules`,
+    );
+  }
+});
+
+test("segmented boolean controls stay neutral material, never cyan-filled", () => {
+  const source = readCode(
+    "../../components/seller/assistant-settings/settings-form-controls.tsx",
+  );
+  // Selected segment uses the neutral graphite selected material.
+  assert.match(source, /selected\s*\n?\s*\? "bg-selected text-foreground"/);
+  // No broad cyan wash on the control.
+  assert.doesNotMatch(source, /bg-primary-muted/);
+  // 44px touch target on mobile is preserved.
+  assert.match(source, /min-h-11/);
+});
+
+/* ------------------------------------------------------------------ */
+/* 9. Unanswered OPEN editor integration                               */
+/* ------------------------------------------------------------------ */
+
+test("the OPEN editor keeps its business explanation verbatim", () => {
+  const source = readCode(ANSWER_EDITOR);
+  // The three claims are rendered from the shared constants — never
+  // paraphrased inline.
+  assert.match(source, /UNANSWERED_FUTURE_ONLY_NOTE/);
+  assert.match(source, /UNANSWERED_NOT_A_RULE_NOTE/);
+  assert.match(source, /UNANSWERED_ANSWER_LABEL/);
+});
+
+test("the OPEN editor stays comfortably usable and bounded", () => {
+  const source = readCode(ANSWER_EDITOR);
+  // The textarea is the bounded work material...
+  assert.match(source, /bg-control/);
+  // ...and keeps a genuinely useful height (not shrunk to a one-liner).
+  assert.match(source, /min-h-\[7\.5rem\]/);
+  assert.match(source, /rows=\{4\}/);
+  assert.match(source, /maxLength=\{UNANSWERED_ANSWER_MAX_LENGTH\}/);
+});
+
+test("save stays primary and dismiss stays secondary in OPEN", () => {
+  const editor = readCode(ANSWER_EDITOR);
+  assert.match(editor, /type="submit"\s*\n?\s*variant="primary"/);
+  // Cancel (edit mode) is a ghost, never a second primary.
+  assert.match(editor, /variant="ghost"/);
+
+  const dismiss = readCode(
+    "../../components/seller/unanswered/unanswered-dismiss-dialog.tsx",
+  );
+  // The dismiss trigger is quiet muted text, not a filled button.
+  assert.match(dismiss, /text-muted-foreground/);
+  assert.doesNotMatch(dismiss, /variant="primary"[^]{0,120}UNANSWERED_DISMISS_TRIGGER_LABEL/);
+});
+
+test("unanswered mutation lifecycle is untouched by the visual pass", () => {
+  const editor = readCode(ANSWER_EDITOR);
+  // Gate + expected_version + gate-owned refresh all survive.
+  assert.match(editor, /gateModeForUnansweredSuccess\(onSuccess\(\)\)/);
+  assert.match(editor, /gate\.finish\(token, \{ refresh: true \}\)/);
+  // The payload still carries the seller-visible version as
+  // expected_version (built by the shared helper).
+  assert.match(editor, /buildSetAnswerPayload\(\{ version, answer \}\)/);
+  // No component-owned router (refreshes stay gate-owned).
+  assert.doesNotMatch(editor, /useRouter/);
 });
