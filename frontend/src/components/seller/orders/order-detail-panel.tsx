@@ -84,9 +84,9 @@ export function OrderDetailPanel({
             aria-hidden="true"
             size={16}
             strokeWidth={1.5}
-            className="mt-0.5 shrink-0 text-muted-foreground/70"
+            className="mt-0.5 shrink-0 text-muted-foreground"
           />
-          <p className="max-w-xs text-[13px] leading-relaxed text-muted-foreground">
+          <p className="max-w-xs text-[13px] leading-relaxed text-muted">
             {ORDER_DETAIL_EMPTY_GUIDANCE}
           </p>
         </div>
@@ -102,7 +102,7 @@ export function OrderDetailPanel({
           type="button"
           onClick={onBackToList}
           className={cn(
-            "inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted-foreground transition-colors",
+            "inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted transition-colors",
             "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           )}
         >
@@ -125,7 +125,7 @@ export function OrderDetailPanel({
           <p className="text-sm font-medium text-foreground">
             {ORDER_DETAIL_NOT_FOUND_TITLE}
           </p>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
+          <p className="text-[13px] leading-relaxed text-muted">
             Kayıt kaldırılmış veya bağlantı eski olabilir. Listeden başka
             bir sipariş seçebilirsiniz.
           </p>
@@ -137,7 +137,7 @@ export function OrderDetailPanel({
           <p className="text-sm font-medium text-foreground">
             {ORDER_DETAIL_UNAVAILABLE_TITLE}
           </p>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
+          <p className="text-[13px] leading-relaxed text-muted">
             {ORDER_DETAIL_UNAVAILABLE_DESCRIPTION}
           </p>
           <Button type="button" variant="secondary" size="sm" onClick={onRetry}>
@@ -187,14 +187,14 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
         <div className="flex items-baseline justify-between gap-3">
           <h2
             id="order-detail-heading"
-            className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground"
+            className="font-heading text-sm font-medium text-muted"
           >
             {ORDER_DETAIL_ORDER_TITLE}
           </h2>
           <span
             className={cn(
               "text-[11.5px] font-medium leading-none",
-              needsReview ? "text-accent-text" : "text-muted-foreground",
+              needsReview ? "text-accent-text" : "text-muted",
             )}
           >
             {order.displayStatus}
@@ -209,7 +209,7 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
           {number.isPending ? number.text : `Sipariş ${number.text}`}
         </p>
         {productName !== null ? (
-          <p className="mt-1 break-words text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-1 break-words text-sm leading-relaxed text-muted">
             {productName}
           </p>
         ) : null}
@@ -256,7 +256,7 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
         </dl>
         {customerNote !== null ? (
           <div className="space-y-1">
-            <p className="text-[12px] font-medium text-muted-foreground">
+            <p className="text-[12px] font-medium text-muted">
               {ORDER_DETAIL_CUSTOMER_NOTE_LABEL}
             </p>
             <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-foreground">
@@ -282,16 +282,32 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
       <DetailSection title={ORDER_DETAIL_TIMELINE_TITLE}>
         <dl className="space-y-1.5">
           {createdLabel !== null ? (
-            <DetailRow label="Kayıt tarihi" value={createdLabel} />
+            <DetailRow
+              label="Kayıt tarihi"
+              value={createdLabel}
+              valueTone="tertiary"
+            />
           ) : null}
           {updatedLabel !== null ? (
-            <DetailRow label="Son güncelleme" value={updatedLabel} />
+            <DetailRow
+              label="Son güncelleme"
+              value={updatedLabel}
+              valueTone="tertiary"
+            />
           ) : null}
           {completedLabel !== null ? (
-            <DetailRow label="Bilgiler tamamlandı" value={completedLabel} />
+            <DetailRow
+              label="Bilgiler tamamlandı"
+              value={completedLabel}
+              valueTone="tertiary"
+            />
           ) : null}
           {closedLabel !== null ? (
-            <DetailRow label="Kapatıldı" value={closedLabel} />
+            <DetailRow
+              label="Kapatıldı"
+              value={closedLabel}
+              valueTone="tertiary"
+            />
           ) : null}
         </dl>
       </DetailSection>
@@ -325,7 +341,7 @@ function ProductionFieldRow({
 
   return (
     <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-      <dt className="min-w-0 break-words text-[12.5px] text-muted-foreground">
+      <dt className="min-w-0 break-words text-[12.5px] text-muted">
         {field.label}
       </dt>
       <dd className="min-w-0 break-words text-[13px] sm:text-right">
@@ -374,20 +390,31 @@ function DetailSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-2 border-t border-divider pt-4">
-      <h2 className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h2>
+    <section className="space-y-3 border-t border-divider pt-5">
+      <h2 className="font-heading text-sm font-medium text-muted">{title}</h2>
       {children}
     </section>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailRow({
+  label,
+  value,
+  valueTone = "primary",
+}: {
+  label: string;
+  value: string;
+  valueTone?: "primary" | "tertiary";
+}) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <dt className="shrink-0 text-[12.5px] text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-words text-right text-[13px] tabular-nums text-foreground">
+      <dt className="shrink-0 text-[12.5px] text-muted">{label}</dt>
+      <dd
+        className={cn(
+          "min-w-0 break-words text-right text-[13px] tabular-nums",
+          valueTone === "primary" ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
         {value}
       </dd>
     </div>
