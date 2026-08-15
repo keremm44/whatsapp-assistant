@@ -409,6 +409,96 @@ export const getOrderRowReviewReason = (
 };
 
 /* ------------------------------------------------------------------ */
+/* Row quick actions (copy order number / inline image)                */
+/* ------------------------------------------------------------------ */
+
+/** Visible + accessible copy affordance labels. */
+export const ORDER_NUMBER_COPY_LABEL = "Sipariş numarasını kopyala";
+export const ORDER_NUMBER_COPIED_LABEL = "Kopyalandı";
+
+/**
+ * The exact string a copy action must place on the clipboard.
+ *
+ * This is deliberately NOT `getOrderNumberDisplay`: that helper returns
+ * presentation text (including the "Sipariş numarası bekleniyor"
+ * phrase and the neutral dash), which must never be copied. Only a
+ * real marketplace order number is copyable, and it is returned
+ * VERBATIM — never trimmed, normalized, uppercased or rewritten, since
+ * the value is matched against the marketplace by exact equality.
+ *
+ * Returns null when there is nothing truthful to copy, which is the
+ * single source of truth for "should the copy action exist at all?".
+ * The internal `id` is never consulted, so it can never leak as a
+ * fallback order number.
+ */
+export const getCopyableOrderNumber = (
+  order: Pick<OrderSummary, "externalOrderNumber">,
+): string | null => {
+  const number = order.externalOrderNumber;
+  if (typeof number !== "string") return null;
+  // Presence is judged on a trimmed view (a whitespace-only snapshot is
+  // not a real number), but the STORED value is what gets copied.
+  if (number.trim().length === 0) return null;
+  return number;
+};
+
+/**
+ * Copy-feedback state machine, kept pure so the "confirm then reset"
+ * behaviour is testable without a DOM or timers.
+ */
+export type OrderNumberCopyState = "idle" | "copied" | "error";
+
+/**
+ * Perform one copy attempt through an injected clipboard writer.
+ *
+ * The writer is injected (rather than reaching for `navigator`
+ * directly) so this stays environment-neutral and unit-testable, and so
+ * a missing/blocked Clipboard API degrades to a calm `error` state
+ * instead of throwing into the row.
+ */
+export const runOrderNumberCopy = async (
+  value: string,
+  writeText: (text: string) => Promise<void>,
+): Promise<OrderNumberCopyState> => {
+  try {
+    await writeText(value);
+    return "copied";
+  } catch {
+    return "error";
+  }
+};
+
+/**
+ * Whether a list row may render an inline image thumbnail / preview
+ * trigger.
+ *
+ * Mirrors the actionable-image rule already used by `getPrintContent`:
+ * the media proxy can only be addressed with a positive message id, and
+ * `has_image` must agree with it (the list parser enforces that pairing
+ * as a contract invariant). Returning the id — rather than a URL —
+ * keeps the proxy the only way to reach bytes; no speculative media URL
+ * is ever constructed, and the id itself is never rendered to the user.
+ */
+export const getRowImageMessageId = (
+  order: Pick<OrderSummary, "hasImage" | "imageMessageId">,
+): number | null => {
+  if (order.hasImage !== true) return null;
+  const id = order.imageMessageId;
+  if (typeof id !== "number" || !Number.isInteger(id) || id <= 0) return null;
+  return id;
+};
+
+/** Accessible label for the row's image trigger (never "open detail"). */
+export const getRowImageActionLabel = (
+  order: Pick<OrderSummary, "externalOrderNumber">,
+): string => {
+  const number = getCopyableOrderNumber(order);
+  return number !== null
+    ? `Sipariş ${number} görselini büyüt`
+    : "Sipariş görselini büyüt";
+};
+
+/* ------------------------------------------------------------------ */
 /* Image preview state machine + loader (dependency-injected)          */
 /* ------------------------------------------------------------------ */
 
