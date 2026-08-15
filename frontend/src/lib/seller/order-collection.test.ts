@@ -156,9 +156,19 @@ test("order patch sends only the order section and expected_version", () => {
   assert.equal(payload && "shipping" in payload, false);
 });
 
-test("Sipariş Toplama page copy stays practical", () => {
-  assert.equal(ORDER_COLLECTION_PAGE_TITLE, "Sipariş Toplama");
-  assert.match(ORDER_COLLECTION_PAGE_DESCRIPTION, /temel bilgileri/);
+test("order-information copy never implies the assistant takes orders", () => {
+  // The assistant does NOT create, accept or place an order — it
+  // collects the information belonging to an order that already
+  // exists. The seller-facing title and description must say that.
+  assert.equal(ORDER_COLLECTION_PAGE_TITLE, "Sipariş Bilgisi Toplama");
+  assert.match(ORDER_COLLECTION_PAGE_DESCRIPTION, /Mevcut siparişler için/);
+  assert.match(ORDER_COLLECTION_PAGE_DESCRIPTION, /toplanacağını/);
+
+  // No wording that frames the assistant as initiating an order.
+  assert.doesNotMatch(
+    ORDER_COLLECTION_PAGE_DESCRIPTION,
+    /yeni sipariş|sipariş al|sipariş oluştur/i,
+  );
   assert.doesNotMatch(
     ORDER_COLLECTION_PAGE_DESCRIPTION,
     /knowledge base|eğitim|öğren|MOQ|stok/i,

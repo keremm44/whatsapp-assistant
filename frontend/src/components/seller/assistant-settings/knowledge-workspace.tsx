@@ -216,9 +216,10 @@ function KnowledgeEditor({
   };
 
   return (
-    // Sections are separated by generous space + a divider rule rather
-    // than by four competing card enclosures.
-    <div className="divide-y divide-divider [&>*]:py-8 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+    // Each section is its own contained work sheet; the stack just
+    // spaces them. No divider rules here — the sheets already read as
+    // separate work areas.
+    <div className="space-y-6">
       <ProductSection
         key={`product-${productEpoch}`}
         settings={editor.settings}
@@ -418,6 +419,7 @@ function UsageSection({
     <SettingsSection
       title={KNOWLEDGE_USAGE_TITLE}
       description={KNOWLEDGE_USAGE_DESCRIPTION}
+      density="compact"
       canSave={hasChanges && !disabled}
       status={status}
       onSave={() => {

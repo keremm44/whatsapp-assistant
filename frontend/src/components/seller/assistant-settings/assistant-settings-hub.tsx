@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
 import { SellerIcon } from "@/components/seller/shell/icon-map";
+import { SETTINGS_SHEET_MEASURE } from "@/components/seller/assistant-settings/settings-measure";
 import type { AssistantSettingsHubBootstrap } from "@/lib/seller/assistant-settings-hub-server";
 import {
   HUB_CARDS,
@@ -13,6 +14,7 @@ import {
   summarizeOrderCollection,
   type HubCardDefinition,
 } from "@/lib/seller/assistant-settings-hub";
+import { cn } from "@/lib/utils/cn";
 
 const summaryForCard = (
   card: HubCardDefinition,
@@ -51,6 +53,13 @@ const summaryForCard = (
  * The whole row remains the link (a generous target, never an
  * arrow-only hit area), and the icons stay small neutral line glyphs:
  * no discs, no per-destination colour, no illustration.
+ *
+ * WIDTH: the register is capped at the shared settings work-sheet
+ * measure and left-aligned with the page heading. Without the cap it
+ * inherited the 1180px page container, which pushed the chevron to the
+ * far edge and made each destination read as an oversized table row
+ * with a long empty gap in the middle. Below the cap the register
+ * stays fluid, so tablet and mobile are unaffected.
  */
 export function AssistantSettingsHub({
   bootstrap,
@@ -60,7 +69,10 @@ export function AssistantSettingsHub({
   return (
     <ul
       role="list"
-      className="mt-8 divide-y divide-divider overflow-hidden rounded-sheet bg-raised"
+      className={cn(
+        "mt-8 divide-y divide-divider overflow-hidden rounded-sheet bg-raised",
+        SETTINGS_SHEET_MEASURE,
+      )}
     >
       {HUB_CARDS.map((card) => {
         const summary = summaryForCard(card, bootstrap);

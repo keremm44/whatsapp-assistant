@@ -5,6 +5,12 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils/cn";
+
+import {
+  SETTINGS_FIELD_MEASURE,
+  SETTINGS_FIELD_MEASURE_WIDE,
+  SETTINGS_SHEET_MEASURE,
+} from "./settings-measure";
 import {
   SETTINGS_SAVE_LABEL,
   SETTINGS_SAVED_LABEL,
@@ -22,25 +28,26 @@ export type SettingsSectionStatus =
  * One editable settings section.
  *
  * SURFACE GRAMMAR
- *   Previously every section was a full-width raised `Surface` whose
- *   content was capped at `max-w-xl`. On a wide desktop that produced
- *   a large empty dark slab to the right of every form — the classic
- *   settings-card look, and the single biggest reason these pages felt
- *   like a different product from the rest of the workspace.
+ *   This has been tuned between two failure modes. Originally every
+ *   section was a full-width raised `Surface` capped at `max-w-xl`,
+ *   which produced a large empty dark slab to the right of each form.
+ *   Removing that slab fixed the card look but went too far the other
+ *   way: a narrow form column floating on a very wide bare canvas,
+ *   reading as raw HTML rather than a work area.
  *
- *   A section is now a RULED REGION on the page canvas: a heading, a
- *   description, the form column, and the section's own save action.
- *   Sections are separated from each other by a top rule (supplied by
- *   the workspace stack), so grouping stays obvious without four
- *   competing boxes. The material a seller looks at is the CONTROLS,
- *   which keep their own inset surface.
+ *   The middle ground is a CONTAINED WORK SHEET. The section owns a
+ *   quiet `raised` region at the shared sheet measure — wide enough to
+ *   feel deliberate, narrow enough that its right edge stays visible —
+ *   with no shadow, no border stack and no nested boxes. Sections are
+ *   still separated by rules supplied by the workspace stack, so
+ *   grouping is obvious without four competing cards.
  *
  * CONTENT MEASURE
- *   `--settings-measure` (~34rem / 544px for ordinary controls, and
- *   the wider `measure="wide"` ~46rem for sections whose content
- *   genuinely benefits) gives the form a deliberate column instead of
- *   inheriting an arbitrary container width. Text inputs no longer
- *   stretch across the viewport just because the page is wide.
+ *   Two nested measures (see `settings-measure.ts`): the sheet holds
+ *   the work area, and the FORM COLUMN inside it is narrower still —
+ *   ~34rem for ordinary label+input stacks, or the wider step for
+ *   sections carrying paired grids. Text inputs no longer stretch
+ *   across the viewport just because the page is wide.
  *
  * SAVE OWNERSHIP IS UNCHANGED
  *   The section still owns exactly one primary save action, still
@@ -58,6 +65,7 @@ export function SettingsSection({
   onSave,
   saveLabel = SETTINGS_SAVE_LABEL,
   measure = "default",
+  density = "default",
 }: {
   title: string;
   description: string;
@@ -73,6 +81,14 @@ export function SettingsSection({
    * narrow column would cramp the content.
    */
   measure?: "default" | "wide";
+  /**
+   * Vertical rhythm of the form column. `default` suits label+input
+   * stacks that need breathing room; `compact` suits quick-scan
+   * checklists of short segmented questions (Kullanım), which
+   * otherwise stretch into an unnecessarily long sparse column.
+   * Purely spacing — no value, label or control semantics change.
+   */
+  density?: "default" | "compact";
 }) {
   const isSaving = status.kind === "saving";
   const statusMessage =
@@ -82,10 +98,19 @@ export function SettingsSection({
         ? status.message
         : null;
 
-  const measureClass = measure === "wide" ? "max-w-[46rem]" : "max-w-[34rem]";
+  const measureClass =
+    measure === "wide" ? SETTINGS_FIELD_MEASURE_WIDE : SETTINGS_FIELD_MEASURE;
 
   return (
-    <section className="space-y-5" aria-labelledby={`${title}-heading`}>
+    <section aria-labelledby={`${title}-heading`}>
+      {/* Contained operational work sheet: quiet raised material, one
+          soft sheet radius, no shadow and no nested card. */}
+      <div
+        className={cn(
+          "space-y-5 rounded-sheet bg-raised px-4 py-5 md:px-6 md:py-6",
+          SETTINGS_SHEET_MEASURE,
+        )}
+      >
         <div className="space-y-1.5">
           <h2
             id={`${title}-heading`}
@@ -98,7 +123,14 @@ export function SettingsSection({
           </p>
           {note}
         </div>
-        <div className={cn("space-y-5", measureClass)}>{children}</div>
+        <div
+          className={cn(
+            density === "compact" ? "space-y-3.5" : "space-y-5",
+            measureClass,
+          )}
+        >
+          {children}
+        </div>
         {/* Section-level save: anchored to the section with a quiet
             hairline instead of floating alone in empty card space.
             Still the one obvious primary action when dirty. */}
@@ -138,6 +170,7 @@ export function SettingsSection({
             </p>
           ) : null}
         </div>
+      </div>
     </section>
   );
 }

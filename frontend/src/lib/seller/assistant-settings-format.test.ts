@@ -142,7 +142,12 @@ test("hub descriptions stay restrained and label-specific", () => {
     assistantHubDescription("Asistanın Bildikleri"),
     /ürün, kullanım, kargo ve iade/,
   );
-  assert.match(assistantHubDescription("Sipariş Toplama"), /temel bilgileri/);
+  // Renamed label: the helper keys on the seller-facing title, which
+  // is now "Sipariş Bilgisi Toplama".
+  assert.match(
+    assistantHubDescription("Sipariş Bilgisi Toplama"),
+    /Mevcut siparişler için/,
+  );
   assert.match(assistantHubDescription("Ürünler"), /ürün bazlı/);
   assert.match(
     assistantHubDescription("Mesaja Göre Cevaplar"),

@@ -95,8 +95,10 @@ export function TriStateControl({
   ];
 
   return (
-    <fieldset className="space-y-1.5" aria-describedby={describedBy}>
-      <legend className="text-sm font-medium text-foreground">{legend}</legend>
+    <fieldset className="space-y-1" aria-describedby={describedBy}>
+      <legend className="mb-1 text-sm font-medium text-foreground">
+        {legend}
+      </legend>
       {/* Compact segments: full-width equal thirds on touch screens
           (>= 44px targets), a quiet inline pill group from sm up. */}
       <div className="flex w-full flex-wrap gap-1 rounded-md border border-border bg-control p-0.5 sm:inline-flex sm:w-auto">
@@ -153,8 +155,10 @@ export function BinaryChoiceControl({
   ];
 
   return (
-    <fieldset className="space-y-1.5" aria-describedby={describedBy}>
-      <legend className="text-sm font-medium text-foreground">{legend}</legend>
+    <fieldset className="space-y-1" aria-describedby={describedBy}>
+      <legend className="mb-1 text-sm font-medium text-foreground">
+        {legend}
+      </legend>
       {/* Compact segments: full-width equal thirds on touch screens
           (>= 44px targets), a quiet inline pill group from sm up. */}
       <div className="flex w-full flex-wrap gap-1 rounded-md border border-border bg-control p-0.5 sm:inline-flex sm:w-auto">

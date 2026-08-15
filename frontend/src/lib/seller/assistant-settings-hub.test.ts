@@ -250,7 +250,12 @@ test("hub cards keep the four real destinations in seller mental order", () => {
   );
   assert.deepEqual(
     HUB_CARDS.map((card) => card.title),
-    ["Ürünler", "Mesaja Göre Cevaplar", "Asistanın Bildikleri", "Sipariş Toplama"],
+    [
+      "Ürünler",
+      "Mesaja Göre Cevaplar",
+      "Asistanın Bildikleri",
+      "Sipariş Bilgisi Toplama",
+    ],
   );
 });
 

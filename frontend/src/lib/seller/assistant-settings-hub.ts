@@ -31,10 +31,15 @@ export const HUB_KNOWLEDGE_HREF = "/seller/assistant-knowledge";
 export const HUB_KNOWLEDGE_DESCRIPTION =
   "Asistanın müşterilere ürün, kullanım, kargo ve iade hakkında verebileceği doğru bilgileri yönetin.";
 
-export const HUB_ORDER_COLLECTION_TITLE = "Sipariş Toplama";
+/**
+ * Seller-facing label. Renamed from "Sipariş Toplama", which implied
+ * the assistant takes orders; it only collects the information for an
+ * order that already exists. The href and internal key are unchanged.
+ */
+export const HUB_ORDER_COLLECTION_TITLE = "Sipariş Bilgisi Toplama";
 export const HUB_ORDER_COLLECTION_HREF = "/seller/order-collection";
 export const HUB_ORDER_COLLECTION_DESCRIPTION =
-  "Asistanın yeni siparişlerde müşteriden hangi temel bilgileri istemesi gerektiğini yönetin.";
+  "Mevcut siparişler için müşteriden hangi temel bilgilerin toplanacağını yönetin.";
 
 export type HubCardKey = "products" | "rules" | "knowledge" | "order";
 

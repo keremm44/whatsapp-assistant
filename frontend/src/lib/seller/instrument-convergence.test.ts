@@ -432,15 +432,41 @@ test("hub icons stay small neutral utility glyphs", () => {
 /* 8. Settings sections — deliberate measure, no full-width slabs      */
 /* ------------------------------------------------------------------ */
 
-test("a settings section is a ruled region with a deliberate form measure", () => {
+test("a settings section is a contained work sheet, not a full-width slab", () => {
   const source = readCode(SETTINGS_SECTION);
 
-  // The full-width raised card enclosure is gone...
+  // The shared full-width `Surface` primitive is still not used here.
   assert.doesNotMatch(source, /<Surface/);
-  // ...replaced by an explicit content measure.
-  assert.match(source, /max-w-\[34rem\]/);
-  assert.match(source, /max-w-\[46rem\]/);
-  assert.match(source, /measure/);
+
+  // The section owns a contained work sheet: quiet raised material at
+  // the shared sheet measure, one sheet radius, and NO shadow.
+  assert.match(source, /rounded-sheet bg-raised/);
+  assert.match(source, /SETTINGS_SHEET_MEASURE/);
+  assert.doesNotMatch(source, /shadow-/);
+
+  // The form column inside the sheet keeps its own narrower measure.
+  assert.match(source, /SETTINGS_FIELD_MEASURE/);
+  assert.match(source, /SETTINGS_FIELD_MEASURE_WIDE/);
+});
+
+test("settings measures are nested: field column narrower than the sheet", () => {
+  const source = readCode("../../components/seller/assistant-settings/settings-measure.ts");
+  const rem = (name: string) => {
+    const match = source.match(
+      new RegExp(`${name} = "max-w-\\[([0-9.]+)rem\\]"`),
+    );
+    assert.ok(match, `${name} must be declared as a rem max-width`);
+    return Number(match![1]);
+  };
+  const sheet = rem("SETTINGS_SHEET_MEASURE");
+  const field = rem("SETTINGS_FIELD_MEASURE");
+  const fieldWide = rem("SETTINGS_FIELD_MEASURE_WIDE");
+
+  assert.ok(field < fieldWide, "the wide field measure must be wider");
+  assert.ok(fieldWide < sheet, "the sheet must contain the widest field column");
+  // The sheet must stay meaningfully narrower than the 1180px page
+  // container, otherwise the register/forms stretch again.
+  assert.ok(sheet <= 60, "the sheet must not approach full page width");
 });
 
 test("settings save ownership and feedback are unchanged", () => {
@@ -459,17 +485,20 @@ test("settings save ownership and feedback are unchanged", () => {
   assert.match(source, /min-h-11 sm:min-h-9/);
 });
 
-test("settings workspaces separate sections with rules, not card stacks", () => {
+test("settings workspaces stack contained sheets, not full-width cards", () => {
   for (const relative of [
     "../../components/seller/assistant-settings/knowledge-workspace.tsx",
     "../../components/seller/assistant-settings/order-collection-workspace.tsx",
   ]) {
     const source = readCode(relative);
+    // Sections are spaced; each one carries its own contained sheet.
     assert.match(
       source,
-      /divide-y divide-divider \[&>\*\]:py-8/,
-      `${relative} must separate sections with rules`,
+      /<div className="space-y-6">/,
+      `${relative} must space its sections`,
     );
+    // The old full-width raised slab must not return.
+    assert.doesNotMatch(source, /<Surface/);
   }
 });
 
@@ -532,4 +561,120 @@ test("unanswered mutation lifecycle is untouched by the visual pass", () => {
   assert.match(editor, /buildSetAnswerPayload\(\{ version, answer \}\)/);
   // No component-owned router (refreshes stay gate-owned).
   assert.doesNotMatch(editor, /useRouter/);
+});
+
+/* ------------------------------------------------------------------ */
+/* 10. Settings composition: contained hub + truthful order copy       */
+/* ------------------------------------------------------------------ */
+
+test("the hub register is contained, not stretched across the page", () => {
+  const source = readCode(HUB);
+
+  // Still one contiguous register (not a card grid)...
+  assert.match(
+    source,
+    /divide-y divide-divider overflow-hidden rounded-sheet bg-raised/,
+  );
+  // ...now capped at the shared settings sheet measure, so the chevron
+  // stays related to its row instead of sitting at the far page edge.
+  assert.match(source, /SETTINGS_SHEET_MEASURE/);
+
+  // The cap is a max-width, so the register stays fluid below it and
+  // mobile never overflows.
+  const measure = readCode(
+    "../../components/seller/assistant-settings/settings-measure.ts",
+  );
+  assert.match(measure, /SETTINGS_SHEET_MEASURE = "max-w-\[/);
+
+  // Full-row link behaviour and routes are unchanged.
+  assert.match(source, /href=\{card\.href as Route\}/);
+  assert.match(source, /className="group flex items-start/);
+});
+
+test("seller-facing order copy describes EXISTING orders only", () => {
+  const hub = read("./assistant-settings-hub.ts");
+  const format = read("./assistant-settings-format.ts");
+
+  // The renamed, accurate seller-facing label.
+  assert.match(hub, /HUB_ORDER_COLLECTION_TITLE = "Sipariş Bilgisi Toplama"/);
+  assert.match(
+    format,
+    /ORDER_COLLECTION_PAGE_TITLE = "Sipariş Bilgisi Toplama"/,
+  );
+
+  // Descriptions frame the work as collecting information for an order
+  // that already exists.
+  assert.match(hub, /Mevcut siparişler için/);
+  assert.match(format, /Mevcut siparişler için/);
+
+  // No seller-facing string may imply the assistant creates/takes an
+  // order. (Comments are stripped so the rationale text doesn't count.)
+  for (const source of [readCode("./assistant-settings-hub.ts"), readCode("./assistant-settings-format.ts")]) {
+    assert.doesNotMatch(source, /yeni siparişlerde müşteriden/i);
+    assert.doesNotMatch(source, /sipariş al(ır|ma)\b/i);
+    assert.doesNotMatch(source, /sipariş oluştur/i);
+  }
+});
+
+test("the order-collection rename is presentation-only", () => {
+  const hub = readCode("./assistant-settings-hub.ts");
+  const format = readCode("./assistant-settings-format.ts");
+
+  // Route, internal key and API-facing identifiers are untouched.
+  assert.match(hub, /HUB_ORDER_COLLECTION_HREF = "\/seller\/order-collection"/);
+  assert.match(hub, /key: "order"/);
+  assert.match(format, /ORDER_KNOWLEDGE_HREF = "\/seller\/assistant-knowledge"/);
+  assert.match(format, /ORDER_PRODUCTS_HREF = "\/seller\/products"/);
+
+  // The field labels the page actually edits are unchanged.
+  for (const label of [
+    "ORDER_MIN_QUANTITY_LABEL",
+    "ORDER_MAX_QUANTITY_LABEL",
+    "ORDER_IMAGE_REQUIRED_LABEL",
+    "ORDER_CUSTOM_TEXT_REQUIRED_LABEL",
+  ]) {
+    assert.ok(format.includes(label), `${label} must still exist`);
+  }
+});
+
+test("usage density is a spacing concern only", () => {
+  const section = readCode(SETTINGS_SECTION);
+  // The density switch exists and only changes vertical rhythm.
+  assert.match(section, /density === "compact" \? "space-y-3\.5" : "space-y-5"/);
+
+  const knowledge = readCode(
+    "../../components/seller/assistant-settings/knowledge-workspace.tsx",
+  );
+  assert.match(knowledge, /density="compact"/);
+  // All four usage questions and their tri-state semantics survive.
+  for (const label of [
+    "KNOWLEDGE_MICROWAVE_LABEL",
+    "KNOWLEDGE_DISHWASHER_LABEL",
+    "KNOWLEDGE_HAND_WASH_LABEL",
+    "KNOWLEDGE_FOOD_SAFE_LABEL",
+  ]) {
+    assert.ok(knowledge.includes(label), `${label} must survive`);
+  }
+  const usage = knowledge.match(/<TriStateControl/g);
+  assert.ok(usage !== null && usage.length >= 4);
+});
+
+test("no settings surface introduces a broad cyan fill", () => {
+  for (const relative of [
+    HUB,
+    SETTINGS_SECTION,
+    "../../components/seller/assistant-settings/knowledge-workspace.tsx",
+    "../../components/seller/assistant-settings/order-collection-workspace.tsx",
+    "../../components/seller/assistant-settings/business-settings-workspace.tsx",
+    "../../components/seller/assistant-settings/settings-form-controls.tsx",
+  ]) {
+    const source = readCode(relative);
+    for (const hit of source.match(/"[^"\n]*bg-primary[^"\n]*"/g) ?? []) {
+      const thinRail = /w-\[[123]px\]|h-\[[123]px\]/.test(hit);
+      assert.ok(
+        thinRail,
+        `${relative} must not fill a region with cyan: ${hit.slice(0, 60)}`,
+      );
+    }
+  }
 });

@@ -41,6 +41,7 @@ import {
   SETTINGS_UNSPECIFIED_LABEL,
 } from "@/lib/seller/assistant-settings-format";
 import type { SellerSettingsBootstrap } from "@/lib/seller/assistant-settings-server";
+import { cn } from "@/lib/utils/cn";
 
 import {
   AuthoritativeReview,
@@ -48,6 +49,10 @@ import {
   FieldMessage,
   LabeledTextField,
 } from "./settings-form-controls";
+import {
+  SETTINGS_FIELD_MEASURE_WIDE,
+  SETTINGS_SHEET_MEASURE,
+} from "./settings-measure";
 import {
   SettingsSection,
   type SettingsSectionStatus,
@@ -120,7 +125,7 @@ function OrderCollectionEditor({
   };
 
   return (
-    <div className="divide-y divide-divider [&>*]:py-8 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+    <div className="space-y-6">
       <OrderSection
         key={`order-${epoch}`}
         settings={editor.settings}
@@ -300,14 +305,22 @@ function OrderSection({
 
 function ProductFieldsCrossLink() {
   return (
-      <section className="space-y-2" aria-labelledby="product-fields-heading">
+    <section aria-labelledby="product-fields-heading">
+      {/* Same contained work sheet as the editable sections, so the
+          page reads as one column of work areas. */}
+      <div
+        className={cn(
+          "space-y-2 rounded-sheet bg-raised px-4 py-5 md:px-6 md:py-6",
+          SETTINGS_SHEET_MEASURE,
+        )}
+      >
         <h2
           id="product-fields-heading"
           className="type-section text-foreground"
         >
           {ORDER_PRODUCT_FIELDS_TITLE}
         </h2>
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        <p className={cn("type-body text-muted", SETTINGS_FIELD_MEASURE_WIDE)}>
           {ORDER_PRODUCT_FIELDS_DESCRIPTION}
         </p>
         <p>
@@ -318,7 +331,8 @@ function ProductFieldsCrossLink() {
             {ORDER_PRODUCTS_LINK_LABEL}
           </Link>
         </p>
-      </section>
+      </div>
+    </section>
   );
 }
 

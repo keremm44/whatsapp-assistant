@@ -13,7 +13,10 @@ import {
 import { resolveSellerSettingsFromSession } from "@/lib/seller/assistant-settings-server";
 
 /**
- * Sipariş Toplama — seller-wide order collection settings.
+ * Sipariş Bilgisi Toplama — seller-wide settings for the information
+ * the assistant collects for an EXISTING order. The assistant never
+ * creates or takes an order; it gathers the details belonging to one
+ * that already exists.
  *
  * This page does not replace product-specific personalization fields.
  * Those stay on /seller/products.

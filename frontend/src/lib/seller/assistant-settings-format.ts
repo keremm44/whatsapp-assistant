@@ -126,7 +126,7 @@ export const KNOWLEDGE_RETURNS_DISABLED_NOTE =
   "İade kabul edilmediği için iade süresi artık uygulanmaz.";
 
 export const KNOWLEDGE_ORDER_COLLECTION_LINK_LABEL =
-  "Sipariş Toplama bölümüne git";
+  "Sipariş Bilgisi Toplama bölümüne git";
 export const KNOWLEDGE_ORDER_COLLECTION_HREF = "/seller/order-collection";
 
 /* ------------------------------------------------------------------ */
@@ -165,28 +165,39 @@ export const KNOWLEDGE_SAVED_ANSWERS_HREF = unansweredWorkspaceHref({
 });
 
 /* ------------------------------------------------------------------ */
-/* Sipariş Toplama                                                     */
+/* Sipariş Bilgisi Toplama                                             */
 /* ------------------------------------------------------------------ */
 
 export const ORDER_COLLECTION_PAGE_CAPTION = "Asistan Ayarları";
-export const ORDER_COLLECTION_PAGE_TITLE = "Sipariş Toplama";
+/**
+ * Seller-facing name of this workspace.
+ *
+ * "Sipariş Toplama" implied the assistant collects/takes ORDERS. It
+ * does not: an order already exists outside this flow, and the
+ * assistant only gathers the information belonging to that existing
+ * order. "Sipariş Bilgisi Toplama" states that accurately.
+ *
+ * The route, the API paths and every internal identifier are
+ * deliberately unchanged — this is presentation language only.
+ */
+export const ORDER_COLLECTION_PAGE_TITLE = "Sipariş Bilgisi Toplama";
 export const ORDER_COLLECTION_PAGE_DESCRIPTION =
-  "Asistanın yeni siparişlerde müşteriden hangi temel bilgileri istemesi gerektiğini yönetin.";
+  "Mevcut siparişler için müşteriden hangi temel bilgilerin toplanacağını yönetin.";
 
 export const ORDER_COLLECTION_QUANTITY_TITLE = "Sipariş adedi";
 export const ORDER_COLLECTION_QUANTITY_DESCRIPTION =
-  "Asistanın sipariş sırasında kullanacağı adet sınırlarını ve temel istekleri yönetin.";
+  "Asistanın sipariş bilgilerini tamamlarken kullanacağı adet sınırlarını ve temel istekleri yönetin.";
 
 export const ORDER_MIN_QUANTITY_LABEL = "Minimum sipariş adedi";
 export const ORDER_MAX_QUANTITY_LABEL = "Maksimum sipariş adedi";
 
 export const ORDER_IMAGE_REQUIRED_LABEL = "Siparişte görsel iste";
 export const ORDER_IMAGE_REQUIRED_HELP =
-  "Açık olduğunda asistan siparişi tamamlarken müşteriden görsel ister.";
+  "Açık olduğunda asistan sipariş bilgilerini tamamlarken müşteriden görsel ister.";
 
 export const ORDER_CUSTOM_TEXT_REQUIRED_LABEL = "Özel yazı iste";
 export const ORDER_CUSTOM_TEXT_REQUIRED_HELP =
-  "Açık olduğunda asistan siparişi tamamlarken müşteriden özel yazı ister.";
+  "Açık olduğunda asistan sipariş bilgilerini tamamlarken müşteriden özel yazı ister.";
 
 export const ORDER_KNOWLEDGE_LINK_LABEL = "Asistanın Bildikleri bölümüne git";
 export const ORDER_KNOWLEDGE_HREF = "/seller/assistant-knowledge";
@@ -205,7 +216,7 @@ export const HUB_KNOWLEDGE_DESCRIPTION =
   "Asistanın müşterilere ürün, kullanım, kargo ve iade hakkında verebileceği doğru bilgileri yönetin.";
 
 export const HUB_ORDER_COLLECTION_DESCRIPTION =
-  "Asistanın yeni siparişlerde müşteriden hangi temel bilgileri istemesi gerektiğini yönetin.";
+  "Mevcut siparişler için müşteriden hangi temel bilgilerin toplanacağını yönetin.";
 
 export const HUB_PRODUCTS_DESCRIPTION =
   "Satışını yaptığınız ürünleri ve ürün bazlı toplanacak bilgileri yönetin.";
@@ -215,7 +226,9 @@ export const HUB_RULES_DESCRIPTION =
 
 export const assistantHubDescription = (label: string): string => {
   if (label === "Asistanın Bildikleri") return HUB_KNOWLEDGE_DESCRIPTION;
-  if (label === "Sipariş Toplama") return HUB_ORDER_COLLECTION_DESCRIPTION;
+  if (label === "Sipariş Bilgisi Toplama") {
+    return HUB_ORDER_COLLECTION_DESCRIPTION;
+  }
   if (label === "Ürünler") return HUB_PRODUCTS_DESCRIPTION;
   if (label === "Mesaja Göre Cevaplar") return HUB_RULES_DESCRIPTION;
   return "";
