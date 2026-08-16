@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from admin_seller_routes import router as admin_seller_router
 from chat_service import sohbet_isle
 from database import (
     create_seller,
@@ -65,6 +66,7 @@ if settings.cors_origins:
 
 app.include_router(public_router)
 app.include_router(protected_router)
+app.include_router(admin_seller_router)
 
 
 @app.get("/")
