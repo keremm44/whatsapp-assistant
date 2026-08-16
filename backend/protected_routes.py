@@ -85,6 +85,27 @@ from seller_product_service import (
     list_products as list_seller_products,
     update_product as update_seller_product,
 )
+from feedback_service import (
+    AdminFeedbackUpdateRequest,
+    FeedbackCategory,
+    FeedbackStatus,
+    SellerFeedbackCreateRequest,
+    get_admin_feedback as get_admin_feedback_item,
+    get_seller_feedback as get_seller_feedback_item,
+    list_admin_feedback,
+    list_seller_feedback,
+    submit_feedback,
+    update_admin_feedback as update_admin_feedback_item,
+)
+from announcement_service import (
+    AdminAnnouncementCreateRequest,
+    create_announcement as publish_announcement,
+    get_admin_announcement as get_admin_announcement_item,
+    get_seller_announcement as get_seller_announcement_item,
+    list_admin_announcements,
+    list_seller_announcements,
+    mark_seller_announcement_read,
+)
 from database import (
     ORDER_DISPLAY_STATUS,
     ORDER_STATUS_COLLECTING,
@@ -190,13 +211,17 @@ def _raise_from_seller_product_service(result: dict[str, Any]) -> None:
     raise HTTPException(status_code=status_code, detail=result["error"])
 
 
-def _trusted_profile_id(context: AuthContext) -> int:
+def _trusted_profile_id(
+    context: AuthContext,
+    *,
+    error_code: str = "conversation_control_unavailable",
+) -> int:
     profile_id = context.profile.get("id")
     if not isinstance(profile_id, int) or isinstance(profile_id, bool) or profile_id < 1:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
-                "code": "conversation_control_unavailable",
+                "code": error_code,
                 "message": "Kullanıcı profili doğrulanamadı.",
             },
         )
@@ -1375,3 +1400,208 @@ def seller_unanswered_question_action(
         "changed": result.get("changed") is True,
         "question": result["group"],
     }
+
+
+# =====================================================
+# SELLER -> ADMIN FEEDBACK ENDPOINTLERİ
+# =====================================================
+
+
+def _raise_from_feedback_service(result: dict[str, Any]) -> None:
+    kind = result.get("kind")
+    status_code = {
+        "not_found": status.HTTP_404_NOT_FOUND,
+        "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
+        "conflict": status.HTTP_409_CONFLICT,
+        "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
+    }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
+    raise HTTPException(status_code=status_code, detail=result["error"])
+
+
+@router.post(
+    "/seller/feedback",
+    status_code=status.HTTP_201_CREATED,
+)
+def seller_submit_feedback(
+    body: SellerFeedbackCreateRequest,
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller adına kategorili feedback oluşturur; seller_id auth context'ten gelir."""
+    result = submit_feedback(context.seller_id, body)
+    if not result.get("ok"):
+        _raise_from_feedback_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/seller/feedback")
+def seller_feedback_list(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller'ın yalnız kendi feedback kayıtlarını en yeniden eskiye listeler."""
+    result = list_seller_feedback(
+        context.seller_id,
+        limit=limit,
+        offset=offset,
+    )
+    if not result.get("ok"):
+        _raise_from_feedback_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/seller/feedback/{feedback_id}")
+def seller_feedback_detail(
+    feedback_id: PositiveInt,
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Tenant dışı feedback kayıtlarını 404 olarak görünmez tutar."""
+    result = get_seller_feedback_item(context.seller_id, feedback_id)
+    if not result.get("ok"):
+        _raise_from_feedback_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/admin/feedback")
+def admin_feedback_list(
+    feedback_status: FeedbackStatus | None = Query(default=None, alias="status"),
+    category: FeedbackCategory | None = Query(default=None),
+    seller_id: int | None = Query(default=None, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    _: AuthContext = Depends(require_admin),
+) -> dict[str, Any]:
+    """Admin workflow kuyruğunu güvenli seller özeti ve filtrelerle listeler."""
+    result = list_admin_feedback(
+        status=feedback_status,
+        category=category,
+        seller_id=seller_id,
+        limit=limit,
+        offset=offset,
+    )
+    if not result.get("ok"):
+        _raise_from_feedback_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/admin/feedback/{feedback_id}")
+def admin_feedback_detail(
+    feedback_id: PositiveInt,
+    _: AuthContext = Depends(require_admin),
+) -> dict[str, Any]:
+    result = get_admin_feedback_item(feedback_id)
+    if not result.get("ok"):
+        _raise_from_feedback_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.patch("/admin/feedback/{feedback_id}")
+def admin_update_feedback(
+    feedback_id: PositiveInt,
+    body: AdminFeedbackUpdateRequest,
+    _: AuthContext = Depends(require_admin),
+) -> dict[str, Any]:
+    """Admin workflow alanlarını expected_version ile atomik günceller."""
+    result = update_admin_feedback_item(feedback_id, body)
+    if not result.get("ok"):
+        _raise_from_feedback_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+# =====================================================
+# UYGULAMA İÇİ DUYURU ENDPOINTLERİ
+# =====================================================
+
+
+def _raise_from_announcement_service(result: dict[str, Any]) -> None:
+    kind = result.get("kind")
+    status_code = {
+        "not_found": status.HTTP_404_NOT_FOUND,
+        "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
+        "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
+    }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
+    raise HTTPException(status_code=status_code, detail=result["error"])
+
+
+@router.post(
+    "/admin/announcements",
+    status_code=status.HTTP_201_CREATED,
+)
+def admin_publish_announcement(
+    body: AdminAnnouncementCreateRequest,
+    context: AuthContext = Depends(require_admin),
+) -> dict[str, Any]:
+    """Duyuru ve explicit seller hedeflerini atomik olarak hemen yayımlar."""
+    result = publish_announcement(
+        _trusted_profile_id(context, error_code="announcement_unavailable"),
+        body,
+    )
+    if not result.get("ok"):
+        _raise_from_announcement_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/admin/announcements")
+def admin_announcement_list(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    _: AuthContext = Depends(require_admin),
+) -> dict[str, Any]:
+    """Admin duyurularını hedef ve okundu sayılarıyla listeler."""
+    result = list_admin_announcements(limit=limit, offset=offset)
+    if not result.get("ok"):
+        _raise_from_announcement_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/admin/announcements/{announcement_id}")
+def admin_announcement_detail(
+    announcement_id: PositiveInt,
+    _: AuthContext = Depends(require_admin),
+) -> dict[str, Any]:
+    """Admin duyuru detayını ve seçili kitle hedef özetlerini döndürür."""
+    result = get_admin_announcement_item(announcement_id)
+    if not result.get("ok"):
+        _raise_from_announcement_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/seller/announcements")
+def seller_announcement_list(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller'ın yalnız explicit hedeflendiği duyuruları tenant scope'unda listeler."""
+    result = list_seller_announcements(
+        context.seller_id,
+        limit=limit,
+        offset=offset,
+    )
+    if not result.get("ok"):
+        _raise_from_announcement_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/seller/announcements/{announcement_id}")
+def seller_announcement_detail(
+    announcement_id: PositiveInt,
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Hedeflenmeyen veya başka tenant'a ait duyuruyu 404 olarak gizler."""
+    result = get_seller_announcement_item(context.seller_id, announcement_id)
+    if not result.get("ok"):
+        _raise_from_announcement_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.post("/seller/announcements/{announcement_id}/read")
+def seller_mark_announcement_read(
+    announcement_id: PositiveInt,
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller'a özel okundu zamanını ilk çağrıda yazar; tekrarları idempotenttir."""
+    result = mark_seller_announcement_read(context.seller_id, announcement_id)
+    if not result.get("ok"):
+        _raise_from_announcement_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}

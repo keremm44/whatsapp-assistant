@@ -5752,6 +5752,313 @@ def get_seller_dashboard_task_list(
     }
 
 # =====================================================
+# SELLER FEEDBACK — SELLER -> ADMIN WORKFLOW
+# =====================================================
+
+
+def _feedback_rpc_response(data: Any) -> dict[str, Any]:
+    """Feedback RPC sonucunu güvenli database-layer sözleşmesine çevirir."""
+    payload = _extract_rpc_payload(data)
+    if payload is None:
+        return {"durum": "hata", "mesaj": "Feedback işlemi geçersiz yanıt döndürdü."}
+
+    rpc_status = payload.get("status")
+    if rpc_status == "success":
+        response: dict[str, Any] = {"durum": "başarılı"}
+        for key in ("feedback", "total", "changed"):
+            if key in payload:
+                response[key] = payload[key]
+        return response
+    if rpc_status == "not_found":
+        return {"durum": "bulunamadı", "mesaj": "Feedback bulunamadı."}
+    if rpc_status == "conflict":
+        return {
+            "durum": "conflict",
+            "mesaj": "Feedback başka bir işlem tarafından değiştirildi.",
+            "reason": payload.get("reason"),
+            "current_version": payload.get("current_version"),
+        }
+    if rpc_status == "error":
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": payload.get("message") or "Feedback bilgileri geçersiz.",
+        }
+    return {"durum": "hata", "mesaj": "Feedback işlemi tamamlanamadı."}
+
+
+def create_seller_feedback_record(
+    seller_id: int,
+    *,
+    category: str,
+    subject: str,
+    message: str,
+) -> dict[str, Any]:
+    """Authenticated seller adına tenant-scoped feedback oluşturur."""
+    try:
+        result = get_supabase().rpc(
+            "create_seller_feedback",
+            {
+                "target_seller_id": seller_id,
+                "category_value": category,
+                "subject_value": subject,
+                "message_value": message,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Feedback oluşturulamadı."}
+    return _feedback_rpc_response(result.data)
+
+
+def list_seller_feedback_records(
+    seller_id: int,
+    *,
+    limit: int = 20,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Seller feedback listesini yalnız güvenilir seller scope'unda okur."""
+    try:
+        result = get_supabase().rpc(
+            "get_seller_feedback_list",
+            {
+                "target_seller_id": seller_id,
+                "result_limit": limit,
+                "result_offset": offset,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Feedback listesi okunamadı."}
+    return _feedback_rpc_response(result.data)
+
+
+def get_seller_feedback_record(
+    seller_id: int,
+    feedback_id: int,
+) -> dict[str, Any]:
+    """Feedback detayını seller_id + feedback_id ile görünmez tenant scope'unda okur."""
+    try:
+        result = get_supabase().rpc(
+            "get_seller_feedback_detail",
+            {
+                "target_seller_id": seller_id,
+                "target_feedback_id": feedback_id,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Feedback detayı okunamadı."}
+    return _feedback_rpc_response(result.data)
+
+
+def list_admin_feedback_records(
+    *,
+    status: str | None = None,
+    category: str | None = None,
+    seller_id: int | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Admin feedback kuyruğunu güvenli seller özeti ve filtrelerle okur."""
+    try:
+        result = get_supabase().rpc(
+            "get_admin_feedback_list",
+            {
+                "status_filter": status,
+                "category_filter": category,
+                "seller_id_filter": seller_id,
+                "result_limit": limit,
+                "result_offset": offset,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Admin feedback listesi okunamadı."}
+    return _feedback_rpc_response(result.data)
+
+
+def get_admin_feedback_record(feedback_id: int) -> dict[str, Any]:
+    """Admin feedback detayını güvenli seller özetiyle okur."""
+    try:
+        result = get_supabase().rpc(
+            "get_admin_feedback_detail",
+            {"target_feedback_id": feedback_id},
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Admin feedback detayı okunamadı."}
+    return _feedback_rpc_response(result.data)
+
+
+def update_admin_feedback_record(
+    feedback_id: int,
+    expected_version: int,
+    *,
+    status: str | None,
+    admin_note: str | None,
+    update_status: bool,
+    update_admin_note: bool,
+) -> dict[str, Any]:
+    """Admin workflow alanlarını optimistic concurrency ile atomik günceller."""
+    try:
+        result = get_supabase().rpc(
+            "update_admin_feedback",
+            {
+                "target_feedback_id": feedback_id,
+                "expected_version_value": expected_version,
+                "update_status": update_status,
+                "status_value": status,
+                "update_admin_note": update_admin_note,
+                "admin_note_value": admin_note,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Feedback güncellenemedi."}
+    return _feedback_rpc_response(result.data)
+
+
+# =====================================================
+# ANNOUNCEMENTS — ADMIN PUBLISH / SELLER READ STATE
+# =====================================================
+
+
+def _announcement_rpc_response(data: Any) -> dict[str, Any]:
+    """Announcement RPC sonucunu exception sızdırmadan katman sözleşmesine çevirir."""
+    payload = _extract_rpc_payload(data)
+    if payload is None:
+        return {"durum": "hata", "mesaj": "Duyuru işlemi geçersiz yanıt döndürdü."}
+
+    rpc_status = payload.get("status")
+    if rpc_status == "success":
+        response: dict[str, Any] = {"durum": "başarılı"}
+        for key in (
+            "announcement",
+            "announcements",
+            "total",
+            "announcement_id",
+            "is_read",
+            "read_at",
+            "changed",
+        ):
+            if key in payload:
+                response[key] = payload[key]
+        return response
+    if rpc_status == "not_found":
+        return {"durum": "bulunamadı", "mesaj": "Duyuru bulunamadı."}
+    if rpc_status == "error":
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": payload.get("message") or "Duyuru bilgileri geçersiz.",
+        }
+    return {"durum": "hata", "mesaj": "Duyuru işlemi tamamlanamadı."}
+
+
+def create_announcement_record(
+    creator_profile_id: int,
+    *,
+    title: str,
+    message: str,
+    audience_type: str,
+    seller_ids: list[int] | None,
+) -> dict[str, Any]:
+    """Duyuruyu ve materialize seller hedeflerini tek RPC transaction'ında oluşturur."""
+    try:
+        result = get_supabase().rpc(
+            "create_announcement",
+            {
+                "creator_profile_id": creator_profile_id,
+                "title_value": title,
+                "message_value": message,
+                "audience_type_value": audience_type,
+                "seller_ids_value": seller_ids,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Duyuru yayımlanamadı."}
+    return _announcement_rpc_response(result.data)
+
+
+def list_admin_announcement_records(
+    *,
+    limit: int = 20,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Admin duyuru listesini hedef ve okundu sayılarıyla okur."""
+    try:
+        result = get_supabase().rpc(
+            "get_admin_announcements_list",
+            {"result_limit": limit, "result_offset": offset},
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Duyuru listesi okunamadı."}
+    return _announcement_rpc_response(result.data)
+
+
+def get_admin_announcement_record(announcement_id: int) -> dict[str, Any]:
+    """Admin duyuru detayını ve seçili hedef özetlerini okur."""
+    try:
+        result = get_supabase().rpc(
+            "get_admin_announcement_detail",
+            {"target_announcement_id": announcement_id},
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Duyuru detayı okunamadı."}
+    return _announcement_rpc_response(result.data)
+
+
+def list_seller_announcement_records(
+    seller_id: int,
+    *,
+    limit: int = 20,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Seller duyurularını yalnız materialize tenant hedefi üzerinden okur."""
+    try:
+        result = get_supabase().rpc(
+            "get_seller_announcements_list",
+            {
+                "target_seller_id": seller_id,
+                "result_limit": limit,
+                "result_offset": offset,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Duyurular okunamadı."}
+    return _announcement_rpc_response(result.data)
+
+
+def get_seller_announcement_record(
+    seller_id: int,
+    announcement_id: int,
+) -> dict[str, Any]:
+    """Seller duyurusunu seller_id + announcement_id scope'unda okur."""
+    try:
+        result = get_supabase().rpc(
+            "get_seller_announcement_detail",
+            {
+                "target_seller_id": seller_id,
+                "target_announcement_id": announcement_id,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Duyuru detayı okunamadı."}
+    return _announcement_rpc_response(result.data)
+
+
+def mark_seller_announcement_read_record(
+    seller_id: int,
+    announcement_id: int,
+) -> dict[str, Any]:
+    """Seller hedefini ilk çağrıda okundu yapar; tekrarları idempotent karşılar."""
+    try:
+        result = get_supabase().rpc(
+            "mark_seller_announcement_read",
+            {
+                "target_seller_id": seller_id,
+                "target_announcement_id": announcement_id,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Duyuru okundu olarak işaretlenemedi."}
+    return _announcement_rpc_response(result.data)
+
+
+# =====================================================
 # TEST
 # =====================================================
 
