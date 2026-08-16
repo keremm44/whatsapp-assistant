@@ -12,6 +12,48 @@ def _is_positive_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
 
+def _validated_quantity_review_request(
+    request: Any,
+    *,
+    seller_id: int,
+    customer_id: int,
+    requested_quantity: int,
+) -> dict[str, Any] | None:
+    if not isinstance(request, dict):
+        return None
+    if request.get("issue_type") != QUANTITY_LIMIT_ISSUE_TYPE:
+        return None
+    if request.get("status") != "SELLER_REVIEW_REQUIRED":
+        return None
+    if request.get("seller_id") != seller_id or request.get("customer_id") != customer_id:
+        return None
+    if request.get("requested_quantity") != requested_quantity:
+        return None
+    if request.get("image_requirement_snapshot") != "NOT_REQUESTED":
+        return None
+
+    minimum = request.get("min_quantity_snapshot")
+    maximum = request.get("max_quantity_snapshot")
+    direction = request.get("quantity_limit_direction")
+
+    if not _is_positive_int(minimum):
+        return None
+    if maximum is not None and (
+        not _is_positive_int(maximum) or maximum < minimum
+    ):
+        return None
+    if direction == "below_min":
+        if requested_quantity >= minimum:
+            return None
+    elif direction == "above_max":
+        if maximum is None or requested_quantity <= maximum:
+            return None
+    else:
+        return None
+
+    return request
+
+
 def get_active_collectable_return_issue_request(
     seller_id: int,
     customer_id: int,
@@ -42,12 +84,16 @@ def get_active_collectable_return_issue_request(
             "mesaj": "Açık iade/sorun talebi okunamadı.",
         }
 
-    rows = result.data or []
-    if rows and not isinstance(rows[0], dict):
+    data = result.data
+    if data is None:
+        rows: list[dict[str, Any]] = []
+    elif not isinstance(data, list) or any(not isinstance(row, dict) for row in data):
         return {
             "durum": "hata",
             "mesaj": "Açık iade/sorun talebi geçersiz yanıt döndürdü.",
         }
+    else:
+        rows = data
 
     return {
         "durum": "başarılı",
@@ -140,6 +186,8 @@ def evaluate_quantity_limit_request(
                 )
             )
             or returned_quantity != requested_quantity
+            or requested_quantity < minimum
+            or (maximum is not None and requested_quantity > maximum)
         ):
             return {
                 "durum": "hata",
@@ -155,22 +203,16 @@ def evaluate_quantity_limit_request(
         }
 
     if status == "review_required":
-        request = payload.get("request")
-        if not isinstance(request, dict):
+        request = _validated_quantity_review_request(
+            payload.get("request"),
+            seller_id=seller_id,
+            customer_id=customer_id,
+            requested_quantity=requested_quantity,
+        )
+        if request is None:
             return {
                 "durum": "hata",
                 "mesaj": "Adet sınırı review kaydı doğrulanamadı.",
-            }
-        if request.get("issue_type") != QUANTITY_LIMIT_ISSUE_TYPE:
-            return {
-                "durum": "hata",
-                "mesaj": "Adet sınırı review türü doğrulanamadı.",
-            }
-        direction = request.get("quantity_limit_direction")
-        if direction not in {"below_min", "above_max"}:
-            return {
-                "durum": "hata",
-                "mesaj": "Adet sınırı review yönü doğrulanamadı.",
             }
         return {
             "durum": "başarılı",
