@@ -12,7 +12,6 @@ from database import (
     RETURN_ISSUE_TYPES,
     add_return_issue_request_evidence,
     create_or_get_return_issue_request,
-    get_active_return_issue_request,
     get_customers_by_ids,
     get_return_issue_request_detail,
     get_return_issue_type_settings,
@@ -23,6 +22,10 @@ from database import (
     transition_conversation_control,
     update_return_issue_request_from_message,
     update_return_issue_type_setting,
+)
+from return_issue_repository import (
+    QUANTITY_LIMIT_ISSUE_TYPE,
+    get_active_collectable_return_issue_request,
 )
 
 
@@ -42,6 +45,7 @@ ISSUE_TYPE_DISPLAY_NAMES = {
     "PRINT_OR_PERSONALIZATION_ISSUE": "Baskı / kişiselleştirme sorunu",
     "DELIVERY_ISSUE": "Teslimat sorunu",
     "OTHER_ORDER_ISSUE": "Diğer sipariş sorunu",
+    QUANTITY_LIMIT_ISSUE_TYPE: "Adet sınırı talebi",
 }
 
 _IMAGE_REQUIREMENT_DEFAULT = "OPTIONAL"
@@ -235,8 +239,6 @@ def parse_order_number_answer(message: str) -> str | None:
     if explicit is not None:
         return explicit
 
-    # Serbest cümleyi sipariş numarası sanma. Çıplak cevap yalnız tek bir
-    # token biçimindeyse ve en az bir rakam içeriyorsa kabul edilir.
     if not _STANDALONE_ORDER_NUMBER_PATTERN.fullmatch(text):
         return None
     if not any(char.isdigit() for char in text):
@@ -261,7 +263,6 @@ def initial_reason_candidate(
         if re.fullmatch(pattern, lowered, flags=re.IGNORECASE):
             return None
 
-    # İade mesajı salt intent değilse, müşteri açıklamasını kaybetme.
     return normalized
 
 
@@ -345,6 +346,17 @@ def get_request_collection_state(
             default_code="return_issue_detail_unavailable",
             default_message="İade/sorun talebi detayı okunamadı.",
         )
+
+    request = detail.get("request")
+    if isinstance(request, dict) and request.get("issue_type") == QUANTITY_LIMIT_ISSUE_TYPE:
+        return {
+            "durum": "başarılı",
+            **detail,
+            "missing_fields": [],
+            "awaiting": None,
+            "ready_for_review": True,
+            "question": None,
+        }
 
     missing = _missing_fields(detail)
     awaiting = missing[0] if missing else None
@@ -450,6 +462,15 @@ def _collect_into_request(
             fail_closed=True,
         )
 
+    if request.get("issue_type") == QUANTITY_LIMIT_ISSUE_TYPE:
+        return _error(
+            "return_issue_collection_type_invalid",
+            "Adet sınırı talebi bilgi toplama akışına alınamaz.",
+            kind="conflict",
+            fail_closed=True,
+            request=request,
+        )
+
     if request.get("status") == RETURN_ISSUE_STATUS_SELLER_REVIEW_REQUIRED:
         return _finalize_review(
             seller_id=seller_id,
@@ -473,9 +494,6 @@ def _collect_into_request(
     if state.get("durum") != "başarılı":
         return {**state, "fail_closed": True, "outgoing_allowed": False}
 
-    # Müşteri fotoğrafı erken gönderirse kaybetme. NOT_REQUESTED yalnız
-    # asistanın fotoğraf istememesini ifade eder; güvenli incoming evidence
-    # kullanıcı tarafından gönüllü gönderilmişse saklanabilir.
     if message_type == "image":
         evidence_result = add_return_issue_request_evidence(
             seller_id,
@@ -494,9 +512,6 @@ def _collect_into_request(
     awaiting = state.get("awaiting")
     normalized_text = (message_text or "").strip()
 
-    # Yeni request'i başlatan intent mesajı, aynı turda eksik alan cevabı
-    # olarak tekrar yorumlanmaz. Aksi halde "ürün kırık geldi" gibi ilk
-    # mesaj yanlışlıkla sipariş numarası olarak kaydedilebilir.
     if not consume_as_answer:
         if urgent:
             return _finalize_review(
@@ -538,8 +553,6 @@ def _collect_into_request(
             "outgoing_allowed": True,
         }
 
-    # Acil/yüksek riskli mesaj, eksik alan cevabı olarak yorumlanmadan
-    # doğrudan seller review'a bırakılır.
     if urgent:
         return _finalize_review(
             seller_id=seller_id,
@@ -703,7 +716,6 @@ def process_customer_issue_message(
         )
 
     if message_type not in {"text", "image"}:
-        # Domain şu aşamada yalnız güvenli text/image collection yapar.
         return _error(
             "return_issue_unsupported_message_type",
             "Bu mesaj türü otomatik iade/sorun toplama için desteklenmiyor.",
@@ -711,7 +723,7 @@ def process_customer_issue_message(
             fail_closed=True,
         )
 
-    active_result = get_active_return_issue_request(seller_id, customer_id)
+    active_result = get_active_collectable_return_issue_request(seller_id, customer_id)
     if active_result.get("durum") != "başarılı":
         return _map_database_error(
             active_result,
@@ -820,10 +832,6 @@ def list_seller_return_issue_requests(
 
     requests = result["requests"]
 
-    # Sayfadaki benzersiz customer kimlikleri tek seller-scoped toplu
-    # sorguyla okunur; satır başına müşteri sorgusu (N+1) yapılmaz.
-    # customer_phone, customers.whatsapp_number'ın olduğu gibi halidir;
-    # snapshot değildir, formatlama/normalize uygulanmaz.
     unique_customer_ids: list[int] = []
     seen_customer_ids: set[int] = set()
     for row in requests:

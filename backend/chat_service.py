@@ -12,7 +12,6 @@ from database import (
     block_customer,
     count_recent_violations,
     create_seller_notification,
-    get_active_return_issue_request,
     get_active_rules,
     get_conversation_control,
     get_or_create_customer,
@@ -40,6 +39,8 @@ from order_service import (
     update_core as order_update_core,
     update_core_from_message as order_update_core_from_message,
 )
+from quantity_limit_service import handle_quantity_message
+from return_issue_repository import get_active_collectable_return_issue_request
 from return_issue_service import (
     process_customer_issue_message as return_issue_process_message,
 )
@@ -706,9 +707,6 @@ def escalate_question(
             "mesaj": "Otomatik yanıt kontrol bağlamı bulunamadı.",
         }
 
-    # Seller cevabı kaydetme ile customer occurrence kaydı yarışırsa RPC
-    # answered bilgiyi döndürebilir. Eski mesaja background cevap yoktur;
-    # yalnız halen işlenmekte olan bu yeni incoming mesaj cevaplanır.
     if question_result.get("answer_available") is True:
         answer = question_result.get("answer")
         if isinstance(answer, str) and answer.strip():
@@ -922,7 +920,6 @@ def _return_issue_chat_response(
     service_result: dict[str, Any],
     control_context: OutgoingControlContext,
 ) -> dict[str, Any]:
-    """Persistent return/issue sonucunu güvenli chat sonucuna çevirir."""
     request = service_result.get("request")
     request_id = request.get("id") if isinstance(request, dict) else None
     common_extra: dict[str, Any] = {
@@ -999,7 +996,6 @@ def handle_return_review_intent(
     intent: str,
     control_context: OutgoingControlContext,
 ) -> dict[str, Any]:
-    """İade/şikayet intent'ini persistent return/issue domainine aktarır."""
     service_result = return_issue_process_message(
         seller_id=seller_id,
         customer_id=customer_id,
@@ -1028,8 +1024,8 @@ def continue_active_return_issue_request(
     incoming_message_id: int,
     control_context: OutgoingControlContext,
 ) -> dict[str, Any] | None:
-    """Açık return/issue request varsa normal flow'dan önce devam ettirir."""
-    active_result = get_active_return_issue_request(
+    """Açık collectable return/issue request varsa normal flow'dan önce devam ettirir."""
+    active_result = get_active_collectable_return_issue_request(
         seller_id=seller_id,
         customer_id=customer_id,
     )
@@ -1095,7 +1091,6 @@ def _transition_order_collection_step(
     completion_just_happened: bool = False,
     ai_confidence: float | None = None,
 ) -> dict[str, Any]:
-    """Order service adımını flow state + tek deterministic soruya çevirir."""
     if step_result.get("durum") != "başarılı":
         return _order_flow_error(
             customer_id=customer_id,
@@ -1238,7 +1233,6 @@ def _continue_order_after_product_assignment(
     expected_version: int | None = None,
     ai_confidence: float | None = None,
 ) -> dict[str, Any]:
-    """Canonical set_order_product yolunu kullanır; başarısızsa ilerletmez."""
     assign_result = order_set_order_product(
         seller_id,
         customer_id,
@@ -1247,8 +1241,6 @@ def _continue_order_after_product_assignment(
         expected_version=expected_version,
     )
     if assign_result.get("durum") == "ürün_değişikliği_inceleme_gerekli":
-        # Image / custom-text / field values already exist. Reuse the
-        # existing RPC safeguard: do not attach a late product.
         step_result = order_get_next_collection_step(seller_id, order_id)
         return _transition_order_collection_step(
             seller_id=seller_id,
@@ -1292,12 +1284,6 @@ def _order_has_assigned_product(order: dict[str, Any]) -> bool:
 
 
 def _order_collection_has_progressed(order: dict[str, Any]) -> bool:
-    """True after image / custom-text collection has already started.
-
-    Dynamic field values are enforced by set_order_product_and_snapshot_fields
-    (order_product_change_requires_review). External order number alone is
-    not progress — the SQL product-change guard does not treat it as such.
-    """
     image_message_id = order.get("image_message_id")
     if _is_positive_order_id(image_message_id):
         return True
@@ -1309,13 +1295,6 @@ def _should_attempt_order_product_resolution(
     order_result: dict[str, Any],
     state: dict[str, Any],
 ) -> bool:
-    """Retry-eligible new orders vs genuinely legacy open orders.
-
-    created=True enters the product-resolution phase. The explicit
-    state_data marker keeps that phase retryable after a later
-    get_or_create returns created=False. Legacy open orders never
-    receive the marker and are not retrofitted.
-    """
     if order_result.get("created") is True:
         return True
     state_data = state.get("state_data") or {}
@@ -1330,11 +1309,6 @@ def _ensure_product_resolution_marker(
     source_message_id: int,
     state_data: dict[str, Any],
 ) -> dict[str, Any] | None:
-    """Persist the retry marker before assignment / selection runs.
-
-    Returns an error result if the write fails; None when the marker
-    is already present or was written.
-    """
     if state_data.get("awaiting_product_resolution") is True:
         return None
 
@@ -1371,11 +1345,6 @@ def _resolve_order_product_for_new_or_retry(
     state_data: dict[str, Any],
     ai_confidence: float | None = None,
 ) -> dict[str, Any] | None:
-    """Run product resolution for a new/retry-eligible order.
-
-    Returns a chat response when this turn is fully handled, or None
-    to continue the legacy collection path without assigning a product.
-    """
     if _order_has_assigned_product(order) or _order_collection_has_progressed(order):
         return None
 
@@ -1577,9 +1546,6 @@ def process_active_state(
                     message="Sipariş kimliği doğrulanamadı.",
                 )
 
-            # Yeni siparişler ve "ürün çözümü bekleniyor" işaretli
-            # retry'ler ürün seçimine girer. Marker olmayan açık /
-            # legacy product_id=NULL siparişler geriye dönük atanmaz.
             if _should_attempt_order_product_resolution(order_result, state):
                 product_response = _resolve_order_product_for_new_or_retry(
                     seller_id=seller_id,
@@ -1769,7 +1735,6 @@ def process_active_state(
                     completion_just_happened=core_result.get("completed") is True,
                 )
 
-            # Legacy state_data uyumluluğu: yeni siparişlerde kullanılmaz.
             transition_result = transition_state(
                 seller_id=seller_id,
                 customer_id=customer_id,
@@ -1815,17 +1780,6 @@ def process_active_state(
         order_id = state_data.get("order_id")
 
         if order_id is not None:
-            # Config-authority dayanıklılığı: görsel adımı yalnızca
-            # image_required=true (veya legacy NULL) iken sorulur. Konuşma
-            # AWAITING_IMAGE'de açılmışsa ama config artık görsel istemiyorsa
-            # (veya koleksiyon zaten ilerlemişse), görsel dışı bir mesaj
-            # sessizce düşürülmez; akış gerçek adıma hizalanır. Aksi halde
-            # konuşma hiç sorulmayacak bir görseli bekleyerek kilitli
-            # kalırdı. AWAITING_CUSTOM_TEXT / AWAITING_ORDER_FIELD
-            # kollarındaki re-align pattern'inin aynısıdır. Görsel mesajı
-            # gerçekten geldiyse eskisi gibi saklanır; persist sonrası
-            # yapılan adım hesabı (config kapısından geçer) akışı
-            # kendiliğinden hizalar.
             if message_type != "image":
                 current_step = order_get_next_collection_step(seller_id, order_id)
                 if (
@@ -1869,7 +1823,6 @@ def process_active_state(
                 completion_just_happened=core_result.get("completed") is True,
             )
 
-        # Legacy state_data uyumluluğu: eski açık konuşmalar için korunur.
         is_image = message_type == "image" or bool(media_url)
         if is_image:
             next_state_data = {
@@ -1976,7 +1929,6 @@ def process_active_state(
                 completion_just_happened=core_result.get("completed") is True,
             )
 
-        # Legacy state_data uyumluluğu.
         if not custom_text:
             return None
 
@@ -2184,13 +2136,6 @@ def safe_template_response(
 def seller_lifecycle_block(
     seller: dict[str, Any],
 ) -> tuple[str, str] | None:
-    """
-    Satıcının otomatik cevap vermeye uygun olup olmadığını kontrol eder.
-
-    Dönüş:
-    - None: otomatik cevap verilebilir.
-    - (reason_code, reason_text): mesaj kaydedilir ancak cevap üretilmez.
-    """
     if bool(seller.get("emergency_paused")):
         return (
             "emergency_paused",
@@ -2234,18 +2179,7 @@ def sohbet_isle(
     message_type: str = "text",
     media_url: str | None = None,
 ) -> dict[str, Any]:
-    """
-    Ana güvenli sohbet akışı.
-
-    Öncelik:
-    1. Payload, satıcı ve müşteri doğrulama
-    2. Incoming mesajı kalıcılaştırma ve duplicate kontrolü
-    3. Seller lifecycle, customer security ve conversation control gate
-    4. Uygunsuz içerik
-    5. Aktif flow state
-    6. Niyet, kural, product info ve güvenli şablon
-    7. Her outgoing öncesi control state/version/cursor doğrulaması
-    """
+    """Ana güvenli sohbet akışı."""
 
     if not kullanici_mesaji and not media_url and message_type != "image":
         return {
@@ -2253,7 +2187,6 @@ def sohbet_isle(
             "mesaj": "Boş mesaj işlenemez.",
         }
 
-    # 1. Satıcı doğrulama
     seller_result = get_seller_by_id(seller_id)
 
     if seller_result.get("durum") != "başarılı":
@@ -2266,7 +2199,6 @@ def sohbet_isle(
     store_link = str(seller.get("store_link") or "").strip()
     product_info = seller.get("product_info") or {}
 
-    # 2. Müşteri bul / oluştur
     customer_result = get_or_create_customer(
         seller_id=seller_id,
         whatsapp_number=whatsapp_number,
@@ -2279,7 +2211,6 @@ def sohbet_isle(
     customer = customer_result["customer"]
     customer_id = customer["id"]
 
-    # 3. Gelen mesajı otomasyon kararlarından önce kaydet
     incoming_result = save_message(
         seller_id=seller_id,
         customer_id=customer_id,
@@ -2324,7 +2255,6 @@ def sohbet_isle(
             "customer_id": customer_id,
         }
 
-    # 4. Satıcı yaşam döngüsü kontrolü
     lifecycle_block = seller_lifecycle_block(seller)
 
     if lifecycle_block:
@@ -2337,7 +2267,6 @@ def sohbet_isle(
             reason_text=reason_text,
         )
 
-    # 5. Conversation control fail-closed okunur
     control_result = get_conversation_control(
         seller_id=seller_id,
         customer_id=customer_id,
@@ -2353,7 +2282,6 @@ def sohbet_isle(
 
     control = control_result["control"]
 
-    # 6. Müşteri security alanları incoming kaydından sonra değerlendirilir
     if customer.get("is_blocked"):
         return pause_for_customer_security(
             seller_id=seller_id,
@@ -2412,7 +2340,6 @@ def sohbet_isle(
         "starting_control_version": control["version"],
     }
 
-    # 7. Uygunsuz içerik kontrolü
     violation = uygunsuz_icerik_bul(kullanici_mesaji or "")
 
     if violation:
@@ -2425,7 +2352,6 @@ def sohbet_isle(
             starting_control_version=control["version"],
         )
 
-    # 8. Aktif flow state
     state_result = get_state(
         seller_id=seller_id,
         customer_id=customer_id,
@@ -2436,9 +2362,6 @@ def sohbet_isle(
 
     state = state_result["state"]
 
-    # Sipariş toplama state'leri field mutation yapmadan önce yalnız yüksek
-    # öncelikli iade/şikayet kesintisini kontrol eder. Bu sayede örneğin
-    # "ürün kırık geldi" metni custom_text veya dinamik alan değeri olmaz.
     preclassified: dict[str, Any] | None = None
     current_flow_state = state.get("current_state", "NORMAL")
     if (
@@ -2461,9 +2384,6 @@ def sohbet_isle(
                 control_context=control_context,
             )
 
-    # Açık persistent iade/sorun talebi normal flow'dan önceliklidir.
-    # Böylece "TR123" gibi devam cevaplarının yeniden return intent olarak
-    # sınıflandırılması gerekmez ve order state'leri yanlışlıkla ilerlemez.
     return_issue_response = continue_active_return_issue_request(
         seller_id=seller_id,
         customer_id=customer_id,
@@ -2475,6 +2395,61 @@ def sohbet_isle(
 
     if return_issue_response is not None:
         return return_issue_response
+
+    if message_type == "text":
+        quantity_result = handle_quantity_message(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            source_message_id=incoming_message_id,
+            message_text=kullanici_mesaji or "",
+            product_info=product_info,
+        )
+        if quantity_result.get("handled") is True:
+            if quantity_result.get("durum") != "başarılı":
+                return stored_no_auto_reply(
+                    customer_id=customer_id,
+                    incoming_message_id=incoming_message_id,
+                    reason_code=str(
+                        quantity_result.get("error_code")
+                        or "quantity_limit_processing_failed"
+                    ),
+                    reason_text=str(
+                        quantity_result.get("mesaj")
+                        or "Sipariş adet sınırı güvenli biçimde değerlendirilemedi."
+                    ),
+                    fail_closed=True,
+                )
+
+            response_text = quantity_result.get("response_text")
+            if not isinstance(response_text, str) or not response_text.strip():
+                return stored_no_auto_reply(
+                    customer_id=customer_id,
+                    incoming_message_id=incoming_message_id,
+                    reason_code="quantity_limit_response_unavailable",
+                    reason_text="Sipariş adet sınırı için güvenli yanıt oluşturulamadı.",
+                    fail_closed=True,
+                )
+
+            response = outgoing_response(
+                seller_id=seller_id,
+                customer_id=customer_id,
+                response_text=response_text.strip(),
+                source="quantity_limit",
+                control_context=control_context,
+                ai_confidence=1.0,
+            )
+            if response.get("durum") == "başarılı":
+                request = quantity_result.get("request")
+                response["quantity_review_required"] = (
+                    quantity_result.get("review_required") is True
+                )
+                response["return_issue_request_id"] = (
+                    request.get("id") if isinstance(request, dict) else None
+                )
+                response["notification_created"] = (
+                    quantity_result.get("notification_created") is True
+                )
+            return response
 
     state_response = process_active_state(
         seller_id=seller_id,
@@ -2491,7 +2466,6 @@ def sohbet_isle(
     if state_response:
         return state_response
 
-    # 9. Niyet sınıflandırma
     classification = preclassified or classify_intent(kullanici_mesaji or "")
 
     if not intent_is_safe(classification):
@@ -2520,7 +2494,6 @@ def sohbet_isle(
     intent = classification["intent"]
     confidence = classification.get("confidence")
 
-    # 10. İade ve önemli sorun incelemesi
     if intent in {"return_request", "complaint"}:
         return handle_return_review_intent(
             seller_id=seller_id,
@@ -2532,7 +2505,6 @@ def sohbet_isle(
             control_context=control_context,
         )
 
-    # 11. Sipariş başlangıcı
     if intent == "order_intent":
         transition_result = transition_state(
             seller_id=seller_id,
@@ -2560,7 +2532,6 @@ def sohbet_isle(
             ai_confidence=confidence,
         )
 
-    # Normal state dışında gelen çıplak evet/hayır güvenli değil
     if intent in {
         "order_confirmation_yes",
         "order_confirmation_no",
@@ -2575,7 +2546,6 @@ def sohbet_isle(
             control_context=control_context,
         )
 
-    # 12. Satıcı kuralları
     rules_result = get_active_rules(seller_id)
     rules = rules_result.get("kurallar", [])
 
@@ -2596,7 +2566,6 @@ def sohbet_isle(
             ai_confidence=1.0,
         )
 
-    # 13. Ürün bilgileri
     product_response, suggested_field = product_info_response(
         intent=intent,
         product_info=product_info,
@@ -2612,7 +2581,6 @@ def sohbet_isle(
             ai_confidence=confidence,
         )
 
-    # 14. Güvenli hazır şablon
     template_response = safe_template_response(
         intent=intent,
         store_link=store_link,
@@ -2628,7 +2596,6 @@ def sohbet_isle(
             ai_confidence=confidence,
         )
 
-    # 15. Daha önce seller tarafından cevaplanmış exact-normalized soru
     saved_answer_response = _saved_unanswered_answer_response(
         seller_id=seller_id,
         customer_id=customer_id,
@@ -2641,7 +2608,6 @@ def sohbet_isle(
     if saved_answer_response is not None:
         return saved_answer_response
 
-    # 16. Bilgi yoksa satıcıya aktar
     return escalate_question(
         seller_id=seller_id,
         customer_id=customer_id,
@@ -2653,10 +2619,6 @@ def sohbet_isle(
         control_context=control_context,
     )
 
-
-# =====================================================
-# BASİT TEST
-# =====================================================
 
 if __name__ == "__main__":
     print("=" * 70)
