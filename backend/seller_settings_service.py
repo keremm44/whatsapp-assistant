@@ -16,6 +16,7 @@ from database import (
     update_seller_rule_record,
     update_seller_settings_record,
 )
+from rule_security import normalize_rule_response_text, normalize_rule_trigger_text
 
 _PHONE_RE = re.compile(r"^\+?[0-9]{7,15}$")
 _CATEGORY_RE = re.compile(r"^[a-z0-9_-]+$")
@@ -186,6 +187,12 @@ class SellerRuleCreateRequest(StrictModel):
     category: str = Field(default="custom", min_length=1, max_length=50)
     is_active: bool = True
 
+    _normalize_trigger_text = field_validator("trigger_text", mode="before")(
+        normalize_rule_trigger_text
+    )
+    _normalize_response_text = field_validator("response_text", mode="before")(
+        normalize_rule_response_text
+    )
     _normalize_category = field_validator("category")(_normalize_category)
 
 
@@ -195,6 +202,16 @@ class SellerRuleUpdateRequest(StrictModel):
     response_text: str | None = Field(default=None, min_length=2, max_length=1500)
     category: str | None = Field(default=None, min_length=1, max_length=50)
     is_active: bool | None = None
+
+    @field_validator("trigger_text", mode="before")
+    @classmethod
+    def normalize_trigger_text(cls, value: Any) -> Any:
+        return normalize_rule_trigger_text(value) if value is not None else None
+
+    @field_validator("response_text", mode="before")
+    @classmethod
+    def normalize_response_text(cls, value: Any) -> Any:
+        return normalize_rule_response_text(value) if value is not None else None
 
     @field_validator("category")
     @classmethod
