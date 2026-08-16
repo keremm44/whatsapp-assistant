@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_migration_chain_is_contiguous_000_through_034() -> None:
+def test_migration_chain_is_contiguous_000_through_035() -> None:
     migrations = sorted(Path("migrations").glob("[0-9][0-9][0-9]_*.sql"))
     versions = [path.name[:3] for path in migrations]
-    assert versions == [f"{version:03d}" for version in range(35)]
+    assert versions == [f"{version:03d}" for version in range(36)]
 
 
 def test_023_024_025_files_match_live_names() -> None:
@@ -32,3 +32,23 @@ def test_027_gates_image_requirement_on_seller_config() -> None:
     assert "revoke execute on function public._recompute_order_completion" in sql
     assert "grant execute on function public._recompute_order_completion" in sql
     assert "on conflict (version) do nothing" in sql
+
+
+def test_035_only_hardens_quantity_function_search_paths() -> None:
+    sql = Path("migrations/035_harden_quantity_function_search_paths.sql").read_text(
+        encoding="utf-8"
+    ).lower()
+
+    assert sql.count("alter function public.") == 3
+    assert "alter function public._return_issue_request_presenter" in sql
+    assert "alter function public.create_or_get_return_issue_request" in sql
+    assert "alter function public.evaluate_quantity_limit_request" in sql
+    assert sql.count("set search_path = pg_catalog, public") == 3
+    assert "create or replace function" not in sql
+    assert "alter table" not in sql
+    assert "update public." not in sql
+    assert "delete from" not in sql
+    assert "truncate" not in sql
+    assert "'035'" in sql
+    assert "'harden_quantity_function_search_paths'" in sql
+    assert "'quantity_function_search_paths_v1'" in sql
