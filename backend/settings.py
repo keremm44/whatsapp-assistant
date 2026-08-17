@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -11,6 +12,7 @@ load_dotenv()
 
 
 _TRUE_VALUES = {"1", "true", "yes", "on", "evet"}
+_ALLOWED_APP_ENVS = frozenset({"development", "test", "production"})
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -31,6 +33,52 @@ def _csv_env(name: str) -> tuple[str, ...]:
     )
 
 
+def _required_env(name: str) -> str | None:
+    value = os.getenv(name, "").strip()
+    return value or None
+
+
+def _validate_production_supabase_config() -> None:
+    supabase_url = _required_env("SUPABASE_URL")
+    service_key = _required_env("SUPABASE_SERVICE_KEY")
+
+    missing = [
+        name
+        for name, value in (
+            ("SUPABASE_URL", supabase_url),
+            ("SUPABASE_SERVICE_KEY", service_key),
+        )
+        if value is None
+    ]
+    if missing:
+        raise RuntimeError(
+            "Production ortamında zorunlu backend ayarları eksik: "
+            + ", ".join(missing)
+            + "."
+        )
+
+    assert supabase_url is not None
+    try:
+        parsed = urlsplit(supabase_url)
+        hostname = parsed.hostname
+        username = parsed.username
+        password = parsed.password
+    except ValueError as exc:
+        raise RuntimeError(
+            "Production ortamında SUPABASE_URL geçerli bir HTTPS URL olmalıdır."
+        ) from exc
+
+    if (
+        parsed.scheme.lower() != "https"
+        or not hostname
+        or username is not None
+        or password is not None
+    ):
+        raise RuntimeError(
+            "Production ortamında SUPABASE_URL geçerli bir HTTPS URL olmalıdır."
+        )
+
+
 class AppSettings(BaseModel):
     app_env: str
     app_version: str
@@ -48,6 +96,13 @@ class AppSettings(BaseModel):
 @lru_cache(maxsize=1)
 def get_settings() -> AppSettings:
     app_env = os.getenv("APP_ENV", "development").strip().lower()
+    if app_env not in _ALLOWED_APP_ENVS:
+        allowed = ", ".join(sorted(_ALLOWED_APP_ENVS))
+        raise RuntimeError(
+            f"APP_ENV değeri geçersiz: {app_env!r}. "
+            f"İzin verilen değerler: {allowed}."
+        )
+
     enable_dev_endpoints = _env_bool(
         "ENABLE_DEV_ENDPOINTS",
         default=False,
@@ -82,6 +137,9 @@ def get_settings() -> AppSettings:
         raise RuntimeError(
             "Production ortamında CORS_ORIGINS yıldız olamaz."
         )
+
+    if app_env == "production":
+        _validate_production_supabase_config()
 
     return AppSettings(
         app_env=app_env,
