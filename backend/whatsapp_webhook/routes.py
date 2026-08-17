@@ -10,6 +10,7 @@ from fastapi.responses import PlainTextResponse
 from settings import AppSettings, get_settings
 
 from .parser import WebhookPayloadError, parse_whatsapp_webhook
+from .runtime import process_webhook_events
 from .security import WebhookBodyTooLarge, read_bounded_body, verify_meta_signature
 
 
@@ -63,7 +64,7 @@ async def receive_whatsapp_webhook(
     ),
     current_settings: AppSettings = Depends(get_settings),
 ) -> dict[str, Any]:
-    """Authenticate and normalize Meta events; business handling remains fail-closed."""
+    """Authenticate Meta callbacks before optionally dispatching runtime work."""
     app_secret = current_settings.whatsapp_app_secret
     if app_secret is None:
         raise _service_unavailable(
@@ -104,13 +105,32 @@ async def receive_whatsapp_webhook(
             detail="Webhook payload yapısı işlenemedi.",
         ) from exc
 
-    if events:
-        # Do not acknowledge actionable events until tenant routing + outbound
-        # retry/delivery semantics are implemented. A premature 2xx would cause
-        # Meta to consider the event handled and could silently lose messages.
+    if not events:
+        return {"received": True, "events": 0}
+
+    if not bool(getattr(current_settings, "whatsapp_runtime_enabled", False)):
         raise _service_unavailable(
             "whatsapp_runtime_not_ready",
             "WhatsApp event işleme katmanı henüz etkinleştirilmedi.",
         )
 
-    return {"received": True, "events": 0}
+    runtime_result = process_webhook_events(events)
+    if runtime_result.get("durum") != "başarılı":
+        reason_code = runtime_result.get("reason_code")
+        safe_code = (
+            reason_code
+            if isinstance(reason_code, str) and reason_code.startswith("whatsapp_")
+            else "whatsapp_runtime_processing_failed"
+        )
+        raise _service_unavailable(
+            safe_code,
+            "WhatsApp event güvenli biçimde tamamlanamadı.",
+        )
+
+    processed = runtime_result.get("processed")
+    processed_count = (
+        processed
+        if isinstance(processed, int) and not isinstance(processed, bool) and processed >= 0
+        else 0
+    )
+    return {"received": True, "events": processed_count}
