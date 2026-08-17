@@ -93,7 +93,7 @@ test("shared Conversations fixtures pass through the real frontend fetch/parser 
     }
   });
 
-  process.env.NEXT_PUBLIC_API_BASE_URL = "http://api.test";
+  process.env.NEXT_PUBLIC_API_BASE_URL = "https://api.test";
 
   let responsePayload: unknown = null;
   let requestedUrl = "";
@@ -123,7 +123,7 @@ test("shared Conversations fixtures pass through the real frontend fetch/parser 
 
   assert.equal(
     requestedUrl,
-    "http://api.test/seller/conversations?attention_only=true&control_state=RETURN_REVIEW&limit=20&offset=0",
+    "https://api.test/seller/conversations?attention_only=true&control_state=RETURN_REVIEW&limit=20&offset=0",
   );
   assert.equal(
     new Headers(requestedInit?.headers).get("Authorization"),
@@ -150,7 +150,7 @@ test("shared Conversations fixtures pass through the real frontend fetch/parser 
 
   assert.equal(
     requestedUrl,
-    "http://api.test/seller/conversations/22?message_limit=50&control_history_limit=20",
+    "https://api.test/seller/conversations/22?message_limit=50&control_history_limit=20",
   );
   assert.equal(detail.customer.id, 22);
   assert.equal(detail.control?.state, "RETURN_REVIEW");
@@ -170,7 +170,7 @@ test("shared Conversations fixtures pass through the real frontend fetch/parser 
 
   assert.equal(
     requestedUrl,
-    "http://api.test/seller/conversations/22/control",
+    "https://api.test/seller/conversations/22/control",
   );
   assert.equal(control.control.state, "RETURN_REVIEW");
   assert.equal(control.control.displayName, "İade incelemesi");

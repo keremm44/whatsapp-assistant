@@ -69,9 +69,15 @@ npm run dev                  # http://localhost:3000
 
 | Name | Required | Visibility | Description |
 | --- | --- | --- | --- |
-| `NEXT_PUBLIC_API_BASE_URL` | yes | browser | FastAPI backend base URL (e.g. `http://127.0.0.1:8000`) |
+| `NEXT_PUBLIC_API_BASE_URL` | yes | browser | FastAPI backend base URL |
 | `NEXT_PUBLIC_SUPABASE_URL` | yes | browser | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes | browser | Supabase anon key |
+| `NEXT_PUBLIC_SITE_URL` | production | browser | Public site origin used for metadata/canonical URLs; local development may omit it |
+
+Public API, Supabase, and configured site URLs must use HTTPS outside local
+loopback development. Plain HTTP is accepted only for `localhost`,
+`127.0.0.1`, and `::1` so local development remains straightforward without
+allowing production Bearer/session traffic to be configured over plaintext.
 
 The service role key, database URL, JWT secret, OpenAI key, and any
 backend secret **must never** appear in this package.

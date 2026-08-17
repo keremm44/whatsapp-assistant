@@ -2,7 +2,7 @@
  * Centralized, typed access to NEXT_PUBLIC_* environment variables.
  *
  * Browser-safe values only. Never reference process.env directly elsewhere.
- * Missing required configuration throws a clear development error when
+ * Missing required configuration throws a clear configuration error when
  * the value is read, not at module load, so that the Next.js build step
  * can complete in environments where the runtime env has not yet been
  * provisioned.
@@ -11,25 +11,60 @@
  * other backend secret must never appear in this package.
  */
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
 const required = (name: string, value: string | undefined): string => {
-  if (value === undefined || value === "") {
+  const normalized = value?.trim();
+  if (!normalized) {
     throw new Error(
       `[env] Missing required environment variable: ${name}. ` +
         "Copy frontend/.env.example to frontend/.env.local and fill it in.",
     );
   }
-  return value;
+  return normalized;
 };
 
 const optional = (value: string | undefined): string | undefined => {
-  if (value === undefined || value === "") {
+  const normalized = value?.trim();
+  if (!normalized) {
     return undefined;
   }
-  return value;
+  return normalized;
 };
 
 const trimTrailingSlash = (value: string): string =>
   value.endsWith("/") ? value.slice(0, -1) : value;
+
+const normalizeHostname = (hostname: string): string =>
+  hostname.startsWith("[") && hostname.endsWith("]")
+    ? hostname.slice(1, -1).toLowerCase()
+    : hostname.toLowerCase();
+
+const securePublicUrl = (name: string, value: string): string => {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`[env] ${name} must be a valid HTTP(S) URL.`);
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`[env] ${name} must be a valid HTTP(S) URL.`);
+  }
+
+  if (parsed.username || parsed.password) {
+    throw new Error(`[env] ${name} must not contain embedded credentials.`);
+  }
+
+  const hostname = normalizeHostname(parsed.hostname);
+  if (parsed.protocol === "http:" && !LOOPBACK_HOSTS.has(hostname)) {
+    throw new Error(
+      `[env] ${name} must use HTTPS outside local development.`,
+    );
+  }
+
+  return value;
+};
 
 /**
  * Read-once accessors. We deliberately do NOT call `required()` at module
@@ -40,17 +75,23 @@ const trimTrailingSlash = (value: string): string =>
 export const env = {
   get apiBaseUrl(): string {
     return trimTrailingSlash(
-      required(
+      securePublicUrl(
         "NEXT_PUBLIC_API_BASE_URL",
-        process.env.NEXT_PUBLIC_API_BASE_URL,
+        required(
+          "NEXT_PUBLIC_API_BASE_URL",
+          process.env.NEXT_PUBLIC_API_BASE_URL,
+        ),
       ),
     );
   },
 
   get supabaseUrl(): string {
-    return required(
+    return securePublicUrl(
       "NEXT_PUBLIC_SUPABASE_URL",
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      required(
+        "NEXT_PUBLIC_SUPABASE_URL",
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+      ),
     );
   },
 
@@ -67,11 +108,15 @@ export const env = {
 
   /**
    * Public site URL. Browser-visible; only the public origin lives here.
-   * Falls back to the local development origin so foundation pages render
-   * without explicit configuration.
+   * Local development may omit it. Production deployments should set it
+   * explicitly so metadata/canonical URLs never point at localhost.
    */
   get siteUrl(): string {
-    return optional(process.env.NEXT_PUBLIC_SITE_URL) ?? "http://localhost:3000";
+    const configured = optional(process.env.NEXT_PUBLIC_SITE_URL);
+    if (!configured) {
+      return "http://localhost:3000";
+    }
+    return securePublicUrl("NEXT_PUBLIC_SITE_URL", configured);
   },
 } as const;
 
