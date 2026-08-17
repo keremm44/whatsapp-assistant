@@ -371,7 +371,10 @@ def get_whatsapp_delivery_context(outbox_id: int) -> dict[str, Any]:
         message_result = (
             get_supabase()
             .table("messages")
-            .select("id,seller_id,customer_id,direction,content,message_type,reply_to_message_id")
+            .select(
+                "id,seller_id,customer_id,direction,content,message_type,"
+                "provider,provider_message_id,reply_to_message_id"
+            )
             .eq("id", message_id)
             .limit(1)
             .execute()
@@ -391,6 +394,8 @@ def get_whatsapp_delivery_context(outbox_id: int) -> dict[str, Any]:
         or message.get("seller_id") != outbox.get("seller_id")
         or message.get("customer_id") != outbox.get("customer_id")
         or message.get("direction") != "outgoing"
+        or message.get("provider") != WHATSAPP_PENDING_PROVIDER
+        or message.get("provider_message_id") is not None
         or message.get("reply_to_message_id") != outbox.get("source_message_id")
     ):
         return {"durum": "çakışma", "mesaj": "WhatsApp teslimat tenant bağlamı uyuşmuyor."}
