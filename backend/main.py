@@ -23,6 +23,7 @@ from protected_routes import router as protected_router
 from public_abuse_protection import PublicApplicationAbuseProtectionMiddleware
 from public_routes import router as public_router
 from settings import AppSettings, get_settings
+from whatsapp_webhook.routes import router as whatsapp_webhook_router
 
 
 settings = get_settings()
@@ -77,6 +78,7 @@ app.include_router(public_router)
 app.include_router(protected_router)
 app.include_router(admin_seller_router)
 app.include_router(cursor_queue_router)
+app.include_router(whatsapp_webhook_router)
 
 
 @app.get("/")
