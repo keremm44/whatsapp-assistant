@@ -1,0 +1,273 @@
+{
+  "schema_version": 1,
+  "conversations": {
+    "list_response": {
+      "toplam": 1,
+      "limit": 20,
+      "offset": 0,
+      "attention_only": true,
+      "control_state": "RETURN_REVIEW",
+      "conversations": [
+        {
+          "customer": {
+            "id": 22,
+            "name": "Elif Yılmaz",
+            "whatsapp_number": "+905321112233",
+            "is_blocked": false,
+            "muted_until": null,
+            "is_muted": false,
+            "total_messages": 12,
+            "last_message_at": "2026-08-10T12:05:00+00:00"
+          },
+          "last_message": {
+            "id": 980,
+            "direction": "incoming",
+            "content": "Ürün kırık geldi",
+            "message_type": "text",
+            "was_auto_replied": false,
+            "media_available": false,
+            "created_at": "2026-08-10T12:05:00+00:00"
+          },
+          "conversation_state": {
+            "state": "AWAITING_SELLER",
+            "state_type": "informational",
+            "updated_at": "2026-08-10T12:05:00+00:00"
+          },
+          "control": {
+            "state": "RETURN_REVIEW",
+            "changed_at": "2026-08-10T12:05:30+00:00",
+            "changed_by_profile_id": 7,
+            "reason_code": "return_review_required",
+            "reason_note": "İade incelemesi gerekiyor.",
+            "resume_after_message_id": 980,
+            "version": 4
+          },
+          "active_order": {
+            "id": 18,
+            "status": "SELLER_REVIEW_REQUIRED",
+            "external_order_number": "TR123456",
+            "product_name_snapshot": "Kişiye Özel Kupa",
+            "version": 5,
+            "updated_at": "2026-08-10T12:04:00+00:00"
+          },
+          "active_return_issue": {
+            "id": 41,
+            "issue_type": "DAMAGED_ITEM",
+            "status": "SELLER_REVIEW_REQUIRED",
+            "version": 3,
+            "updated_at": "2026-08-10T12:05:00+00:00"
+          },
+          "open_unanswered": {
+            "id": 61,
+            "question": "Kargoya ne zaman verilir?",
+            "occurrence_count": 2,
+            "last_seen_at": "2026-08-10T11:58:00+00:00",
+            "version": 2
+          },
+          "needs_attention": true,
+          "attention_reason": "return_review"
+        }
+      ]
+    },
+    "detail_response": {
+      "customer": {
+        "id": 22,
+        "name": "Elif Yılmaz",
+        "whatsapp_number": "+905321112233",
+        "is_blocked": false,
+        "muted_until": null,
+        "is_muted": false,
+        "total_messages": 12,
+        "last_message_at": "2026-08-10T12:05:00+00:00",
+        "blocked_reason": null,
+        "blocked_at": null
+      },
+      "conversation_state": {
+        "state": "AWAITING_SELLER",
+        "state_type": "informational",
+        "updated_at": "2026-08-10T12:05:00+00:00"
+      },
+      "control": {
+        "state": "RETURN_REVIEW",
+        "changed_at": "2026-08-10T12:05:30+00:00",
+        "changed_by_profile_id": 7,
+        "reason_code": "return_review_required",
+        "reason_note": "İade incelemesi gerekiyor.",
+        "resume_after_message_id": 980,
+        "version": 4
+      },
+      "messages": [
+        {
+          "id": 979,
+          "direction": "outgoing",
+          "content": "İnceleme için ürünün fotoğrafını gönderebilir misiniz?",
+          "message_type": "text",
+          "was_auto_replied": true,
+          "media_available": false,
+          "created_at": "2026-08-10T12:04:30+00:00"
+        },
+        {
+          "id": 980,
+          "direction": "incoming",
+          "content": "Ürün kırık geldi",
+          "message_type": "text",
+          "was_auto_replied": false,
+          "media_available": false,
+          "created_at": "2026-08-10T12:05:00+00:00"
+        }
+      ],
+      "message_page": {
+        "limit": 50,
+        "has_more": true,
+        "next_before_message_id": 979
+      },
+      "control_history": [
+        {
+          "id": 101,
+          "from_state": "ASSISTANT_ACTIVE",
+          "to_state": "RETURN_REVIEW",
+          "reason_code": "return_review_required",
+          "reason_note": "İade incelemesi gerekiyor.",
+          "changed_by_profile_id": 7,
+          "trigger_message_id": 980,
+          "resume_after_message_id": 980,
+          "previous_version": 3,
+          "new_version": 4,
+          "created_at": "2026-08-10T12:05:30+00:00"
+        }
+      ],
+      "active_order": {
+        "id": 18,
+        "status": "SELLER_REVIEW_REQUIRED",
+        "external_order_number": "TR123456",
+        "product_name_snapshot": "Kişiye Özel Kupa",
+        "version": 5,
+        "updated_at": "2026-08-10T12:04:00+00:00",
+        "product_id": 3,
+        "customer_phone_snapshot": "+905321112233",
+        "image_message_id": 970,
+        "custom_text": null,
+        "review_reason_code": "return_issue_open",
+        "review_reason_note": "Hasarlı ürün incelemesi açık.",
+        "created_at": "2026-08-10T11:45:00+00:00"
+      },
+      "active_return_issue": {
+        "id": 41,
+        "issue_type": "DAMAGED_ITEM",
+        "status": "SELLER_REVIEW_REQUIRED",
+        "version": 3,
+        "updated_at": "2026-08-10T12:05:00+00:00",
+        "order_id": 18,
+        "external_order_number_snapshot": "TR123456",
+        "product_name_snapshot": "Kişiye Özel Kupa",
+        "reason_text": "Ürün kırık geldi",
+        "image_requirement_snapshot": "REQUIRED",
+        "review_reason_code": "COLLECTION_COMPLETE",
+        "review_note": "Zorunlu bilgiler tamamlandı.",
+        "created_at": "2026-08-10T12:00:00+00:00",
+        "review_required_at": "2026-08-10T12:05:00+00:00"
+      },
+      "open_unanswered": [
+        {
+          "id": 61,
+          "question": "Kargoya ne zaman verilir?",
+          "occurrence_count": 2,
+          "last_seen_at": "2026-08-10T11:58:00+00:00",
+          "version": 2,
+          "first_seen_at": "2026-08-09T09:00:00+00:00"
+        }
+      ]
+    },
+    "control_response": {
+      "customer_id": 22,
+      "control": {
+        "state": "RETURN_REVIEW",
+        "changed_at": "2026-08-10T12:05:30+00:00",
+        "changed_by_profile_id": 7,
+        "reason_code": "return_review_required",
+        "reason_note": "İade incelemesi gerekiyor.",
+        "resume_after_message_id": 980,
+        "version": 4,
+        "display_name": "İade incelemesi"
+      },
+      "capabilities": {
+        "can_take_over": true,
+        "can_resume_assistant": true,
+        "can_pause_assistant": false,
+        "can_activate_assistant": true
+      }
+    }
+  },
+  "unanswered": {
+    "list_response": {
+      "view": "action_required",
+      "toplam": 1,
+      "limit": 20,
+      "offset": 0,
+      "questions": [
+        {
+          "id": 61,
+          "question": "Kargoya ne zaman verilir?",
+          "status": "OPEN",
+          "answer": null,
+          "occurrence_count": 2,
+          "first_seen_at": "2026-08-09T09:00:00+00:00",
+          "last_seen_at": "2026-08-10T11:58:00+00:00",
+          "version": 2
+        }
+      ]
+    },
+    "detail_response": {
+      "question": {
+        "id": 61,
+        "canonical_question": "Kargoya ne zaman verilir?",
+        "status": "OPEN",
+        "answer_text": null,
+        "occurrence_count": 2,
+        "first_seen_at": "2026-08-09T09:00:00+00:00",
+        "last_seen_at": "2026-08-10T11:58:00+00:00",
+        "version": 2,
+        "answered_at": null,
+        "dismissed_at": null,
+        "dismiss_note": null,
+        "created_at": "2026-08-09T09:00:00+00:00",
+        "updated_at": "2026-08-10T11:58:00+00:00"
+      },
+      "occurrences": [
+        {
+          "id": 71,
+          "customer_id": 22,
+          "message_id": 901,
+          "question_text": "Kargoya ne zaman verilir?",
+          "occurred_at": "2026-08-09T09:00:00+00:00"
+        },
+        {
+          "id": 72,
+          "customer_id": 22,
+          "message_id": 950,
+          "question_text": "Siparişim kargoya ne zaman çıkar?",
+          "occurred_at": "2026-08-10T11:58:00+00:00"
+        }
+      ]
+    },
+    "action_response": {
+      "action": "set_answer",
+      "changed": true,
+      "question": {
+        "id": 61,
+        "canonical_question": "Kargoya ne zaman verilir?",
+        "status": "ANSWERED",
+        "answer_text": "Siparişler iki iş günü içinde kargoya verilir.",
+        "occurrence_count": 2,
+        "first_seen_at": "2026-08-09T09:00:00+00:00",
+        "last_seen_at": "2026-08-10T11:58:00+00:00",
+        "version": 3,
+        "answered_at": "2026-08-10T12:10:00+00:00",
+        "dismissed_at": null,
+        "dismiss_note": null,
+        "created_at": "2026-08-09T09:00:00+00:00",
+        "updated_at": "2026-08-10T12:10:00+00:00"
+      }
+    }
+  }
+}
