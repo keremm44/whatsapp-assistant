@@ -41,7 +41,7 @@ Copy-Item .env.example .env
 
 `.env` içine Supabase ve sınıflandırıcı anahtarlarını gir. `SUPABASE_SERVICE_KEY` yalnızca backend ortamında tutulmalıdır.
 
-Migrationlar Supabase SQL Editor üzerinden numara sırasıyla uygulanır. Mevcut veritabanında `000–012` uygulanmışsa yeniden çalıştırılmaz.
+Migrationlar `backend/migrations/` altındaki üç haneli numara sırasıyla uygulanır. Hangi migrationların daha önce uygulandığı için kaynak `public.schema_migrations` tablosudur; tabloda kayıtlı sürümleri yeniden çalıştırma, yalnızca eksik sürümleri artan numara sırasıyla uygula. Her DB değişikliğinden önce repo migration zinciri ile hedef Supabase projesindeki `schema_migrations` kaydını karşılaştır.
 
 ## API çalıştırma
 

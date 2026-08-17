@@ -14,6 +14,21 @@ cd C:\Projeler\whatsapp-asistan\backend
 python -m uvicorn main:app --reload
 ```
 
+## Migration parity
+
+Her DB değişikliğinden önce `backend/migrations/` altındaki migration dosyalarını hedef Supabase projesindeki `public.schema_migrations` kaydıyla karşılaştır.
+
+```sql
+SELECT version, name
+FROM public.schema_migrations
+ORDER BY version;
+```
+
+- Migration dosyaları üç haneli numara sırasıyla ilerlemelidir.
+- `schema_migrations` içinde kayıtlı bir sürümü yeniden uygulama.
+- Yalnızca eksik migrationları artan numara sırasıyla uygula.
+- Repo ve hedef DB aynı sürüm zincirindeyse migration uygulama.
+
 ## Test sırası
 
 ```powershell
