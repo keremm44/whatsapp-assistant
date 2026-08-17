@@ -86,6 +86,19 @@ export const designTokens = {
       text: color("#7E3F2F", "clay as small text (light = accent dark)"),
     },
 
+    /**
+     * Brand (iris) — product identity only. A third hue that lives
+     * outside the cyan/coral signal model. Spent exclusively on the
+     * product's face (wordmark monogram, identity marks); never a
+     * state, never an interaction, never a content-type code.
+     */
+    brand: {
+      DEFAULT: color("#6D5BD0", "iris"),
+      soft: color("#ECE9FB", "iris soft"),
+      foreground: color("#FFFFFF"),
+      text: color("#5B49B8", "iris as small text"),
+    },
+
     state: {
       success: color("#2F7458"),
       successMuted: color("#E2EFE9"),
@@ -159,6 +172,13 @@ export const designTokens = {
     attention: {
       DEFAULT: color("#EA8266", "AA on every surface incl. hover"),
       soft: color("#331D17"),
+    },
+    /** Iris = product identity only. Far from cyan and coral in hue. */
+    brand: {
+      DEFAULT: color("#8B7CF6", "identity marks only"),
+      soft: color("#26203D", "identity wash"),
+      foreground: color("#16122A", "dark ink on a bright iris fill"),
+      text: color("#A99CF8", "iris as small text on dark material"),
     },
     state: {
       success: color("#5EC59A"),
@@ -243,6 +263,7 @@ export const designTokens = {
     2: "0 8px 24px rgba(36, 48, 46, 0.08)",
     surface:
       "0 1px 2px rgba(36, 48, 46, 0.04), 0 1px 0 rgba(36, 48, 46, 0.02)",
+    inset: "inset 0 1px 2px rgba(36, 48, 46, 0.05)",
     focus: "0 0 0 2px var(--color-primary)",
   },
 

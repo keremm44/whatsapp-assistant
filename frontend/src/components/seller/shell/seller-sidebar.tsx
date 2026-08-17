@@ -87,10 +87,11 @@ export function SellerSidebar() {
 /**
  * Product identity. A single monogram tile + wordmark.
  *
- * The tile uses the raised material with a cyan glyph — the same
- * material/interaction pair the active nav row uses, so the brand
- * reads as part of the instrument rather than as decoration bolted on
- * top. A boundary rule underneath separates identity from navigation.
+ * The tile is the ONE place the workspace spends its brand hue: an
+ * iris-tinted wash with an iris glyph. Iris is identity, never a
+ * state or an interaction, so the mark reads as the product's face
+ * while the active nav row keeps its own cyan signal. A boundary rule
+ * underneath separates identity from navigation.
  */
 const BrandPlate = () => (
   <div className="border-b border-boundary/40 px-4 pb-4 pt-5">
@@ -100,7 +101,7 @@ const BrandPlate = () => (
     >
       <span
         aria-hidden="true"
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control border border-boundary/60 bg-raised text-primary"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control border border-brand/40 bg-brand/15 text-brand"
       >
         <SellerIcon name="Store" size={16} strokeWidth={2} />
       </span>

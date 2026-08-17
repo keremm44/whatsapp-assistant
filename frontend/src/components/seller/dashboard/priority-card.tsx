@@ -3,6 +3,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
+import { StatusChip } from "@/components/shared/status-chip";
 import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
 import { dashboardTaskHref } from "@/lib/seller/dashboard-destinations";
 import {
@@ -55,7 +56,7 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
             aria-hidden="true"
             size={20}
             strokeWidth={1.6}
-            className="mt-1 shrink-0 text-muted-foreground"
+            className="mt-1 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
           />
 
           <div className="min-w-0 flex-1 space-y-2">
@@ -72,15 +73,10 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
                 </span>
               ) : null}
               {/* Oxide seller-attention flag. Present only for backend
-                  review types; never decorative. */}
+                  review types; never decorative. Rendered through the
+                  shared chip so it matches every other queue surface. */}
               {meta.sellerReview && meta.attentionLabel ? (
-                <span className="inline-flex items-center gap-1.5 type-meta font-semibold text-attention">
-                  <span
-                    aria-hidden="true"
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-attention"
-                  />
-                  {meta.attentionLabel}
-                </span>
+                <StatusChip tone="attention">{meta.attentionLabel}</StatusChip>
               ) : null}
             </div>
             <h3
@@ -111,7 +107,12 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
           className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-control px-2 type-row-secondary font-semibold text-primary transition-colors hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas sm:h-9"
         >
           <span>{meta.cta}</span>
-          <ArrowUpRight aria-hidden="true" size={14} strokeWidth={1.9} />
+          <ArrowUpRight
+            aria-hidden="true"
+            size={14}
+            strokeWidth={1.9}
+            className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+          />
         </Link>
       </div>
     </article>

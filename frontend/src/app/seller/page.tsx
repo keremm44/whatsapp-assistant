@@ -48,10 +48,14 @@ import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
  * Working Ledger composition (this pass):
  *
  *   The dashboard is today's WORK DOCKET, not a set of widgets.
- *   Each region is ONE contiguous paper work sheet whose entries are
- *   separated by rules — never a gallery of individually bordered,
- *   rounded, shadowed cards. Section identity comes from typography
- *   and the sheet boundary, not from colour.
+ *   High- and normal-priority tasks are each a BOUNDED WORK CARD
+ *   (hairline edge + soft ambient shadow) stacked with real gutters,
+ *   and each card lifts one quiet step on hover/focus (`work-card`).
+ *   The card shell lives in the page; the row components carry no
+ *   resting border/radius/shadow of their own, so the ledger-row
+ *   discipline is preserved INSIDE each card. The side-column summary
+ *   stays one quiet divided sheet. Section identity still comes from
+ *   typography, not from colour.
  *
  *   Colour discipline: type is communicated by icon + label; the only
  *   colour a task row spends is OXIDE, and only where the backend
@@ -244,13 +248,18 @@ function NormalOnlyLayout({
           count={normalTasks.length}
           description="Vakit varsa ilerleyebileceğiniz konular."
         />
-        {/* Same single work sheet, quieter rows. */}
+        {/* Quiet work, each as its own bounded card. Two columns on
+            lg+ so the available width is used without making quiet
+            rows read as full-width attention cards. */}
         <ul
           role="list"
-          className="divide-y divide-divider overflow-hidden rounded-sheet bg-raised"
+          className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0"
         >
           {normalTasks.map((task) => (
-            <li key={task.id}>
+            <li
+              key={task.id}
+              className="work-card overflow-hidden rounded-sheet bg-raised"
+            >
               <CompactTaskCard task={task} />
             </li>
           ))}
@@ -292,14 +301,14 @@ function PrimaryColumn({
         count={count}
         description="İncelemeniz gereken konular."
       />
-      {/* ONE contiguous work sheet. The rows are separated by rules,
-          not by gutters — no per-task card. */}
-      <ul
-        role="list"
-        className="divide-y divide-divider overflow-hidden rounded-sheet bg-raised"
-      >
+      {/* High-priority work as individual bounded cards, stacked with
+          real gutters. Each card lifts one quiet step on hover/focus. */}
+      <ul role="list" className="space-y-3">
         {tasks.map((task) => (
-          <li key={task.id}>
+          <li
+            key={task.id}
+            className="work-card overflow-hidden rounded-sheet bg-raised"
+          >
             <PriorityCard task={task} />
           </li>
         ))}
@@ -310,11 +319,10 @@ function PrimaryColumn({
 
 /**
  * The right-hand supporting region (scenario A only): one quiet
- * paper work sheet with an internal rule under its compact heading.
- * It uses the same paper material as "Önce bunlar" so the two read
- * as two columns of the same ledger page, differentiated by
- * typographic weight and row density rather than by material or
- * colour.
+ * bordered paper work sheet with an internal rule under its compact
+ * heading. It uses the same raised material as the cards on the left,
+ * but stays a single divided sheet — normal-priority work is a list,
+ * not a stack of attention cards.
  */
 function SecondaryPanel({
   id,
@@ -330,7 +338,7 @@ function SecondaryPanel({
   return (
     <section
       aria-labelledby={id}
-      className="overflow-hidden rounded-sheet bg-raised"
+      className="overflow-hidden rounded-sheet bg-raised shadow-surface border border-boundary/60"
     >
       <header className="flex items-baseline gap-2.5 border-b border-divider px-4 py-3.5 sm:px-5">
         <h2

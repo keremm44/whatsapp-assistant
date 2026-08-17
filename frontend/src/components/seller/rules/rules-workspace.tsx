@@ -63,7 +63,7 @@ export function RulesWorkspace({
         // boundary; each entry is a ruled row inside it.
         <ul
           role="list"
-          className="divide-y divide-divider overflow-hidden rounded-sheet bg-raised"
+          className="divide-y divide-divider overflow-hidden rounded-sheet bg-raised shadow-surface border border-boundary/60"
         >
           {rules.map((rule) => (
             <li key={rule.id}>

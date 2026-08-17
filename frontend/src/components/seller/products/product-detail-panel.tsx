@@ -300,7 +300,7 @@ function FieldList({
           rules inside a single sheet, never by individual cards. */}
       <ul
         role="list"
-        className="divide-y divide-divider overflow-hidden rounded-sheet bg-raised"
+        className="divide-y divide-divider overflow-hidden rounded-sheet bg-raised shadow-surface border border-boundary/60"
         aria-busy={mutationLocked}
       >
         {definitions.map((field, index) => (

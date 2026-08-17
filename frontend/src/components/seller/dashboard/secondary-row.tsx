@@ -3,6 +3,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
+import { StatusChip } from "@/components/shared/status-chip";
 import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
 import { dashboardTaskHref } from "@/lib/seller/dashboard-destinations";
 import {
@@ -61,9 +62,7 @@ export function SecondaryRow({ task }: { task: DashboardTask }) {
               </span>
             ) : null}
             {meta.sellerReview && meta.attentionLabel ? (
-              <span className="type-meta font-semibold text-attention">
-                {meta.attentionLabel}
-              </span>
+              <StatusChip tone="attention">{meta.attentionLabel}</StatusChip>
             ) : null}
           </div>
           <p

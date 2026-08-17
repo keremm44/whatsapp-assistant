@@ -112,6 +112,14 @@ const config: Config = {
           DEFAULT: "rgb(var(--color-attention-rgb) / <alpha-value>)",
           soft: "rgb(var(--color-attention-soft-rgb) / <alpha-value>)",
         },
+        /* Brand (iris). Product identity only — never a state,
+         * interaction or content-type code. */
+        brand: {
+          DEFAULT: "rgb(var(--color-brand-rgb) / <alpha-value>)",
+          soft: "rgb(var(--color-brand-soft-rgb) / <alpha-value>)",
+          foreground: "rgb(var(--color-brand-foreground-rgb) / <alpha-value>)",
+          text: "rgb(var(--color-brand-text-rgb) / <alpha-value>)",
+        },
         paused: "rgb(var(--color-paused-rgb) / <alpha-value>)",
         "paused-muted": "rgb(var(--color-paused-muted-rgb) / <alpha-value>)",
       },
@@ -154,6 +162,7 @@ const config: Config = {
         1: "var(--shadow-1)",
         2: "var(--shadow-2)",
         surface: "var(--shadow-surface)",
+        inset: "var(--shadow-inset)",
         focus: "var(--shadow-focus)",
       },
       keyframes: {

@@ -20,6 +20,7 @@ import {
   runOrderNumberCopy,
   type OrderNumberCopyState,
 } from "@/lib/seller/orders-format";
+import { StatusChip } from "@/components/shared/status-chip";
 import { cn } from "@/lib/utils/cn";
 
 import { OrderImagePreview } from "./order-image-preview";
@@ -185,16 +186,9 @@ export function OrderRow({
             >
               {number.text}
             </span>
-            <span
-              className={cn(
-                "shrink-0 text-[11.5px] font-medium leading-snug",
-                statusTone === "attention" && "text-accent-text",
-                statusTone === "success" && "text-success",
-                statusTone === "muted" && "text-muted-foreground",
-              )}
-            >
+            <StatusChip tone={statusTone} className="shrink-0">
               {order.displayStatus}
-            </span>
+            </StatusChip>
           </span>
 
           {metaParts.length > 0 ? (

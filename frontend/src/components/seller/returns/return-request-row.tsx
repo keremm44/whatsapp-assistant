@@ -1,6 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
+import { StatusChip } from "@/components/shared/status-chip";
 import type { ReturnIssueType, ReturnView } from "@/lib/seller/returns";
 import type { ReturnRequestSummary } from "@/lib/seller/returns";
 import {
@@ -136,15 +137,10 @@ export function ReturnRequestRow({
           </span>
         </span>
 
-        <span
-          className={cn(
-            "mt-1 block text-[11.5px] font-medium leading-none",
-            statusDisplay.tone === "accent" && "text-accent-text",
-            statusDisplay.tone === "success" && "text-success",
-            statusDisplay.tone === "muted" && "text-muted-foreground",
-          )}
-        >
-          {statusDisplay.label}
+        <span className="mt-1 block">
+          <StatusChip tone={statusDisplay.tone}>
+            {statusDisplay.label}
+          </StatusChip>
         </span>
       </Link>
     </li>

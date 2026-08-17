@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowUpRight, Image as ImageIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { StatusChip } from "@/components/shared/status-chip";
 import { ApiError } from "@/lib/api/client";
 import type {
   ReturnIssueType,
@@ -214,23 +215,16 @@ export function ReturnRequestDetail({
       <div className="space-y-6 px-4 py-5 md:px-5 md:py-6">
         {/* A. Ne oldu? */}
         <section aria-labelledby="return-detail-what">
-          <div className="flex items-baseline justify-between gap-3">
+          <div className="flex items-center justify-between gap-3">
             <h2
               id="return-detail-what"
               className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground"
             >
               Ne oldu?
             </h2>
-            <span
-              className={cn(
-                "text-[11.5px] font-medium leading-none",
-                statusDisplay.tone === "accent" && "text-accent-text",
-                statusDisplay.tone === "success" && "text-success",
-                statusDisplay.tone === "muted" && "text-muted-foreground",
-              )}
-            >
+            <StatusChip tone={statusDisplay.tone} className="shrink-0">
               {statusDisplay.label}
-            </span>
+            </StatusChip>
           </div>
           <p className="mt-2 font-heading text-lg font-medium leading-snug text-foreground">
             {request.displayIssueType}
@@ -246,7 +240,7 @@ export function ReturnRequestDetail({
             </p>
           )}
           {reviewNote !== null ? (
-            <p className="mt-2 border-l-2 border-l-accent pl-3 text-[12.5px] leading-snug text-accent-text">
+            <p className="mt-2 rounded-sm border-l-2 border-l-accent bg-accent-muted/45 py-2 pl-3 pr-3 text-[12.5px] leading-snug text-accent-text">
               {reviewNote}
             </p>
           ) : null}

@@ -128,10 +128,10 @@ export const MEDIA_MESSAGE_LABEL = "Medya mesajı";
 /* ------------------------------------------------------------------ */
 
 /**
- * The one restrained attention signal for a row: small dot + short
- * label. Labels are the approved presentation mapping for
- * backend-defined attention reasons — presentation only, never new
- * business semantics.
+ * The one restrained attention signal for a row: a short status chip
+ * whose soft fill follows the row's backend-defined attention reason.
+ * Labels are the approved presentation mapping — presentation only,
+ * never new business semantics.
  *
  * Tone follows the Working Ledger's colour semantics, where colour
  * describes STATE and never content type:
@@ -142,7 +142,8 @@ export const MEDIA_MESSAGE_LABEL = "Medya mesajı";
  *   dashboard flags, so the two surfaces agree.
  *
  *   `unanswered_question` is a queue item the seller can pick up, not
- *   a record awaiting review, so it stays neutral ink.
+ *   a record awaiting review, so it stays neutral ink (muted = no
+ *   chip fill).
  *
  *   `seller_taken_over` is OWNERSHIP, not an alarm — it is deliberately
  *   neutral, and deliberately NOT interaction blue, because blue in
@@ -151,34 +152,31 @@ export const MEDIA_MESSAGE_LABEL = "Medya mesajı";
  *
  *   `assistant_paused` uses the truthful paused/neutral state role.
  */
+export type AttentionReasonChipTone = "attention" | "paused" | "muted";
+
 export const ATTENTION_REASON_META: Record<
   ConversationAttentionReason,
-  { label: string; dotClassName: string; textClassName: string }
+  { label: string; chipTone: AttentionReasonChipTone }
 > = {
   return_review: {
     label: "İade incelemesi",
-    dotClassName: "bg-attention",
-    textClassName: "text-attention",
+    chipTone: "attention",
   },
   seller_taken_over: {
     label: "Siz ilgileniyorsunuz",
-    dotClassName: "bg-muted-foreground",
-    textClassName: "text-muted",
+    chipTone: "muted",
   },
   assistant_paused: {
     label: "Yanıtlar durduruldu",
-    dotClassName: "bg-paused",
-    textClassName: "text-paused",
+    chipTone: "paused",
   },
   order_review: {
     label: "Sipariş incelemesi",
-    dotClassName: "bg-attention",
-    textClassName: "text-attention",
+    chipTone: "attention",
   },
   unanswered_question: {
     label: "Cevaplanamayan soru",
-    dotClassName: "bg-muted-foreground",
-    textClassName: "text-muted",
+    chipTone: "muted",
   },
 };
 

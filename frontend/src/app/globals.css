@@ -136,6 +136,20 @@
   --color-accent-text: #7e3f2f;
   --color-accent-text-rgb: 126 63 47;
 
+  /* Brand (iris — product identity only). A third hue reserved for
+   * the product's face (wordmark monogram, identity marks). It is
+   * never a state, never an interaction and never a content-type
+   * code: it exists so the product has a recognisable character
+   * without touching the cyan/coral signal model. */
+  --color-brand: #6d5bd0;
+  --color-brand-rgb: 109 91 208;
+  --color-brand-soft: #ece9fb;
+  --color-brand-soft-rgb: 236 233 251;
+  --color-brand-foreground: #ffffff;
+  --color-brand-foreground-rgb: 255 255 255;
+  --color-brand-text: #5b49b8;
+  --color-brand-text-rgb: 91 73 184;
+
   /* Functional states */
   --color-success: #2f7458;
   --color-success-rgb: 47 116 88;
@@ -227,6 +241,9 @@
   --shadow-2: 0 8px 24px rgba(36, 48, 46, 0.08);
   --shadow-surface: 0 1px 2px rgba(36, 48, 46, 0.04),
     0 1px 0 rgba(36, 48, 46, 0.02);
+  /* Recessed wells / controls: light enters from above, so an inset
+   * material is shaded at the top edge. */
+  --shadow-inset: inset 0 1px 2px rgba(36, 48, 46, 0.05);
   --shadow-focus: 0 0 0 2px var(--color-primary);
 
   /* Motion */
@@ -429,6 +446,19 @@
   --color-review-muted: #331d17;
   --color-review-muted-rgb: 51 29 23;
 
+  /* --- Brand (iris — identity only) ------------------------------------ */
+  /* One third hue for the product's face. Sits far from cyan (~194°)
+   * and coral (~41°) so it can never be mistaken for interaction or
+   * seller attention, and it is spent ONLY on identity marks. */
+  --color-brand: #8b7cf6;
+  --color-brand-rgb: 139 124 246;
+  --color-brand-soft: #26203d;
+  --color-brand-soft-rgb: 38 32 61;
+  --color-brand-foreground: #16122a;
+  --color-brand-foreground-rgb: 22 18 42;
+  --color-brand-text: #a99cf8;
+  --color-brand-text-rgb: 169 156 248;
+
   /* --- Truthful functional states -------------------------------------- */
   --color-success: #5ec59a;
   --color-success-rgb: 94 197 154;
@@ -462,12 +492,22 @@
   --color-paused-muted-rgb: 30 36 46;
 
   /* --- Elevation ---------------------------------------------------- */
-  /* On dark material a drop shadow is nearly invisible, so elevation
-   * is carried by the material step itself; shadows exist only to
-   * anchor genuinely floating objects against the field. */
+  /* Dark material hides a drop shadow, so elevation is carried by the
+   * material step itself — but a SOFT ambient shadow under each work
+   * sheet plus a hair of top light separates a panel from the canvas
+   * on dim displays without rebuilding a card grammar. */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 18px 44px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-surface: none;
+  /* Floating objects get a top-edge light so they read as ABOVE the
+   * page, not just darker. */
+  --shadow-2: inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 44px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  /* Work sheets: one crisp contact shadow plus a wide, low-opacity
+   * ambient pool. Quiet enough to keep the ledger rows dominant. */
+  --shadow-surface: inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.28);
+  /* Recessed wells / controls: shaded at the top, not the bottom. */
+  --shadow-inset: inset 0 1px 0 rgba(0, 0, 0, 0.45),
+    inset 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 @layer base {
@@ -640,6 +680,42 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
     letter-spacing: 0.01em;
+  }
+
+  /*
+   * INTERACTIVE WORK CARD — bounded sheet + one quiet step of lift.
+   *
+   * A work sheet that is itself an interactive surface (a dashboard
+   * task card). At rest it carries the same hairline boundary edge
+   * and soft ambient shadow as a static sheet, so the whole surface
+   * reads as a bounded card rather than a flat patch of the field.
+   * On hover / focus-within it lifts one pixel and its edge brightens
+   * and its shadow deepens, so a card reads as pressable without
+   * rebuilding a gallery of resting chrome. The content inside keeps
+   * ledger-row discipline: no per-row borders, radii or shadows.
+   */
+  .work-card {
+    border: 1px solid rgb(var(--color-boundary-rgb) / 0.6);
+    box-shadow: var(--shadow-surface);
+    transition:
+      transform var(--dur-fast) var(--ease-standard),
+      box-shadow var(--dur-fast) var(--ease-standard),
+      border-color var(--dur-fast) var(--ease-standard);
+  }
+  .work-card:hover,
+  .work-card:focus-within {
+    transform: translateY(-1px);
+    border-color: rgb(var(--color-boundary-rgb) / 0.9);
+    box-shadow: var(--shadow-2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .work-card {
+      transition: none;
+    }
+    .work-card:hover,
+    .work-card:focus-within {
+      transform: none;
+    }
   }
 }
 
