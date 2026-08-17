@@ -3,6 +3,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
+import { StatusChip } from "@/components/shared/status-chip";
 import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
 import { dashboardTaskHref } from "@/lib/seller/dashboard-destinations";
 import {
@@ -39,12 +40,9 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
   return (
     <article className="group relative transition-colors hover:bg-elevated/50">
       <div className="flex items-start gap-3.5 p-4 sm:px-5">
-        <Icon
-          aria-hidden="true"
-          size={18}
-          strokeWidth={1.6}
-          className="mt-1 shrink-0 text-muted-foreground"
-        />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-boundary/40 bg-recessed text-muted-foreground transition-colors group-hover:bg-hover group-hover:text-foreground">
+          <Icon aria-hidden="true" size={18} strokeWidth={1.6} />
+        </span>
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <span className="type-meta text-muted-foreground">
@@ -59,9 +57,7 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
               </span>
             ) : null}
             {meta.sellerReview && meta.attentionLabel ? (
-              <span className="type-meta font-semibold text-attention">
-                {meta.attentionLabel}
-              </span>
+              <StatusChip tone="attention">{meta.attentionLabel}</StatusChip>
             ) : null}
           </div>
           <h3 className="type-row-primary text-foreground" title={task.title}>
@@ -90,7 +86,12 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
           className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-control px-2 type-row-secondary font-medium text-primary transition-colors hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas sm:h-9"
         >
           <span className="hidden sm:inline">{meta.cta}</span>
-          <ArrowUpRight aria-hidden="true" size={14} strokeWidth={1.9} />
+          <ArrowUpRight
+            aria-hidden="true"
+            size={14}
+            strokeWidth={1.9}
+            className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+          />
         </Link>
       </div>
     </article>

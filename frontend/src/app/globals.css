@@ -10,38 +10,68 @@
  * every role; hierarchy comes from size, weight, tracking and ink
  * level rather than from a second typeface.
  *
- * There are still NO trusted local font assets in this repo:
- * `frontend/public/` does not exist, nothing is vendored, and the
- * project has no `next/font` integration. We therefore DO NOT fetch
- * font binaries and DO NOT add a remote @import (CDN dependency,
- * FOUT, license/provenance ambiguity, offline build failure).
- *
  * Two roles, one family:
  *
  *   --font-display  tight, tracked-in grotesque for page titles and
  *                   record identity (the "voice" of the workspace)
  *   --font-body     the same family for UI, lists, controls, metadata
  *
- * Inter is named first (a true UI grotesque with excellent dense-row
- * behaviour and tabular figures) and the stack terminates in real
- * system fallbacks, all of which are grotesques — so the character
- * degrades gracefully instead of falling back to a serif. Dropping
- * WOFF2 into public/fonts and uncommenting below upgrades the whole
- * product with zero component changes.
+ * Inter is the family, SELF-HOSTED from `public/fonts/` (SIL OFL 1.1,
+ * see `public/fonts/OFL-Inter.txt`) as variable-weight WOFF2. It is
+ * served locally — no CDN, no remote @import, no `next/font` — so the
+ * build stays offline-safe and the provenance is auditable in-repo.
+ * The stack still terminates in real system fallbacks (all grotesques)
+ * so the character degrades gracefully rather than falling back to a
+ * serif.
  *
  * `--font-numeric` is a deliberate role: dense ledger rows show
  * counts, versions and timestamps, and those must never shift width
  * between renders.
  */
-/*
+
+/* Inter Variable — latin core + latin-ext (Turkish ğ ı ş İ …). Each
+ * face is a weight-range WOFF2 so every weight the type roles use
+ * (400-700, including the tracked 620/650 steps) renders from one
+ * file per subset. */
 @font-face {
   font-family: "Inter";
-  src: url("/fonts/Inter-latin.woff2") format("woff2");
-  font-weight: 400 700;
   font-style: normal;
   font-display: swap;
+  font-weight: 100 900;
+  src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC,
+    U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+    U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
+    U+FFFD;
 }
-*/
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/fonts/inter-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* Entrance + shimmer motion. All are disabled by the global
+ * `prefers-reduced-motion` override at the bottom of the base layer. */
+@keyframes wa-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes wa-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
 
 :root {
   /* Typography — ONE grotesque family, two roles. No serif. */
@@ -136,6 +166,20 @@
   --color-accent-text: #7e3f2f;
   --color-accent-text-rgb: 126 63 47;
 
+  /* Brand (iris — product identity only). A third hue reserved for
+   * the product's face (wordmark monogram, identity marks). It is
+   * never a state, never an interaction and never a content-type
+   * code: it exists so the product has a recognisable character
+   * without touching the cyan/coral signal model. */
+  --color-brand: #6d5bd0;
+  --color-brand-rgb: 109 91 208;
+  --color-brand-soft: #ece9fb;
+  --color-brand-soft-rgb: 236 233 251;
+  --color-brand-foreground: #ffffff;
+  --color-brand-foreground-rgb: 255 255 255;
+  --color-brand-text: #5b49b8;
+  --color-brand-text-rgb: 91 73 184;
+
   /* Functional states */
   --color-success: #2f7458;
   --color-success-rgb: 47 116 88;
@@ -227,6 +271,9 @@
   --shadow-2: 0 8px 24px rgba(36, 48, 46, 0.08);
   --shadow-surface: 0 1px 2px rgba(36, 48, 46, 0.04),
     0 1px 0 rgba(36, 48, 46, 0.02);
+  /* Recessed wells / controls: light enters from above, so an inset
+   * material is shaded at the top edge. */
+  --shadow-inset: inset 0 1px 2px rgba(36, 48, 46, 0.05);
   --shadow-focus: 0 0 0 2px var(--color-primary);
 
   /* Motion */
@@ -429,6 +476,19 @@
   --color-review-muted: #331d17;
   --color-review-muted-rgb: 51 29 23;
 
+  /* --- Brand (iris — identity only) ------------------------------------ */
+  /* One third hue for the product's face. Sits far from cyan (~194°)
+   * and coral (~41°) so it can never be mistaken for interaction or
+   * seller attention, and it is spent ONLY on identity marks. */
+  --color-brand: #8b7cf6;
+  --color-brand-rgb: 139 124 246;
+  --color-brand-soft: #26203d;
+  --color-brand-soft-rgb: 38 32 61;
+  --color-brand-foreground: #16122a;
+  --color-brand-foreground-rgb: 22 18 42;
+  --color-brand-text: #a99cf8;
+  --color-brand-text-rgb: 169 156 248;
+
   /* --- Truthful functional states -------------------------------------- */
   --color-success: #5ec59a;
   --color-success-rgb: 94 197 154;
@@ -462,12 +522,22 @@
   --color-paused-muted-rgb: 30 36 46;
 
   /* --- Elevation ---------------------------------------------------- */
-  /* On dark material a drop shadow is nearly invisible, so elevation
-   * is carried by the material step itself; shadows exist only to
-   * anchor genuinely floating objects against the field. */
+  /* Dark material hides a drop shadow, so elevation is carried by the
+   * material step itself — but a SOFT ambient shadow under each work
+   * sheet plus a hair of top light separates a panel from the canvas
+   * on dim displays without rebuilding a card grammar. */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 18px 44px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-surface: none;
+  /* Floating objects get a top-edge light so they read as ABOVE the
+   * page, not just darker. */
+  --shadow-2: inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 44px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  /* Work sheets: one crisp contact shadow plus a wide, low-opacity
+   * ambient pool. Quiet enough to keep the ledger rows dominant. */
+  --shadow-surface: inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.28);
+  /* Recessed wells / controls: shaded at the top, not the bottom. */
+  --shadow-inset: inset 0 1px 0 rgba(0, 0, 0, 0.45),
+    inset 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 @layer base {
@@ -641,6 +711,42 @@
     font-feature-settings: "tnum" 1;
     letter-spacing: 0.01em;
   }
+
+  /*
+   * INTERACTIVE WORK CARD — bounded sheet + one quiet step of lift.
+   *
+   * A work sheet that is itself an interactive surface (a dashboard
+   * task card). At rest it carries the same hairline boundary edge
+   * and soft ambient shadow as a static sheet, so the whole surface
+   * reads as a bounded card rather than a flat patch of the field.
+   * On hover / focus-within it lifts one pixel and its edge brightens
+   * and its shadow deepens, so a card reads as pressable without
+   * rebuilding a gallery of resting chrome. The content inside keeps
+   * ledger-row discipline: no per-row borders, radii or shadows.
+   */
+  .work-card {
+    border: 1px solid rgb(var(--color-boundary-rgb) / 0.6);
+    box-shadow: var(--shadow-surface);
+    transition:
+      transform var(--dur-fast) var(--ease-standard),
+      box-shadow var(--dur-fast) var(--ease-standard),
+      border-color var(--dur-fast) var(--ease-standard);
+  }
+  .work-card:hover,
+  .work-card:focus-within {
+    transform: translateY(-1px);
+    border-color: rgb(var(--color-boundary-rgb) / 0.9);
+    box-shadow: var(--shadow-2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .work-card {
+      transition: none;
+    }
+    .work-card:hover,
+    .work-card:focus-within {
+      transform: none;
+    }
+  }
 }
 
 @layer utilities {
@@ -678,5 +784,61 @@
   }
   .scrollbar-quiet::-webkit-scrollbar-thumb:hover {
     background-color: rgb(var(--color-muted-foreground-rgb) / 0.58);
+  }
+
+  /*
+   * SKELETON — calm loading block with a quiet shimmer.
+   *
+   * A neutral recessed block whose surface carries a travelling
+   * highlight. Used by loading surfaces so a stream-in reads as
+   * "content is arriving" instead of a blank rectangle. Neutral
+   * material only — never a status hue.
+   */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: rgb(var(--color-recessed-rgb) / 0.7);
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--color-foreground-rgb) / 0.06),
+      transparent
+    );
+    animation: wa-shimmer 1.6s infinite;
+  }
+
+  /*
+   * CARD ENTER — the first-paint stagger for dashboard work cards.
+   * Each card fades and rises one step; the page assigns a per-index
+   * delay so the queue settles in order. Reduced-motion turns this
+   * off entirely via the global override.
+   */
+  .card-enter {
+    animation: wa-card-enter var(--dur-base) var(--ease-standard) both;
+  }
+
+  /*
+   * AUTH CANVAS — a soft top-light for the light auth surfaces so the
+   * centered card sits on a designed field rather than a flat colour.
+   * Iris is identity here at very low opacity, never a state.
+   */
+  .auth-canvas {
+    background-color: var(--color-background);
+    background-image: radial-gradient(
+        1200px 480px at 50% -12%,
+        rgb(var(--color-brand-rgb) / 0.07),
+        transparent 60%
+      ),
+      radial-gradient(
+        900px 420px at 88% 110%,
+        rgb(var(--color-primary-rgb) / 0.05),
+        transparent 60%
+      );
   }
 }

@@ -70,7 +70,7 @@ export function AssistantSettingsHub({
     <ul
       role="list"
       className={cn(
-        "mt-8 divide-y divide-divider overflow-hidden rounded-sheet bg-raised",
+        "mt-8 divide-y divide-divider overflow-hidden rounded-sheet bg-raised shadow-surface border border-boundary/60",
         SETTINGS_SHEET_MEASURE,
       )}
     >
@@ -85,7 +85,7 @@ export function AssistantSettingsHub({
               <SellerIcon
                 name={card.icon}
                 size={18}
-                className="mt-0.5 shrink-0 text-muted-foreground"
+                className="mt-0.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
               />
               <span className="min-w-0 flex-1 space-y-1">
                 <span className="block type-row-primary text-foreground">
@@ -104,7 +104,7 @@ export function AssistantSettingsHub({
                 aria-hidden="true"
                 size={15}
                 strokeWidth={1.75}
-                className="mt-1 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-muted-foreground"
+                className="mt-1 shrink-0 text-muted-foreground/50 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-muted-foreground"
               />
             </Link>
           </li>

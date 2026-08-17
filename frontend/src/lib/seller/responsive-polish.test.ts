@@ -153,8 +153,10 @@ test("priority card stacks the CTA below content on narrow mobile", () => {
 test("work surfaces use material and rules instead of card chrome", () => {
   const css = read("../../app/globals.css");
   const sellerBlock = css.slice(css.indexOf(".seller-theme {"));
-  // Ordinary work sheets stay flat; elevation is for floating objects.
-  assert.match(sellerBlock, /--shadow-surface: none/);
+  // Ordinary work sheets lift one quiet step off the canvas with a soft
+  // ambient shadow; hard elevation stays reserved for floating objects.
+  assert.doesNotMatch(sellerBlock, /--shadow-surface: none/);
+  assert.match(sellerBlock, /--shadow-surface:[^;]*0 12px 32px rgba\(0, 0, 0, 0\.28\)/);
   // The seller theme scopes its override to the class, never to a
   // descendant element selector sweep.
   assert.doesNotMatch(sellerBlock, /\.seller-theme :is\(/);

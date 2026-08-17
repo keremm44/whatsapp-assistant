@@ -310,7 +310,7 @@ function ProductFieldsCrossLink() {
           page reads as one column of work areas. */}
       <div
         className={cn(
-          "space-y-2 rounded-sheet bg-raised px-4 py-5 md:px-6 md:py-6",
+          "space-y-2 rounded-sheet bg-raised shadow-surface border border-boundary/60 px-4 py-5 md:px-6 md:py-6",
           SETTINGS_SHEET_MEASURE,
         )}
       >

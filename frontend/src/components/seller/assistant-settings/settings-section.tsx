@@ -107,7 +107,7 @@ export function SettingsSection({
           soft sheet radius, no shadow and no nested card. */}
       <div
         className={cn(
-          "space-y-5 rounded-sheet bg-raised px-4 py-5 md:px-6 md:py-6",
+          "space-y-5 rounded-sheet bg-raised shadow-surface border border-boundary/60 px-4 py-5 md:px-6 md:py-6",
           SETTINGS_SHEET_MEASURE,
         )}
       >

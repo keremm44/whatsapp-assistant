@@ -56,7 +56,7 @@ export function QuietSummary({
     return (
       <section
         aria-labelledby="dashboard-quiet-summary"
-        className="rounded-sheet bg-raised px-4 py-4 sm:px-5"
+        className="rounded-sheet bg-raised shadow-surface border border-boundary/60 px-4 py-4 sm:px-5"
       >
         <div>
           <h3

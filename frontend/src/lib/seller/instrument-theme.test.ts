@@ -286,35 +286,53 @@ test("oxide is reserved for backend-supported seller review", () => {
     format.indexOf("export const ATTENTION_REASON_META"),
     format.indexOf("/* Control chip presentation"),
   );
-  assert.match(meta, /return_review:[^}]*text-attention/s);
-  assert.match(meta, /order_review:[^}]*text-attention/s);
-  // Ownership and queue-only reasons stay neutral, and specifically
-  // never borrow the interaction-blue selection language.
+  assert.match(meta, /return_review:[^}]*chipTone:\s*"attention"/s);
+  assert.match(meta, /order_review:[^}]*chipTone:\s*"attention"/s);
+  // Ownership and queue-only reasons stay neutral (muted = no chip
+  // fill), and specifically never borrow the interaction-blue
+  // selection language.
   for (const reason of ["seller_taken_over", "unanswered_question"]) {
     const entry = meta.slice(meta.indexOf(`${reason}:`));
     const body = entry.slice(0, entry.indexOf("},"));
     assert.doesNotMatch(body, /attention/);
     assert.doesNotMatch(body, /text-primary|bg-primary/);
   }
+  // Paused keeps its truthful near-neutral role, not coral.
+  const pausedEntry = meta.slice(meta.indexOf("assistant_paused:"));
+  const pausedBody = pausedEntry.slice(0, pausedEntry.indexOf("},"));
+  assert.match(pausedBody, /chipTone:\s*"paused"/);
 });
 
 /* ------------------------------------------------------------------ */
 /* 3. Dashboard reads as a work docket, not a card gallery             */
 /* ------------------------------------------------------------------ */
 
-test("dashboard groups tasks into one work sheet, not individual cards", () => {
+test("dashboard renders each task as a bounded card that lifts on hover", () => {
   const page = read("../../app/seller/page.tsx");
 
-  // Each region is ONE paper sheet whose entries are divided by rules.
-  const sheets = page.match(
-    /divide-y divide-divider overflow-hidden rounded-sheet bg-raised/g,
-  );
-  assert.ok(
-    sheets && sheets.length >= 2,
-    "high and normal regions must each render one contiguous work sheet",
+  // High- and normal-priority tasks are each their OWN bounded work
+  // card, stacked with real gutters — not one contiguous divided sheet.
+  assert.match(page, /space-y-3/);
+  assert.match(page, /work-card card-enter overflow-hidden rounded-sheet bg-raised/);
+
+  // The side-column summary stays one quiet bordered sheet beside the
+  // cards (normal-priority work is a list, not a card stack). Its rows
+  // divide themselves, so it carries no `divide-y`.
+  assert.match(
+    page,
+    /overflow-hidden rounded-sheet bg-raised shadow-surface border border-boundary\/60/,
   );
 
-  // Row components must not reintroduce per-task card chrome.
+  // The lift affordance lives in the shared utility: a hairline edge +
+  // resting shadow that translate/shadow up one step on hover/focus.
+  const css = globals();
+  assert.match(css, /\.work-card\s*\{/);
+  assert.match(css, /\.work-card:hover/);
+  assert.match(css, /\.work-card:focus-within/);
+  assert.match(css, /transform:\s*translateY\(-1px\)/);
+
+  // Row components still carry no resting card chrome of their own —
+  // the card shell belongs to the page, not to the row.
   for (const relative of [
     "../../components/seller/dashboard/priority-card.tsx",
     "../../components/seller/dashboard/compact-task-card.tsx",
@@ -322,7 +340,9 @@ test("dashboard groups tasks into one work sheet, not individual cards", () => {
     const source = readCode(relative);
     assert.doesNotMatch(source, /rounded-(md|lg|sheet|floating)/);
     assert.doesNotMatch(source, /shadow-(1|2|surface)/);
-    assert.doesNotMatch(source, /border border-(border|boundary)/);
+    // A full-strength card border is card chrome; a low-alpha
+    // hairline on a small icon TILE (border-boundary/40) is not.
+    assert.doesNotMatch(source, /border border-(border|boundary)(?!\/)/);
     assert.doesNotMatch(source, /bg-(raised|surface|overlay|paper)\b/);
   }
 });
@@ -334,7 +354,12 @@ test("dashboard header states the count typographically, not as a badge", () => 
   // The accessible phrase for the backend aggregate is preserved.
   assert.match(header, /aria-label=\{`İlgilenmeniz gereken \$\{total\} konu`\}/);
   // Zero still hides the statement rather than showing an empty badge.
-  assert.match(header, /total > 0 \? <WorkloadCount/);
+  assert.match(header, /total > 0 \?/);
+  // The priority split renders as a divided stat strip with big
+  // tabular numerals — still typography, not a pill/badge fill.
+  assert.match(header, /divide-x divide-divider/);
+  assert.match(header, /Önce bakılacaklar/);
+  assert.match(header, /Vakit varsa/);
   // No decorative badge fill or state-free colour hairline.
   assert.doesNotMatch(header, /bg-primary-muted|rounded-pill/);
   assert.doesNotMatch(header, /bg-primary["\s]/);
@@ -626,10 +651,20 @@ test("no unsafe font integration ships: no remote imports, no dangling faces", (
   assert.doesNotMatch(css, /@import\s+url\(/);
   assert.doesNotMatch(css, /https?:\/\/fonts\./);
 
-  // Any @font-face must stay commented out until real local assets
-  // are vendored, so the build can never reference a missing binary.
+  // Real local assets are now vendored (public/fonts, OFL 1.1), so the
+  // @font-face rules are live and reference ONLY local files.
   const live = css.replace(/\/\*[^]*?\*\//g, "");
-  assert.doesNotMatch(live, /@font-face/);
+  assert.match(live, /@font-face/);
+  assert.match(
+    live,
+    /url\("\/fonts\/inter-latin-wght-normal\.woff2"\)/,
+  );
+  assert.match(
+    live,
+    /url\("\/fonts\/inter-latin-ext-wght-normal\.woff2"\)/,
+  );
+  // Self-hosted only — a font face must never point at a CDN origin.
+  assert.doesNotMatch(live, /src:\s*url\(\s*https?:/);
 
   // And the app must not have adopted next/font behind our back.
   assert.doesNotMatch(read("../../app/layout.tsx"), /next\/font/);
@@ -651,8 +686,13 @@ test("geometry roles separate controls, work sheets and floating objects", () =>
     /rounded-floating[^"]*bg-overlay[^"]*shadow-2/,
   );
   assert.match(read("../../components/ui/sheet.tsx"), /bg-overlay p-6 shadow-2/);
-  // Ordinary seller work sheets stay flat.
-  assert.match(sellerThemeBlock(), /--shadow-surface:\s*none/);
+  // Ordinary seller work sheets lift one quiet step off the canvas with
+  // a soft ambient shadow — not a flat patch of the field.
+  assert.doesNotMatch(sellerThemeBlock(), /--shadow-surface:\s*none/);
+  assert.match(
+    sellerThemeBlock(),
+    /--shadow-surface:[^;]*0 12px 32px rgba\(0, 0, 0, 0\.28\)/,
+  );
   // Controls use the crisp control radius.
   assert.match(read("../../components/ui/button.tsx"), /rounded-control/);
   assert.match(read("../../components/ui/input.tsx"), /rounded-control/);
@@ -785,10 +825,10 @@ test("colour is not used to code content type", () => {
 test("the spine has a brand plate, banded sections and a pinned system foot", () => {
   const sidebar = readCode("../../components/seller/shell/seller-sidebar.tsx");
 
-  // Brand: a real monogram tile built from workspace materials.
+  // Brand: a real monogram tile carrying the iris identity hue.
   assert.match(sidebar, /BrandPlate/);
   assert.match(sidebar, /name="Store"/);
-  assert.match(sidebar, /bg-raised text-primary/);
+  assert.match(sidebar, /bg-brand\/15 text-brand/);
 
   // Vertical rhythm: work sections scroll, the system group is pinned
   // to the foot with its own boundary.
@@ -949,4 +989,34 @@ test("view tabs use a cyan underline, not a cyan filled pill", () => {
     assert.doesNotMatch(source, /bg-selected text-foreground/);
     assert.doesNotMatch(source, /bg-primary-muted/);
   }
+});
+
+/* ------------------------------------------------------------------ */
+/* 11. Status chip — soft-fill states, muted never promoted            */
+/* ------------------------------------------------------------------ */
+
+test("status chip spends muted fills on states worth noticing, never on cyan", () => {
+  const chip = readCode("../../components/shared/status-chip.tsx");
+
+  // The soft-fill pairings the chip is built from.
+  assert.match(chip, /attention:\s*"bg-accent-muted text-accent-text"/);
+  assert.match(chip, /accent:\s*"bg-accent-muted text-accent-text"/);
+  assert.match(chip, /success:\s*"bg-success-muted text-success"/);
+  assert.match(chip, /paused:\s*"bg-paused-muted text-paused"/);
+
+  // Cyan is interaction, never a state outcome.
+  assert.doesNotMatch(chip, /bg-primary|text-primary/);
+
+  // "muted" is NOT promoted to a badge: it renders plain quiet ink,
+  // so a chip stays a signal instead of uniform wallpaper.
+  assert.doesNotMatch(chip, /muted:\s*"bg-/);
+  assert.match(chip, /tone === "muted"/);
+  assert.match(chip, /text-muted-foreground/);
+});
+
+test("status chip always ships its label — state is never colour-only", () => {
+  const chip = readCode("../../components/shared/status-chip.tsx");
+  // The dot is decorative (aria-hidden); the label is the real content.
+  assert.match(chip, /aria-hidden="true"/);
+  assert.match(chip, /<span className="truncate">\{children\}<\/span>/);
 });

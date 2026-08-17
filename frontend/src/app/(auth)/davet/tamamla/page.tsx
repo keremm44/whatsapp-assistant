@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BrandMark } from "@/components/shared/brand-mark";
 import { InviteCompletionForm } from "./_invite-completion-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -45,15 +46,7 @@ export default async function DavetTamamlaPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2.5">
-        <span
-          aria-hidden="true"
-          className="block h-[20px] w-[2px] rounded-full bg-primary"
-        />
-        <p className="font-heading text-[15px] font-semibold text-primary">
-          WhatsApp Asistan
-        </p>
-      </div>
+      <BrandMark subtitle="Sakin Ustalık" />
 
       <div className="space-y-2">
         <h1 className="font-heading text-2xl font-medium leading-tight text-foreground">
@@ -72,15 +65,7 @@ export default async function DavetTamamlaPage({
 function InvalidInviteView() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2.5">
-        <span
-          aria-hidden="true"
-          className="block h-[20px] w-[2px] rounded-full bg-primary"
-        />
-        <p className="font-heading text-[15px] font-semibold text-primary">
-          WhatsApp Asistan
-        </p>
-      </div>
+      <BrandMark subtitle="Sakin Ustalık" />
 
       <div className="space-y-2">
         <h1 className="font-heading text-2xl font-medium leading-tight text-foreground">

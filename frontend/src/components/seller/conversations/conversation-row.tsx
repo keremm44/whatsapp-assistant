@@ -3,6 +3,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { Image as ImageIcon } from "lucide-react";
 
+import { StatusChip } from "@/components/shared/status-chip";
 import {
   ATTENTION_REASON_META,
   MEDIA_MESSAGE_LABEL,
@@ -150,26 +151,14 @@ export function ConversationRow({
           ) : null}
         </span>
 
-        {/* Attention: the backend's reason as a status flag. Coexists
-            with selection because it occupies its own line. */}
+        {/* Attention: the backend's reason as a status chip. Coexists
+            with selection because it occupies its own line. Review
+            reasons get the coral soft fill; neutral/paused reasons
+            keep their own truthful tone. */}
         {attentionMeta ? (
-          <span className="mt-1.5 flex items-center gap-1.5">
-            <span
-              aria-hidden="true"
-              className={cn(
-                "h-1.5 w-1.5 shrink-0 rounded-full",
-                attentionMeta.dotClassName,
-              )}
-            />
-            <span
-              className={cn(
-                "type-meta font-semibold",
-                attentionMeta.textClassName,
-              )}
-            >
-              {attentionMeta.label}
-            </span>
-          </span>
+          <StatusChip tone={attentionMeta.chipTone} className="mt-1.5">
+            {attentionMeta.label}
+          </StatusChip>
         ) : null}
       </Link>
     </li>

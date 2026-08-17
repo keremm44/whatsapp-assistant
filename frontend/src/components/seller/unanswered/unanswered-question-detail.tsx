@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { StatusChip } from "@/components/shared/status-chip";
 import { useRecordMutationGate } from "@/components/shared/use-record-mutation-gate";
 import type {
   UnansweredAction,
@@ -155,24 +156,16 @@ export function UnansweredQuestionDetail({
       <div className="space-y-6 px-4 py-5 md:px-5 md:py-6">
         {/* A. Soru */}
         <section aria-labelledby="unanswered-detail-question">
-          <div className="flex items-baseline justify-between gap-3">
+          <div className="flex items-center justify-between gap-3">
             <h2
               id="unanswered-detail-question"
               className="type-meta text-muted-foreground"
             >
               Soru
             </h2>
-            <span
-              className={cn(
-                "text-[11.5px] font-medium leading-none",
-                statusDisplay.tone === "accent" && "text-accent-text",
-                statusDisplay.tone === "success" && "text-success",
-                statusDisplay.tone === "paused" && "text-paused",
-                statusDisplay.tone === "muted" && "text-muted-foreground",
-              )}
-            >
+            <StatusChip tone={statusDisplay.tone} className="shrink-0">
               {statusDisplay.label}
-            </span>
+            </StatusChip>
           </div>
           <p className="mt-2 whitespace-pre-wrap break-words type-record-identity text-foreground">
             {question.canonicalQuestion}

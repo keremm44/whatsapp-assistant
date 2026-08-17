@@ -343,8 +343,11 @@ test("unanswered status semantics stay truthful", () => {
   const source = readCode(UNANSWERED_DETAIL);
   // Cyan is never a resolved state on this surface.
   assert.doesNotMatch(source, /tone === "success" && "text-primary/);
-  assert.match(source, /statusDisplay\.tone === "success" && "text-success"/);
-  assert.match(source, /statusDisplay\.tone === "paused" && "text-paused"/);
+  // State renders through the shared chip: the tone drives the chip's
+  // soft-fill semantic and the label always ships with it (never
+  // colour-only).
+  assert.match(source, /<StatusChip tone=\{statusDisplay\.tone\}/);
+  assert.match(source, /statusDisplay\.label/);
   // The dismissed heading carries the paused role, with its label.
   assert.match(source, /type-row-primary text-paused/);
   assert.match(source, /UNANSWERED_STATUS_DISPLAY\.DISMISSED\.label/);
@@ -439,10 +442,10 @@ test("a settings section is a contained work sheet, not a full-width slab", () =
   assert.doesNotMatch(source, /<Surface/);
 
   // The section owns a contained work sheet: quiet raised material at
-  // the shared sheet measure, one sheet radius, and NO shadow.
-  assert.match(source, /rounded-sheet bg-raised/);
+  // the shared sheet measure, one sheet radius, and the canonical soft
+  // sheet shadow.
+  assert.match(source, /rounded-sheet bg-raised shadow-surface/);
   assert.match(source, /SETTINGS_SHEET_MEASURE/);
-  assert.doesNotMatch(source, /shadow-/);
 
   // The form column inside the sheet keeps its own narrower measure.
   assert.match(source, /SETTINGS_FIELD_MEASURE/);

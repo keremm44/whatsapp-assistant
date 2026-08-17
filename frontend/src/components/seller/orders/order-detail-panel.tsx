@@ -7,6 +7,10 @@ import { ArrowLeft, ArrowUpRight, Image as ImageIcon, Inbox } from "lucide-react
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  StatusChip,
+  type StatusChipTone,
+} from "@/components/shared/status-chip";
 import type { OrderDetail, OrderDetailField } from "@/lib/seller/orders";
 import {
   formatOrderTimestamp,
@@ -160,6 +164,14 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
   // Same derivation the backend uses for summaries:
   // has_image := image_message_id is not None.
   const needsReview = order.status === "SELLER_REVIEW_REQUIRED";
+  // The detail exposes `status` directly (no summary action flag), so
+  // the header chip derives the SAME tone the list row uses:
+  // review -> attention, COMPLETE -> success, otherwise muted.
+  const statusTone: StatusChipTone = needsReview
+    ? "attention"
+    : order.status === "COMPLETE"
+      ? "success"
+      : "muted";
   const reviewNote =
     typeof order.reviewReasonNote === "string" &&
     order.reviewReasonNote.trim().length > 0
@@ -184,21 +196,16 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
     <div className="space-y-6 px-4 py-5 md:px-5 md:py-6">
       {/* A. Header */}
       <section aria-labelledby="order-detail-heading">
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <h2
             id="order-detail-heading"
             className="font-heading text-sm font-medium text-muted"
           >
             {ORDER_DETAIL_ORDER_TITLE}
           </h2>
-          <span
-            className={cn(
-              "text-[11.5px] font-medium leading-none",
-              needsReview ? "text-accent-text" : "text-muted",
-            )}
-          >
+          <StatusChip tone={statusTone} className="shrink-0">
             {order.displayStatus}
-          </span>
+          </StatusChip>
         </div>
         <p
           className={cn(
@@ -214,7 +221,7 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
           </p>
         ) : null}
         {needsReview && reviewNote !== null ? (
-          <p className="mt-2 border-l-2 border-l-accent pl-3 text-[12.5px] leading-snug text-accent-text">
+          <p className="mt-2 rounded-sm border-l-2 border-l-accent bg-accent-muted/45 py-2 pl-3 pr-3 text-[12.5px] leading-snug text-accent-text">
             {reviewNote}
           </p>
         ) : null}

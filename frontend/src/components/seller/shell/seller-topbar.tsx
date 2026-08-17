@@ -90,6 +90,12 @@ const TabletNavSheet = () => {
         )}
       >
         <SheetHeader className="px-5 pb-4 pt-6">
+          <span
+            aria-hidden="true"
+            className="mb-1 flex h-9 w-9 items-center justify-center rounded-control border border-brand/40 bg-brand/15 text-brand"
+          >
+            <SellerIcon name="Store" size={18} strokeWidth={2} />
+          </span>
           <SheetTitle className="font-display text-[15px] font-semibold tracking-[-0.012em] text-chrome-foreground">
             WhatsApp Asistan
           </SheetTitle>
