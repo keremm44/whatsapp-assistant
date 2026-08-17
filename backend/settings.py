@@ -109,6 +109,8 @@ class AppSettings(BaseModel):
     log_level: str
     sentry_dsn: str | None = None
     sentry_traces_sample_rate: float = 0.0
+    whatsapp_verify_token: str | None = None
+    whatsapp_app_secret: str | None = None
 
     @property
     def is_production(self) -> bool:
@@ -176,4 +178,6 @@ def get_settings() -> AppSettings:
             "SENTRY_TRACES_SAMPLE_RATE",
             default=0.0,
         ),
+        whatsapp_verify_token=_required_env("WHATSAPP_VERIFY_TOKEN"),
+        whatsapp_app_secret=_required_env("WHATSAPP_APP_SECRET"),
     )
