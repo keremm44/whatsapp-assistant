@@ -137,6 +137,79 @@ test("parses a complete list row with the backend display fields", () => {
   assert.equal(row?.imageRequirementSnapshot, "REQUIRED");
 });
 
+test("parses migration-034 quantity-limit review metadata", () => {
+  const page = parseReturnListResponse(
+    rawListResponse([
+      rawListRow({
+        order_id: null,
+        issue_type: "QUANTITY_LIMIT_REQUEST",
+        external_order_number_snapshot: null,
+        product_name_snapshot: null,
+        reason_text: "50 adet istiyorum",
+        requested_quantity: 50,
+        min_quantity_snapshot: 100,
+        max_quantity_snapshot: 500,
+        quantity_limit_direction: "below_min",
+        image_requirement_snapshot: "NOT_REQUESTED",
+        status: "SELLER_REVIEW_REQUIRED",
+        review_reason_code: "quantity_limit_request",
+        review_note: "50 adet, minimum 100 sınırının altında.",
+        display_issue_type: "Adet sınırı talebi",
+      }),
+    ]),
+  );
+
+  const row = page.requests[0];
+  assert.equal(row?.issueType, "QUANTITY_LIMIT_REQUEST");
+  assert.equal(row?.requestedQuantity, 50);
+  assert.equal(row?.minQuantitySnapshot, 100);
+  assert.equal(row?.maxQuantitySnapshot, 500);
+  assert.equal(row?.quantityLimitDirection, "below_min");
+  assert.equal(row?.imageRequirementSnapshot, "NOT_REQUESTED");
+});
+
+test("quantity-limit metadata must stay coherent with migration 034", () => {
+  assert.throws(
+    () =>
+      parseReturnListResponse(
+        rawListRowShape({
+          issue_type: "QUANTITY_LIMIT_REQUEST",
+          image_requirement_snapshot: "NOT_REQUESTED",
+          status: "SELLER_REVIEW_REQUIRED",
+        }),
+      ),
+    /returns_invalid_quantity_metadata/,
+  );
+
+  assert.throws(
+    () =>
+      parseReturnListResponse(
+        rawListRowShape({
+          requested_quantity: 2,
+          min_quantity_snapshot: 5,
+          quantity_limit_direction: "below_min",
+        }),
+      ),
+    /returns_invalid_quantity_metadata/,
+  );
+
+  assert.throws(
+    () =>
+      parseReturnListResponse(
+        rawListRowShape({
+          issue_type: "QUANTITY_LIMIT_REQUEST",
+          requested_quantity: 12,
+          min_quantity_snapshot: 2,
+          max_quantity_snapshot: null,
+          quantity_limit_direction: "above_max",
+          image_requirement_snapshot: "NOT_REQUESTED",
+          status: "SELLER_REVIEW_REQUIRED",
+        }),
+      ),
+    /returns_invalid_quantity_metadata/,
+  );
+});
+
 test("each canonical backend view parses through unchanged", () => {
   for (const view of ["action_required", "collecting", "handled", "all"]) {
     const page = parseReturnListResponse(rawListResponse([], { view }));
@@ -461,14 +534,16 @@ test("parses the canonical six-row settings response", () => {
   assert.equal(settings[1]?.displayName, "Hasarlı ürün");
 });
 
-test("rejects unknown issue_type / image_requirement in settings", () => {
-  assert.throws(
-    () =>
-      parseReturnIssueSettingsList({
-        settings: [rawSetting({ issue_type: "REFUND" })],
-      }),
-    /returns_invalid_issue_type/,
-  );
+test("rejects non-configurable or unknown issue types in settings", () => {
+  for (const issueType of ["QUANTITY_LIMIT_REQUEST", "REFUND"]) {
+    assert.throws(
+      () =>
+        parseReturnIssueSettingsList({
+          settings: [rawSetting({ issue_type: issueType })],
+        }),
+      /returns_invalid_issue_type/,
+    );
+  }
   assert.throws(
     () =>
       parseReturnIssueSettingsList({
