@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from types import ModuleType
+from typing import Any
 
 from . import dependencies
 from . import content
@@ -12,6 +13,49 @@ from . import return_flow
 from . import order_helpers
 from . import order_state
 from . import orchestrator
+from . import transport_context
+
+
+def sohbet_isle(
+    seller_id: int,
+    whatsapp_number: str,
+    kullanici_mesaji: str,
+    customer_name: str | None = None,
+    provider: str = "internal",
+    provider_message_id: str | None = None,
+    message_type: str = "text",
+    media_url: str | None = None,
+    outgoing_provider: str = transport_context.INTERNAL_OUTGOING_PROVIDER,
+) -> dict[str, Any]:
+    """Run the historical chat flow inside an explicit request-local transport scope."""
+    normalized_provider = transport_context.normalize_outgoing_provider(
+        outgoing_provider
+    )
+    with transport_context.transport_scope(normalized_provider):
+        result = orchestrator.sohbet_isle(
+            seller_id=seller_id,
+            whatsapp_number=whatsapp_number,
+            kullanici_mesaji=kullanici_mesaji,
+            customer_name=customer_name,
+            provider=provider,
+            provider_message_id=provider_message_id,
+            message_type=message_type,
+            media_url=media_url,
+        )
+
+        if (
+            normalized_provider
+            == transport_context.WHATSAPP_PENDING_OUTGOING_PROVIDER
+            and isinstance(result, dict)
+        ):
+            result = dict(result)
+            incoming_message_id = transport_context.current_incoming_message_id()
+            outgoing_message_id = transport_context.current_outgoing_message_id()
+            if incoming_message_id is not None:
+                result.setdefault("incoming_message_id", incoming_message_id)
+            if outgoing_message_id is not None:
+                result.setdefault("outgoing_message_id", outgoing_message_id)
+        return result
 
 
 _MODULES = (
@@ -38,6 +82,7 @@ _SKIP_EXPORTS = {
     "order_helpers",
     "order_state",
     "orchestrator",
+    "transport_context",
 }
 
 _EXPORT_TARGETS: dict[str, ModuleType] = {}
@@ -65,4 +110,7 @@ class _ChatServiceCompatibilityModule(ModuleType):
 
 sys.modules[__name__].__class__ = _ChatServiceCompatibilityModule
 
-__all__ = sorted(name for name in _EXPORT_TARGETS if not name.startswith("_"))
+__all__ = sorted(
+    {"sohbet_isle"}
+    | {name for name in _EXPORT_TARGETS if not name.startswith("_")}
+)

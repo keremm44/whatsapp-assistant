@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from functools import lru_cache
 from urllib.parse import urlsplit
 
@@ -13,6 +14,7 @@ load_dotenv()
 
 _TRUE_VALUES = {"1", "true", "yes", "on", "evet"}
 _ALLOWED_APP_ENVS = frozenset({"development", "test", "production"})
+_WHATSAPP_GRAPH_VERSION_RE = re.compile(r"^v[1-9][0-9]*\.[0-9]+$")
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -99,6 +101,41 @@ def _validate_production_supabase_config() -> None:
         )
 
 
+def _validate_whatsapp_send_config(send_enabled: bool) -> tuple[str | None, str | None]:
+    access_token = _required_env("WHATSAPP_ACCESS_TOKEN")
+    graph_api_version = _required_env("WHATSAPP_GRAPH_API_VERSION")
+
+    if not send_enabled:
+        return access_token, graph_api_version
+
+    missing = [
+        name
+        for name, value in (
+            ("WHATSAPP_ACCESS_TOKEN", access_token),
+            ("WHATSAPP_GRAPH_API_VERSION", graph_api_version),
+        )
+        if value is None
+    ]
+    if missing:
+        raise RuntimeError(
+            "WhatsApp outbound gönderimi için zorunlu backend ayarları eksik: "
+            + ", ".join(missing)
+            + "."
+        )
+
+    assert access_token is not None
+    assert graph_api_version is not None
+    if len(access_token) < 20:
+        raise RuntimeError(
+            "WHATSAPP_ACCESS_TOKEN outbound gönderim için geçersiz görünüyor."
+        )
+    if _WHATSAPP_GRAPH_VERSION_RE.fullmatch(graph_api_version) is None:
+        raise RuntimeError(
+            "WHATSAPP_GRAPH_API_VERSION vNN.N biçiminde olmalıdır."
+        )
+    return access_token, graph_api_version
+
+
 class AppSettings(BaseModel):
     app_env: str
     app_version: str
@@ -111,6 +148,10 @@ class AppSettings(BaseModel):
     sentry_traces_sample_rate: float = 0.0
     whatsapp_verify_token: str | None = None
     whatsapp_app_secret: str | None = None
+    whatsapp_runtime_enabled: bool = False
+    whatsapp_send_enabled: bool = False
+    whatsapp_access_token: str | None = None
+    whatsapp_graph_api_version: str | None = None
 
     @property
     def is_production(self) -> bool:
@@ -165,6 +206,14 @@ def get_settings() -> AppSettings:
     if app_env == "production":
         _validate_production_supabase_config()
 
+    whatsapp_send_enabled = _env_bool(
+        "WHATSAPP_SEND_ENABLED",
+        default=False,
+    )
+    whatsapp_access_token, whatsapp_graph_api_version = _validate_whatsapp_send_config(
+        whatsapp_send_enabled
+    )
+
     return AppSettings(
         app_env=app_env,
         app_version=os.getenv("APP_VERSION", "0.4.0").strip(),
@@ -180,4 +229,11 @@ def get_settings() -> AppSettings:
         ),
         whatsapp_verify_token=_required_env("WHATSAPP_VERIFY_TOKEN"),
         whatsapp_app_secret=_required_env("WHATSAPP_APP_SECRET"),
+        whatsapp_runtime_enabled=_env_bool(
+            "WHATSAPP_RUNTIME_ENABLED",
+            default=False,
+        ),
+        whatsapp_send_enabled=whatsapp_send_enabled,
+        whatsapp_access_token=whatsapp_access_token,
+        whatsapp_graph_api_version=whatsapp_graph_api_version,
     )
