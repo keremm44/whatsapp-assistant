@@ -16,10 +16,13 @@
  *
  * Proven facts enforced by the parsers:
  *
- *   - Canonical issue types / statuses / image requirements / views
- *     are the backend's exact allowlists (database.py constants and
- *     migration 016 CHECKs). Unknown values are contract errors, never
- *     coerced into a "nearest" known state.
+ *   - Canonical request issue types / statuses / image requirements /
+ *     views are the backend's exact allowlists (database.py constants
+ *     and migrations 016 + 034). Unknown values are contract errors,
+ *     never coerced into a "nearest" known state.
+ *   - QUANTITY_LIMIT_REQUEST is a seller-review record in the same
+ *     queue, but not a return-collection or photo-preference setting.
+ *     Its structured quantity snapshot is parsed and cross-validated.
  *   - `customer_phone` is the service-enriched copy of
  *     customers.whatsapp_number (commit e8ff3f9) — nullable, rendered
  *     verbatim, no snapshot semantics.
@@ -109,6 +112,18 @@ const readNullablePositiveInteger = (
   return value;
 };
 
+const readNullableNonNegativeInteger = (
+  raw: Record<string, unknown>,
+  key: string,
+): number | null => {
+  const value = readKey(raw, key);
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw contractError(key);
+  }
+  return value;
+};
+
 const readRequiredBoolean = (
   raw: Record<string, unknown>,
   key: string,
@@ -132,6 +147,19 @@ const readLiteral = <T extends string>(
   return value as T;
 };
 
+const readNullableLiteral = <T extends string>(
+  raw: Record<string, unknown>,
+  key: string,
+  allowed: readonly T[],
+): T | null => {
+  const value = readKey(raw, key);
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string" || !allowed.includes(value as T)) {
+    throw contractError(key);
+  }
+  return value as T;
+};
+
 /* ------------------------------------------------------------------ */
 /* Allowlisted enums (backend-owned)                                   */
 /* ------------------------------------------------------------------ */
@@ -149,7 +177,7 @@ const isReturnView = (value: unknown): value is ReturnView =>
   typeof value === "string" &&
   (RETURN_VIEWS as readonly string[]).includes(value);
 
-/** database.RETURN_ISSUE_TYPES / migration 016 CHECK. */
+/** database.RETURN_ISSUE_TYPES / migrations 016 + 034 CHECKs. */
 export const RETURN_ISSUE_TYPES = [
   "RETURN_REQUEST",
   "DAMAGED_ITEM",
@@ -157,6 +185,7 @@ export const RETURN_ISSUE_TYPES = [
   "PRINT_OR_PERSONALIZATION_ISSUE",
   "DELIVERY_ISSUE",
   "OTHER_ORDER_ISSUE",
+  "QUANTITY_LIMIT_REQUEST",
 ] as const;
 export type ReturnIssueType = (typeof RETURN_ISSUE_TYPES)[number];
 
@@ -165,6 +194,25 @@ export const isReturnIssueType = (
 ): value is ReturnIssueType =>
   typeof value === "string" &&
   (RETURN_ISSUE_TYPES as readonly string[]).includes(value);
+
+/**
+ * Photo-preference settings remain limited to the six collection issue
+ * types. Quantity reviews always snapshot NOT_REQUESTED in migration 034.
+ */
+export const RETURN_CONFIGURABLE_ISSUE_TYPES = [
+  "RETURN_REQUEST",
+  "DAMAGED_ITEM",
+  "WRONG_ITEM",
+  "PRINT_OR_PERSONALIZATION_ISSUE",
+  "DELIVERY_ISSUE",
+  "OTHER_ORDER_ISSUE",
+] as const;
+export type ReturnConfigurableIssueType =
+  (typeof RETURN_CONFIGURABLE_ISSUE_TYPES)[number];
+
+export const QUANTITY_LIMIT_DIRECTIONS = ["below_min", "above_max"] as const;
+export type QuantityLimitDirection =
+  (typeof QUANTITY_LIMIT_DIRECTIONS)[number];
 
 /** database.VALID_RETURN_ISSUE_STATUSES / migration 016 CHECK. */
 export const RETURN_STATUSES = [
@@ -209,6 +257,10 @@ export type ReturnRequestRecord = {
   productNameSnapshot: string | null;
   /** Customer-provided text; rendered byte-exact, never rewritten. */
   reasonText: string | null;
+  requestedQuantity: number | null;
+  minQuantitySnapshot: number | null;
+  maxQuantitySnapshot: number | null;
+  quantityLimitDirection: QuantityLimitDirection | null;
   imageRequirementSnapshot: ReturnImageRequirement;
   status: ReturnStatus;
   reviewReasonCode: string | null;
@@ -277,7 +329,7 @@ export type MarkReturnHandledResult = {
 };
 
 export type ReturnIssueSetting = {
-  issueType: ReturnIssueType;
+  issueType: ReturnConfigurableIssueType;
   /** Backend display_name (`ISSUE_TYPE_DISPLAY_NAMES`); verbatim. */
   displayName: string;
   imageRequirement: ReturnImageRequirement;
@@ -289,9 +341,54 @@ export type ReturnIssueSetting = {
 /* Parsers                                                             */
 /* ------------------------------------------------------------------ */
 
+const validateQuantityMetadata = (record: ReturnRequestRecord): void => {
+  const hasQuantityMetadata =
+    record.requestedQuantity !== null ||
+    record.minQuantitySnapshot !== null ||
+    record.maxQuantitySnapshot !== null ||
+    record.quantityLimitDirection !== null;
+
+  if (record.issueType !== "QUANTITY_LIMIT_REQUEST") {
+    if (hasQuantityMetadata) throw contractError("quantity_metadata");
+    return;
+  }
+
+  if (
+    record.requestedQuantity === null ||
+    record.minQuantitySnapshot === null ||
+    record.quantityLimitDirection === null ||
+    record.imageRequirementSnapshot !== "NOT_REQUESTED" ||
+    record.status === "COLLECTING"
+  ) {
+    throw contractError("quantity_metadata");
+  }
+
+  if (
+    record.maxQuantitySnapshot !== null &&
+    record.maxQuantitySnapshot < record.minQuantitySnapshot
+  ) {
+    throw contractError("quantity_metadata");
+  }
+
+  if (
+    record.quantityLimitDirection === "below_min" &&
+    record.requestedQuantity >= record.minQuantitySnapshot
+  ) {
+    throw contractError("quantity_metadata");
+  }
+
+  if (
+    record.quantityLimitDirection === "above_max" &&
+    (record.maxQuantitySnapshot === null ||
+      record.requestedQuantity <= record.maxQuantitySnapshot)
+  ) {
+    throw contractError("quantity_metadata");
+  }
+};
+
 const parseReturnRequestRecord = (raw: unknown): ReturnRequestRecord => {
   if (!isPlainObject(raw)) throw contractError("request");
-  return {
+  const record: ReturnRequestRecord = {
     id: readRequiredPositiveInteger(raw, "id"),
     customerId: readRequiredPositiveInteger(raw, "customer_id"),
     orderId: readNullablePositiveInteger(raw, "order_id"),
@@ -302,6 +399,14 @@ const parseReturnRequestRecord = (raw: unknown): ReturnRequestRecord => {
     ),
     productNameSnapshot: readNullableString(raw, "product_name_snapshot"),
     reasonText: readNullableString(raw, "reason_text"),
+    requestedQuantity: readNullableNonNegativeInteger(raw, "requested_quantity"),
+    minQuantitySnapshot: readNullablePositiveInteger(raw, "min_quantity_snapshot"),
+    maxQuantitySnapshot: readNullablePositiveInteger(raw, "max_quantity_snapshot"),
+    quantityLimitDirection: readNullableLiteral(
+      raw,
+      "quantity_limit_direction",
+      QUANTITY_LIMIT_DIRECTIONS,
+    ),
     imageRequirementSnapshot: readLiteral(
       raw,
       "image_requirement_snapshot",
@@ -317,6 +422,8 @@ const parseReturnRequestRecord = (raw: unknown): ReturnRequestRecord => {
     handledAt: readNullableString(raw, "handled_at"),
     sellerNote: readNullableString(raw, "seller_note"),
   };
+  validateQuantityMetadata(record);
+  return record;
 };
 
 const parseReturnRequestSummary = (raw: unknown): ReturnRequestSummary => {
@@ -446,7 +553,11 @@ const parseMarkReturnHandledResult = (
 const parseReturnIssueSetting = (raw: unknown): ReturnIssueSetting => {
   if (!isPlainObject(raw)) throw contractError("setting");
   return {
-    issueType: readLiteral(raw, "issue_type", RETURN_ISSUE_TYPES),
+    issueType: readLiteral(
+      raw,
+      "issue_type",
+      RETURN_CONFIGURABLE_ISSUE_TYPES,
+    ),
     displayName: readRequiredString(raw, "display_name"),
     imageRequirement: readLiteral(
       raw,
