@@ -38,6 +38,26 @@ def _required_env(name: str) -> str | None:
     return value or None
 
 
+def _env_sample_rate(name: str, default: float = 0.0) -> float:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+
+    try:
+        value = float(raw.strip())
+    except ValueError as exc:
+        raise RuntimeError(
+            f"{name} 0.0 ile 1.0 arasında sayısal bir değer olmalıdır."
+        ) from exc
+
+    if not 0.0 <= value <= 1.0:
+        raise RuntimeError(
+            f"{name} 0.0 ile 1.0 arasında olmalıdır."
+        )
+
+    return value
+
+
 def _validate_production_supabase_config() -> None:
     supabase_url = _required_env("SUPABASE_URL")
     service_key = _required_env("SUPABASE_SERVICE_KEY")
@@ -87,6 +107,8 @@ class AppSettings(BaseModel):
     cors_origins: tuple[str, ...]
     media_allowed_hosts: tuple[str, ...]
     log_level: str
+    sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float = 0.0
 
     @property
     def is_production(self) -> bool:
@@ -149,4 +171,9 @@ def get_settings() -> AppSettings:
         cors_origins=cors_origins,
         media_allowed_hosts=media_allowed_hosts,
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper(),
+        sentry_dsn=_required_env("SENTRY_DSN"),
+        sentry_traces_sample_rate=_env_sample_rate(
+            "SENTRY_TRACES_SAMPLE_RATE",
+            default=0.0,
+        ),
     )

@@ -18,6 +18,7 @@ from database import (
     get_seller_by_id,
     test_connection,
 )
+from observability import init_sentry
 from protected_routes import router as protected_router
 from public_abuse_protection import PublicApplicationAbuseProtectionMiddleware
 from public_routes import router as public_router
@@ -30,6 +31,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+init_sentry(settings)
 
 
 class ChatMesaj(BaseModel):
