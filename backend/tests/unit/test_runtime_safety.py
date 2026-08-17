@@ -59,3 +59,98 @@ def test_production_rejects_development_endpoints(monkeypatch) -> None:
         assert "Production" in str(exc)
     finally:
         get_settings.cache_clear()
+
+
+def test_unknown_app_env_is_rejected(monkeypatch) -> None:
+    from settings import get_settings
+
+    monkeypatch.setenv("APP_ENV", "prod")
+    get_settings.cache_clear()
+
+    try:
+        get_settings()
+        raise AssertionError("Bilinmeyen APP_ENV değeri reddedilmeliydi.")
+    except RuntimeError as exc:
+        message = str(exc)
+        assert "APP_ENV" in message
+        assert "production" in message
+        assert "development" in message
+    finally:
+        get_settings.cache_clear()
+
+
+def test_production_requires_supabase_runtime_config(monkeypatch) -> None:
+    from settings import get_settings
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("ENABLE_DEV_ENDPOINTS", "false")
+    monkeypatch.setenv("CORS_ORIGINS", "https://seller.example.com")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
+    get_settings.cache_clear()
+
+    try:
+        get_settings()
+        raise AssertionError(
+            "Production eksik Supabase ayarlarıyla başlamamalıydı."
+        )
+    except RuntimeError as exc:
+        message = str(exc)
+        assert "SUPABASE_URL" in message
+        assert "SUPABASE_SERVICE_KEY" in message
+    finally:
+        get_settings.cache_clear()
+
+
+def test_production_rejects_non_https_supabase_url(monkeypatch) -> None:
+    from settings import get_settings
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("ENABLE_DEV_ENDPOINTS", "false")
+    monkeypatch.setenv("CORS_ORIGINS", "https://seller.example.com")
+    monkeypatch.setenv("SUPABASE_URL", "http://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_KEY", "service-role-test-key")
+    get_settings.cache_clear()
+
+    try:
+        get_settings()
+        raise AssertionError("Production HTTP Supabase URL ile başlamamalıydı.")
+    except RuntimeError as exc:
+        assert "HTTPS" in str(exc)
+    finally:
+        get_settings.cache_clear()
+
+
+def test_production_accepts_minimal_required_backend_config(monkeypatch) -> None:
+    from settings import get_settings
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("ENABLE_DEV_ENDPOINTS", "false")
+    monkeypatch.setenv("CORS_ORIGINS", "https://seller.example.com")
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_KEY", "service-role-test-key")
+    get_settings.cache_clear()
+
+    try:
+        current = get_settings()
+        assert current.is_production is True
+        assert current.enable_dev_endpoints is False
+    finally:
+        get_settings.cache_clear()
+
+
+def test_development_settings_keep_supabase_config_lazy(monkeypatch) -> None:
+    from settings import get_settings
+
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("ENABLE_DEV_ENDPOINTS", "false")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
+    get_settings.cache_clear()
+
+    try:
+        current = get_settings()
+        assert current.app_env == "development"
+        assert current.is_production is False
+    finally:
+        get_settings.cache_clear()
