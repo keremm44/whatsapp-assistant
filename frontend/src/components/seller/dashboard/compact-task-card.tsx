@@ -40,12 +40,9 @@ export function CompactTaskCard({ task }: { task: DashboardTask }) {
   return (
     <article className="group relative transition-colors hover:bg-elevated/50">
       <div className="flex items-start gap-3.5 p-4 sm:px-5">
-        <Icon
-          aria-hidden="true"
-          size={18}
-          strokeWidth={1.6}
-          className="mt-1 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
-        />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-boundary/40 bg-recessed text-muted-foreground transition-colors group-hover:bg-hover group-hover:text-foreground">
+          <Icon aria-hidden="true" size={18} strokeWidth={1.6} />
+        </span>
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <span className="type-meta text-muted-foreground">

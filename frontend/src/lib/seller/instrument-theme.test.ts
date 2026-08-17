@@ -313,7 +313,7 @@ test("dashboard renders each task as a bounded card that lifts on hover", () => 
   // High- and normal-priority tasks are each their OWN bounded work
   // card, stacked with real gutters — not one contiguous divided sheet.
   assert.match(page, /space-y-3/);
-  assert.match(page, /work-card overflow-hidden rounded-sheet bg-raised/);
+  assert.match(page, /work-card card-enter overflow-hidden rounded-sheet bg-raised/);
 
   // The side-column summary stays one quiet bordered sheet beside the
   // cards (normal-priority work is a list, not a card stack). Its rows
@@ -340,7 +340,9 @@ test("dashboard renders each task as a bounded card that lifts on hover", () => 
     const source = readCode(relative);
     assert.doesNotMatch(source, /rounded-(md|lg|sheet|floating)/);
     assert.doesNotMatch(source, /shadow-(1|2|surface)/);
-    assert.doesNotMatch(source, /border border-(border|boundary)/);
+    // A full-strength card border is card chrome; a low-alpha
+    // hairline on a small icon TILE (border-boundary/40) is not.
+    assert.doesNotMatch(source, /border border-(border|boundary)(?!\/)/);
     assert.doesNotMatch(source, /bg-(raised|surface|overlay|paper)\b/);
   }
 });
@@ -352,7 +354,12 @@ test("dashboard header states the count typographically, not as a badge", () => 
   // The accessible phrase for the backend aggregate is preserved.
   assert.match(header, /aria-label=\{`İlgilenmeniz gereken \$\{total\} konu`\}/);
   // Zero still hides the statement rather than showing an empty badge.
-  assert.match(header, /total > 0 \? <WorkloadCount/);
+  assert.match(header, /total > 0 \?/);
+  // The priority split renders as a divided stat strip with big
+  // tabular numerals — still typography, not a pill/badge fill.
+  assert.match(header, /divide-x divide-divider/);
+  assert.match(header, /Önce bakılacaklar/);
+  assert.match(header, /Vakit varsa/);
   // No decorative badge fill or state-free colour hairline.
   assert.doesNotMatch(header, /bg-primary-muted|rounded-pill/);
   assert.doesNotMatch(header, /bg-primary["\s]/);
@@ -644,10 +651,20 @@ test("no unsafe font integration ships: no remote imports, no dangling faces", (
   assert.doesNotMatch(css, /@import\s+url\(/);
   assert.doesNotMatch(css, /https?:\/\/fonts\./);
 
-  // Any @font-face must stay commented out until real local assets
-  // are vendored, so the build can never reference a missing binary.
+  // Real local assets are now vendored (public/fonts, OFL 1.1), so the
+  // @font-face rules are live and reference ONLY local files.
   const live = css.replace(/\/\*[^]*?\*\//g, "");
-  assert.doesNotMatch(live, /@font-face/);
+  assert.match(live, /@font-face/);
+  assert.match(
+    live,
+    /url\("\/fonts\/inter-latin-wght-normal\.woff2"\)/,
+  );
+  assert.match(
+    live,
+    /url\("\/fonts\/inter-latin-ext-wght-normal\.woff2"\)/,
+  );
+  // Self-hosted only — a font face must never point at a CDN origin.
+  assert.doesNotMatch(live, /src:\s*url\(\s*https?:/);
 
   // And the app must not have adopted next/font behind our back.
   assert.doesNotMatch(read("../../app/layout.tsx"), /next\/font/);

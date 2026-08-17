@@ -42,12 +42,9 @@ export function SecondaryRow({ task }: { task: DashboardTask }) {
         aria-label={accessibleName}
         className="group flex min-h-[60px] items-start gap-3 px-4 py-3.5 transition-colors hover:bg-elevated/50 focus-visible:bg-elevated/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset sm:px-5"
       >
-        <Icon
-          aria-hidden="true"
-          size={18}
-          strokeWidth={1.6}
-          className="mt-0.5 shrink-0 text-muted-foreground group-hover:text-foreground"
-        />
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-boundary/40 bg-recessed text-muted-foreground transition-colors group-hover:bg-hover group-hover:text-foreground">
+          <Icon aria-hidden="true" size={16} strokeWidth={1.6} />
+        </span>
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
             <span className="type-meta text-muted-foreground">

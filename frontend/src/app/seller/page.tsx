@@ -124,7 +124,11 @@ export default async function SellerOverviewPage() {
 
   return (
     <PageContainer className="py-8 sm:py-10">
-      <DashboardHeader total={total} />
+      <DashboardHeader
+        total={total}
+        high={highTasks.length}
+        normal={normalTasks.length}
+      />
       <DashboardFreshness
         signature={buildDashboardFreshnessSignature({ total, tasks })}
       />
@@ -255,10 +259,11 @@ function NormalOnlyLayout({
           role="list"
           className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0"
         >
-          {normalTasks.map((task) => (
+          {normalTasks.map((task, index) => (
             <li
               key={task.id}
-              className="work-card overflow-hidden rounded-sheet bg-raised"
+              className="work-card card-enter overflow-hidden rounded-sheet bg-raised"
+              style={{ animationDelay: `${index * 50}ms` }}
             >
               <CompactTaskCard task={task} />
             </li>
@@ -304,10 +309,11 @@ function PrimaryColumn({
       {/* High-priority work as individual bounded cards, stacked with
           real gutters. Each card lifts one quiet step on hover/focus. */}
       <ul role="list" className="space-y-3">
-        {tasks.map((task) => (
+        {tasks.map((task, index) => (
           <li
             key={task.id}
-            className="work-card overflow-hidden rounded-sheet bg-raised"
+            className="work-card card-enter overflow-hidden rounded-sheet bg-raised"
+            style={{ animationDelay: `${index * 50}ms` }}
           >
             <PriorityCard task={task} />
           </li>

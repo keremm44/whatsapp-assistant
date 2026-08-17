@@ -52,12 +52,11 @@ export function PriorityCard({ task }: { task: DashboardTask }) {
     <article className="group relative transition-colors hover:bg-elevated/50">
       <div className="flex flex-col gap-3 p-4 pl-5 sm:flex-row sm:items-start sm:gap-5 sm:p-5 sm:pl-6">
         <div className="flex min-w-0 items-start gap-4 sm:flex-1 sm:gap-5">
-          <Icon
-            aria-hidden="true"
-            size={20}
-            strokeWidth={1.6}
-            className="mt-1 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
-          />
+          {/* Neutral recessed icon tile: the row's identity mark. Never
+              colour-coded by type — type stays icon + label. */}
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-boundary/40 bg-recessed text-muted-foreground transition-colors group-hover:bg-hover group-hover:text-foreground">
+            <Icon aria-hidden="true" size={20} strokeWidth={1.6} />
+          </span>
 
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

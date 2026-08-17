@@ -105,7 +105,11 @@ export default function PreviewPage() {
           </p>
         </div>
 
-        <DashboardHeader total={mockTasks.length} />
+        <DashboardHeader
+          total={mockTasks.length}
+          high={highTasks.length}
+          normal={normalTasks.length}
+        />
 
         {/* High priority — bounded cards that lift on hover. */}
         <section aria-labelledby="preview-high" className="mt-6 space-y-5">

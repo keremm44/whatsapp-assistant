@@ -2,6 +2,7 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 
 import { AccessUnavailable } from "@/components/auth/access-unavailable";
+import { BrandMark } from "@/components/shared/brand-mark";
 import { LoginForm } from "./_login-form";
 import {
   PROTECTED_ROUTES,
@@ -80,15 +81,7 @@ export default async function GirisPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2.5">
-        <span
-          aria-hidden="true"
-          className="block h-[20px] w-[2px] rounded-full bg-primary"
-        />
-        <p className="font-heading text-[15px] font-semibold text-primary">
-          WhatsApp Asistan
-        </p>
-      </div>
+      <BrandMark subtitle="Sakin Ustalık" />
 
       <div className="space-y-2">
         <h1 className="font-heading text-2xl font-medium leading-tight text-foreground">
