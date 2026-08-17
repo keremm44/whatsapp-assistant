@@ -39,12 +39,12 @@ def test_034_quantity_review_never_changes_conversation_control_or_creates_order
 
 
 def test_quantity_chat_gate_runs_before_order_collection_mutation() -> None:
-    source = Path("chat_service.py").read_text(encoding="utf-8")
+    source = Path("chat_service/orchestrator.py").read_text(encoding="utf-8")
 
-    quantity_pos = source.index("quantity_result = handle_quantity_message(")
-    state_pos = source.index("state_response = process_active_state(")
+    quantity_pos = source.index("quantity_result = deps.handle_quantity_message(")
+    state_pos = source.index("state_response = order_state.process_active_state(")
     active_return_pos = source.index(
-        "return_issue_response = continue_active_return_issue_request("
+        "return_issue_response = return_flow.continue_active_return_issue_request("
     )
 
     assert active_return_pos < quantity_pos < state_pos
