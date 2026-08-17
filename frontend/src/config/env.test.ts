@@ -75,6 +75,12 @@ test("supabaseUrl requires HTTPS outside loopback development", () => {
   });
 });
 
+test("supabaseUrl allows IPv6 loopback HTTP for local development", () => {
+  withEnv("NEXT_PUBLIC_SUPABASE_URL", "http://[::1]:54321", () => {
+    assert.equal(env.supabaseUrl, "http://[::1]:54321");
+  });
+});
+
 test("supabaseAnonKey rejects missing and whitespace-only values", () => {
   withEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", undefined, () => {
     assert.throws(() => env.supabaseAnonKey, /Missing required environment variable/);

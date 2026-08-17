@@ -35,6 +35,11 @@ const optional = (value: string | undefined): string | undefined => {
 const trimTrailingSlash = (value: string): string =>
   value.endsWith("/") ? value.slice(0, -1) : value;
 
+const normalizeHostname = (hostname: string): string =>
+  hostname.startsWith("[") && hostname.endsWith("]")
+    ? hostname.slice(1, -1).toLowerCase()
+    : hostname.toLowerCase();
+
 const securePublicUrl = (name: string, value: string): string => {
   let parsed: URL;
   try {
@@ -51,7 +56,7 @@ const securePublicUrl = (name: string, value: string): string => {
     throw new Error(`[env] ${name} must not contain embedded credentials.`);
   }
 
-  const hostname = parsed.hostname.toLowerCase();
+  const hostname = normalizeHostname(parsed.hostname);
   if (parsed.protocol === "http:" && !LOOPBACK_HOSTS.has(hostname)) {
     throw new Error(
       `[env] ${name} must use HTTPS outside local development.`,
