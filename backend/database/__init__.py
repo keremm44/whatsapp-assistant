@@ -13,6 +13,7 @@ from types import ModuleType
 
 from . import core
 from . import messaging
+from . import whatsapp_delivery
 from . import conversations
 from . import notifications
 from . import unanswered
@@ -34,6 +35,7 @@ from . import announcements
 _MODULES = (
     core,
     messaging,
+    whatsapp_delivery,
     conversations,
     notifications,
     unanswered,
