@@ -19,6 +19,7 @@ from database import (
     test_connection,
 )
 from protected_routes import router as protected_router
+from public_abuse_protection import PublicApplicationAbuseProtectionMiddleware
 from public_routes import router as public_router
 from settings import AppSettings, get_settings
 
@@ -54,6 +55,11 @@ app = FastAPI(
     title="WhatsApp Asistan API",
     version=settings.app_version,
 )
+
+# Public seller applications are intentionally unauthenticated, so bound request
+# bytes and burst attempts before FastAPI parses the JSON body. This middleware
+# is added before CORS so CORS remains the outer wrapper for browser responses.
+app.add_middleware(PublicApplicationAbuseProtectionMiddleware)
 
 if settings.cors_origins:
     allow_all = "*" in settings.cors_origins
