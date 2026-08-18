@@ -1,15 +1,9 @@
+import { LoadingSignal } from "@/components/shared/loading-signal";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
 import { Surface } from "@/components/shared/surface";
 
-/**
- * Calm loading state for the Cevaplanamayan Sorular workspace (initial
- * stream-in and tab transitions). Geometry mirrors the page: static
- * header, tabs outline, and the two-pane workspace silhouette (queue
- * rows + detail placeholder) — no giant spinner, no fake questions or
- * names, header position stays stable so switching views never jumps
- * the layout.
- */
+/** Stable unanswered loading geometry with a small branded activity signal. */
 export default function SellerUnansweredLoading() {
   return (
     <PageContainer size="wide" className="py-8 sm:py-10">
@@ -24,6 +18,7 @@ export default function SellerUnansweredLoading() {
         aria-label="Cevaplanamayan sorular yükleniyor"
       >
         <span className="sr-only">Cevaplanamayan sorular yükleniyor…</span>
+        <LoadingSignal decorative compact />
         <div className="h-10 w-full max-w-lg animate-pulse rounded-md bg-surface-2/60 lg:max-w-xl" />
         <Surface className="overflow-hidden">
           <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
