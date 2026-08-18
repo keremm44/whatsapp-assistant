@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   clearWorkbenchNavigationNamespace,
+  isSelectionOnlyWorkbenchNavigation,
   readWorkbenchNavigationMemory,
   workbenchNavigationStorageKey,
   writeWorkbenchNavigationMemory,
@@ -76,4 +77,44 @@ test("clearing a namespace does not remove another workbench memory", () => {
   assert.equal(storage.getItem(allKey), null);
   assert.equal(storage.getItem(attentionKey), null);
   assert.equal(storage.getItem(ordersKey), "three");
+});
+
+test("selection-only navigation preserves an identical returns list context", () => {
+  assert.equal(
+    isSelectionOnlyWorkbenchNavigation(
+      "https://example.test/seller/returns?view=handled&q=TR9&type=OTHER",
+      "https://example.test/seller/returns?view=handled&q=TR9&type=OTHER&request=42",
+      "request",
+    ),
+    true,
+  );
+
+  assert.equal(
+    isSelectionOnlyWorkbenchNavigation(
+      "https://example.test/seller/returns?view=handled&q=TR9&type=OTHER&request=42",
+      "https://example.test/seller/returns?type=OTHER&q=TR9&view=handled",
+      "request",
+    ),
+    true,
+  );
+});
+
+test("filter changes are not treated as selection-only navigation", () => {
+  assert.equal(
+    isSelectionOnlyWorkbenchNavigation(
+      "https://example.test/seller/returns?view=handled&request=42",
+      "https://example.test/seller/returns?view=action_required",
+      "request",
+    ),
+    false,
+  );
+
+  assert.equal(
+    isSelectionOnlyWorkbenchNavigation(
+      "https://example.test/seller/returns?view=handled",
+      "https://example.test/seller/orders?view=handled&request=42",
+      "request",
+    ),
+    false,
+  );
 });
