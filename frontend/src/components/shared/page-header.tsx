@@ -3,19 +3,12 @@ import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Standard page header rhythm — "The Working Ledger" pilot.
+ * Standard page header rhythm.
  *
- * Three layers, in order of weight:
- *   1. An optional quiet caption in sentence case (metadata role).
- *      It names the region; it is no longer an uppercase colored
- *      eyebrow.
- *   2. The page H1 in the display role (`type-page-title`):
- *      40/46 desktop, 34/40 mobile, tracked in.
- *   3. A short description in the readable secondary ink role.
- *
- * The previous decorative colored hairline under the title is gone:
- * it carried no state, and in this direction color must describe
- * state, not ornament. Typographic weight anchors the header instead.
+ * The title now carries a short three-part signature rule: interaction
+ * cyan, product iris and a quiet structural tail. It is intentionally
+ * small enough to add identity and rhythm without turning headings into
+ * state indicators or filling the workspace with colour.
  */
 export function PageHeader({
   caption,
@@ -42,6 +35,14 @@ export function PageHeader({
           <p className="type-meta text-muted-foreground">{caption}</p>
         ) : null}
         <h1 className="type-page-title text-foreground">{title}</h1>
+        <span
+          aria-hidden="true"
+          className="flex h-1 items-center gap-1.5 pt-0.5"
+        >
+          <span className="h-0.5 w-8 rounded-pill bg-primary/80" />
+          <span className="h-0.5 w-3 rounded-pill bg-brand/75" />
+          <span className="h-px w-10 bg-divider" />
+        </span>
         {description ? (
           <p className="max-w-2xl type-body text-muted">{description}</p>
         ) : null}
