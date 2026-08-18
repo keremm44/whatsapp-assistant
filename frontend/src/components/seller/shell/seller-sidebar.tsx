@@ -164,7 +164,7 @@ const NavRow = ({
         {isActive ? (
           <span
             aria-hidden="true"
-            className="absolute inset-y-1 left-0 w-[3px] rounded-control bg-primary motion-safe:animate-fade-in"
+            className="absolute inset-y-1 left-0 w-[3px] rounded-l-control bg-primary motion-safe:animate-fade-in"
           />
         ) : null}
         <span className="flex w-5 shrink-0 justify-center">
