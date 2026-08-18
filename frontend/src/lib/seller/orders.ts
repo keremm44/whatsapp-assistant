@@ -234,12 +234,11 @@ export type OrderListPage = {
 /**
  * The detail's order block (`seller_order_detail` in
  * protected_routes.py). Superset of the summary: adds the verbatim
- * customer note and the closed timestamp. `seller_action_required`
- * is not part of the detail payload; the backend derives it for
- * summaries as `status == SELLER_REVIEW_REQUIRED`, and the detail
- * exposes `status` directly. Internal message references
- * (`created_from_message_id`, `last_source_message_id`) are not
- * parsed — they are not user-facing.
+ * customer note and the closed timestamp. The backend now exposes the
+ * same `seller_action_required` boolean as the list, so detail
+ * presentation never has to recreate the review rule from `status`.
+ * Internal message references (`created_from_message_id`,
+ * `last_source_message_id`) are not parsed — they are not user-facing.
  */
 export type OrderDetailRecord = {
   id: number;
@@ -263,6 +262,7 @@ export type OrderDetailRecord = {
   updatedAt: string;
   completedAt: string | null;
   closedAt: string | null;
+  sellerActionRequired: boolean;
 };
 
 /** One `{value, label}` entry of a choice field's options snapshot. */
@@ -410,6 +410,7 @@ const parseOrderDetailRecord = (raw: unknown): OrderDetailRecord => {
     updatedAt: readRequiredString(raw, "updated_at"),
     completedAt: readNullableString(raw, "completed_at"),
     closedAt: readNullableString(raw, "closed_at"),
+    sellerActionRequired: readRequiredBoolean(raw, "seller_action_required"),
   };
 };
 

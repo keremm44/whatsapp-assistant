@@ -107,10 +107,15 @@ export function UnansweredQuestionDetail({
   );
 
   const mayAnswer = canAnswerUnanswered(question.status);
-  const mayDismiss = canDismissUnanswered(question.status);
+  // OPEN primary actions are shown only when the backend says seller
+  // action is required. Status remains a transition-validity check,
+  // not the source of the primary-action decision.
+  const primaryActionRequired = question.sellerActionRequired;
+  const mayDismiss =
+    primaryActionRequired && canDismissUnanswered(question.status);
 
   const answerForm =
-    question.status === "OPEN" ||
+    (question.status === "OPEN" && primaryActionRequired) ||
     (question.status === "DISMISSED" && answerMode === "edit") ? (
       <UnansweredAnswerEditor
         groupId={question.id}
@@ -243,7 +248,7 @@ export function UnansweredQuestionDetail({
         ) : null}
 
         {/* C. Doğru cevap / kayıtlı cevap / dismissed state */}
-        {question.status === "OPEN" ? (
+        {question.status === "OPEN" && primaryActionRequired ? (
           // OPEN belongs to the SAME record-detail language as ANSWERED
           // and DISMISSED: a ruled section, not a bounded form card
           // dropped into the panel. The enclosing sunken slab is gone —

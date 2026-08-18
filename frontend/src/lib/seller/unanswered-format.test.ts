@@ -66,6 +66,7 @@ const summary = (
   firstSeenAt: "2026-08-07T10:00:00+00:00",
   lastSeenAt: "2026-08-07T12:00:00+00:00",
   version: 3,
+  sellerActionRequired: true,
   ...overrides,
 });
 

@@ -313,20 +313,21 @@ export const getReturnConversationHref = (
 export const RETURN_RELATED_ORDER_LABEL = "İlgili siparişi aç";
 
 /**
- * Related order → the existing Orders worklist through its exact
- * external-order-number search (there is no `/seller/orders/{id}`
- * detail route to invent). The link exists only when the backend
- * returned a real related order carrying a usable external number;
- * an internal-only order id cannot be truthfully resolved by the
- * Orders surface, so it never fabricates navigation.
+ * Related order → exact selection in the existing Orders workbench.
+ * The backend relationship id is authoritative; the marketplace order
+ * number remains display/search data, not record identity.
  */
 export const getReturnRelatedOrderHref = (
-  order: { externalOrderNumber: string | null } | null,
+  order: { id: number } | null,
 ): string | null => {
-  if (order === null) return null;
-  const number = order.externalOrderNumber;
-  if (typeof number !== "string" || number.trim().length === 0) return null;
-  return ordersListHref({ view: "all", query: number.trim() });
+  if (
+    order === null ||
+    !Number.isInteger(order.id) ||
+    order.id <= 0
+  ) {
+    return null;
+  }
+  return ordersListHref({ view: "all", query: null, orderId: order.id });
 };
 
 /* ------------------------------------------------------------------ */

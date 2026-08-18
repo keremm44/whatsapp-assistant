@@ -623,24 +623,17 @@ test("absent or invalid customer id yields no conversation link", () => {
   assert.equal(getReturnConversationHref(1.5), null);
 });
 
-test("a related order with an external number opens the existing Orders search", () => {
+test("a related order id opens the exact existing Orders selection", () => {
   assert.equal(
-    getReturnRelatedOrderHref({ externalOrderNumber: "TR123456" }),
-    "/seller/orders?q=TR123456",
-  );
-  // Surrounding whitespace is normalized; the number itself is exact.
-  assert.equal(
-    getReturnRelatedOrderHref({ externalOrderNumber: "  A-77  " }),
-    "/seller/orders?q=A-77",
+    getReturnRelatedOrderHref({ id: 18 }),
+    "/seller/orders?order=18",
   );
   assert.equal(RETURN_RELATED_ORDER_LABEL, "İlgili siparişi aç");
 });
 
-test("a missing order or missing external number never fabricates a link", () => {
+test("a missing or invalid order id never fabricates a link", () => {
   assert.equal(getReturnRelatedOrderHref(null), null);
-  assert.equal(getReturnRelatedOrderHref({ externalOrderNumber: null }), null);
-  assert.equal(
-    getReturnRelatedOrderHref({ externalOrderNumber: "   " }),
-    null,
-  );
+  assert.equal(getReturnRelatedOrderHref({ id: 0 }), null);
+  assert.equal(getReturnRelatedOrderHref({ id: -3 }), null);
+  assert.equal(getReturnRelatedOrderHref({ id: 1.5 }), null);
 });

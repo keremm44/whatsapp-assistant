@@ -48,8 +48,8 @@ import { ControlHistorySection } from "./control-history-section";
  * conversation history, which is supporting material.
  *
  * Section labels are sentence-case metadata in neutral ink; the only
- * colour spent here is oxide, and only on the return/issue block,
- * which is the one genuinely seller-review context. Interaction blue
+ * colour spent here is oxide, and only on a return/issue block when
+ * the backend says seller action is required. Interaction blue
  * belongs to the destination links.
  *
  * Each block is compact and read-only: the rail points the seller to
@@ -111,9 +111,9 @@ function ContextBlock({
   icon: LucideIcon;
   label: string;
   /**
-   * `attention` is oxide and is reserved for the return/issue block
-   * (a genuine seller-review context). Everything else is neutral —
-   * type is carried by the icon and the label, never by colour.
+   * `attention` is oxide and is reserved for backend-confirmed seller
+   * review context. Everything else is neutral — type is carried by
+   * the icon and the label, never by colour.
    */
   labelTone: "attention" | "neutral";
   destination: Route;
@@ -186,8 +186,7 @@ function OrderContextBlock({ order }: { order: ConversationOrderDetail }) {
           Üzerine yazılacak: “{order.customText}”
         </p>
       ) : null}
-      {order.status === "SELLER_REVIEW_REQUIRED" &&
-      order.reviewReasonNote ? (
+      {order.sellerActionRequired && order.reviewReasonNote ? (
         <p className="line-clamp-3 type-row-secondary text-muted">
           {order.reviewReasonNote}
         </p>
@@ -210,7 +209,7 @@ function ReturnIssueContextBlock({
     <ContextBlock
       icon={Undo2}
       label="İade / sorun"
-      labelTone="attention"
+      labelTone={issue.sellerActionRequired ? "attention" : "neutral"}
       destination={conversationReturnDestination(issue) as Route}
       destinationLabel="İade ve sorunlara git"
     >

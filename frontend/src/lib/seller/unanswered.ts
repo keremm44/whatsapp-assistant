@@ -178,6 +178,8 @@ export type UnansweredQuestionSummary = {
   firstSeenAt: string;
   lastSeenAt: string;
   version: number;
+  /** Backend-authoritative primary-action signal. */
+  sellerActionRequired: boolean;
 };
 
 export type UnansweredListPage = {
@@ -205,6 +207,8 @@ export type UnansweredQuestionRecord = {
   dismissNote: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Backend-authoritative primary-action signal. */
+  sellerActionRequired: boolean;
 };
 
 /**
@@ -247,6 +251,7 @@ const parseUnansweredSummary = (raw: unknown): UnansweredQuestionSummary => {
     firstSeenAt: readRequiredString(raw, "first_seen_at"),
     lastSeenAt: readRequiredString(raw, "last_seen_at"),
     version: readRequiredPositiveInteger(raw, "version"),
+    sellerActionRequired: readRequiredBoolean(raw, "seller_action_required"),
   };
 };
 
@@ -266,6 +271,7 @@ const parseUnansweredRecord = (raw: unknown): UnansweredQuestionRecord => {
     dismissNote: readNullableString(raw, "dismiss_note"),
     createdAt: readRequiredString(raw, "created_at"),
     updatedAt: readRequiredString(raw, "updated_at"),
+    sellerActionRequired: readRequiredBoolean(raw, "seller_action_required"),
   };
 };
 

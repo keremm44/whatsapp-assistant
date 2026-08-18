@@ -161,12 +161,12 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
   const productName = getProductNameDisplay(order);
   const phone = getPhoneDisplay(order);
   const conversationHref = getOrderConversationHref(order.customerId);
-  // Same derivation the backend uses for summaries:
-  // has_image := image_message_id is not None.
-  const needsReview = order.status === "SELLER_REVIEW_REQUIRED";
-  // The detail exposes `status` directly (no summary action flag), so
-  // the header chip derives the SAME tone the list row uses:
-  // review -> attention, COMPLETE -> success, otherwise muted.
+  // Backend-authoritative primary-action signal. The detail contract
+  // now carries the same flag as the list, so this surface does not
+  // recreate the seller-review rule from status.
+  const needsReview = order.sellerActionRequired;
+  // COMPLETE remains a presentation-only tone decision; seller action
+  // comes exclusively from the backend flag above.
   const statusTone: StatusChipTone = needsReview
     ? "attention"
     : order.status === "COMPLETE"

@@ -285,11 +285,13 @@ export type ConversationControlView = {
 /** List-shape active order context (migration 020 list projection). */
 export type ConversationOrderContext = {
   id: number;
+  customerId: number;
   status: ConversationOrderStatus;
   externalOrderNumber: string | null;
   productNameSnapshot: string | null;
   version: number;
   updatedAt: string;
+  sellerActionRequired: boolean;
 };
 
 /**
@@ -310,10 +312,12 @@ export type ConversationOrderDetail = ConversationOrderContext & {
 /** List-shape active return/issue context. */
 export type ConversationReturnIssueContext = {
   id: number;
+  customerId: number;
   issueType: ReturnIssueType;
   status: ConversationReturnIssueStatus;
   version: number;
   updatedAt: string;
+  sellerActionRequired: boolean;
 };
 
 /**
@@ -341,6 +345,7 @@ export type ConversationUnansweredContext = {
   occurrenceCount: number;
   lastSeenAt: string | null;
   version: number;
+  sellerActionRequired: boolean;
 };
 
 /** Detail-shape open unanswered group (adds first_seen_at). */
@@ -654,6 +659,7 @@ const parseControlSummary = (raw: unknown): ConversationControlSummary => {
 const parseOrderContext = (raw: unknown): ConversationOrderContext => {
   if (!isPlainObject(raw)) throw contractError("active_order");
   const id = readRequiredPositiveInteger(raw, "id");
+  const customerId = readRequiredPositiveInteger(raw, "customer_id");
   const statusRaw = readKey(raw, "status");
   if (!isOrderStatus(statusRaw)) {
     throw contractError("active_order_status");
@@ -662,13 +668,16 @@ const parseOrderContext = (raw: unknown): ConversationOrderContext => {
   const productNameSnapshot = readNullableString(raw, "product_name_snapshot");
   const version = readRequiredPositiveInteger(raw, "version");
   const updatedAt = readRequiredString(raw, "updated_at");
+  const sellerActionRequired = readRequiredBoolean(raw, "seller_action_required");
   return {
     id,
+    customerId,
     status: statusRaw,
     externalOrderNumber,
     productNameSnapshot,
     version,
     updatedAt,
+    sellerActionRequired,
   };
 };
 
@@ -702,6 +711,7 @@ const parseReturnIssueContext = (
 ): ConversationReturnIssueContext => {
   if (!isPlainObject(raw)) throw contractError("active_return_issue");
   const id = readRequiredPositiveInteger(raw, "id");
+  const customerId = readRequiredPositiveInteger(raw, "customer_id");
   const issueTypeRaw = readKey(raw, "issue_type");
   if (!isReturnIssueType(issueTypeRaw)) {
     throw contractError("return_issue_type");
@@ -712,12 +722,15 @@ const parseReturnIssueContext = (
   }
   const version = readRequiredPositiveInteger(raw, "version");
   const updatedAt = readRequiredString(raw, "updated_at");
+  const sellerActionRequired = readRequiredBoolean(raw, "seller_action_required");
   return {
     id,
+    customerId,
     issueType: issueTypeRaw,
     status: statusRaw,
     version,
     updatedAt,
+    sellerActionRequired,
   };
 };
 
@@ -767,7 +780,15 @@ const parseUnansweredContext = (
   );
   const lastSeenAt = readNullableString(raw, "last_seen_at");
   const version = readRequiredPositiveInteger(raw, "version");
-  return { id, question, occurrenceCount, lastSeenAt, version };
+  const sellerActionRequired = readRequiredBoolean(raw, "seller_action_required");
+  return {
+    id,
+    question,
+    occurrenceCount,
+    lastSeenAt,
+    version,
+    sellerActionRequired,
+  };
 };
 
 const parseUnansweredGroup = (
