@@ -16,41 +16,65 @@ import { SellerIcon } from "./icon-map";
 import { SidebarSections } from "./seller-sidebar";
 
 /**
- * Topbar — the slim workspace rail.
+ * Topbar — a slim workspace rail that gets out of the way while reading.
  *
- * The rail belongs to the WORK, not to the navigation frame, so it
- * sits on the canvas material (one step above the spine) with a
- * single structural rule beneath it. It stays deliberately thin:
- * every pixel it takes is a pixel the ledger does not get.
- *
- *   - Left: the seller's real bootstrap identity (the store name from
- *     `GET /seller/me`). The decorative "Mağaza" chip stays removed —
- *     it restated the adjacent label and carried no backend state.
- *     No truthful business identity or data is lost.
- *
- *   - Tablet only (md to lg): a Menu trigger opens the same
- *     navigation in a Sheet, rendering the spine material and the
- *     identical section list as the desktop spine
- *     (`SidebarSections`), so tablet and desktop can never drift.
- *
- *   - No fabricated utility chrome: no notifications, no
- *     announcements, no assistant health. Those have no seller-facing
- *     backend contract.
+ * Downward scrolling past the opening region slides the rail above the
+ * viewport; upward scrolling, returning near the top, route changes, or
+ * keyboard focus reveal it immediately. The movement is transform-only
+ * so it stays cheap, and reduced-motion users get an instant state change.
  */
 export function SellerTopbar({
   storeName,
 }: {
-  /**
-   * The seller-facing store / business name returned by
-   * `GET /seller/me`. The layout is responsible for resolving
-   * the bootstrap state and passing either the real name or the
-   * approved generic fallback; this component does not invent
-   * labels.
-   */
+  /** Seller-facing store / business name returned by GET /seller/me. */
   storeName: string;
 }) {
+  const pathname = usePathname();
+  const [isHidden, setIsHidden] = React.useState(false);
+  const lastScrollY = React.useRef(0);
+  const ticking = React.useRef(false);
+
+  React.useEffect(() => {
+    lastScrollY.current = Math.max(window.scrollY, 0);
+    setIsHidden(false);
+
+    const update = () => {
+      const nextY = Math.max(window.scrollY, 0);
+      const delta = nextY - lastScrollY.current;
+
+      if (nextY < 72) {
+        setIsHidden(false);
+      } else if (delta > 7) {
+        setIsHidden(true);
+      } else if (delta < -5) {
+        setIsHidden(false);
+      }
+
+      lastScrollY.current = nextY;
+      ticking.current = false;
+    };
+
+    const onScroll = () => {
+      if (ticking.current) return;
+      ticking.current = true;
+      window.requestAnimationFrame(update);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [pathname]);
+
   return (
-    <header className="sticky top-0 z-10 border-b border-divider bg-canvas">
+    <header
+      onFocusCapture={() => setIsHidden(false)}
+      className={cn(
+        "sticky top-0 z-10 border-b border-divider bg-canvas/92 backdrop-blur-md",
+        "transition-[transform,opacity,box-shadow] duration-200 ease-out will-change-transform motion-reduce:transition-none",
+        isHidden
+          ? "pointer-events-none -translate-y-full opacity-0"
+          : "translate-y-0 opacity-100 shadow-[0_8px_24px_rgba(0,0,0,0.08)]",
+      )}
+    >
       <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
         <TabletNavSheet />
         <p
@@ -59,6 +83,14 @@ export function SellerTopbar({
         >
           {storeName}
         </p>
+        <span
+          aria-hidden="true"
+          className="ml-auto hidden items-center gap-1.5 sm:flex"
+        >
+          <span className="h-px w-8 bg-primary/45" />
+          <span className="h-px w-3 bg-brand/55" />
+          <span className="h-px w-5 bg-divider" />
+        </span>
       </div>
     </header>
   );
@@ -73,7 +105,7 @@ const TabletNavSheet = () => {
       <SheetTrigger
         aria-label="Menüyü aç"
         className={cn(
-          "-ml-2 hidden h-11 w-11 items-center justify-center rounded-control text-muted transition-colors hover:bg-elevated hover:text-foreground md:inline-flex lg:hidden",
+          "-ml-2 hidden h-11 w-11 items-center justify-center rounded-control text-muted transition-[background-color,color,transform] duration-200 hover:scale-[1.03] hover:bg-elevated hover:text-foreground motion-reduce:transform-none md:inline-flex lg:hidden",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
         )}
       >
@@ -83,9 +115,6 @@ const TabletNavSheet = () => {
         side="left"
         className={cn(
           "w-[300px] gap-0 bg-chrome p-0 text-chrome-foreground sm:max-w-sm",
-          // The Sheet's own close control inherits paper-theme ink;
-          // on the dark spine material it needs the chrome ink role
-          // to stay legible and to keep a visible hover step.
           "[&>button]:text-chrome-foreground/70 [&>button:hover]:text-chrome-foreground",
         )}
       >
