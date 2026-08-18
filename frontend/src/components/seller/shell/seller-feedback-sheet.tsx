@@ -48,8 +48,8 @@ export function SellerFeedbackSheet({
         <button
           type="button"
           className={cn(
-            "inline-flex h-9 shrink-0 items-center gap-2 rounded-control border border-primary/30 bg-primary/5 px-3 text-[13px] font-medium text-foreground transition-colors",
-            "hover:border-primary/50 hover:bg-primary/10",
+            "inline-flex h-9 shrink-0 items-center gap-2 rounded-control border border-boundary bg-raised px-3 text-[13px] font-medium text-foreground transition-colors",
+            "hover:border-chrome-foreground/25 hover:bg-elevated",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
           )}
           aria-label="Bize ulaş"
