@@ -185,14 +185,6 @@ export type ConversationControlAction =
 /* Typed contract (camelCase)                                          */
 /* ------------------------------------------------------------------ */
 
-/**
- * Customer identity block. `name` and `whatsappNumber` follow the
- * underlying `customers` columns: `whatsapp_number` is always written
- * on insert, `name` is optional — both are still typed nullable
- * because the base table predates the migration chain and the SQL
- * projection applies no COALESCE. `isBlocked` / `totalMessages` are
- * written as non-null defaults at insert (`False` / `0`).
- */
 export type ConversationCustomerSummary = {
   id: number;
   name: string | null;
@@ -204,7 +196,6 @@ export type ConversationCustomerSummary = {
   lastMessageAt: string | null;
 };
 
-/** Detail payload adds the two moderation columns from migration 001. */
 export type ConversationCustomerDetail = ConversationCustomerSummary & {
   blockedReason: string | null;
   blockedAt: string | null;
@@ -213,13 +204,7 @@ export type ConversationCustomerDetail = ConversationCustomerSummary & {
 export type ConversationMessage = {
   id: number;
   direction: "incoming" | "outgoing";
-  /** NULL for pure media messages; content column is nullable. */
   content: string | null;
-  /**
-   * Free-form provider string (<= 40 chars, default "text"). NOT an
-   * enum — callers must rely on `mediaAvailable`, never on parsing
-   * this field, to decide media presentation.
-   */
   messageType: string;
   wasAutoReplied: boolean;
   mediaAvailable: boolean;
@@ -229,29 +214,15 @@ export type ConversationMessage = {
 export type ConversationMessagePage = {
   limit: number;
   hasMore: boolean;
-  /**
-   * Oldest visible message id; non-null exactly when `hasMore` is
-   * true (SQL invariant, enforced in the parser).
-   */
   nextBeforeMessageId: number | null;
 };
 
-/**
- * Raw conversation-state block (flow machine). V1 parses it as part
- * of the contract but deliberately does NOT render it.
- */
 export type ConversationFlowStateBlock = {
   state: ConversationFlowState;
   stateType: ConversationFlowStateType;
   updatedAt: string;
 };
 
-/**
- * Raw control summary as embedded in list rows and the detail
- * payload. Contains state + version for optimistic concurrency but
- * NO display name and NO capabilities — those come only from the
- * dedicated control endpoint (`ConversationControlView`).
- */
 export type ConversationControlSummary = {
   state: ConversationControlState;
   changedAt: string;
@@ -262,7 +233,6 @@ export type ConversationControlSummary = {
   version: number;
 };
 
-/** Backend-owned capability map (conversation_control_service._CAPABILITIES). */
 export type ConversationCapabilities = {
   canTakeOver: boolean;
   canResumeAssistant: boolean;
@@ -270,33 +240,24 @@ export type ConversationCapabilities = {
   canActivateAssistant: boolean;
 };
 
-/**
- * Authoritative control presentation from
- * `GET/POST /seller/conversations/{id}/control`. `displayName` is a
- * backend-owned Turkish label; the parser enforces it matches the
- * backend's own CONTROL_DISPLAY_NAMES mapping exactly.
- */
 export type ConversationControlView = {
   customerId: number;
   control: ConversationControlSummary & { displayName: string };
   capabilities: ConversationCapabilities;
 };
 
-/** List-shape active order context (migration 020 list projection). */
+/** List-shape active order context, enriched by seller_panel_service. */
 export type ConversationOrderContext = {
   id: number;
+  customerId: number;
   status: ConversationOrderStatus;
   externalOrderNumber: string | null;
   productNameSnapshot: string | null;
   version: number;
   updatedAt: string;
+  sellerActionRequired: boolean;
 };
 
-/**
- * Detail-shape active order. Snapshot columns follow the orders table
- * (migration 014): all snapshot/review fields are nullable; status,
- * version, created_at, updated_at are NOT NULL.
- */
 export type ConversationOrderDetail = ConversationOrderContext & {
   productId: number | null;
   customerPhoneSnapshot: string | null;
@@ -307,20 +268,17 @@ export type ConversationOrderDetail = ConversationOrderContext & {
   createdAt: string;
 };
 
-/** List-shape active return/issue context. */
+/** List-shape active return/issue context, enriched by seller_panel_service. */
 export type ConversationReturnIssueContext = {
   id: number;
+  customerId: number;
   issueType: ReturnIssueType;
   status: ConversationReturnIssueStatus;
   version: number;
   updatedAt: string;
+  sellerActionRequired: boolean;
 };
 
-/**
- * Detail-shape active return/issue (migration 016): order linkage and
- * snapshot/reason fields nullable; `imageRequirementSnapshot` is NOT
- * NULL (default 'OPTIONAL'); `reviewRequiredAt` nullable.
- */
 export type ConversationReturnIssueDetail =
   ConversationReturnIssueContext & {
     orderId: number | null;
@@ -334,28 +292,19 @@ export type ConversationReturnIssueDetail =
     reviewRequiredAt: string | null;
   };
 
-/** List-shape open unanswered group (single, latest occurrence join). */
 export type ConversationUnansweredContext = {
   id: number;
   question: string | null;
   occurrenceCount: number;
   lastSeenAt: string | null;
   version: number;
+  sellerActionRequired: boolean;
 };
 
-/** Detail-shape open unanswered group (adds first_seen_at). */
 export type ConversationUnansweredGroup = ConversationUnansweredContext & {
   firstSeenAt: string | null;
 };
 
-/**
- * One control audit entry. Rendered read-only as the "Konuşma
- * geçmişi" section of the conversation context (transition + optional
- * reason note + timestamp only; the technical fields are parsed for
- * contract completeness but never seller-facing).
- * from_state / to_state are NOT NULL with CHECK constraints
- * (migration 013), so both are strict allowlist parse sites.
- */
 export type ConversationControlHistoryEntry = {
   id: number;
   fromState: ConversationControlState;
@@ -370,7 +319,6 @@ export type ConversationControlHistoryEntry = {
   createdAt: string;
 };
 
-/** One conversation row in the seller's queue. */
 export type ConversationListItem = {
   customer: ConversationCustomerSummary;
   lastMessage: ConversationMessage | null;
@@ -378,7 +326,6 @@ export type ConversationListItem = {
   control: ConversationControlSummary | null;
   activeOrder: ConversationOrderContext | null;
   activeReturnIssue: ConversationReturnIssueContext | null;
-  /** The list SQL joins at most ONE open group (LATERAL LIMIT 1). */
   openUnanswered: ConversationUnansweredContext | null;
   needsAttention: boolean;
   attentionReason: ConversationAttentionReason | null;
@@ -389,7 +336,6 @@ export type ConversationListPage = {
   limit: number;
   offset: number;
   attentionOnly: boolean;
-  /** Echo of the optional backend `control_state` filter; null when omitted. */
   controlState: ConversationControlState | null;
   conversations: ConversationListItem[];
 };
@@ -397,7 +343,6 @@ export type ConversationListPage = {
 export type ConversationDetail = {
   customer: ConversationCustomerDetail;
   conversationState: ConversationFlowStateBlock | null;
-  /** Raw state/version only — never presentation. */
   control: ConversationControlSummary | null;
   messages: ConversationMessage[];
   messagePage: ConversationMessagePage;
@@ -408,7 +353,7 @@ export type ConversationDetail = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Parser primitives (mirrors dashboard-tasks.ts discipline)           */
+/* Parser primitives                                                   */
 /* ------------------------------------------------------------------ */
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
@@ -546,54 +491,42 @@ const parseCustomerSummary = (
   raw: unknown,
 ): ConversationCustomerSummary => {
   if (!isPlainObject(raw)) throw contractError("customer");
-  const id = readRequiredPositiveInteger(raw, "id");
-  const name = readNullableString(raw, "name");
-  const whatsappNumber = readNullableString(raw, "whatsapp_number");
-  const isBlocked = readRequiredBoolean(raw, "is_blocked");
-  const mutedUntil = readNullableString(raw, "muted_until");
-  const isMuted = readRequiredBoolean(raw, "is_muted");
-  const totalMessages = readRequiredNonNegativeInteger(raw, "total_messages");
-  const lastMessageAt = readNullableString(raw, "last_message_at");
   return {
-    id,
-    name,
-    whatsappNumber,
-    isBlocked,
-    mutedUntil,
-    isMuted,
-    totalMessages,
-    lastMessageAt,
+    id: readRequiredPositiveInteger(raw, "id"),
+    name: readNullableString(raw, "name"),
+    whatsappNumber: readNullableString(raw, "whatsapp_number"),
+    isBlocked: readRequiredBoolean(raw, "is_blocked"),
+    mutedUntil: readNullableString(raw, "muted_until"),
+    isMuted: readRequiredBoolean(raw, "is_muted"),
+    totalMessages: readRequiredNonNegativeInteger(raw, "total_messages"),
+    lastMessageAt: readNullableString(raw, "last_message_at"),
   };
 };
 
 const parseCustomerDetail = (raw: unknown): ConversationCustomerDetail => {
   const summary = parseCustomerSummary(raw);
   if (!isPlainObject(raw)) throw contractError("customer");
-  const blockedReason = readNullableString(raw, "blocked_reason");
-  const blockedAt = readNullableString(raw, "blocked_at");
-  return { ...summary, blockedReason, blockedAt };
+  return {
+    ...summary,
+    blockedReason: readNullableString(raw, "blocked_reason"),
+    blockedAt: readNullableString(raw, "blocked_at"),
+  };
 };
 
 const parseMessage = (raw: unknown): ConversationMessage => {
   if (!isPlainObject(raw)) throw contractError("message");
-  const id = readRequiredPositiveInteger(raw, "id");
   const directionRaw = readKey(raw, "direction");
   if (directionRaw !== "incoming" && directionRaw !== "outgoing") {
     throw contractError("message_direction");
   }
-  const content = readNullableString(raw, "content");
-  const messageType = readRequiredString(raw, "message_type");
-  const wasAutoReplied = readRequiredBoolean(raw, "was_auto_replied");
-  const mediaAvailable = readRequiredBoolean(raw, "media_available");
-  const createdAt = readRequiredString(raw, "created_at");
   return {
-    id,
+    id: readRequiredPositiveInteger(raw, "id"),
     direction: directionRaw,
-    content,
-    messageType,
-    wasAutoReplied,
-    mediaAvailable,
-    createdAt,
+    content: readNullableString(raw, "content"),
+    messageType: readRequiredString(raw, "message_type"),
+    wasAutoReplied: readRequiredBoolean(raw, "was_auto_replied"),
+    mediaAvailable: readRequiredBoolean(raw, "media_available"),
+    createdAt: readRequiredString(raw, "created_at"),
   };
 };
 
@@ -613,13 +546,14 @@ const parseFlowStateBlock = (
     throw contractError("conversation_state_type");
   }
   const stateType = stateTypeRaw as ConversationFlowStateType;
-  // Fixed mapping owned by the backend STATE_TYPES table; a payload
-  // that violates it is a contract error, not something to repair.
   if (FLOW_STATE_TO_TYPE[stateRaw] !== stateType) {
     throw contractError("conversation_state_type_mismatch");
   }
-  const updatedAt = readRequiredString(raw, "updated_at");
-  return { state: stateRaw, stateType, updatedAt };
+  return {
+    state: stateRaw,
+    stateType,
+    updatedAt: readRequiredString(raw, "updated_at"),
+  };
 };
 
 const parseControlSummary = (raw: unknown): ConversationControlSummary => {
@@ -628,72 +562,47 @@ const parseControlSummary = (raw: unknown): ConversationControlSummary => {
   if (!isControlState(stateRaw)) {
     throw contractError("control_state");
   }
-  const changedAt = readRequiredString(raw, "changed_at");
-  const changedByProfileId = readNullablePositiveInteger(
-    raw,
-    "changed_by_profile_id",
-  );
-  const reasonCode = readNullableString(raw, "reason_code");
-  const reasonNote = readNullableString(raw, "reason_note");
-  const resumeAfterMessageId = readNullablePositiveInteger(
-    raw,
-    "resume_after_message_id",
-  );
-  const version = readRequiredPositiveInteger(raw, "version");
   return {
     state: stateRaw,
-    changedAt,
-    changedByProfileId,
-    reasonCode,
-    reasonNote,
-    resumeAfterMessageId,
-    version,
+    changedAt: readRequiredString(raw, "changed_at"),
+    changedByProfileId: readNullablePositiveInteger(raw, "changed_by_profile_id"),
+    reasonCode: readNullableString(raw, "reason_code"),
+    reasonNote: readNullableString(raw, "reason_note"),
+    resumeAfterMessageId: readNullablePositiveInteger(raw, "resume_after_message_id"),
+    version: readRequiredPositiveInteger(raw, "version"),
   };
 };
 
 const parseOrderContext = (raw: unknown): ConversationOrderContext => {
   if (!isPlainObject(raw)) throw contractError("active_order");
-  const id = readRequiredPositiveInteger(raw, "id");
   const statusRaw = readKey(raw, "status");
   if (!isOrderStatus(statusRaw)) {
     throw contractError("active_order_status");
   }
-  const externalOrderNumber = readNullableString(raw, "external_order_number");
-  const productNameSnapshot = readNullableString(raw, "product_name_snapshot");
-  const version = readRequiredPositiveInteger(raw, "version");
-  const updatedAt = readRequiredString(raw, "updated_at");
   return {
-    id,
+    id: readRequiredPositiveInteger(raw, "id"),
+    customerId: readRequiredPositiveInteger(raw, "customer_id"),
     status: statusRaw,
-    externalOrderNumber,
-    productNameSnapshot,
-    version,
-    updatedAt,
+    externalOrderNumber: readNullableString(raw, "external_order_number"),
+    productNameSnapshot: readNullableString(raw, "product_name_snapshot"),
+    version: readRequiredPositiveInteger(raw, "version"),
+    updatedAt: readRequiredString(raw, "updated_at"),
+    sellerActionRequired: readRequiredBoolean(raw, "seller_action_required"),
   };
 };
 
 const parseOrderDetail = (raw: unknown): ConversationOrderDetail => {
   const base = parseOrderContext(raw);
   if (!isPlainObject(raw)) throw contractError("active_order");
-  const productId = readNullablePositiveInteger(raw, "product_id");
-  const customerPhoneSnapshot = readNullableString(
-    raw,
-    "customer_phone_snapshot",
-  );
-  const imageMessageId = readNullablePositiveInteger(raw, "image_message_id");
-  const customText = readNullableString(raw, "custom_text");
-  const reviewReasonCode = readNullableString(raw, "review_reason_code");
-  const reviewReasonNote = readNullableString(raw, "review_reason_note");
-  const createdAt = readRequiredString(raw, "created_at");
   return {
     ...base,
-    productId,
-    customerPhoneSnapshot,
-    imageMessageId,
-    customText,
-    reviewReasonCode,
-    reviewReasonNote,
-    createdAt,
+    productId: readNullablePositiveInteger(raw, "product_id"),
+    customerPhoneSnapshot: readNullableString(raw, "customer_phone_snapshot"),
+    imageMessageId: readNullablePositiveInteger(raw, "image_message_id"),
+    customText: readNullableString(raw, "custom_text"),
+    reviewReasonCode: readNullableString(raw, "review_reason_code"),
+    reviewReasonNote: readNullableString(raw, "review_reason_note"),
+    createdAt: readRequiredString(raw, "created_at"),
   };
 };
 
@@ -701,7 +610,6 @@ const parseReturnIssueContext = (
   raw: unknown,
 ): ConversationReturnIssueContext => {
   if (!isPlainObject(raw)) throw contractError("active_return_issue");
-  const id = readRequiredPositiveInteger(raw, "id");
   const issueTypeRaw = readKey(raw, "issue_type");
   if (!isReturnIssueType(issueTypeRaw)) {
     throw contractError("return_issue_type");
@@ -710,14 +618,14 @@ const parseReturnIssueContext = (
   if (!isReturnIssueStatus(statusRaw)) {
     throw contractError("return_issue_status");
   }
-  const version = readRequiredPositiveInteger(raw, "version");
-  const updatedAt = readRequiredString(raw, "updated_at");
   return {
-    id,
+    id: readRequiredPositiveInteger(raw, "id"),
+    customerId: readRequiredPositiveInteger(raw, "customer_id"),
     issueType: issueTypeRaw,
     status: statusRaw,
-    version,
-    updatedAt,
+    version: readRequiredPositiveInteger(raw, "version"),
+    updatedAt: readRequiredString(raw, "updated_at"),
+    sellerActionRequired: readRequiredBoolean(raw, "seller_action_required"),
   };
 };
 
@@ -726,32 +634,21 @@ const parseReturnIssueDetail = (
 ): ConversationReturnIssueDetail => {
   const base = parseReturnIssueContext(raw);
   if (!isPlainObject(raw)) throw contractError("active_return_issue");
-  const orderId = readNullablePositiveInteger(raw, "order_id");
-  const externalOrderNumberSnapshot = readNullableString(
-    raw,
-    "external_order_number_snapshot",
-  );
-  const productNameSnapshot = readNullableString(raw, "product_name_snapshot");
-  const reasonText = readNullableString(raw, "reason_text");
   const imageRequirementRaw = readKey(raw, "image_requirement_snapshot");
   if (!isImageRequirement(imageRequirementRaw)) {
     throw contractError("return_issue_image_requirement");
   }
-  const reviewReasonCode = readNullableString(raw, "review_reason_code");
-  const reviewNote = readNullableString(raw, "review_note");
-  const createdAt = readRequiredString(raw, "created_at");
-  const reviewRequiredAt = readNullableString(raw, "review_required_at");
   return {
     ...base,
-    orderId,
-    externalOrderNumberSnapshot,
-    productNameSnapshot,
-    reasonText,
+    orderId: readNullablePositiveInteger(raw, "order_id"),
+    externalOrderNumberSnapshot: readNullableString(raw, "external_order_number_snapshot"),
+    productNameSnapshot: readNullableString(raw, "product_name_snapshot"),
+    reasonText: readNullableString(raw, "reason_text"),
     imageRequirementSnapshot: imageRequirementRaw,
-    reviewReasonCode,
-    reviewNote,
-    createdAt,
-    reviewRequiredAt,
+    reviewReasonCode: readNullableString(raw, "review_reason_code"),
+    reviewNote: readNullableString(raw, "review_note"),
+    createdAt: readRequiredString(raw, "created_at"),
+    reviewRequiredAt: readNullableString(raw, "review_required_at"),
   };
 };
 
@@ -759,15 +656,14 @@ const parseUnansweredContext = (
   raw: unknown,
 ): ConversationUnansweredContext => {
   if (!isPlainObject(raw)) throw contractError("open_unanswered");
-  const id = readRequiredPositiveInteger(raw, "id");
-  const question = readNullableString(raw, "question");
-  const occurrenceCount = readRequiredPositiveInteger(
-    raw,
-    "occurrence_count",
-  );
-  const lastSeenAt = readNullableString(raw, "last_seen_at");
-  const version = readRequiredPositiveInteger(raw, "version");
-  return { id, question, occurrenceCount, lastSeenAt, version };
+  return {
+    id: readRequiredPositiveInteger(raw, "id"),
+    question: readNullableString(raw, "question"),
+    occurrenceCount: readRequiredPositiveInteger(raw, "occurrence_count"),
+    lastSeenAt: readNullableString(raw, "last_seen_at"),
+    version: readRequiredPositiveInteger(raw, "version"),
+    sellerActionRequired: readRequiredBoolean(raw, "seller_action_required"),
+  };
 };
 
 const parseUnansweredGroup = (
@@ -775,11 +671,9 @@ const parseUnansweredGroup = (
 ): ConversationUnansweredGroup => {
   const base = parseUnansweredContext(raw);
   if (!isPlainObject(raw)) throw contractError("open_unanswered");
-  const firstSeenAt = readNullableString(raw, "first_seen_at");
-  return { ...base, firstSeenAt };
+  return { ...base, firstSeenAt: readNullableString(raw, "first_seen_at") };
 };
 
-/** Parse a nullable-or-object block (used for context joins). */
 const parseNullableBlock = <T>(
   obj: Record<string, unknown>,
   key: string,
@@ -797,12 +691,7 @@ const parseMessagePage = (raw: unknown): ConversationMessagePage => {
     throw contractError("message_page_limit");
   }
   const hasMore = readRequiredBoolean(raw, "has_more");
-  const nextBeforeMessageId = readNullablePositiveInteger(
-    raw,
-    "next_before_message_id",
-  );
-  // SQL invariant: next_before_message_id is set exactly when
-  // has_more is true (it is the oldest visible message id).
+  const nextBeforeMessageId = readNullablePositiveInteger(raw, "next_before_message_id");
   if (hasMore && nextBeforeMessageId === null) {
     throw contractError("message_page_cursor_missing");
   }
@@ -816,7 +705,6 @@ const parseControlHistoryEntry = (
   raw: unknown,
 ): ConversationControlHistoryEntry => {
   if (!isPlainObject(raw)) throw contractError("control_history_entry");
-  const id = readRequiredPositiveInteger(raw, "id");
   const fromStateRaw = readKey(raw, "from_state");
   if (!isControlState(fromStateRaw)) {
     throw contractError("control_history_from_state");
@@ -826,20 +714,14 @@ const parseControlHistoryEntry = (
     throw contractError("control_history_to_state");
   }
   return {
-    id,
+    id: readRequiredPositiveInteger(raw, "id"),
     fromState: fromStateRaw,
     toState: toStateRaw,
     reasonCode: readNullableString(raw, "reason_code"),
     reasonNote: readNullableString(raw, "reason_note"),
-    changedByProfileId: readNullablePositiveInteger(
-      raw,
-      "changed_by_profile_id",
-    ),
+    changedByProfileId: readNullablePositiveInteger(raw, "changed_by_profile_id"),
     triggerMessageId: readNullablePositiveInteger(raw, "trigger_message_id"),
-    resumeAfterMessageId: readNullablePositiveInteger(
-      raw,
-      "resume_after_message_id",
-    ),
+    resumeAfterMessageId: readNullablePositiveInteger(raw, "resume_after_message_id"),
     previousVersion: readNullablePositiveInteger(raw, "previous_version"),
     newVersion: readNullablePositiveInteger(raw, "new_version"),
     createdAt: readRequiredString(raw, "created_at"),
@@ -854,23 +736,11 @@ const parseConversationListItem = (raw: unknown): ConversationListItem => {
   if (!isPlainObject(raw)) throw contractError("conversation");
   const customer = parseCustomerSummary(readKey(raw, "customer"));
   const lastMessage = parseNullableBlock(raw, "last_message", parseMessage);
-  const conversationState = parseNullableBlock(
-    raw,
-    "conversation_state",
-    parseFlowStateBlock,
-  );
+  const conversationState = parseNullableBlock(raw, "conversation_state", parseFlowStateBlock);
   const control = parseNullableBlock(raw, "control", parseControlSummary);
   const activeOrder = parseNullableBlock(raw, "active_order", parseOrderContext);
-  const activeReturnIssue = parseNullableBlock(
-    raw,
-    "active_return_issue",
-    parseReturnIssueContext,
-  );
-  const openUnanswered = parseNullableBlock(
-    raw,
-    "open_unanswered",
-    parseUnansweredContext,
-  );
+  const activeReturnIssue = parseNullableBlock(raw, "active_return_issue", parseReturnIssueContext);
+  const openUnanswered = parseNullableBlock(raw, "open_unanswered", parseUnansweredContext);
   const needsAttention = readRequiredBoolean(raw, "needs_attention");
   const attentionReasonRaw = readKey(raw, "attention_reason");
   if (attentionReasonRaw !== null && !isAttentionReason(attentionReasonRaw)) {
@@ -879,8 +749,6 @@ const parseConversationListItem = (raw: unknown): ConversationListItem => {
   const attentionReason = isAttentionReason(attentionReasonRaw)
     ? attentionReasonRaw
     : null;
-  // SQL invariant from migration 020: attention_reason is non-null
-  // exactly when needs_attention is true.
   if (needsAttention && attentionReason === null) {
     throw contractError("attention_reason_missing");
   }
@@ -902,8 +770,6 @@ const parseConversationListItem = (raw: unknown): ConversationListItem => {
 
 const parseConversationListPage = (raw: unknown): ConversationListPage => {
   if (!isPlainObject(raw)) throw contractError("response");
-  // `toplam` is the total filtered count (mirrors the dashboard's
-  // Turkish key); limit/offset are echoed from the request.
   const total = readRequiredNonNegativeInteger(raw, "toplam");
   const limitRaw = readKey(raw, "limit");
   if (!isPositiveInteger(limitRaw) || limitRaw > 100) {
@@ -916,14 +782,13 @@ const parseConversationListPage = (raw: unknown): ConversationListPage => {
   if (!Array.isArray(conversationsRaw)) {
     throw contractError("conversations");
   }
-  const conversations = conversationsRaw.map(parseConversationListItem);
   return {
     total,
     limit: limitRaw,
     offset,
     attentionOnly,
     controlState,
-    conversations,
+    conversations: conversationsRaw.map(parseConversationListItem),
   };
 };
 
@@ -939,52 +804,29 @@ const parseOptionalControlStateFilter = (
 
 const parseConversationDetail = (raw: unknown): ConversationDetail => {
   if (!isPlainObject(raw)) throw contractError("response");
-  const customer = parseCustomerDetail(readKey(raw, "customer"));
-  const conversationState = parseNullableBlock(
-    raw,
-    "conversation_state",
-    parseFlowStateBlock,
-  );
-  const control = parseNullableBlock(raw, "control", parseControlSummary);
   const messagesRaw = readKey(raw, "messages");
   if (!Array.isArray(messagesRaw)) throw contractError("messages");
-  const messages = messagesRaw.map(parseMessage);
-  const messagePage = parseMessagePage(readKey(raw, "message_page"));
   const controlHistoryRaw = readKey(raw, "control_history");
   if (!Array.isArray(controlHistoryRaw)) {
     throw contractError("control_history");
   }
-  const controlHistory = controlHistoryRaw.map(parseControlHistoryEntry);
-  const activeOrder = parseNullableBlock(raw, "active_order", parseOrderDetail);
-  const activeReturnIssue = parseNullableBlock(
-    raw,
-    "active_return_issue",
-    parseReturnIssueDetail,
-  );
   const openUnansweredRaw = readKey(raw, "open_unanswered");
   if (!Array.isArray(openUnansweredRaw)) {
     throw contractError("open_unanswered");
   }
-  const openUnanswered = openUnansweredRaw.map(parseUnansweredGroup);
   return {
-    customer,
-    conversationState,
-    control,
-    messages,
-    messagePage,
-    controlHistory,
-    activeOrder,
-    activeReturnIssue,
-    openUnanswered,
+    customer: parseCustomerDetail(readKey(raw, "customer")),
+    conversationState: parseNullableBlock(raw, "conversation_state", parseFlowStateBlock),
+    control: parseNullableBlock(raw, "control", parseControlSummary),
+    messages: messagesRaw.map(parseMessage),
+    messagePage: parseMessagePage(readKey(raw, "message_page")),
+    controlHistory: controlHistoryRaw.map(parseControlHistoryEntry),
+    activeOrder: parseNullableBlock(raw, "active_order", parseOrderDetail),
+    activeReturnIssue: parseNullableBlock(raw, "active_return_issue", parseReturnIssueDetail),
+    openUnanswered: openUnansweredRaw.map(parseUnansweredGroup),
   };
 };
 
-/**
- * Backend-owned display names (conversation_control_service
- * .CONTROL_DISPLAY_NAMES). The control endpoint echoes them; the
- * frontend enforces the exact mapping rather than maintaining its
- * own copy of the labels.
- */
 const CONTROL_DISPLAY_NAMES: Record<ConversationControlState, string> = {
   ASSISTANT_ACTIVE: "Asistan aktif",
   SELLER_TAKEN_OVER: "Siz ilgileniyorsunuz",
@@ -1009,17 +851,13 @@ const parseControlView = (raw: unknown): ConversationControlView => {
   if (!isPlainObject(controlRaw)) throw contractError("control");
   const summary = parseControlSummary(controlRaw);
   const displayName = readRequiredString(controlRaw, "display_name");
-  // Cross-field invariant: the display name is the backend's own
-  // mapping for the returned state; anything else means the payload
-  // drifted from CONTROL_DISPLAY_NAMES.
   if (CONTROL_DISPLAY_NAMES[summary.state] !== displayName) {
     throw contractError("control_display_name_mismatch");
   }
-  const capabilities = parseCapabilities(readKey(raw, "capabilities"));
   return {
     customerId,
     control: { ...summary, displayName },
-    capabilities,
+    capabilities: parseCapabilities(readKey(raw, "capabilities")),
   };
 };
 
@@ -1040,30 +878,26 @@ const parseControlMutationResult = (
   ) {
     throw contractError("action");
   }
-  const changed = readRequiredBoolean(raw, "changed");
   return {
     ...view,
     action: actionRaw as ConversationControlAction,
-    changed,
+    changed: readRequiredBoolean(raw, "changed"),
   };
 };
 
 /* ------------------------------------------------------------------ */
-/* Fetchers (environment-neutral; caller supplies the access token)    */
+/* Fetchers                                                            */
 /* ------------------------------------------------------------------ */
 
 export type FetchConversationListOptions = {
   attentionOnly?: boolean;
-  /** Exact backend control-state filter; omitted means no filter. */
   controlState?: ConversationControlState;
-  /** 1..100; when omitted the backend default (20) applies. */
   limit?: number;
   offset?: number;
   signal?: AbortSignal;
   cache?: RequestCache;
 };
 
-/** Fetch and parse `GET /seller/conversations`. */
 export const fetchConversationList = async (
   accessToken: string,
   options?: FetchConversationListOptions,
@@ -1078,16 +912,13 @@ export const fetchConversationList = async (
 };
 
 export type FetchConversationDetailOptions = {
-  /** 1..100; when omitted the backend default (50) applies. */
   messageLimit?: number;
-  /** Oldest-first paging cursor from `messagePage.nextBeforeMessageId`. */
   beforeMessageId?: number;
   controlHistoryLimit?: number;
   signal?: AbortSignal;
   cache?: RequestCache;
 };
 
-/** Fetch and parse `GET /seller/conversations/{customerId}`. */
 export const fetchConversationDetail = async (
   accessToken: string,
   customerId: number,
@@ -1112,10 +943,6 @@ export const fetchConversationDetail = async (
   return parseConversationDetail(raw);
 };
 
-/**
- * Fetch and parse `GET /seller/conversations/{customerId}/control` —
- * the ONLY source of the control display name and capability map.
- */
 export const fetchConversationControl = async (
   accessToken: string,
   customerId: number,
@@ -1129,14 +956,6 @@ export const fetchConversationControl = async (
   return parseControlView(raw);
 };
 
-/**
- * Post a control action to
- * `POST /seller/conversations/{customerId}/control`. Optimistic
- * concurrency is mandatory: `expectedVersion` must be the version the
- * seller's screen was showing. A stale version yields HTTP 409 with
- * the backend's own calm Turkish message; the caller must refresh and
- * surface that message, never retry blindly.
- */
 export const mutateConversationControl = async (
   accessToken: string,
   customerId: number,
