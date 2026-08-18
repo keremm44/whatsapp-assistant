@@ -1,48 +1,26 @@
 /**
  * Conversations context-rail destinations.
  *
- * The detail payload already carries the real ids. The rail must use
- * them to open the existing workspaces — never invent a detail route
- * and never dump the seller on a broad list when a precise URL exists.
+ * Related-record ids and primary-action signals come from the backend.
+ * The rail opens the existing URL-owned workspaces on the exact record;
+ * it never invents a route or recreates business rules from status text.
  */
 
-import type {
-  ConversationOrderStatus,
-  ConversationReturnIssueStatus,
-} from "./conversations.ts";
 import { ordersListHref } from "./orders-format.ts";
 import { returnsWorkspaceHref } from "./returns-format.ts";
 import { unansweredWorkspaceHref } from "./unanswered-format.ts";
 
-/**
- * Active return/issue → Returns workspace, exact request.
- *
- * Status decides the view: COLLECTING is not a seller-review item, so
- * it must open Bilgi Toplanıyor. SELLER_REVIEW_REQUIRED stays on the
- * default İncelenecekler queue. The helper never invents a third
- * status or a detail route.
- */
+/** Active return/issue → Returns workspace, exact request. */
 export const conversationReturnDestination = (issue: {
   id: number;
-  status: ConversationReturnIssueStatus;
-}): string => {
-  switch (issue.status) {
-    case "COLLECTING":
-      return returnsWorkspaceHref({
-        view: "collecting",
-        query: null,
-        issueType: null,
-        requestId: issue.id,
-      });
-    case "SELLER_REVIEW_REQUIRED":
-      return returnsWorkspaceHref({
-        view: "action_required",
-        query: null,
-        issueType: null,
-        requestId: issue.id,
-      });
-  }
-};
+  sellerActionRequired: boolean;
+}): string =>
+  returnsWorkspaceHref({
+    view: issue.sellerActionRequired ? "action_required" : "collecting",
+    query: null,
+    issueType: null,
+    requestId: issue.id,
+  });
 
 /** Open unanswered group → Unanswered workspace, exact question. */
 export const conversationUnansweredDestination = (group: {
@@ -54,24 +32,16 @@ export const conversationUnansweredDestination = (group: {
   });
 
 /**
- * Active order → existing Orders list, on the view that matches the
- * real order status. When the marketplace order number is present,
- * use the exact search the list already supports. There is no
- * approved `/seller/orders/{id}` workbench in V1.
+ * Active order → existing Orders workbench, exact selected order.
+ * `?order=` is the established detail-selection contract; there is no
+ * `/seller/orders/{id}` page route.
  */
 export const conversationOrderDestination = (order: {
-  status: ConversationOrderStatus;
-  externalOrderNumber: string | null;
-}): string => {
-  const number = order.externalOrderNumber;
-  const query =
-    typeof number === "string" && number.trim().length > 0
-      ? number.trim()
-      : null;
-  switch (order.status) {
-    case "COLLECTING":
-      return ordersListHref({ view: "collecting", query });
-    case "SELLER_REVIEW_REQUIRED":
-      return ordersListHref({ view: "action_required", query });
-  }
-};
+  id: number;
+  sellerActionRequired: boolean;
+}): string =>
+  ordersListHref({
+    view: order.sellerActionRequired ? "action_required" : "collecting",
+    query: null,
+    orderId: order.id,
+  });
