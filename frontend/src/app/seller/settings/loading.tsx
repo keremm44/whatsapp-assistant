@@ -60,6 +60,46 @@ export default function SettingsLoading() {
           </div>
         </section>
 
+        <section aria-labelledby="settings-loading-feedback-heading" className="space-y-5">
+          <SectionHeader
+            id="settings-loading-feedback-heading"
+            title="Geri Bildirim"
+            description="Deneyiminizi, bir önerinizi veya karşılaştığınız bir sorunu bize iletin."
+          />
+
+          <div aria-hidden="true" className="space-y-4 rounded-md border border-border bg-surface-2 p-4 sm:p-5">
+            <div className="space-y-2">
+              <div className={`${staticSkeleton} h-3 w-20 rounded-sm`} />
+              <div className={`${staticSkeleton} h-11 w-full rounded-control`} />
+            </div>
+            <div className="space-y-2">
+              <div className={`${staticSkeleton} h-3 w-16 rounded-sm`} />
+              <div className={`${staticSkeleton} h-11 w-full rounded-control`} />
+            </div>
+            <div className="space-y-2">
+              <div className={`${staticSkeleton} h-3 w-16 rounded-sm`} />
+              <div className={`${staticSkeleton} h-28 w-full rounded-control`} />
+            </div>
+            <div className={`${staticSkeleton} h-11 w-40 rounded-control sm:h-9`} />
+          </div>
+
+          <div aria-hidden="true" className="space-y-3">
+            <div className="space-y-2">
+              <div className={`${staticSkeleton} h-4 w-28 rounded-sm`} />
+              <div className={`${staticSkeleton} h-3 w-72 max-w-full rounded-sm`} />
+            </div>
+            <div className="border-y border-divider">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <div key={index} className="space-y-2 border-b border-divider px-1 py-3 last:border-b-0 sm:px-2">
+                  <div className={`${staticSkeleton} h-3 w-20 rounded-sm`} />
+                  <div className={`${staticSkeleton} h-4 w-52 max-w-full rounded-sm`} />
+                  <div className={`${staticSkeleton} h-3 w-24 rounded-sm`} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <div className="space-y-2.5">
           <SectionHeader
             title={SESSION_SECTION_TITLE}
