@@ -1,5 +1,6 @@
 import { ConversationListPanel } from "@/components/seller/conversations/conversation-list-panel";
 import { ConversationsWorkbench } from "@/components/seller/conversations/conversations-workbench";
+import { WorkbenchScrollMemory } from "@/components/seller/navigation/workbench-scroll-memory";
 import { PageContainer } from "@/components/shared/page-container";
 
 import { resolveConversationListFromSession } from "@/lib/seller/conversations-server";
@@ -29,6 +30,7 @@ export default async function SellerConversationsPage({
 }) {
   const params = await searchParams;
   const attentionOnly = params.filter === "attention";
+  const navigationContext = attentionOnly ? "attention" : "all";
 
   const bootstrap = await resolveConversationListFromSession({
     attentionOnly,
@@ -40,11 +42,18 @@ export default async function SellerConversationsPage({
         mobileView="list"
         hasContextRail={false}
         list={
-          <ConversationListPanel
-            bootstrap={bootstrap}
-            attentionOnly={attentionOnly}
-            selectedCustomerId={null}
-          />
+          <WorkbenchScrollMemory
+            namespace="conversations"
+            context={navigationContext}
+            trackViewport
+            resetPathname="/seller/conversations"
+          >
+            <ConversationListPanel
+              bootstrap={bootstrap}
+              attentionOnly={attentionOnly}
+              selectedCustomerId={null}
+            />
+          </WorkbenchScrollMemory>
         }
         center={
           <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-6 py-16 text-center">
