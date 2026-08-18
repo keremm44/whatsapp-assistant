@@ -2,10 +2,11 @@
  * Conservative V1 freshness signatures for seller work surfaces.
  *
  * Background checks compare a small, stable first-page identity
- * (ids + versions, or the proven attention/control identity for
- * conversations). They never invent a count of new records and never
- * claim what changed — only that the current first page no longer
- * matches the page the seller is looking at.
+ * (ids + versions + backend freshness timestamps when available, or
+ * the proven attention/control identity for conversations). They never
+ * invent a count of new records and never claim what changed — only
+ * that the current first page no longer matches the page the seller is
+ * looking at.
  *
  * Dashboard is the exception that also includes the REAL global
  * filtered total: the first 50 tasks can stay identical while
@@ -20,9 +21,27 @@ export const SELLER_FRESHNESS_COPY = {
   action: "Yenile",
 } as const;
 
+/**
+ * Generic queue identity. `version` remains the concurrency source of
+ * truth; timestamps are an additional backend-provided freshness hint
+ * for records whose contracts expose one.
+ */
 export const buildIdVersionSignature = (
-  items: readonly { id: number; version: number }[],
-): string => items.map((item) => `${item.id}:${item.version}`).join(",");
+  items: readonly {
+    id: number;
+    version: number;
+    updatedAt?: string | null;
+    lastSeenAt?: string | null;
+  }[],
+): string =>
+  items
+    .map((item) => {
+      const timestamp = item.updatedAt ?? item.lastSeenAt ?? null;
+      return timestamp === null
+        ? `${item.id}:${item.version}`
+        : `${item.id}:${item.version}:${timestamp}`;
+    })
+    .join(",");
 
 export const signaturesDiffer = (current: string, next: string): boolean =>
   current !== next;
@@ -56,7 +75,11 @@ export type PausedListFreshnessInput = {
     customer: { id: number };
     lastMessage: { id: number } | null;
     control: { version: number } | null;
-    activeOrder: { id: number; version: number } | null;
+    activeOrder: {
+      id: number;
+      version: number;
+      updatedAt?: string | null;
+    } | null;
     needsAttention: boolean;
     attentionReason: string | null;
   }[];
@@ -64,19 +87,15 @@ export type PausedListFreshnessInput = {
 
 /**
  * Paused queue signature: real global filtered total + first-page
- * conversation identity + active-order identity. Active orders affect
- * both backend ordering and the visible “Sipariş var” recognition
- * signal, so an order appearing/disappearing must surface Yenile even
- * if the message/control identity is unchanged.
+ * conversation identity. Active orders are part of the conversation
+ * signature because they affect both backend ordering and the visible
+ * “Sipariş var” recognition signal.
  */
 export const buildPausedListFreshnessSignature = (
   input: PausedListFreshnessInput,
 ): string => {
   const rows = input.conversations
-    .map((row) => {
-      const base = buildConversationListFreshnessSignature([row]);
-      return `${base}:${row.activeOrder?.id ?? 0}:${row.activeOrder?.version ?? 0}`;
-    })
+    .map((row) => buildConversationListFreshnessSignature([row]))
     .join(",");
   return `total:${input.total}|rows:${rows}`;
 };
@@ -86,6 +105,21 @@ export const buildConversationListFreshnessSignature = (
     customer: { id: number };
     lastMessage: { id: number } | null;
     control: { version: number } | null;
+    activeOrder?: {
+      id: number;
+      version: number;
+      updatedAt?: string | null;
+    } | null;
+    activeReturnIssue?: {
+      id: number;
+      version: number;
+      updatedAt?: string | null;
+    } | null;
+    openUnanswered?: {
+      id: number;
+      version: number;
+      lastSeenAt?: string | null;
+    } | null;
     needsAttention: boolean;
     attentionReason: string | null;
   }[],
@@ -98,6 +132,21 @@ export const buildConversationListFreshnessSignature = (
         row.control?.version ?? 0,
         row.needsAttention ? 1 : 0,
         row.attentionReason ?? "",
+        row.activeOrder === undefined
+          ? "order:-"
+          : row.activeOrder === null
+            ? "order:0"
+            : `order:${row.activeOrder.id}:${row.activeOrder.version}:${row.activeOrder.updatedAt ?? ""}`,
+        row.activeReturnIssue === undefined
+          ? "return:-"
+          : row.activeReturnIssue === null
+            ? "return:0"
+            : `return:${row.activeReturnIssue.id}:${row.activeReturnIssue.version}:${row.activeReturnIssue.updatedAt ?? ""}`,
+        row.openUnanswered === undefined
+          ? "unanswered:-"
+          : row.openUnanswered === null
+            ? "unanswered:0"
+            : `unanswered:${row.openUnanswered.id}:${row.openUnanswered.version}:${row.openUnanswered.lastSeenAt ?? ""}`,
       ].join(":"),
     )
     .join(",");
