@@ -4,6 +4,7 @@ import * as React from "react";
 
 import {
   clearWorkbenchNavigationNamespace,
+  isSelectionOnlyWorkbenchNavigation,
   readWorkbenchNavigationMemory,
   workbenchNavigationStorageKey,
   writeWorkbenchNavigationMemory,
@@ -19,13 +20,16 @@ export function WorkbenchScrollMemory({
   context,
   trackViewport,
   resetPathname,
+  selectionParam,
   children,
 }: {
   namespace: string;
   context: string;
   trackViewport: boolean;
-  /** Clicking a link to this exact pathname means a filter/list reset. */
+  /** Clicking a link to this exact pathname means a list-context change. */
   resetPathname?: string;
+  /** Query param that represents selected record rather than list context. */
+  selectionParam?: string;
   children: React.ReactNode;
 }) {
   const rootRef = React.useRef<HTMLDivElement | null>(null);
@@ -86,19 +90,33 @@ export function WorkbenchScrollMemory({
 
       const target = event.target;
       const anchor =
-        target instanceof Element ? target.closest<HTMLAnchorElement>("a[href]") : null;
+        target instanceof Element
+          ? target.closest<HTMLAnchorElement>("a[href]")
+          : null;
 
       if (anchor && resetPathname) {
         const destination = new URL(anchor.href, window.location.href);
         if (destination.pathname === resetPathname) {
-          clearWorkbenchNavigationNamespace(window.sessionStorage, namespace);
-          return;
+          const selectionOnly =
+            selectionParam !== undefined &&
+            isSelectionOnlyWorkbenchNavigation(
+              window.location.href,
+              destination.href,
+              selectionParam,
+            );
+          if (!selectionOnly) {
+            clearWorkbenchNavigationNamespace(
+              window.sessionStorage,
+              namespace,
+            );
+            return;
+          }
         }
       }
 
       save();
     },
-    [namespace, resetPathname, save],
+    [namespace, resetPathname, save, selectionParam],
   );
 
   return (
