@@ -11,6 +11,7 @@ import {
   RETURN_SEARCH_PLACEHOLDER,
   returnsWorkspaceHref,
 } from "@/lib/seller/returns-format";
+import { clearWorkbenchNavigationNamespace } from "@/lib/seller/workbench-navigation";
 
 /**
  * Exact external order-number search.
@@ -37,9 +38,6 @@ export function ReturnsSearchForm({
   const [value, setValue] = React.useState(query ?? "");
   const [isPending, startTransition] = React.useTransition();
 
-  // The URL is the source of truth: external changes (browser back,
-  // refresh, clear) re-sync the field without a remount, so submit-time
-  // focus is never lost.
   React.useEffect(() => {
     setValue(query ?? "");
   }, [query]);
@@ -47,6 +45,9 @@ export function ReturnsSearchForm({
   const submit = (nextValue: string) => {
     const normalized = nextValue.trim();
     if (normalized === (query ?? "")) return;
+    if (typeof window !== "undefined") {
+      clearWorkbenchNavigationNamespace(window.sessionStorage, "returns");
+    }
     startTransition(() => {
       router.push(
         returnsWorkspaceHref({
@@ -86,7 +87,6 @@ export function ReturnsSearchForm({
           value={value}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {
-            // Native "clear search" affordance keeps view + type.
             if (event.key === "Escape" && value.length > 0) {
               event.preventDefault();
               setValue("");
