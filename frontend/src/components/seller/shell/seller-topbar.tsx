@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils/cn";
 
+import { SellerAnnouncementsSheet } from "./seller-announcements-sheet";
 import { SellerIcon } from "./icon-map";
 import { SidebarSections } from "./seller-sidebar";
 
@@ -35,6 +36,7 @@ export function SellerTopbar({
 }) {
   const pathname = usePathname();
   const [isHidden, setIsHidden] = React.useState(false);
+  const [isAnnouncementsOpen, setIsAnnouncementsOpen] = React.useState(false);
   const lastScrollY = React.useRef(0);
   const directionAnchorY = React.useRef(0);
   const direction = React.useRef<"up" | "down" | null>(null);
@@ -93,11 +95,20 @@ export function SellerTopbar({
     };
   }, [pathname]);
 
+  const handleAnnouncementsOpenChange = (nextOpen: boolean) => {
+    setIsAnnouncementsOpen(nextOpen);
+    if (nextOpen) setIsHidden(false);
+  };
+
   return (
     <header
       onFocusCapture={() => setIsHidden(false)}
       className={cn(
-        "sticky top-0 z-50 border-b border-divider bg-canvas",
+        "sticky top-0 border-b border-divider bg-canvas",
+        // Sheet overlay/content use z-20/z-30. While the announcement
+        // drawer owns focus the header steps below them; otherwise it
+        // keeps the normal z-50 scroll-content protection.
+        isAnnouncementsOpen ? "z-10" : "z-50",
         "transition-[transform,opacity,box-shadow] duration-200 ease-out will-change-transform motion-reduce:transition-none",
         isHidden
           ? "pointer-events-none -translate-y-full opacity-0"
@@ -120,6 +131,7 @@ export function SellerTopbar({
           <span className="h-px w-3 bg-brand/55" />
           <span className="h-px w-5 bg-chrome-foreground/20" />
         </span>
+        <SellerAnnouncementsSheet onOpenChange={handleAnnouncementsOpenChange} />
       </div>
     </header>
   );
