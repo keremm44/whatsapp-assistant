@@ -246,7 +246,7 @@ export function SellerAnnouncementsSheet({
           {hasLoadedUnread ? (
             <span
               aria-hidden="true"
-              className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-primary"
+              className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border border-primary"
             />
           ) : null}
         </button>
@@ -324,7 +324,7 @@ export function SellerAnnouncementsSheet({
                           <span className="flex items-start gap-2">
                             {!item.isRead ? (
                               <span
-                                className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                                className="mt-[5px] h-2 w-2 shrink-0 rounded-full border border-primary"
                                 aria-hidden="true"
                               />
                             ) : null}
