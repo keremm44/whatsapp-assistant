@@ -15,13 +15,17 @@ import { cn } from "@/lib/utils/cn";
 import { SellerIcon } from "./icon-map";
 import { SidebarSections } from "./seller-sidebar";
 
+const TOPBAR_OPEN_REGION = 72;
+const TOPBAR_DIRECTION_THRESHOLD = 10;
+
 /**
  * Topbar — a slim workspace rail that gets out of the way while reading.
  *
  * Downward scrolling past the opening region slides the rail above the
  * viewport; upward scrolling, returning near the top, route changes, or
- * keyboard focus reveal it immediately. The movement is transform-only
- * so it stays cheap, and reduced-motion users get an instant state change.
+ * keyboard focus reveal it. A small direction threshold filters trackpad
+ * jitter so tiny reversals do not repeatedly toggle the rail. Movement is
+ * transform-only, and reduced-motion users get an instant state change.
  */
 export function SellerTopbar({
   storeName,
@@ -32,6 +36,8 @@ export function SellerTopbar({
   const pathname = usePathname();
   const [isHidden, setIsHidden] = React.useState(false);
   const lastScrollY = React.useRef(0);
+  const directionAnchorY = React.useRef(0);
+  const direction = React.useRef<"up" | "down" | null>(null);
   const ticking = React.useRef(false);
   const frame = React.useRef<number | null>(null);
 
@@ -39,19 +45,32 @@ export function SellerTopbar({
     const readScrollY = () =>
       Math.max(window.scrollY || document.documentElement.scrollTop || 0, 0);
 
-    lastScrollY.current = readScrollY();
+    const initialY = readScrollY();
+    lastScrollY.current = initialY;
+    directionAnchorY.current = initialY;
+    direction.current = null;
     setIsHidden(false);
 
     const update = () => {
       const nextY = readScrollY();
       const previousY = lastScrollY.current;
 
-      if (nextY < 72) {
+      if (nextY < TOPBAR_OPEN_REGION) {
         setIsHidden(false);
-      } else if (nextY > previousY) {
-        setIsHidden(true);
-      } else if (nextY < previousY) {
-        setIsHidden(false);
+        direction.current = null;
+        directionAnchorY.current = nextY;
+      } else if (nextY !== previousY) {
+        const nextDirection = nextY > previousY ? "down" : "up";
+
+        if (direction.current !== nextDirection) {
+          direction.current = nextDirection;
+          directionAnchorY.current = previousY;
+        }
+
+        const distance = Math.abs(nextY - directionAnchorY.current);
+        if (distance >= TOPBAR_DIRECTION_THRESHOLD) {
+          setIsHidden(nextDirection === "down");
+        }
       }
 
       lastScrollY.current = nextY;
