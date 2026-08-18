@@ -33,6 +33,7 @@ export function SellerTopbar({
   const [isHidden, setIsHidden] = React.useState(false);
   const lastScrollY = React.useRef(0);
   const ticking = React.useRef(false);
+  const frame = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     lastScrollY.current = Math.max(window.scrollY, 0);
@@ -52,23 +53,29 @@ export function SellerTopbar({
 
       lastScrollY.current = nextY;
       ticking.current = false;
+      frame.current = null;
     };
 
     const onScroll = () => {
       if (ticking.current) return;
       ticking.current = true;
-      window.requestAnimationFrame(update);
+      frame.current = window.requestAnimationFrame(update);
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame.current !== null) window.cancelAnimationFrame(frame.current);
+      frame.current = null;
+      ticking.current = false;
+    };
   }, [pathname]);
 
   return (
     <header
       onFocusCapture={() => setIsHidden(false)}
       className={cn(
-        "sticky top-0 z-10 border-b border-divider bg-canvas/92 backdrop-blur-md",
+        "sticky top-0 z-10 border-b border-divider bg-canvas/90 backdrop-blur-md",
         "transition-[transform,opacity,box-shadow] duration-200 ease-out will-change-transform motion-reduce:transition-none",
         isHidden
           ? "pointer-events-none -translate-y-full opacity-0"
