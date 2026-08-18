@@ -63,6 +63,7 @@ from seller_panel_service import (
     list_conversations as list_seller_panel_conversations,
     list_dashboard_tasks as list_seller_panel_dashboard_tasks,
 )
+from seller_sidebar_service import get_seller_sidebar_summary
 from seller_invitation_service import (
     AdminSellerInvitationRequest,
     invite_seller_from_application,
@@ -111,6 +112,7 @@ from database import (
     ORDER_STATUS_COLLECTING,
     ORDER_STATUS_COMPLETE,
     ORDER_STATUS_SELLER_REVIEW_REQUIRED,
+    UNANSWERED_STATUS_OPEN,
     create_order_field_definition,
     get_order_field_definitions,
     get_product_by_id,
@@ -206,6 +208,15 @@ def _raise_from_seller_product_service(result: dict[str, Any]) -> None:
         "not_found": status.HTTP_404_NOT_FOUND,
         "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
         "conflict": status.HTTP_409_CONFLICT,
+        "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
+    }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
+    raise HTTPException(status_code=status_code, detail=result["error"])
+
+
+def _raise_from_sidebar_service(result: dict[str, Any]) -> None:
+    kind = result.get("kind")
+    status_code = {
+        "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
         "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
     }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
     raise HTTPException(status_code=status_code, detail=result["error"])
@@ -646,6 +657,22 @@ def seller_dashboard_tasks(
     return {key: value for key, value in result.items() if key != "ok"}
 
 
+@router.get("/seller/sidebar-summary")
+def seller_sidebar_summary(
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller sidebar için hafif, güvenilir action-count özetini döndürür.
+
+    - Tek seller-scoped endpoint.
+    - Liste endpointlerini çağırıp saymaz; database read model count'larını kullanır.
+    - Tenant isolation AuthContext seller_id üzerinden korunur.
+    """
+    result = get_seller_sidebar_summary(context.seller_id)
+    if not result.get("ok"):
+        _raise_from_sidebar_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
 @router.get("/seller/conversations/{customer_id}/control")
 def seller_conversation_control(
     customer_id: PositiveInt,
@@ -914,6 +941,7 @@ def seller_order_detail(
             "updated_at": order.get("updated_at"),
             "completed_at": order.get("completed_at"),
             "closed_at": order.get("closed_at"),
+            "seller_action_required": status_value == ORDER_STATUS_SELLER_REVIEW_REQUIRED,
         },
         "fields": result["fields"],
     }
@@ -1357,8 +1385,12 @@ def seller_unanswered_question_detail(
             default_message="Cevaplanamayan soru detayı okunamadı.",
         )
 
+    group = result["group"]
+    if isinstance(group, dict) and "seller_action_required" not in group:
+        group = {**group, "seller_action_required": group.get("status") == UNANSWERED_STATUS_OPEN}
+
     return {
-        "question": result["group"],
+        "question": group,
         "occurrences": result.get("occurrences") or [],
     }
 
@@ -1395,10 +1427,14 @@ def seller_unanswered_question_action(
             default_message="Cevaplanamayan soru güncellenemedi.",
         )
 
+    group = result["group"]
+    if isinstance(group, dict) and "seller_action_required" not in group:
+        group = {**group, "seller_action_required": group.get("status") == UNANSWERED_STATUS_OPEN}
+
     return {
         "action": body.action,
         "changed": result.get("changed") is True,
-        "question": result["group"],
+        "question": group,
     }
 
 

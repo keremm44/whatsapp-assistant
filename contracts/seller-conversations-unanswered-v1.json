@@ -48,21 +48,26 @@
             "external_order_number": "TR123456",
             "product_name_snapshot": "Kişiye Özel Kupa",
             "version": 5,
-            "updated_at": "2026-08-10T12:04:00+00:00"
+            "updated_at": "2026-08-10T12:04:00+00:00",
+            "customer_id": 22,
+            "seller_action_required": true
           },
           "active_return_issue": {
             "id": 41,
             "issue_type": "DAMAGED_ITEM",
             "status": "SELLER_REVIEW_REQUIRED",
             "version": 3,
-            "updated_at": "2026-08-10T12:05:00+00:00"
+            "updated_at": "2026-08-10T12:05:00+00:00",
+            "customer_id": 22,
+            "seller_action_required": true
           },
           "open_unanswered": {
             "id": 61,
             "question": "Kargoya ne zaman verilir?",
             "occurrence_count": 2,
             "last_seen_at": "2026-08-10T11:58:00+00:00",
-            "version": 2
+            "version": 2,
+            "seller_action_required": true
           },
           "needs_attention": true,
           "attention_reason": "return_review"
@@ -149,7 +154,9 @@
         "custom_text": null,
         "review_reason_code": "return_issue_open",
         "review_reason_note": "Hasarlı ürün incelemesi açık.",
-        "created_at": "2026-08-10T11:45:00+00:00"
+        "created_at": "2026-08-10T11:45:00+00:00",
+        "customer_id": 22,
+        "seller_action_required": true
       },
       "active_return_issue": {
         "id": 41,
@@ -165,7 +172,9 @@
         "review_reason_code": "COLLECTION_COMPLETE",
         "review_note": "Zorunlu bilgiler tamamlandı.",
         "created_at": "2026-08-10T12:00:00+00:00",
-        "review_required_at": "2026-08-10T12:05:00+00:00"
+        "review_required_at": "2026-08-10T12:05:00+00:00",
+        "customer_id": 22,
+        "seller_action_required": true
       },
       "open_unanswered": [
         {
@@ -174,7 +183,8 @@
           "occurrence_count": 2,
           "last_seen_at": "2026-08-10T11:58:00+00:00",
           "version": 2,
-          "first_seen_at": "2026-08-09T09:00:00+00:00"
+          "first_seen_at": "2026-08-09T09:00:00+00:00",
+          "seller_action_required": true
         }
       ]
     },
@@ -213,7 +223,8 @@
           "occurrence_count": 2,
           "first_seen_at": "2026-08-09T09:00:00+00:00",
           "last_seen_at": "2026-08-10T11:58:00+00:00",
-          "version": 2
+          "version": 2,
+          "seller_action_required": true
         }
       ]
     },
@@ -231,7 +242,8 @@
         "dismissed_at": null,
         "dismiss_note": null,
         "created_at": "2026-08-09T09:00:00+00:00",
-        "updated_at": "2026-08-10T11:58:00+00:00"
+        "updated_at": "2026-08-10T11:58:00+00:00",
+        "seller_action_required": true
       },
       "occurrences": [
         {
@@ -266,7 +278,8 @@
         "dismissed_at": null,
         "dismiss_note": null,
         "created_at": "2026-08-09T09:00:00+00:00",
-        "updated_at": "2026-08-10T12:10:00+00:00"
+        "updated_at": "2026-08-10T12:10:00+00:00",
+        "seller_action_required": false
       }
     }
   }

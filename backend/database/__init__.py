@@ -28,6 +28,7 @@ from . import order_fields
 from . import returns
 from . import return_reads
 from . import seller_panel
+from . import seller_summary
 from . import feedback
 from . import announcements
 
@@ -50,6 +51,7 @@ _MODULES = (
     returns,
     return_reads,
     seller_panel,
+    seller_summary,
     feedback,
     announcements,
 )

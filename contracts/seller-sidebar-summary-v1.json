@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "endpoint": "GET /seller/sidebar-summary",
+  "auth": "require_seller (Bearer, seller_id tenant scoped via AuthContext)",
+  "description": "Seller sidebar için hafif, güvenilir action-count özeti. Liste endpointlerini çağırmadan database read model count'ları ile hesaplar.",
+  "request": {
+    "method": "GET",
+    "path": "/seller/sidebar-summary",
+    "headers": {
+      "Authorization": "Bearer <supabase_access_token>"
+    },
+    "query": {}
+  },
+  "response": {
+    "success_example": {
+      "returns_action_required": 4,
+      "unanswered_open": 7,
+      "paused_or_taken_over": 2
+    },
+    "fields": {
+      "returns_action_required": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "SELLER_REVIEW_REQUIRED durumundaki iade/sorun talep sayısı (return_issue_requests.seller_id scoped)"
+      },
+      "unanswered_open": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "OPEN durumundaki cevaplanamayan soru grup sayısı (unanswered_question_groups.seller_id scoped)"
+      },
+      "paused_or_taken_over": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Kontrol durumu ASSISTANT_PAUSED veya SELLER_TAKEN_OVER olan konuşma sayısı (conversation_states.seller_id scoped)"
+      }
+    },
+    "error_cases": {
+      "401": "Missing/invalid Bearer token",
+      "503": "Database unavailable (seller_sidebar_unavailable)"
+    }
+  },
+  "database_read_model": {
+    "tables": [
+      "return_issue_requests (status = 'SELLER_REVIEW_REQUIRED')",
+      "unanswered_question_groups (status = 'OPEN')",
+      "conversation_states (control_state IN ('ASSISTANT_PAUSED','SELLER_TAKEN_OVER'))"
+    ],
+    "isolation": "WHERE seller_id = auth.seller_id (AuthContext)",
+    "implementation": "database.seller_summary.get_seller_action_counts -> head count with index, no list fetch"
+  },
+  "frontend_consumer": "seller shell sidebar badges / freshness (future)",
+  "backward_compatible": true
+}

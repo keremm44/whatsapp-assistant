@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from database import (
+    ORDER_STATUS_SELLER_REVIEW_REQUIRED,
+    RETURN_ISSUE_STATUS_SELLER_REVIEW_REQUIRED,
     get_seller_conversation_detail_read_model,
     get_seller_conversation_list,
     get_seller_dashboard_task_list,
@@ -43,6 +45,67 @@ def _map_database_failure(
     )
 
 
+def _enrich_active_order(order: dict[str, Any] | None, customer_id: int | None) -> dict[str, Any] | None:
+    if not isinstance(order, dict):
+        return order
+    status = order.get("status")
+    enriched: dict[str, Any] = {**order}
+    if customer_id is not None and "customer_id" not in enriched:
+        enriched["customer_id"] = customer_id
+    # seller_action_required normalize: mevcut convention ile uyumlu
+    if "seller_action_required" not in enriched:
+        enriched["seller_action_required"] = status == ORDER_STATUS_SELLER_REVIEW_REQUIRED
+    return enriched
+
+
+def _enrich_active_return(issue: dict[str, Any] | None, customer_id: int | None) -> dict[str, Any] | None:
+    if not isinstance(issue, dict):
+        return issue
+    status = issue.get("status")
+    enriched: dict[str, Any] = {**issue}
+    if customer_id is not None and "customer_id" not in enriched:
+        enriched["customer_id"] = customer_id
+    if "seller_action_required" not in enriched:
+        enriched["seller_action_required"] = status == RETURN_ISSUE_STATUS_SELLER_REVIEW_REQUIRED
+    return enriched
+
+
+def _enrich_open_unanswered(entries: Any) -> Any:
+    if not isinstance(entries, list):
+        return entries
+    enriched_list: list[Any] = []
+    for entry in entries:
+        if isinstance(entry, dict):
+            # open_unanswered filtre zaten OPEN; frontend primary action için normalize
+            if "seller_action_required" not in entry:
+                enriched_list.append({**entry, "seller_action_required": True})
+            else:
+                enriched_list.append(entry)
+        else:
+            enriched_list.append(entry)
+    return enriched_list
+
+
+def _enrich_conversation_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(entry, dict):
+        return entry
+    customer = entry.get("customer") if isinstance(entry.get("customer"), dict) else None
+    customer_id = customer.get("id") if isinstance(customer, dict) and isinstance(customer.get("id"), int) else None
+    # defensive: try to preserve original but add enrichments
+    enriched_entry = dict(entry)
+    enriched_entry["active_order"] = _enrich_active_order(entry.get("active_order"), customer_id)
+    enriched_entry["active_return_issue"] = _enrich_active_return(entry.get("active_return_issue"), customer_id)
+    if "open_unanswered" in entry:
+        # conversation list has singular open_unanswered (object or None), detail has list
+        val = entry.get("open_unanswered")
+        if isinstance(val, list):
+            enriched_entry["open_unanswered"] = _enrich_open_unanswered(val)
+        elif isinstance(val, dict):
+            enriched_entry["open_unanswered"] = {**val, "seller_action_required": True} if "seller_action_required" not in val else val
+        # else None stays None
+    return enriched_entry
+
+
 def list_conversations(
     seller_id: int,
     *,
@@ -73,6 +136,8 @@ def list_conversations(
             kind="unavailable",
         )
 
+    enriched = [_enrich_conversation_entry(c) if isinstance(c, dict) else c for c in conversations]
+
     return {
         "ok": True,
         "toplam": result["toplam"],
@@ -80,7 +145,7 @@ def list_conversations(
         "offset": offset,
         "attention_only": attention_only,
         "control_state": control_state,
-        "conversations": conversations,
+        "conversations": enriched,
     }
 
 
@@ -106,6 +171,10 @@ def get_conversation_detail(
             unavailable_message="Konuşma detayına şu anda erişilemiyor.",
         )
 
+    active_order = _enrich_active_order(result.get("active_order"), customer_id)
+    active_return_issue = _enrich_active_return(result.get("active_return_issue"), customer_id)
+    open_unanswered = _enrich_open_unanswered(result.get("open_unanswered") or [])
+
     return {
         "ok": True,
         "customer": result["customer"],
@@ -114,9 +183,9 @@ def get_conversation_detail(
         "messages": result.get("messages") or [],
         "message_page": result.get("message_page") or {},
         "control_history": result.get("control_history") or [],
-        "active_order": result.get("active_order"),
-        "active_return_issue": result.get("active_return_issue"),
-        "open_unanswered": result.get("open_unanswered") or [],
+        "active_order": active_order,
+        "active_return_issue": active_return_issue,
+        "open_unanswered": open_unanswered,
     }
 
 
