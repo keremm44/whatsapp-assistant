@@ -38,7 +38,9 @@ export function ReturnsIssueTypeFilter({
   const onChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const next = normalizeReturnIssueTypeParam(event.target.value);
     if (next === issueType) return;
-    clearWorkbenchNavigationNamespace(window.sessionStorage, "returns");
+    if (typeof window !== "undefined") {
+      clearWorkbenchNavigationNamespace(window.sessionStorage, "returns");
+    }
     startTransition(() => {
       router.push(
         returnsWorkspaceHref({
