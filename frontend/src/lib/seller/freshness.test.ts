@@ -61,6 +61,27 @@ test("id+version signatures match only when identity and version match", () => {
   assert.equal(signaturesDiffer(first, buildIdVersionSignature([])), true);
 });
 
+test("id+version signatures use backend freshness timestamps when present", () => {
+  const first = buildIdVersionSignature([
+    { id: 1, version: 3, updatedAt: "2026-08-10T12:05:00+00:00" },
+    { id: 2, version: 1, lastSeenAt: "2026-08-10T12:06:00+00:00" },
+  ]);
+  assert.equal(
+    first,
+    "1:3:2026-08-10T12:05:00+00:00,2:1:2026-08-10T12:06:00+00:00",
+  );
+  assert.equal(
+    signaturesDiffer(
+      first,
+      buildIdVersionSignature([
+        { id: 1, version: 3, updatedAt: "2026-08-10T12:07:00+00:00" },
+        { id: 2, version: 1, lastSeenAt: "2026-08-10T12:06:00+00:00" },
+      ]),
+    ),
+    true,
+  );
+});
+
 test("an empty first page has a stable empty signature", () => {
   assert.equal(buildIdVersionSignature([]), "");
   assert.equal(signaturesDiffer("", ""), false);
@@ -139,21 +160,80 @@ test("dashboard signature moves when backend task order changes", () => {
   );
 });
 
-test("conversation signatures move when last message, control or attention changes", () => {
+test("conversation signatures move with related-record freshness", () => {
   const row = {
     customer: { id: 22 },
     lastMessage: { id: 90 },
     control: { version: 4 },
+    activeOrder: {
+      id: 18,
+      version: 5,
+      updatedAt: "2026-08-10T12:05:00+00:00",
+    },
+    activeReturnIssue: {
+      id: 7,
+      version: 3,
+      updatedAt: "2026-08-10T12:06:00+00:00",
+    },
+    openUnanswered: {
+      id: 11,
+      version: 4,
+      lastSeenAt: "2026-08-10T12:07:00+00:00",
+    },
     needsAttention: true,
     attentionReason: "order_review",
   };
   const first = buildConversationListFreshnessSignature([row]);
-  assert.equal(first, "22:90:4:1:order_review");
+  assert.match(first, /order:18:5:2026-08-10T12:05:00\+00:00/);
+  assert.match(first, /return:7:3:2026-08-10T12:06:00\+00:00/);
+  assert.match(first, /unanswered:11:4:2026-08-10T12:07:00\+00:00/);
   assert.equal(
     signaturesDiffer(
       first,
       buildConversationListFreshnessSignature([
         { ...row, lastMessage: { id: 91 } },
+      ]),
+    ),
+    true,
+  );
+  assert.equal(
+    signaturesDiffer(
+      first,
+      buildConversationListFreshnessSignature([
+        {
+          ...row,
+          activeOrder: {
+            ...row.activeOrder,
+            updatedAt: "2026-08-10T12:08:00+00:00",
+          },
+        },
+      ]),
+    ),
+    true,
+  );
+  assert.equal(
+    signaturesDiffer(
+      first,
+      buildConversationListFreshnessSignature([
+        {
+          ...row,
+          activeReturnIssue: { ...row.activeReturnIssue, version: 4 },
+        },
+      ]),
+    ),
+    true,
+  );
+  assert.equal(
+    signaturesDiffer(
+      first,
+      buildConversationListFreshnessSignature([
+        {
+          ...row,
+          openUnanswered: {
+            ...row.openUnanswered,
+            lastSeenAt: "2026-08-10T12:09:00+00:00",
+          },
+        },
       ]),
     ),
     true,
@@ -174,7 +254,7 @@ test("paused freshness includes total, first-page identity and active-order iden
     customer: { id: 22 },
     lastMessage: { id: 90 },
     control: { version: 4 },
-    activeOrder: { id: 18, version: 5 },
+    activeOrder: { id: 18, version: 5, updatedAt: "2026-08-10T12:05:00+00:00" },
     needsAttention: true,
     attentionReason: "assistant_paused",
   };
@@ -182,7 +262,8 @@ test("paused freshness includes total, first-page identity and active-order iden
     total: 20,
     conversations: [row],
   });
-  assert.equal(first, "total:20|rows:22:90:4:1:assistant_paused:18:5");
+  assert.match(first, /^total:20\|rows:/);
+  assert.match(first, /order:18:5:2026-08-10T12:05:00\+00:00/);
   assert.equal(
     signaturesDiffer(
       first,
@@ -212,7 +293,9 @@ test("paused freshness includes total, first-page identity and active-order iden
       first,
       buildPausedListFreshnessSignature({
         total: 20,
-        conversations: [{ ...row, activeOrder: { id: 18, version: 6 } }],
+        conversations: [
+          { ...row, activeOrder: { ...row.activeOrder, version: 6 } },
+        ],
       }),
     ),
     true,
