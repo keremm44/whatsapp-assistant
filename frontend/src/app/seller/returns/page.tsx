@@ -1,3 +1,4 @@
+import { WorkbenchScrollMemory } from "@/components/seller/navigation/workbench-scroll-memory";
 import { ReturnPhotoPreferences } from "@/components/seller/returns/return-photo-preferences";
 import { ReturnsIssueTypeFilter } from "@/components/seller/returns/returns-issue-type-filter";
 import { ReturnsSearchForm } from "@/components/seller/returns/returns-search-form";
@@ -52,6 +53,7 @@ export default async function SellerReturnsPage({
   const query = normalizeReturnSearchParam(params.q);
   const issueType = normalizeReturnIssueTypeParam(params.type);
   const selectedRequestId = normalizeReturnRequestIdParam(params.request);
+  const navigationContext = `${view}:${query ?? ""}:${issueType ?? ""}`;
 
   const listBootstrap = await resolveReturnListFromSession({
     view,
@@ -71,39 +73,47 @@ export default async function SellerReturnsPage({
         description="Asistanın topladığı iade ve sorun bilgilerini inceleyin; gereken yerde siz devreye girin."
       />
 
-      <div className="mt-8 space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <ReturnsViewTabs
-            activeView={view}
-            query={query}
-            issueType={issueType}
-          />
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <ReturnsSearchForm
-              view={view}
+      <WorkbenchScrollMemory
+        namespace="returns"
+        context={navigationContext}
+        trackViewport={selectedRequestId === null}
+        resetPathname="/seller/returns"
+        selectionParam="request"
+      >
+        <div className="mt-8 space-y-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <ReturnsViewTabs
+              activeView={view}
               query={query}
               issueType={issueType}
             />
-            <ReturnsIssueTypeFilter
-              view={view}
-              query={query}
-              issueType={issueType}
-            />
-            <ReturnPhotoPreferences />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <ReturnsSearchForm
+                view={view}
+                query={query}
+                issueType={issueType}
+              />
+              <ReturnsIssueTypeFilter
+                view={view}
+                query={query}
+                issueType={issueType}
+              />
+              <ReturnPhotoPreferences />
+            </div>
           </div>
-        </div>
 
-        <Surface className="overflow-hidden">
-          <ReturnsWorkspace
-            listBootstrap={listBootstrap}
-            detailBootstrap={detailBootstrap}
-            view={view}
-            query={query}
-            issueType={issueType}
-            selectedRequestId={selectedRequestId}
-          />
-        </Surface>
-      </div>
+          <Surface className="overflow-hidden">
+            <ReturnsWorkspace
+              listBootstrap={listBootstrap}
+              detailBootstrap={detailBootstrap}
+              view={view}
+              query={query}
+              issueType={issueType}
+              selectedRequestId={selectedRequestId}
+            />
+          </Surface>
+        </div>
+      </WorkbenchScrollMemory>
     </PageContainer>
   );
 }
