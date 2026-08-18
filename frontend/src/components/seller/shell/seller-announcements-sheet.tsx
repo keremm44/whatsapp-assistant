@@ -79,6 +79,7 @@ export function SellerAnnouncementsSheet({
 
   const loadFirstPage = React.useCallback(async () => {
     listControllerRef.current?.abort();
+    setIsLoadingMore(false);
     const controller = new AbortController();
     listControllerRef.current = controller;
 
