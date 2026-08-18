@@ -39,6 +39,25 @@ import { cn } from "@/lib/utils/cn";
 import { OrderImagePreview } from "./order-image-preview";
 import { PrintContent } from "./print-content";
 
+/**
+ * The selected order's detail surface — the right region of the Orders
+ * workspace (full-width on mobile with an obvious list-return
+ * affordance).
+ *
+ * Everything rendered here comes from the real
+ * `GET /seller/orders/{order_id}` payload:
+ *   A. Header      order number + backend displayStatus + review note
+ *   B. Sipariş     number / product snapshot
+ *   C. Üretim      dynamic-field snapshots with their collected values
+ *                  (`fields[]`) — the seller's own labels, backend
+ *                  order preserved; image values open the existing
+ *                  media-proxy preview
+ *   D. Baskı       core image action + verbatim custom_text
+ *   E. Müşteri     phone + verbatim customer note + "Konuşmayı aç"
+ *   F. Zaman       factual timestamps
+ * No fulfillment/shipping/payment semantics are invented; there are no
+ * mutations on this surface.
+ */
 export type OrderDetailPhase =
   | { phase: "idle" }
   | { phase: "loading" }
@@ -52,10 +71,16 @@ export function OrderDetailPanel({
   onBackToList,
 }: {
   state: OrderDetailPhase;
+  /** Re-runs the detail fetch for the current selection. */
   onRetry: () => void;
+  /** Mobile-only: clear the selection and return to the queue. */
   onBackToList: () => void;
 }) {
   if (state.phase === "idle") {
+    // Only visible from lg up: below that the region is hidden while
+    // there is no selection, and the queue owns the screen. The
+    // guidance sits near the top of the detail surface — quiet and
+    // secondary, not a large vertically-centered empty block.
     return (
       <div className="px-4 py-6 md:px-5 md:py-7" role="status">
         <div className="flex items-start gap-2.5">
@@ -75,6 +100,7 @@ export function OrderDetailPanel({
 
   return (
     <div className="flex min-h-0 flex-col">
+      {/* Mobile: obvious queue-return affordance, filters preserved. */}
       <div className="border-b border-divider px-4 py-2.5 md:px-5 lg:hidden">
         <button
           type="button"
@@ -135,7 +161,12 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
   const productName = getProductNameDisplay(order);
   const phone = getPhoneDisplay(order);
   const conversationHref = getOrderConversationHref(order.customerId);
+  // Backend-authoritative primary-action signal. The detail contract
+  // now carries the same flag as the list, so this surface does not
+  // recreate the seller-review rule from status.
   const needsReview = order.sellerActionRequired;
+  // COMPLETE remains a presentation-only tone decision; seller action
+  // comes exclusively from the backend flag above.
   const statusTone: StatusChipTone = needsReview
     ? "attention"
     : order.status === "COMPLETE"
@@ -163,6 +194,7 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
 
   return (
     <div className="space-y-6 px-4 py-5 md:px-5 md:py-6">
+      {/* A. Header */}
       <section aria-labelledby="order-detail-heading">
         <div className="flex items-center justify-between gap-3">
           <h2
@@ -195,6 +227,7 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
         ) : null}
       </section>
 
+      {/* C. Üretim bilgileri (dynamic-field snapshot values) */}
       {detail.fields.length > 0 ? (
         <DetailSection title={ORDER_DETAIL_PRODUCTION_TITLE}>
           <dl className="space-y-1.5">
@@ -210,6 +243,7 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
         </DetailSection>
       ) : null}
 
+      {/* D. Baskı içeriği (core image + verbatim custom text) */}
       <DetailSection title={ORDER_DETAIL_PRINT_TITLE}>
         <PrintContent
           order={{
@@ -222,6 +256,7 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
         />
       </DetailSection>
 
+      {/* E. Müşteri */}
       <DetailSection title={ORDER_DETAIL_CUSTOMER_TITLE}>
         <dl className="space-y-1.5">
           <DetailRow label="WhatsApp numarası" value={phone} />
@@ -250,13 +285,22 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
         ) : null}
       </DetailSection>
 
+      {/* F. Zaman bilgileri */}
       <DetailSection title={ORDER_DETAIL_TIMELINE_TITLE}>
         <dl className="space-y-1.5">
           {createdLabel !== null ? (
-            <DetailRow label="Kayıt tarihi" value={createdLabel} valueTone="tertiary" />
+            <DetailRow
+              label="Kayıt tarihi"
+              value={createdLabel}
+              valueTone="tertiary"
+            />
           ) : null}
           {updatedLabel !== null ? (
-            <DetailRow label="Son güncelleme" value={updatedLabel} valueTone="tertiary" />
+            <DetailRow
+              label="Son güncelleme"
+              value={updatedLabel}
+              valueTone="tertiary"
+            />
           ) : null}
           {completedLabel !== null ? (
             <DetailRow
@@ -266,7 +310,11 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
             />
           ) : null}
           {closedLabel !== null ? (
-            <DetailRow label="Kapatıldı" value={closedLabel} valueTone="tertiary" />
+            <DetailRow
+              label="Kapatıldı"
+              value={closedLabel}
+              valueTone="tertiary"
+            />
           ) : null}
         </dl>
       </DetailSection>
@@ -274,6 +322,18 @@ function OrderDetailBody({ detail }: { detail: OrderDetail }) {
   );
 }
 
+/**
+ * One production line: the seller's own field label with the
+ * collected snapshot value. Both sides are seller-defined content of
+ * unbounded length, so the composition is wrap-safe by construction:
+ * narrow viewports stack label above value; from sm up the compact
+ * two-sided "Label — Value" line returns, with both sides allowed to
+ * wrap (no rigid shrink-0 — a long label can never squeeze the value
+ * out of the viewport, and nothing is truncated). Image values open
+ * the existing authenticated media-proxy preview; a not-yet-collected
+ * value shows the single waiting phrase only while the order is
+ * truthfully still COLLECTING.
+ */
 function ProductionFieldRow({
   field,
   orderStatus,
@@ -293,7 +353,9 @@ function ProductionFieldRow({
       </dt>
       <dd className="min-w-0 break-words text-[13px] sm:text-right">
         {display.kind === "text" ? (
-          <span className="whitespace-pre-wrap text-foreground">{display.text}</span>
+          <span className="whitespace-pre-wrap text-foreground">
+            {display.text}
+          </span>
         ) : null}
         {display.kind === "image" ? (
           <>
