@@ -48,6 +48,7 @@ test("shared Orders backend fixtures parse through the frontend contract", () =>
   const detail = parseOrderDetailResponse(contract.orders.detail_response);
   assert.equal(detail.order.id, 41);
   assert.equal(detail.order.customerNote, "Hediye paketi olsun lütfen");
+  assert.equal(detail.order.sellerActionRequired, false);
   assert.equal(detail.fields.length, 1);
   assert.deepEqual(detail.fields[0]?.value, {
     kind: "single_choice",
