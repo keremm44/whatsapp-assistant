@@ -169,11 +169,12 @@ test("conversation signatures move when last message, control or attention chang
   );
 });
 
-test("paused freshness includes the global total and first-page identity", () => {
+test("paused freshness includes total, first-page identity and active-order identity", () => {
   const row = {
     customer: { id: 22 },
     lastMessage: { id: 90 },
     control: { version: 4 },
+    activeOrder: { id: 18, version: 5 },
     needsAttention: true,
     attentionReason: "assistant_paused",
   };
@@ -181,7 +182,7 @@ test("paused freshness includes the global total and first-page identity", () =>
     total: 20,
     conversations: [row],
   });
-  assert.equal(first, "total:20|rows:22:90:4:1:assistant_paused");
+  assert.equal(first, "total:20|rows:22:90:4:1:assistant_paused:18:5");
   assert.equal(
     signaturesDiffer(
       first,
@@ -195,6 +196,26 @@ test("paused freshness includes the global total and first-page identity", () =>
       buildPausedListFreshnessSignature({ total: 20, conversations: [row] }),
     ),
     false,
+  );
+  assert.equal(
+    signaturesDiffer(
+      first,
+      buildPausedListFreshnessSignature({
+        total: 20,
+        conversations: [{ ...row, activeOrder: null }],
+      }),
+    ),
+    true,
+  );
+  assert.equal(
+    signaturesDiffer(
+      first,
+      buildPausedListFreshnessSignature({
+        total: 20,
+        conversations: [{ ...row, activeOrder: { id: 18, version: 6 } }],
+      }),
+    ),
+    true,
   );
 });
 
