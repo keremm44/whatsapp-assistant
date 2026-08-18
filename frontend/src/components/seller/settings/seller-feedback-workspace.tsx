@@ -116,8 +116,7 @@ export function SellerFeedbackWorkspace() {
 
   const draft = { category, subject, message };
   const validation = validateSellerFeedbackCreatePayload(draft);
-  const canSubmit =
-    Object.keys(validation).length === 0 && !isSubmitting;
+  const canSubmit = Object.keys(validation).length === 0 && !isSubmitting;
 
   const submitFeedback = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -146,13 +145,13 @@ export function SellerFeedbackWorkspace() {
       );
       if (controller.signal.aborted) return;
 
+      const existed = rowsRef.current.some((item) => item.id === created.id);
       setRows((current) => {
-        const existed = current.some((item) => item.id === created.id);
         const next = [created, ...current.filter((item) => item.id !== created.id)];
         const visibleLength = Math.max(current.length, PAGE_SIZE);
-        if (!existed) setTotal((value) => value + 1);
         return next.slice(0, visibleLength);
       });
+      if (!existed) setTotal((value) => value + 1);
       setHasLoaded(true);
       hasLoadedRef.current = true;
       setCategory("suggestion");
@@ -160,6 +159,7 @@ export function SellerFeedbackWorkspace() {
       setMessage("");
       setSubmitAttempted(false);
       setSubmitSuccess("Geri bildiriminiz gönderildi.");
+      void loadFirstPage();
     } catch {
       if (controller.signal.aborted) return;
       setSubmitError("Geri bildiriminiz gönderilemedi. Tekrar deneyebilirsiniz.");
@@ -342,7 +342,11 @@ export function SellerFeedbackWorkspace() {
             placeholder="Kısaca ne hakkında olduğunu yazın"
           />
           {submitAttempted && validation.subject ? (
-            <p id="feedback-subject-error" role="alert" className="text-[12.5px] text-destructive">
+            <p
+              id="feedback-subject-error"
+              role="alert"
+              className="text-[12.5px] text-destructive"
+            >
               {validation.subject}
             </p>
           ) : null}
@@ -380,7 +384,11 @@ export function SellerFeedbackWorkspace() {
             placeholder="Detayları paylaşın"
           />
           {submitAttempted && validation.message ? (
-            <p id="feedback-message-error" role="alert" className="text-[12.5px] text-destructive">
+            <p
+              id="feedback-message-error"
+              role="alert"
+              className="text-[12.5px] text-destructive"
+            >
               {validation.message}
             </p>
           ) : null}
@@ -424,7 +432,10 @@ export function SellerFeedbackWorkspace() {
         </div>
 
         {isInitialLoading && !hasLoaded ? (
-          <div className="flex min-h-28 items-center justify-center gap-2 border-y border-divider py-6 text-sm text-muted-foreground" role="status">
+          <div
+            className="flex min-h-28 items-center justify-center gap-2 border-y border-divider py-6 text-sm text-muted-foreground"
+            role="status"
+          >
             <Spinner size={16} label="Geri bildirimler yükleniyor" />
             <span>Gönderdikleriniz yükleniyor…</span>
           </div>
@@ -432,9 +443,18 @@ export function SellerFeedbackWorkspace() {
 
         {!isInitialLoading && !hasLoaded && listError ? (
           <div className="space-y-3 border-y border-divider py-5" role="status">
-            <p className="text-sm font-medium text-foreground">Gönderdikleriniz yüklenemedi.</p>
-            <p className="text-[12.5px] text-muted-foreground">Bağlantı kurulamadı. Formu yine kullanabilirsiniz.</p>
-            <Button type="button" variant="secondary" size="sm" onClick={loadFirstPage}>
+            <p className="text-sm font-medium text-foreground">
+              Gönderdikleriniz yüklenemedi.
+            </p>
+            <p className="text-[12.5px] text-muted-foreground">
+              Bağlantı kurulamadı. Formu yine kullanabilirsiniz.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={loadFirstPage}
+            >
               Tekrar dene
             </Button>
           </div>
@@ -442,8 +462,12 @@ export function SellerFeedbackWorkspace() {
 
         {hasLoaded && rows.length === 0 ? (
           <div className="border-y border-divider py-5" role="status">
-            <p className="text-sm font-medium text-foreground">Henüz geri bildirim göndermediniz</p>
-            <p className="mt-1 text-[12.5px] text-muted-foreground">İlk geri bildiriminiz gönderildiğinde burada görünecek.</p>
+            <p className="text-sm font-medium text-foreground">
+              Henüz geri bildirim göndermediniz
+            </p>
+            <p className="mt-1 text-[12.5px] text-muted-foreground">
+              İlk geri bildiriminiz gönderildiğinde burada görünecek.
+            </p>
           </div>
         ) : null}
 
@@ -455,7 +479,10 @@ export function SellerFeedbackWorkspace() {
               const detailError = detailErrors[item.id];
 
               return (
-                <li key={item.id} className="border-b border-divider last:border-b-0">
+                <li
+                  key={item.id}
+                  className="border-b border-divider last:border-b-0"
+                >
                   <button
                     type="button"
                     aria-expanded={expanded}
@@ -478,7 +505,10 @@ export function SellerFeedbackWorkspace() {
                         <StatusChip tone={statusTone(item.status)}>
                           {FEEDBACK_STATUS_LABELS[item.status]}
                         </StatusChip>
-                        <span aria-hidden="true" className="text-sm text-muted-foreground">
+                        <span
+                          aria-hidden="true"
+                          className="text-sm text-muted-foreground"
+                        >
                           {expanded ? "−" : "+"}
                         </span>
                       </span>
@@ -508,14 +538,18 @@ export function SellerFeedbackWorkspace() {
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-muted-foreground">Son güncelleme</dt>
+                            <dt className="text-muted-foreground">
+                              Son güncelleme
+                            </dt>
                             <dd className="mt-0.5 text-foreground">
                               {formatFeedbackDate(item.updatedAt)}
                             </dd>
                           </div>
                         </dl>
                         <div className="mt-4 border-t border-divider pt-3">
-                          <p className="text-[11px] font-medium text-muted-foreground">Mesaj</p>
+                          <p className="text-[11px] font-medium text-muted-foreground">
+                            Mesaj
+                          </p>
                           <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-foreground">
                             {item.message}
                           </p>
@@ -523,13 +557,19 @@ export function SellerFeedbackWorkspace() {
                       </div>
 
                       {detailLoading ? (
-                        <p role="status" className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                          <Spinner size={12} label="Durum yenileniyor" />
+                        <p
+                          role="status"
+                          className="flex items-center gap-2 text-[11px] text-muted-foreground"
+                        >
+                          <Spinner size={14} label="Durum yenileniyor" />
                           Güncel durum kontrol ediliyor…
                         </p>
                       ) : null}
                       {detailError ? (
-                        <p role="status" className="text-[11px] text-muted-foreground">
+                        <p
+                          role="status"
+                          className="text-[11px] text-muted-foreground"
+                        >
                           {detailError}
                         </p>
                       ) : null}
@@ -560,7 +600,10 @@ export function SellerFeedbackWorkspace() {
               >
                 {isLoadingMore ? (
                   <>
-                    <Spinner size={14} label="Daha fazla geri bildirim yükleniyor" />
+                    <Spinner
+                      size={14}
+                      label="Daha fazla geri bildirim yükleniyor"
+                    />
                     Yükleniyor…
                   </>
                 ) : (
@@ -568,7 +611,13 @@ export function SellerFeedbackWorkspace() {
                 )}
               </Button>
             ) : listError ? (
-              <Button type="button" variant="ghost" size="sm" className="w-full" onClick={loadFirstPage}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={loadFirstPage}
+              >
                 Yenile
               </Button>
             ) : null}
