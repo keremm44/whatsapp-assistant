@@ -1,15 +1,9 @@
+import { LoadingSignal } from "@/components/shared/loading-signal";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
 import { Surface } from "@/components/shared/surface";
 
-/**
- * Calm loading state for the İade ve Sorunlar workspace (initial
- * stream-in and tab/search/type transitions). Geometry mirrors the
- * page: static header, controls outline, and the two-pane workspace
- * silhouette (queue rows + detail placeholder) — no giant spinner, no
- * fake names/numbers, header position stays stable so switching views
- * never jumps the layout.
- */
+/** Stable returns loading geometry with a small branded activity signal. */
 export default function SellerReturnsLoading() {
   return (
     <PageContainer size="wide" className="py-8 sm:py-10">
@@ -24,6 +18,7 @@ export default function SellerReturnsLoading() {
         aria-label="İade ve sorun kayıtları yükleniyor"
       >
         <span className="sr-only">İade ve sorun kayıtları yükleniyor…</span>
+        <LoadingSignal decorative compact />
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="h-10 w-full max-w-md animate-pulse rounded-md bg-surface-2/60" />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
