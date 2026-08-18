@@ -6,7 +6,7 @@ import {
   feedbackStatusLabel,
   parseSellerFeedbackCreateResponse,
   parseSellerFeedbackListResponse,
-} from "./feedback";
+} from "./feedback.ts";
 
 const row = {
   id: 7,
