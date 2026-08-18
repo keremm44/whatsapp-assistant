@@ -14,7 +14,7 @@ import {
   conversationUnansweredDestination,
 } from "./conversations-destinations.ts";
 
-test("non-action return context opens collecting on the exact request", () => {
+test("non-action return context opens the collecting view on the exact request", () => {
   assert.equal(
     conversationReturnDestination({
       id: 41,
@@ -24,7 +24,7 @@ test("non-action return context opens collecting on the exact request", () => {
   );
 });
 
-test("seller-action return context opens the canonical action-required request", () => {
+test("seller-action return context uses the canonical action-required URL", () => {
   assert.equal(
     conversationReturnDestination({
       id: 41,
