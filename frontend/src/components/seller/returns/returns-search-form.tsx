@@ -11,6 +11,7 @@ import {
   RETURN_SEARCH_PLACEHOLDER,
   returnsWorkspaceHref,
 } from "@/lib/seller/returns-format";
+import { clearWorkbenchNavigationNamespace } from "@/lib/seller/workbench-navigation";
 
 /**
  * Exact external order-number search.
@@ -47,6 +48,7 @@ export function ReturnsSearchForm({
   const submit = (nextValue: string) => {
     const normalized = nextValue.trim();
     if (normalized === (query ?? "")) return;
+    clearWorkbenchNavigationNamespace(window.sessionStorage, "returns");
     startTransition(() => {
       router.push(
         returnsWorkspaceHref({
