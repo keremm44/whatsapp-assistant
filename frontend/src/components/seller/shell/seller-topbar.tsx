@@ -94,9 +94,9 @@ export function SellerTopbar({
           aria-hidden="true"
           className="ml-auto hidden items-center gap-1.5 sm:flex"
         >
-          <span className="h-px w-8 bg-primary/45" />
+          <span className="h-px w-8 bg-divider" />
           <span className="h-px w-3 bg-brand/55" />
-          <span className="h-px w-5 bg-divider" />
+          <span className="h-px w-5 bg-chrome-foreground/20" />
         </span>
       </div>
     </header>
