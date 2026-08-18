@@ -9,7 +9,6 @@ import {
   parseUnansweredListResponse,
 } from "./unanswered.ts";
 
-
 type SharedContract = {
   schema_version: number;
   conversations: {
@@ -24,10 +23,7 @@ type SharedContract = {
   };
 };
 
-type ResolveContext = {
-  parentURL?: string;
-};
-
+type ResolveContext = { parentURL?: string };
 type ResolveHook = (
   specifier: string,
   context: ResolveContext,
@@ -74,10 +70,7 @@ const contractUrl = new URL(
   "../../../../contracts/seller-conversations-unanswered-v1.json",
   import.meta.url,
 );
-const contract = JSON.parse(
-  readFileSync(contractUrl, "utf8"),
-) as SharedContract;
-
+const contract = JSON.parse(readFileSync(contractUrl, "utf8")) as SharedContract;
 
 test("shared Conversations fixtures pass through the real frontend fetch/parser contract", async (t) => {
   assert.equal(contract.schema_version, 1);
@@ -135,8 +128,16 @@ test("shared Conversations fixtures pass through the real frontend fetch/parser 
   assert.equal(list.conversations[0]?.control?.version, 4);
   assert.equal(list.conversations[0]?.attentionReason, "return_review");
   assert.equal(list.conversations[0]?.activeOrder?.id, 18);
+  assert.equal(list.conversations[0]?.activeOrder?.customerId, 22);
+  assert.equal(list.conversations[0]?.activeOrder?.sellerActionRequired, true);
   assert.equal(list.conversations[0]?.activeReturnIssue?.id, 41);
+  assert.equal(list.conversations[0]?.activeReturnIssue?.customerId, 22);
+  assert.equal(
+    list.conversations[0]?.activeReturnIssue?.sellerActionRequired,
+    true,
+  );
   assert.equal(list.conversations[0]?.openUnanswered?.id, 61);
+  assert.equal(list.conversations[0]?.openUnanswered?.sellerActionRequired, true);
 
   responsePayload = contract.conversations.detail_response;
   const detail = await conversations.fetchConversationDetail(
@@ -159,8 +160,13 @@ test("shared Conversations fixtures pass through the real frontend fetch/parser 
   assert.equal(detail.messagePage.nextBeforeMessageId, 979);
   assert.equal(detail.controlHistory[0]?.toState, "RETURN_REVIEW");
   assert.equal(detail.activeOrder?.status, "SELLER_REVIEW_REQUIRED");
+  assert.equal(detail.activeOrder?.customerId, 22);
+  assert.equal(detail.activeOrder?.sellerActionRequired, true);
   assert.equal(detail.activeReturnIssue?.issueType, "DAMAGED_ITEM");
+  assert.equal(detail.activeReturnIssue?.customerId, 22);
+  assert.equal(detail.activeReturnIssue?.sellerActionRequired, true);
   assert.equal(detail.openUnanswered[0]?.id, 61);
+  assert.equal(detail.openUnanswered[0]?.sellerActionRequired, true);
 
   responsePayload = contract.conversations.control_response;
   const control = await conversations.fetchConversationControl(
@@ -183,18 +189,16 @@ test("shared Conversations fixtures pass through the real frontend fetch/parser 
   });
 });
 
-
 test("shared Unanswered fixtures pass through the real frontend parsers", () => {
   assert.equal(contract.schema_version, 1);
 
-  const list = parseUnansweredListResponse(
-    contract.unanswered.list_response,
-  );
+  const list = parseUnansweredListResponse(contract.unanswered.list_response);
   assert.equal(list.view, "action_required");
   assert.equal(list.pageCount, 1);
   assert.equal(list.questions[0]?.id, 61);
   assert.equal(list.questions[0]?.status, "OPEN");
   assert.equal(list.questions[0]?.version, 2);
+  assert.equal(list.questions[0]?.sellerActionRequired, true);
 
   const detail = parseUnansweredDetailResponse(
     contract.unanswered.detail_response,
@@ -204,6 +208,7 @@ test("shared Unanswered fixtures pass through the real frontend parsers", () => 
     detail.question.canonicalQuestion,
     "Kargoya ne zaman verilir?",
   );
+  assert.equal(detail.question.sellerActionRequired, true);
   assert.equal(detail.occurrences.length, 2);
   assert.equal(detail.occurrences[1]?.customerId, 22);
 
@@ -214,6 +219,7 @@ test("shared Unanswered fixtures pass through the real frontend parsers", () => 
   assert.equal(action.changed, true);
   assert.equal(action.question.status, "ANSWERED");
   assert.equal(action.question.version, 3);
+  assert.equal(action.question.sellerActionRequired, false);
   assert.equal(
     action.question.answerText,
     "Siparişler iki iş günü içinde kargoya verilir.",
