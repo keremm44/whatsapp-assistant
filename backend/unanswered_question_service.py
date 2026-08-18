@@ -317,13 +317,15 @@ def dismiss_seller_unanswered_question(
 
 
 def present_group_summary(group: dict[str, Any]) -> dict[str, Any]:
+    status = group.get("status")
     return {
         "id": group.get("id"),
         "question": group.get("canonical_question"),
-        "status": group.get("status"),
+        "status": status,
         "answer": group.get("answer_text"),
         "occurrence_count": group.get("occurrence_count"),
         "first_seen_at": group.get("first_seen_at"),
         "last_seen_at": group.get("last_seen_at"),
         "version": group.get("version"),
+        "seller_action_required": status == UNANSWERED_STATUS_OPEN,
     }

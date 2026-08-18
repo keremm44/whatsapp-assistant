@@ -112,6 +112,7 @@ from database import (
     ORDER_STATUS_COLLECTING,
     ORDER_STATUS_COMPLETE,
     ORDER_STATUS_SELLER_REVIEW_REQUIRED,
+    UNANSWERED_STATUS_OPEN,
     create_order_field_definition,
     get_order_field_definitions,
     get_product_by_id,
@@ -940,6 +941,7 @@ def seller_order_detail(
             "updated_at": order.get("updated_at"),
             "completed_at": order.get("completed_at"),
             "closed_at": order.get("closed_at"),
+            "seller_action_required": status_value == ORDER_STATUS_SELLER_REVIEW_REQUIRED,
         },
         "fields": result["fields"],
     }
@@ -1383,8 +1385,12 @@ def seller_unanswered_question_detail(
             default_message="Cevaplanamayan soru detayı okunamadı.",
         )
 
+    group = result["group"]
+    if isinstance(group, dict) and "seller_action_required" not in group:
+        group = {**group, "seller_action_required": group.get("status") == UNANSWERED_STATUS_OPEN}
+
     return {
-        "question": result["group"],
+        "question": group,
         "occurrences": result.get("occurrences") or [],
     }
 
@@ -1421,10 +1427,14 @@ def seller_unanswered_question_action(
             default_message="Cevaplanamayan soru güncellenemedi.",
         )
 
+    group = result["group"]
+    if isinstance(group, dict) and "seller_action_required" not in group:
+        group = {**group, "seller_action_required": group.get("status") == UNANSWERED_STATUS_OPEN}
+
     return {
         "action": body.action,
         "changed": result.get("changed") is True,
-        "question": result["group"],
+        "question": group,
     }
 
 
