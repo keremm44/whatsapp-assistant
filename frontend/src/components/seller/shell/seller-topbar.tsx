@@ -36,18 +36,21 @@ export function SellerTopbar({
   const frame = React.useRef<number | null>(null);
 
   React.useEffect(() => {
-    lastScrollY.current = Math.max(window.scrollY, 0);
+    const readScrollY = () =>
+      Math.max(window.scrollY || document.documentElement.scrollTop || 0, 0);
+
+    lastScrollY.current = readScrollY();
     setIsHidden(false);
 
     const update = () => {
-      const nextY = Math.max(window.scrollY, 0);
-      const delta = nextY - lastScrollY.current;
+      const nextY = readScrollY();
+      const previousY = lastScrollY.current;
 
       if (nextY < 72) {
         setIsHidden(false);
-      } else if (delta > 7) {
+      } else if (nextY > previousY) {
         setIsHidden(true);
-      } else if (delta < -5) {
+      } else if (nextY < previousY) {
         setIsHidden(false);
       }
 
@@ -75,7 +78,7 @@ export function SellerTopbar({
     <header
       onFocusCapture={() => setIsHidden(false)}
       className={cn(
-        "sticky top-0 z-10 border-b border-divider bg-canvas/90 backdrop-blur-md",
+        "sticky top-0 z-50 border-b border-divider bg-canvas",
         "transition-[transform,opacity,box-shadow] duration-200 ease-out will-change-transform motion-reduce:transition-none",
         isHidden
           ? "pointer-events-none -translate-y-full opacity-0"
