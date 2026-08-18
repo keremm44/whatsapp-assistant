@@ -1,16 +1,23 @@
 /**
  * Conversations context-rail destinations.
  *
- * Related-record ids and primary-action signals come from the backend.
- * The rail opens the existing URL-owned workspaces on the exact record;
- * it never invents a route or recreates business rules from status text.
+ * The detail payload already carries the real ids. The rail must use
+ * them to open the existing workspaces — never invent a detail route
+ * and never dump the seller on a broad list when a precise URL exists.
  */
 
 import { ordersListHref } from "./orders-format.ts";
 import { returnsWorkspaceHref } from "./returns-format.ts";
 import { unansweredWorkspaceHref } from "./unanswered-format.ts";
 
-/** Active return/issue → Returns workspace, exact request. */
+/**
+ * Active return/issue → Returns workspace, exact request.
+ *
+ * The backend's `seller_action_required` decides which operational
+ * view owns the request: false stays in Bilgi Toplanıyor; true opens
+ * İncelenecekler. The frontend does not recreate that decision from
+ * the raw status string.
+ */
 export const conversationReturnDestination = (issue: {
   id: number;
   sellerActionRequired: boolean;
@@ -33,8 +40,11 @@ export const conversationUnansweredDestination = (group: {
 
 /**
  * Active order → existing Orders workbench, exact selected order.
- * `?order=` is the established detail-selection contract; there is no
- * `/seller/orders/{id}` page route.
+ *
+ * `?order=` is the established detail-selection contract. The backend
+ * `seller_action_required` decides collecting vs action-required; no
+ * external-order-number lookup and no invented `/seller/orders/{id}`
+ * route are needed.
  */
 export const conversationOrderDestination = (order: {
   id: number;
