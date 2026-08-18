@@ -14,18 +14,21 @@ import {
   conversationUnansweredDestination,
 } from "./conversations-destinations.ts";
 
-test("COLLECTING return context opens the collecting view on the exact request", () => {
+test("non-action return context opens collecting on the exact request", () => {
   assert.equal(
-    conversationReturnDestination({ id: 41, status: "COLLECTING" }),
+    conversationReturnDestination({
+      id: 41,
+      sellerActionRequired: false,
+    }),
     "/seller/returns?view=collecting&request=41",
   );
 });
 
-test("SELLER_REVIEW_REQUIRED return context uses the canonical action-required URL", () => {
+test("seller-action return context opens the canonical action-required request", () => {
   assert.equal(
     conversationReturnDestination({
       id: 41,
-      status: "SELLER_REVIEW_REQUIRED",
+      sellerActionRequired: true,
     }),
     "/seller/returns?request=41",
   );
@@ -38,57 +41,31 @@ test("unanswered context opens the exact question group", () => {
   );
 });
 
-test("COLLECTING order with a number opens the collecting queue search", () => {
+test("non-action order opens collecting on the exact selected order", () => {
   assert.equal(
     conversationOrderDestination({
-      status: "COLLECTING",
-      externalOrderNumber: "TR123456",
+      id: 18,
+      sellerActionRequired: false,
     }),
-    "/seller/orders?view=collecting&q=TR123456",
+    "/seller/orders?view=collecting&order=18",
   );
 });
 
-test("COLLECTING order without a number opens the collecting queue", () => {
+test("seller-action order opens action-required on the exact selected order", () => {
   assert.equal(
     conversationOrderDestination({
-      status: "COLLECTING",
-      externalOrderNumber: null,
+      id: 18,
+      sellerActionRequired: true,
     }),
-    "/seller/orders?view=collecting",
-  );
-  assert.equal(
-    conversationOrderDestination({
-      status: "COLLECTING",
-      externalOrderNumber: "   ",
-    }),
-    "/seller/orders?view=collecting",
+    "/seller/orders?view=action_required&order=18",
   );
 });
 
-test("SELLER_REVIEW_REQUIRED order with a number opens the action-required search", () => {
-  assert.equal(
-    conversationOrderDestination({
-      status: "SELLER_REVIEW_REQUIRED",
-      externalOrderNumber: "TR123456",
-    }),
-    "/seller/orders?view=action_required&q=TR123456",
-  );
-});
-
-test("SELLER_REVIEW_REQUIRED order without a number opens the action-required queue", () => {
-  assert.equal(
-    conversationOrderDestination({
-      status: "SELLER_REVIEW_REQUIRED",
-      externalOrderNumber: null,
-    }),
-    "/seller/orders?view=action_required",
-  );
-});
-
-test("order context never invents an order detail route", () => {
+test("order context uses the existing query selection, never an invented detail route", () => {
   const href = conversationOrderDestination({
-    status: "SELLER_REVIEW_REQUIRED",
-    externalOrderNumber: "TR9",
+    id: 18,
+    sellerActionRequired: true,
   });
   assert.equal(href.includes("/seller/orders/"), false);
+  assert.equal(href.includes("order=18"), true);
 });
