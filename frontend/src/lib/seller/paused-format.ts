@@ -19,6 +19,13 @@ export const PAUSED_STATE_LABEL = "Yanıtlar durduruldu";
 export const PAUSED_OPEN_CONVERSATION_LABEL = "Konuşmayı aç";
 
 /**
+ * Backend active-order context is surfaced asymmetrically: rows with
+ * an active order get a quiet recognition signal; rows without one
+ * stay visually calm instead of repeating a noisy “Sipariş yok”.
+ */
+export const PAUSED_ACTIVE_ORDER_LABEL = "Sipariş var";
+
+/**
  * Backend-owned reason codes that have an approved seller-facing
  * label. Any other / future code falls back to the generic state
  * line and is never shown raw.
