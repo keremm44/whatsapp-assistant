@@ -1,14 +1,9 @@
+import { LoadingSignal } from "@/components/shared/loading-signal";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
 import { Surface } from "@/components/shared/surface";
 
-/**
- * Calm loading state for the Orders workspace (initial stream-in and
- * tab/search/filter transitions). Geometry mirrors the page: static
- * header, toolbar outline, and the two-pane list/detail split with
- * calm row skeletons — no giant spinner, header position stays stable
- * so switching views never jumps the layout.
- */
+/** Stable Orders loading geometry with a small branded activity signal. */
 export default function SellerOrdersLoading() {
   return (
     <PageContainer size="wide" className="py-8 sm:py-10">
@@ -23,6 +18,7 @@ export default function SellerOrdersLoading() {
         aria-label="Sipariş listesi yükleniyor"
       >
         <span className="sr-only">Sipariş listesi yükleniyor…</span>
+        <LoadingSignal decorative compact />
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="h-10 w-full max-w-sm animate-pulse rounded-md bg-surface-2/60 lg:w-96" />
           <div className="flex flex-col gap-3 sm:flex-row">
