@@ -76,7 +76,6 @@ test("parses a complete order summary including the print-content fields", () =>
   assert.equal(order.externalOrderNumber, "TR987654");
   assert.equal(order.imageMessageId, 104);
   assert.equal(order.hasImage, true);
-  // custom_text must arrive byte-exact — no trimming/case folding.
   assert.equal(order.customText, "İyi ki doğdun Kerem");
   assert.equal(order.status, "COMPLETE");
   assert.equal(order.displayStatus, "Bilgiler tamamlandı");
@@ -118,7 +117,7 @@ test("parses review rows with the backend note", () => {
         review_reason_note: "Ürün baskı tipi değişti.",
       }),
     ]),
-    );
+  );
   const order = page.orders[0] as OrderSummary;
   assert.equal(order.sellerActionRequired, true);
   assert.equal(order.reviewReasonNote, "Ürün baskı tipi değişti.");
@@ -185,9 +184,6 @@ test("rejects drifted payloads with contract errors", () => {
 });
 
 test("toplam mirrors the returned page length — it is not a global total", () => {
-  // Inspected backend semantics: database.list_orders computes
-  // toplam = len(result.data) of the paginated range. A first page
-  // of 20 items therefore reports toplam=20 even when more exist.
   const full = parseOrdersListResponse(
     rawListPage(
       Array.from({ length: 20 }, (_, index) => rawSummary({ id: index + 1 })),
@@ -218,10 +214,6 @@ test("keeps backend ordering verbatim (no client re-sort)", () => {
   );
 });
 
-/* ------------------------------------------------------------------ */
-/* Detail contract (GET /seller/orders/{id})                           */
-/* ------------------------------------------------------------------ */
-
 const rawDetailOrder = (
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> => ({
@@ -245,6 +237,7 @@ const rawDetailOrder = (
   updated_at: "2026-08-10T12:30:00+00:00",
   completed_at: "2026-08-10T12:30:00+00:00",
   closed_at: null,
+  seller_action_required: false,
   ...overrides,
 });
 
@@ -327,6 +320,7 @@ test("parses a full detail: order block + dynamic-field snapshot values", () => 
   assert.equal(detail.order.customerNote, "Hediye paketi olsun lütfen");
   assert.equal(detail.order.customText, "İyi ki doğdun Deniz");
   assert.equal(detail.order.closedAt, null);
+  assert.equal(detail.order.sellerActionRequired, false);
 
   assert.equal(detail.fields.length, 6);
   assert.deepEqual(detail.fields[0]!.value, {
@@ -346,9 +340,34 @@ test("parses a full detail: order block + dynamic-field snapshot values", () => 
   assert.deepEqual(detail.fields[5]!.value, { kind: "image", messageId: 970 });
 });
 
+test("order detail primary-action flag is backend-owned and strict", () => {
+  const review = parseOrderDetailResponse({
+    order: rawDetailOrder({
+      status: "SELLER_REVIEW_REQUIRED",
+      display_status: "Satıcı incelemesi gerekiyor",
+      seller_action_required: true,
+    }),
+    fields: [],
+  });
+  assert.equal(review.order.sellerActionRequired, true);
+
+  assert.throws(
+    () =>
+      parseOrderDetailResponse({
+        order: rawDetailOrder({ seller_action_required: "true" }),
+        fields: [],
+      }),
+    new RegExp(`^Error: ${ORDERS_CONTRACT_ERROR_PREFIX}`),
+  );
+});
+
 test("keeps backend field ordering verbatim and preserves pending fields", () => {
   const detail = parseOrderDetailResponse({
-    order: rawDetailOrder({ status: "COLLECTING", display_status: "Bilgi toplanıyor", completed_at: null }),
+    order: rawDetailOrder({
+      status: "COLLECTING",
+      display_status: "Bilgi toplanıyor",
+      completed_at: null,
+    }),
     fields: [
       rawDetailField({ id: 21, sort_order: 2 }),
       rawDetailField({
@@ -362,7 +381,6 @@ test("keeps backend field ordering verbatim and preserves pending fields", () =>
       }),
     ],
   });
-  // No client re-sort: the backend already ordered by sort_order_snapshot.
   assert.deepEqual(
     detail.fields.map((field) => field.id),
     [21, 22],
@@ -388,7 +406,6 @@ test("image field values carry only the safe message reference", () => {
 });
 
 test("detail contract drifts fail closed", () => {
-  // completed=true must carry a value payload (backend invariant).
   assert.throws(
     () =>
       parseOrderDetailResponse({
@@ -397,7 +414,6 @@ test("detail contract drifts fail closed", () => {
       }),
     new RegExp(`^Error: ${ORDERS_CONTRACT_ERROR_PREFIX}`),
   );
-  // Unknown field types are rejected, never guessed at.
   assert.throws(
     () =>
       parseOrderDetailResponse({
@@ -406,7 +422,6 @@ test("detail contract drifts fail closed", () => {
       }),
     new RegExp(`^Error: ${ORDERS_CONTRACT_ERROR_PREFIX}`),
   );
-  // Value shape must match the declared type.
   assert.throws(
     () =>
       parseOrderDetailResponse({
@@ -415,7 +430,6 @@ test("detail contract drifts fail closed", () => {
       }),
     new RegExp(`^Error: ${ORDERS_CONTRACT_ERROR_PREFIX}`),
   );
-  // Missing order block.
   assert.throws(
     () => parseOrderDetailResponse({ fields: [] }),
     new RegExp(`^Error: ${ORDERS_CONTRACT_ERROR_PREFIX}`),
