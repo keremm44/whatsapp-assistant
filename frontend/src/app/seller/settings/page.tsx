@@ -1,5 +1,4 @@
 import { BusinessSettingsWorkspace } from "@/components/seller/assistant-settings/business-settings-workspace";
-import { SellerFeedbackWorkspace } from "@/components/seller/settings/seller-feedback-workspace";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
@@ -15,8 +14,8 @@ import { resolveSellerSettingsFromSession } from "@/lib/seller/assistant-setting
 import { LogoutButton } from "./_logout-button";
 
 /**
- * Sistem Ayarları — business information, seller feedback, and the existing
- * session control. Logout semantics stay in `_logout-button.tsx`.
+ * Sistem Ayarları — business information and session control.
+ * Seller feedback is intentionally available from the persistent topbar.
  */
 export default async function SellerSettingsPage() {
   const bootstrap = await resolveSellerSettingsFromSession();
@@ -31,7 +30,6 @@ export default async function SellerSettingsPage() {
 
       <div className="mt-8 max-w-xl space-y-8">
         <BusinessSettingsWorkspace bootstrap={bootstrap} />
-        <SellerFeedbackWorkspace />
         <div className="space-y-2.5">
           <SectionHeader
             title={SESSION_SECTION_TITLE}
