@@ -12,6 +12,7 @@ import {
   normalizeReturnIssueTypeParam,
   returnsWorkspaceHref,
 } from "@/lib/seller/returns-format";
+import { clearWorkbenchNavigationNamespace } from "@/lib/seller/workbench-navigation";
 
 /**
  * Compact canonical issue-type filter (native select — no new
@@ -37,6 +38,7 @@ export function ReturnsIssueTypeFilter({
   const onChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const next = normalizeReturnIssueTypeParam(event.target.value);
     if (next === issueType) return;
+    clearWorkbenchNavigationNamespace(window.sessionStorage, "returns");
     startTransition(() => {
       router.push(
         returnsWorkspaceHref({
