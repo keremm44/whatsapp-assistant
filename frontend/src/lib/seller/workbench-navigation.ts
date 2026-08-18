@@ -3,7 +3,10 @@ export type WorkbenchNavigationMemory = {
   viewportY: number | null;
 };
 
-type NavigationStorage = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key" | "length">;
+type NavigationStorage = Pick<
+  Storage,
+  "getItem" | "setItem" | "removeItem" | "key" | "length"
+>;
 
 const STORAGE_PREFIX = "seller-workbench-navigation";
 
@@ -17,6 +20,38 @@ export const workbenchNavigationStorageKey = (
   namespace: string,
   context: string,
 ): string => `${workbenchNavigationStoragePrefix(namespace)}${context}`;
+
+const normalizedSearchEntries = (
+  url: URL,
+  omittedParam: string,
+): string[] => {
+  const entries: string[] = [];
+  for (const [key, value] of url.searchParams.entries()) {
+    if (key !== omittedParam) {
+      entries.push(`${key}=${value}`);
+    }
+  }
+  return entries.sort();
+};
+
+/**
+ * Returns true when navigation only adds/removes/changes a selected-record
+ * query param while keeping the list/filter context identical.
+ */
+export const isSelectionOnlyWorkbenchNavigation = (
+  currentHref: string,
+  destinationHref: string,
+  selectionParam: string,
+): boolean => {
+  const current = new URL(currentHref);
+  const destination = new URL(destinationHref, current);
+  if (current.pathname !== destination.pathname) return false;
+
+  return (
+    JSON.stringify(normalizedSearchEntries(current, selectionParam)) ===
+    JSON.stringify(normalizedSearchEntries(destination, selectionParam))
+  );
+};
 
 export const readWorkbenchNavigationMemory = (
   storage: NavigationStorage,
