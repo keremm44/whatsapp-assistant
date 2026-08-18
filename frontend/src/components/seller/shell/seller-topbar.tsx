@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 
 import { SellerAnnouncementsSheet } from "./seller-announcements-sheet";
+import { SellerFeedbackSheet } from "./seller-feedback-sheet";
 import { SellerIcon } from "./icon-map";
 import { SidebarSections } from "./seller-sidebar";
 
@@ -37,6 +38,7 @@ export function SellerTopbar({
   const pathname = usePathname();
   const [isHidden, setIsHidden] = React.useState(false);
   const [isAnnouncementsOpen, setIsAnnouncementsOpen] = React.useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = React.useState(false);
   const lastScrollY = React.useRef(0);
   const directionAnchorY = React.useRef(0);
   const direction = React.useRef<"up" | "down" | null>(null);
@@ -100,22 +102,29 @@ export function SellerTopbar({
     if (nextOpen) setIsHidden(false);
   };
 
+  const handleFeedbackOpenChange = (nextOpen: boolean) => {
+    setIsFeedbackOpen(nextOpen);
+    if (nextOpen) setIsHidden(false);
+  };
+
+  const isDrawerOpen = isAnnouncementsOpen || isFeedbackOpen;
+
   return (
     <header
       onFocusCapture={() => setIsHidden(false)}
       className={cn(
         "sticky top-0 border-b border-divider bg-canvas",
-        // Sheet overlay/content use z-20/z-30. While the announcement
-        // drawer owns focus the header steps below them; otherwise it
-        // keeps the normal z-50 scroll-content protection.
-        isAnnouncementsOpen ? "z-10" : "z-50",
+        // Sheet overlay/content use z-20/z-30. While a topbar drawer owns
+        // focus the header steps below it; otherwise it keeps the normal
+        // z-50 scroll-content protection.
+        isDrawerOpen ? "z-10" : "z-50",
         "transition-[transform,opacity,box-shadow] duration-200 ease-out will-change-transform motion-reduce:transition-none",
         isHidden
           ? "pointer-events-none -translate-y-full opacity-0"
           : "translate-y-0 opacity-100 shadow-[0_8px_24px_rgba(0,0,0,0.08)]",
       )}
     >
-      <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
+      <div className="flex h-14 items-center gap-2 px-4 sm:gap-3 sm:px-6">
         <TabletNavSheet />
         <p
           className="min-w-0 truncate type-row-primary text-foreground"
@@ -131,6 +140,7 @@ export function SellerTopbar({
           <span className="h-px w-3 bg-brand/55" />
           <span className="h-px w-5 bg-chrome-foreground/20" />
         </span>
+        <SellerFeedbackSheet onOpenChange={handleFeedbackOpenChange} />
         <SellerAnnouncementsSheet onOpenChange={handleAnnouncementsOpenChange} />
       </div>
     </header>
