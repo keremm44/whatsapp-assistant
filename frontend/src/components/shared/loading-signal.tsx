@@ -15,15 +15,19 @@ export function LoadingSignal({
   className,
   label = "Yükleniyor",
   compact = false,
+  decorative = false,
 }: {
   className?: string;
   label?: string;
   compact?: boolean;
+  /** Use inside a parent that already owns the live loading announcement. */
+  decorative?: boolean;
 }) {
   return (
     <div
-      role="status"
-      aria-label={label}
+      role={decorative ? undefined : "status"}
+      aria-label={decorative ? undefined : label}
+      aria-hidden={decorative ? true : undefined}
       className={cn("inline-flex items-center gap-3", className)}
     >
       <span
