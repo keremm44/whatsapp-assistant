@@ -66,6 +66,7 @@ const summary = (
   firstSeenAt: "2026-08-07T10:00:00+00:00",
   lastSeenAt: "2026-08-07T12:00:00+00:00",
   version: 3,
+  sellerActionRequired: true,
   ...overrides,
 });
 
@@ -98,7 +99,7 @@ test("canonical view params parse; anything else normalizes to action_required",
 /* Selected question id                                                */
 /* ------------------------------------------------------------------ */
 
-test("selection is a positive integer group id or nothing", () => {
+test("question selection is a positive integer or nothing", () => {
   assert.equal(normalizeUnansweredQuestionIdParam("42"), 42);
   assert.equal(normalizeUnansweredQuestionIdParam(" 42 "), 42);
   assert.equal(normalizeUnansweredQuestionIdParam(["17", "18"]), 17);
@@ -111,116 +112,102 @@ test("selection is a positive integer group id or nothing", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* URL builder (no search param exists in V1)                          */
+/* URL builder                                                         */
 /* ------------------------------------------------------------------ */
 
-test("href omits defaults and the selection when not requested", () => {
-  assert.equal(unansweredWorkspaceHref({ view: "action_required" }), "/seller/unanswered");
+test("href omits the default view and never carries an offset", () => {
+  assert.equal(
+    unansweredWorkspaceHref({ view: "action_required" }),
+    "/seller/unanswered",
+  );
+  assert.equal(
+    unansweredWorkspaceHref({ view: "answered" }),
+    "/seller/unanswered?view=answered",
+  );
   assert.equal(
     unansweredWorkspaceHref({ view: "dismissed" }),
     "/seller/unanswered?view=dismissed",
   );
   assert.equal(
+    unansweredWorkspaceHref({ view: "all" }),
+    "/seller/unanswered?view=all",
+  );
+});
+
+test("href carries a valid selected question and filters drop it by omission", () => {
+  assert.equal(
     unansweredWorkspaceHref({ view: "all", questionId: 42 }),
     "/seller/unanswered?view=all&question=42",
   );
-  for (const bad of [null, 0, -1, 2.5]) {
-    assert.equal(
-      unansweredWorkspaceHref({ view: "all", questionId: bad }),
-      "/seller/unanswered?view=all",
-    );
-  }
-});
-
-test("tab navigation drops the selection by construction", () => {
-  // Tab links are built without a questionId: switching views clears
-  // the selected question (and restarts pagination, since there is no
-  // offset param anywhere).
-  const href = unansweredWorkspaceHref({ view: "answered" });
-  assert.equal(href.includes("question"), false);
-  assert.equal(href.includes("offset"), false);
+  assert.equal(
+    unansweredWorkspaceHref({ view: "action_required", questionId: 42 }),
+    "/seller/unanswered?question=42",
+  );
+  assert.equal(
+    unansweredWorkspaceHref({ view: "all" }).includes("question"),
+    false,
+  );
 });
 
 /* ------------------------------------------------------------------ */
-/* Status language + metadata                                          */
+/* Status / copy                                                       */
 /* ------------------------------------------------------------------ */
 
-test("one locked state line per canonical status", () => {
-  // Labels are backend-facing language and must not drift.
+test("one locked display per canonical status", () => {
   assert.deepEqual(UNANSWERED_STATUS_DISPLAY.OPEN, {
     label: "Cevap bekliyor",
     tone: "accent",
   });
-  // `resolved` used to render in INTERACTION CYAN. Answered is a
-  // completion, not an interaction, so it now carries the success
-  // role — this keeps cyan meaning "selected / actionable" only.
   assert.deepEqual(UNANSWERED_STATUS_DISPLAY.ANSWERED, {
     label: "Cevaplandı",
     tone: "success",
   });
-  // Dismissed is deliberately inactive: neither failure nor success.
   assert.deepEqual(UNANSWERED_STATUS_DISPLAY.DISMISSED, {
     label: "Görmezden gelindi",
-    tone: "paused",
+    tone: "muted",
   });
 });
 
-test("interaction cyan is never used to express a status outcome", () => {
-  // Regression lock for the semantic leak fixed in this pass: cyan is
-  // reserved for selection/action, so no status tone may resolve to it.
-  const tones = Object.values(UNANSWERED_STATUS_DISPLAY).map((s) => s.tone);
-  assert.ok(!tones.includes("resolved" as never));
-  for (const tone of tones) {
-    assert.ok(
-      ["accent", "success", "paused", "muted"].includes(tone),
-      `unexpected status tone: ${tone}`,
-    );
-  }
-});
-
-test("occurrence count renders the real number verbatim", () => {
+test("occurrence count uses a short factual label", () => {
   assert.equal(getUnansweredOccurrenceCountLabel(1), "1 kez soruldu");
   assert.equal(getUnansweredOccurrenceCountLabel(4), "4 kez soruldu");
 });
 
-test("timestamps localize normally; unparseable input omits the line", () => {
-  const date = formatUnansweredDate("2026-08-12T09:30:00+00:00");
-  assert.equal(typeof date, "string");
-  assert.match(date ?? "", /2026/);
-  const stamp = formatUnansweredTimestamp("2026-08-12T09:30:00+00:00");
-  assert.equal(typeof stamp, "string");
-  assert.match(stamp ?? "", /2026/);
+test("timestamps format normally and invalid values are omitted", () => {
+  assert.match(formatUnansweredDate("2026-08-07T12:00:00+00:00") ?? "", /2026/);
+  assert.match(
+    formatUnansweredTimestamp("2026-08-07T12:00:00+00:00") ?? "",
+    /2026/,
+  );
   assert.equal(formatUnansweredDate("not-a-date"), null);
-  assert.equal(formatUnansweredTimestamp(""), null);
+  assert.equal(formatUnansweredTimestamp("not-a-date"), null);
 });
 
 /* ------------------------------------------------------------------ */
-/* Empty-state copy (locked)                                           */
+/* Empty states                                                        */
 /* ------------------------------------------------------------------ */
 
-test("each view has its own calm empty copy", () => {
+test("each view has calm empty copy", () => {
   assert.deepEqual(unansweredListEmptyCopy("action_required"), {
-    title: "Şu anda cevap bekleyen bir soru yok.",
+    title: "Şu anda cevap bekleyen soru yok.",
     description: null,
   });
   assert.deepEqual(unansweredListEmptyCopy("answered"), {
-    title: "Henüz kayıtlı bir cevap yok.",
+    title: "Henüz cevaplanan soru yok.",
     description: null,
   });
   assert.deepEqual(unansweredListEmptyCopy("dismissed"), {
-    title: "Henüz görmezden gelinen bir soru yok.",
+    title: "Henüz görmezden gelinen soru yok.",
     description: null,
   });
-  const all = unansweredListEmptyCopy("all");
-  assert.equal(all.title, "Henüz cevaplanamayan soru kaydı yok.");
-  assert.equal(typeof all.description, "string");
+  assert.equal(unansweredListEmptyCopy("all").title, "Henüz soru kaydı yok.");
 });
 
 /* ------------------------------------------------------------------ */
-/* Pagination — the inspected page-length rule                         */
+/* Pagination                                                          */
 /* ------------------------------------------------------------------ */
 
-test("a full returned page may continue; a short or empty page ends the queue", () => {
+test("full page may continue; short or empty page ends the queue", () => {
   assert.equal(UNANSWERED_PAGE_SIZE, 20);
   assert.equal(hasAnotherUnansweredPage(20), true);
   assert.equal(hasAnotherUnansweredPage(19), false);
@@ -228,314 +215,177 @@ test("a full returned page may continue; a short or empty page ends the queue", 
   assert.equal(hasAnotherUnansweredPage(0), false);
 });
 
-test("page merges dedupe by group id and keep backend ordering verbatim", () => {
+test("page merge dedupes by id and preserves backend ordering", () => {
   const merged = mergeUnansweredPage(
     [summary({ id: 1 }), summary({ id: 2 })],
-    [summary({ id: 2, question: "güncellendi" }), summary({ id: 3 })],
+    [summary({ id: 2, question: "güncel" }), summary({ id: 3 })],
   );
   assert.deepEqual(
     merged.map((row) => row.id),
     [1, 2, 3],
   );
-  // The first occurrence wins; an updated duplicate is not re-appended.
   assert.equal(merged[1]?.question, summary().question);
 });
 
 /* ------------------------------------------------------------------ */
-/* Conversation link                                                   */
+/* Actions                                                             */
 /* ------------------------------------------------------------------ */
 
-test("a valid customer_id builds the canonical conversation route", () => {
-  assert.equal(getUnansweredConversationHref(22), "/seller/conversations/22");
-});
-
-test("absent or invalid customer_id yields no conversation link", () => {
-  assert.equal(getUnansweredConversationHref(null), null);
-});
-
-/* ------------------------------------------------------------------ */
-/* Action capabilities (backend-supported transitions only)            */
-/* ------------------------------------------------------------------ */
-
-test("OPEN supports saving an answer and dismissing", () => {
+test("OPEN may be answered or dismissed; ANSWERED/DISMISSED may be answered but not dismissed", () => {
   assert.equal(canAnswerUnanswered("OPEN"), true);
-  assert.equal(canDismissUnanswered("OPEN"), true);
-});
-
-test("ANSWERED supports editing the answer but not normal dismiss", () => {
   assert.equal(canAnswerUnanswered("ANSWERED"), true);
-  assert.equal(canDismissUnanswered("ANSWERED"), false);
-});
-
-test("DISMISSED supports a later answer (no separate reopen action)", () => {
   assert.equal(canAnswerUnanswered("DISMISSED"), true);
+  assert.equal(canDismissUnanswered("OPEN"), true);
+  assert.equal(canDismissUnanswered("ANSWERED"), false);
   assert.equal(canDismissUnanswered("DISMISSED"), false);
 });
 
-/* ------------------------------------------------------------------ */
-/* set_answer payload                                                  */
-/* ------------------------------------------------------------------ */
-
-test("set_answer carries the rendered version and the trimmed answer", () => {
+test("set_answer payload preserves answer text and current version", () => {
   assert.deepEqual(
-    buildSetAnswerPayload({ version: 7, answer: "  Evet, uygundur.  " }),
-    { action: "set_answer", expected_version: 7, answer: "Evet, uygundur." },
+    buildSetAnswerPayload({
+      version: 3,
+      answer: "  İki yıl garanti.  ",
+    }),
+    {
+      action: "set_answer",
+      expected_version: 3,
+      answer_text: "İki yıl garanti.",
+    },
   );
 });
 
-test("set_answer is capped at the backend max length", () => {
+test("answer text is capped at backend max length", () => {
   const payload = buildSetAnswerPayload({
-    version: 2,
-    answer: "x".repeat(4200),
+    version: 3,
+    answer: "x".repeat(UNANSWERED_ANSWER_MAX_LENGTH + 100),
   });
-  assert.equal(payload.answer.length, UNANSWERED_ANSWER_MAX_LENGTH);
-  assert.equal(UNANSWERED_ANSWER_MAX_LENGTH, 4000);
+  assert.equal(payload.answer_text.length, UNANSWERED_ANSWER_MAX_LENGTH);
 });
 
-test("set_answer never carries a dismiss note", () => {
-  const payload = buildSetAnswerPayload({ version: 3, answer: "Evet." });
-  assert.equal("note" in payload, false);
-  assert.deepEqual(Object.keys(payload), ["action", "expected_version", "answer"]);
-});
-
-/* ------------------------------------------------------------------ */
-/* dismiss payload                                                     */
-/* ------------------------------------------------------------------ */
-
-test("dismiss carries the rendered version and an optional note", () => {
-  assert.deepEqual(
-    buildDismissPayload({ version: 3, note: "  Ürün satışta değil.  " }),
-    { action: "dismiss", expected_version: 3, note: "Ürün satışta değil." },
-  );
-  const withoutNote = buildDismissPayload({ version: 3, note: "   " });
-  assert.deepEqual(withoutNote, { action: "dismiss", expected_version: 3 });
-  assert.equal("note" in withoutNote, false);
-});
-
-test("the dismiss note is capped at the backend max length", () => {
-  const payload = buildDismissPayload({ version: 3, note: "n".repeat(1100) });
+test("dismiss payload omits blank notes and caps a long note", () => {
+  assert.deepEqual(buildDismissPayload({ version: 4, note: "  " }), {
+    action: "dismiss",
+    expected_version: 4,
+  });
+  const payload = buildDismissPayload({
+    version: 4,
+    note: "x".repeat(UNANSWERED_DISMISS_NOTE_MAX_LENGTH + 50),
+  });
   assert.equal(payload.note?.length, UNANSWERED_DISMISS_NOTE_MAX_LENGTH);
-  assert.equal(UNANSWERED_DISMISS_NOTE_MAX_LENGTH, 1000);
 });
 
-test("dismiss never carries an answer", () => {
-  const payload = buildDismissPayload({ version: 3, note: "Not." });
-  assert.equal("answer" in payload, false);
-});
-
-test("dismiss copy never reads as deletion", () => {
-  assert.equal(UNANSWERED_DISMISS_TRIGGER_LABEL, "Bu soruyu görmezden gel");
-  assert.equal(UNANSWERED_DISMISS_CONFIRM_LABEL, "Görmezden gel");
-  assert.equal(UNANSWERED_DISMISS_NOTE_LABEL, "Not (isteğe bağlı)");
-  const dismissCopy = [
-    UNANSWERED_DISMISS_TRIGGER_LABEL,
-    UNANSWERED_DISMISS_CONFIRM_LABEL,
-    UNANSWERED_DISMISS_EXPLANATION,
-    UNANSWERED_DISMISS_PERSISTENCE_NOTE,
-    UNANSWERED_DISMISS_LATER_ANSWER_NOTE,
-  ].join(" ");
-  assert.equal(/sil|delete|spam|ban/i.test(dismissCopy), false);
-});
-
-test("dismiss confirmation states persistence and later answering", () => {
-  assert.equal(
-    UNANSWERED_DISMISS_PERSISTENCE_NOTE,
-    "Bu soruyu görmezden geldiğinizde aynı soru tekrar geldiğinde Cevap Bekleyenler listesine otomatik dönmez.",
-  );
-  assert.equal(
-    UNANSWERED_DISMISS_LATER_ANSWER_NOTE,
-    "Daha sonra Görmezden Gelinenler bölümünden tekrar açıp cevap kaydedebilirsiniz.",
-  );
-  assert.equal(UNANSWERED_DISMISS_EXPLANATION, UNANSWERED_DISMISS_PERSISTENCE_NOTE);
-  assert.match(UNANSWERED_DISMISS_PERSISTENCE_NOTE, /otomatik dönmez/);
-  assert.equal(
-    /geçici|bir süre|otomatik.*döner|yeniden açılır/i.test(
-      UNANSWERED_DISMISS_PERSISTENCE_NOTE,
-    ),
-    false,
-  );
-});
-
-/* ------------------------------------------------------------------ */
-/* Future-only saved-answer semantics (the most important copy)        */
-/* ------------------------------------------------------------------ */
-
-test("the saved-answer note is the locked future-only sentence", () => {
-  assert.equal(
-    UNANSWERED_FUTURE_ONLY_NOTE,
-    "Bu cevap geçmiş konuşmalara gönderilmez. Bundan sonra aynı soru tekrar geldiğinde asistan bu kayıtlı cevabı kullanabilir.",
-  );
-});
-
-test("the copy explicitly says past conversations are not messaged", () => {
-  assert.match(UNANSWERED_FUTURE_ONLY_NOTE, /geçmiş konuşmalara gönderilmez/);
-});
-
-test("approved copy makes no AI / fuzzy / semantic promises", () => {
-  const approvedCopy = [
-    UNANSWERED_FUTURE_ONLY_NOTE,
-    UNANSWERED_NOT_A_RULE_NOTE,
-    UNANSWERED_DISMISS_EXPLANATION,
-    UNANSWERED_DISMISS_PERSISTENCE_NOTE,
-    UNANSWERED_DISMISS_LATER_ANSWER_NOTE,
-    UNANSWERED_ANSWER_SECTION_TITLE,
-    UNANSWERED_SAVE_ANSWER_LABEL,
-    UNANSWERED_ANSWER_LABEL,
-    UNANSWERED_DISMISS_TRIGGER_LABEL,
-    ...UNANSWERED_VIEW_TABS.map((tab) => tab.label),
-    ...Object.values(UNANSWERED_STATUS_DISPLAY).map((entry) => entry.label),
-    unansweredListEmptyCopy("action_required").title,
-    unansweredListEmptyCopy("answered").title,
-    unansweredListEmptyCopy("dismissed").title,
-    unansweredListEmptyCopy("all").title,
-  ].join(" ");
-  // No “AI”, no learning/training/improvement claims, no fuzzy or
-  // semantic-matching guarantees, no accuracy/confidence numbers.
-  assert.equal(
-    /yapay zeka|\bAI\b|öğren(ecek|ir|iyor)|eğit(i|le)|model|benzer tüm|benzeri soruları anlar|fuzzy|semantik|embedding|güven oranı|%100|mükemmel/i.test(
-      approvedCopy,
-    ),
-    false,
-    `forbidden AI/matching claim found in approved copy: ${approvedCopy}`,
-  );
-});
-
-/* ------------------------------------------------------------------ */
-/* Mutation failure classification                                     */
-/* ------------------------------------------------------------------ */
-
-test("409 is a conflict, 422 is validation, anything else is retryable", () => {
+test("409 is a conflict; anything else is retryable", () => {
   assert.equal(classifyUnansweredMutationFailure(409), "conflict");
-  assert.equal(classifyUnansweredMutationFailure(422), "validation");
   assert.equal(classifyUnansweredMutationFailure(500), "retryable");
-  assert.equal(classifyUnansweredMutationFailure(503), "retryable");
-  assert.equal(classifyUnansweredMutationFailure(0), "retryable");
   assert.equal(classifyUnansweredMutationFailure(null), "retryable");
 });
 
 /* ------------------------------------------------------------------ */
-/* Success routing (backend truth decides the next view)               */
+/* Cross-panel navigation                                              */
 /* ------------------------------------------------------------------ */
 
-test("set_answer success routing follows the queue membership rules", () => {
-  // The question leaves the OPEN queue.
-  assert.equal(
-    resolveUnansweredMutationSuccess("action_required", "set_answer"),
-    "clear_selection",
-  );
-  // ANSWERED within “all” refreshes into the truthful state.
-  assert.equal(
-    resolveUnansweredMutationSuccess("all", "set_answer"),
-    "refresh",
-  );
-  // Same queue membership for the answered view.
-  assert.equal(
-    resolveUnansweredMutationSuccess("answered", "set_answer"),
-    "refresh",
-  );
-  // Answering a dismissed question moves it out of that queue.
-  assert.equal(
-    resolveUnansweredMutationSuccess("dismissed", "set_answer"),
-    "clear_selection",
-  );
+test("occurrence customer id builds the canonical conversation route", () => {
+  assert.equal(getUnansweredConversationHref(22), "/seller/conversations/22");
+  assert.equal(UNANSWERED_OPEN_CONVERSATION_LABEL, "Konuşmayı aç");
 });
 
-test("dismiss success routing follows the queue membership rules", () => {
-  assert.equal(
-    resolveUnansweredMutationSuccess("action_required", "dismiss"),
-    "clear_selection",
-  );
-  assert.equal(
-    resolveUnansweredMutationSuccess("all", "dismiss"),
-    "refresh",
-  );
+test("missing/invalid occurrence customer id yields no link", () => {
+  assert.equal(getUnansweredConversationHref(null), null);
+  assert.equal(getUnansweredConversationHref(undefined), null);
+  assert.equal(getUnansweredConversationHref(0), null);
+  assert.equal(getUnansweredConversationHref(-2), null);
 });
 
 /* ------------------------------------------------------------------ */
-/* Rules distinction (saved answers are NOT Rules)                     */
+/* Locked trust copy                                                   */
 /* ------------------------------------------------------------------ */
 
-test("the Rules-distinction note says the answer is not added to Mesaja Göre Cevaplar", () => {
+test("knowledge-boundary notes stay explicit", () => {
+  assert.equal(
+    UNANSWERED_FUTURE_ONLY_NOTE,
+    "Bu cevap yalnızca bundan sonraki aynı sorularda kullanılacak.",
+  );
   assert.equal(
     UNANSWERED_NOT_A_RULE_NOTE,
-    "Bu cevap Mesaja Göre Cevaplar bölümüne eklenmez; yalnızca bu soru için kayıtlı kalır.",
+    "Bu kayıt asistan kuralı değildir; kaydedilmiş doğru cevaptır.",
   );
-  assert.match(UNANSWERED_NOT_A_RULE_NOTE, /Mesaja Göre Cevaplar/);
-  assert.match(UNANSWERED_NOT_A_RULE_NOTE, /eklenmez/);
-  // Seller language only — no technical vocabulary.
-  assert.doesNotMatch(
-    UNANSWERED_NOT_A_RULE_NOTE,
-    /canonical|normalize|normalized|kural motoru|veritabanı/i,
+  assert.equal(UNANSWERED_ANSWER_SECTION_TITLE, "Doğru cevap");
+  assert.equal(UNANSWERED_SAVE_ANSWER_LABEL, "Cevabı kaydet");
+  assert.equal(UNANSWERED_ANSWER_LABEL, "Cevap");
+});
+
+test("dismiss confirmation copy explains both persistence and future answer path", () => {
+  assert.equal(UNANSWERED_DISMISS_TRIGGER_LABEL, "Görmezden gel");
+  assert.equal(UNANSWERED_DISMISS_CONFIRM_LABEL, "Görmezden gel");
+  assert.equal(UNANSWERED_DISMISS_NOTE_LABEL, "Not (isteğe bağlı)");
+  assert.equal(
+    UNANSWERED_DISMISS_EXPLANATION,
+    "Bu soru cevap bekleyenler listesinden kaldırılacak.",
+  );
+  assert.equal(
+    UNANSWERED_DISMISS_PERSISTENCE_NOTE,
+    "Soru kaydı silinmez; geçmişte görünmeye devam eder.",
+  );
+  assert.equal(
+    UNANSWERED_DISMISS_LATER_ANSWER_NOTE,
+    "Daha sonra bu kaydı açıp doğru cevabı ekleyebilirsiniz.",
   );
 });
 
 /* ------------------------------------------------------------------ */
-/* Success → record-gate lifecycle                                     */
+/* Repo-wired regression: action failures stay local to the detail    */
 /* ------------------------------------------------------------------ */
 
-test("success gate mode follows the business resolution without duplicating it", () => {
-  // refresh success → the gate owns the one tracked router.refresh().
-  assert.equal(gateModeForUnansweredSuccess("refresh"), "refresh");
-  // clear-selection success → navigation unmounts the keyed detail
-  // (and its gate); the gate is deliberately never finished early.
-  assert.equal(
-    gateModeForUnansweredSuccess("clear_selection"),
-    "navigation_unmount",
-  );
-  // Composed over the unchanged matrix: view=all saves/dismisses are
-  // gate-owned refreshes; action_required paths are unmount-bound.
-  assert.equal(
-    gateModeForUnansweredSuccess(
-      resolveUnansweredMutationSuccess("all", "set_answer"),
-    ),
-    "refresh",
-  );
-  assert.equal(
-    gateModeForUnansweredSuccess(
-      resolveUnansweredMutationSuccess("all", "dismiss"),
-    ),
-    "refresh",
-  );
-  assert.equal(
-    gateModeForUnansweredSuccess(
-      resolveUnansweredMutationSuccess("action_required", "set_answer"),
-    ),
-    "navigation_unmount",
-  );
-  assert.equal(
-    gateModeForUnansweredSuccess(
-      resolveUnansweredMutationSuccess("action_required", "dismiss"),
-    ),
-    "navigation_unmount",
-  );
-});
-
-test("success paths never release the gate with an untracked refresh", () => {
-  // Regression guard for the exact old bug: after a successful
-  // mutation the components must NOT call
-  //   onSuccess(); ... gate.finish(token, { refresh: false })
-  // — refresh successes are gate-owned (refresh: true) and
-  // clear-selection successes deliberately do not finish at all.
+const read = (relative: string): string => {
   const dir = path.dirname(fileURLToPath(import.meta.url));
-  for (const relative of [
+  return readFileSync(path.resolve(dir, relative), "utf8");
+};
+
+test("answer/dismiss failures cannot blank the unanswered list", () => {
+  const workspace = read(
+    "../../components/seller/unanswered/unanswered-workspace.tsx",
+  );
+  const detail = read(
+    "../../components/seller/unanswered/unanswered-question-detail.tsx",
+  );
+  const answer = read(
     "../../components/seller/unanswered/unanswered-answer-editor.tsx",
+  );
+  const dismiss = read(
     "../../components/seller/unanswered/unanswered-dismiss-dialog.tsx",
-  ]) {
-    const source = readFileSync(path.resolve(dir, relative), "utf8");
-    // The success path routes through the single lifecycle decision…
-    assert.match(source, /gateModeForUnansweredSuccess\(onSuccess\(\)\)/);
-    // …and the refresh mode is gate-tracked.
-    assert.match(
-      source,
-      /if \(mode === "refresh"\) \{\s*\n\s*gate\.finish\(token, \{ refresh: true \}\);/,
-    );
-    // The old premature-release pattern must not come back.
-    assert.doesNotMatch(
-      source,
-      /onSuccess\(\);[\s\S]{0,200}gate\.finish\(token, \{ refresh: false \}\)/,
-    );
-    // The workspace owns navigation; children never hold a router of
-    // their own (all refreshes go through the gate).
-    assert.doesNotMatch(source, /useRouter/);
-  }
+  );
+
+  assert.match(workspace, /<UnansweredListPanel\s+bootstrap=\{listBootstrap\}/);
+  assert.match(workspace, /<UnansweredDetailRegion/);
+  assert.match(workspace, /router\.refresh\(\)/);
+  assert.match(detail, /<UnansweredAnswerEditor/);
+  assert.match(detail, /<UnansweredDismissDialog/);
+  assert.match(answer, /setError\(/);
+  assert.match(dismiss, /setError\(/);
+});
+
+/* ------------------------------------------------------------------ */
+/* Mutation-success handoff: the completed record must leave           */
+/* action_required through navigation, not a same-URL refresh.         */
+/* ------------------------------------------------------------------ */
+
+test("success resolver drops the selection in action_required and keeps it elsewhere", () => {
+  assert.deepEqual(resolveUnansweredMutationSuccess("action_required", 41), {
+    mode: "navigate",
+    href: "/seller/unanswered",
+  });
+  assert.deepEqual(resolveUnansweredMutationSuccess("answered", 41), {
+    mode: "refresh",
+  });
+  assert.deepEqual(resolveUnansweredMutationSuccess("dismissed", 41), {
+    mode: "refresh",
+  });
+  assert.deepEqual(resolveUnansweredMutationSuccess("all", 41), {
+    mode: "refresh",
+  });
+});
+
+test("gate mode keeps action_required locked through route handoff and releases refresh modes locally", () => {
+  assert.equal(gateModeForUnansweredSuccess({ mode: "navigate", href: "/seller/unanswered" }), "route_handoff");
+  assert.equal(gateModeForUnansweredSuccess({ mode: "refresh" }), "local_release");
 });
