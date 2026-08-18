@@ -63,6 +63,7 @@ from seller_panel_service import (
     list_conversations as list_seller_panel_conversations,
     list_dashboard_tasks as list_seller_panel_dashboard_tasks,
 )
+from seller_sidebar_service import get_seller_sidebar_summary
 from seller_invitation_service import (
     AdminSellerInvitationRequest,
     invite_seller_from_application,
@@ -206,6 +207,15 @@ def _raise_from_seller_product_service(result: dict[str, Any]) -> None:
         "not_found": status.HTTP_404_NOT_FOUND,
         "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
         "conflict": status.HTTP_409_CONFLICT,
+        "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
+    }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
+    raise HTTPException(status_code=status_code, detail=result["error"])
+
+
+def _raise_from_sidebar_service(result: dict[str, Any]) -> None:
+    kind = result.get("kind")
+    status_code = {
+        "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
         "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
     }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
     raise HTTPException(status_code=status_code, detail=result["error"])
@@ -643,6 +653,22 @@ def seller_dashboard_tasks(
     )
     if not result.get("ok"):
         _raise_from_seller_panel_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/seller/sidebar-summary")
+def seller_sidebar_summary(
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller sidebar için hafif, güvenilir action-count özetini döndürür.
+
+    - Tek seller-scoped endpoint.
+    - Liste endpointlerini çağırıp saymaz; database read model count'larını kullanır.
+    - Tenant isolation AuthContext seller_id üzerinden korunur.
+    """
+    result = get_seller_sidebar_summary(context.seller_id)
+    if not result.get("ok"):
+        _raise_from_sidebar_service(result)
     return {key: value for key, value in result.items() if key != "ok"}
 
 
