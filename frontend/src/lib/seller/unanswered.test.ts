@@ -1,10 +1,6 @@
 /**
  * Contract tests for the Cevaplanamayan Sorular parsers
  * (`unanswered.ts`).
- *
- * Runs with Node's built-in test runner (no new test framework):
- *   node --test src/lib/seller/unanswered.test.ts
- * (via `npm test`)
  */
 
 import assert from "node:assert/strict";
@@ -15,10 +11,6 @@ import {
   parseUnansweredDetailResponse,
   parseUnansweredListResponse,
 } from "./unanswered.ts";
-
-/* ------------------------------------------------------------------ */
-/* Raw fixtures (backend response shapes, verbatim key names)          */
-/* ------------------------------------------------------------------ */
 
 const rawGroupRow = (
   overrides: Record<string, unknown> = {},
@@ -40,10 +32,10 @@ const rawGroupRow = (
   dismiss_note: null,
   created_at: "2026-08-07T10:00:00+00:00",
   updated_at: "2026-08-07T12:00:00+00:00",
+  seller_action_required: true,
   ...overrides,
 });
 
-/** List rows use present_group_summary (different key names!). */
 const rawSummary = (
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> => ({
@@ -55,6 +47,7 @@ const rawSummary = (
   first_seen_at: "2026-08-07T10:00:00+00:00",
   last_seen_at: "2026-08-07T12:00:00+00:00",
   version: 3,
+  seller_action_required: true,
   ...overrides,
 });
 
@@ -70,7 +63,6 @@ const rawListResponse = (
   ...overrides,
 });
 
-/** List response containing exactly one customized row. */
 const rawSingleRow = (
   row: Record<string, unknown>,
 ): Record<string, unknown> => rawListResponse([rawSummary(row)]);
@@ -99,11 +91,7 @@ const rawDetail = (
   ...overrides,
 });
 
-/* ------------------------------------------------------------------ */
-/* List envelope + rows                                                */
-/* ------------------------------------------------------------------ */
-
-test("parses a complete list row (present_group_summary keys)", () => {
+test("parses a complete list row including backend primary-action state", () => {
   const page = parseUnansweredListResponse(
     rawListResponse([
       rawSummary({
@@ -111,6 +99,7 @@ test("parses a complete list row (present_group_summary keys)", () => {
         occurrence_count: 4,
         status: "ANSWERED",
         answer: "Evet, mikrodalga kullanımına uygundur.",
+        seller_action_required: false,
       }),
     ]),
   );
@@ -122,7 +111,6 @@ test("parses a complete list row (present_group_summary keys)", () => {
 
   const row = page.questions[0];
   assert.equal(row?.id, 41);
-  // The canonical question arrives byte-exact — never rewritten.
   assert.equal(row?.question, "Bu kupa mikrodalgaya girebilir mi?");
   assert.equal(row?.status, "ANSWERED");
   assert.equal(row?.answer, "Evet, mikrodalga kullanımına uygundur.");
@@ -130,6 +118,7 @@ test("parses a complete list row (present_group_summary keys)", () => {
   assert.equal(row?.firstSeenAt, "2026-08-07T10:00:00+00:00");
   assert.equal(row?.lastSeenAt, "2026-08-07T12:00:00+00:00");
   assert.equal(row?.version, 3);
+  assert.equal(row?.sellerActionRequired, false);
 });
 
 test("each canonical view parses through unchanged", () => {
@@ -159,6 +148,24 @@ test("all three canonical statuses parse; unknown status fails closed", () => {
     () => parseUnansweredListResponse(rawSingleRow({ status: "open" })),
     /unanswered_invalid_status/,
   );
+});
+
+test("seller_action_required is a strict backend boolean", () => {
+  assert.equal(
+    parseUnansweredListResponse(
+      rawSingleRow({ seller_action_required: true }),
+    ).questions[0]?.sellerActionRequired,
+    true,
+  );
+  for (const bad of [1, "true", null, undefined]) {
+    assert.throws(
+      () =>
+        parseUnansweredListResponse(
+          rawSingleRow({ seller_action_required: bad }),
+        ),
+      /unanswered_invalid_seller_action_required/,
+    );
+  }
 });
 
 test("occurrence_count is a strict non-negative integer", () => {
@@ -234,8 +241,6 @@ test("rejects a malformed list envelope", () => {
 });
 
 test("toplam mirrors the returned page length — it is not a global total", () => {
-  // Inspected backend semantics: database.py computes
-  // toplam = len(result.data) of the paginated range.
   const full = parseUnansweredListResponse(
     rawListResponse(
       Array.from({ length: 20 }, (_, index) => rawSummary({ id: index + 1 })),
@@ -252,10 +257,6 @@ test("toplam mirrors the returned page length — it is not a global total", () 
   assert.equal(short.pageCount, 1);
 });
 
-/* ------------------------------------------------------------------ */
-/* Detail                                                              */
-/* ------------------------------------------------------------------ */
-
 test("parses the full detail row and its occurrences", () => {
   const detail = parseUnansweredDetailResponse(
     rawDetail({
@@ -263,6 +264,7 @@ test("parses the full detail row and its occurrences", () => {
         status: "DISMISSED",
         dismissed_at: "2026-08-08T09:00:00+00:00",
         dismiss_note: "Ürün artık satılmıyor.",
+        seller_action_required: false,
       }),
     }),
   );
@@ -273,12 +275,12 @@ test("parses the full detail row and its occurrences", () => {
   assert.equal(detail.question.dismissNote, "Ürün artık satılmıyor.");
   assert.equal(detail.question.dismissedAt, "2026-08-08T09:00:00+00:00");
   assert.equal(detail.question.answeredAt, null);
+  assert.equal(detail.question.sellerActionRequired, false);
 
   const occurrence = detail.occurrences[0];
   assert.equal(occurrence?.id, 9);
   assert.equal(occurrence?.customerId, 22);
   assert.equal(occurrence?.messageId, 101);
-  // The actual customer wording, byte-exact (raw casing preserved).
   assert.equal(occurrence?.questionText, "bulaşık makinesine atılıyor mu acaba");
   assert.equal(occurrence?.occurredAt, "2026-08-07T12:00:00+00:00");
 });
@@ -331,13 +333,14 @@ test("rejects occurrences with malformed references", () => {
   );
 });
 
-test("answered rows carry the saved answer byte-exact", () => {
+test("answered rows carry the saved answer and action flag", () => {
   const detail = parseUnansweredDetailResponse(
     rawDetail({
       question: rawGroupRow({
         status: "ANSWERED",
         answer_text: "  Evet.\nSıcak su önermiyoruz.  ",
         answered_at: "2026-08-08T09:00:00+00:00",
+        seller_action_required: false,
       }),
     }),
   );
@@ -346,13 +349,10 @@ test("answered rows carry the saved answer byte-exact", () => {
     "  Evet.\nSıcak su önermiyoruz.  ",
   );
   assert.equal(detail.question.answeredAt, "2026-08-08T09:00:00+00:00");
+  assert.equal(detail.question.sellerActionRequired, false);
 });
 
-/* ------------------------------------------------------------------ */
-/* Actions — set_answer / dismiss results                              */
-/* ------------------------------------------------------------------ */
-
-test("parses both action responses (question is the full row)", () => {
+test("parses both action responses with backend action state", () => {
   const answered = parseUnansweredActionResponse({
     action: "set_answer",
     changed: true,
@@ -361,20 +361,26 @@ test("parses both action responses (question is the full row)", () => {
       answer_text: "Evet.",
       version: 4,
       answered_at: "2026-08-09T10:00:00+00:00",
+      seller_action_required: false,
     }),
   });
   assert.equal(answered.action, "set_answer");
   assert.equal(answered.changed, true);
   assert.equal(answered.question.status, "ANSWERED");
   assert.equal(answered.question.version, 4);
+  assert.equal(answered.question.sellerActionRequired, false);
 
   const dismissed = parseUnansweredActionResponse({
     action: "dismiss",
     changed: false,
-    question: rawGroupRow({ status: "DISMISSED" }),
+    question: rawGroupRow({
+      status: "DISMISSED",
+      seller_action_required: false,
+    }),
   });
   assert.equal(dismissed.action, "dismiss");
   assert.equal(dismissed.changed, false);
+  assert.equal(dismissed.question.sellerActionRequired, false);
 });
 
 test("no other action vocabulary exists in the contract", () => {
