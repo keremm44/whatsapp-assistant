@@ -12,46 +12,119 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils/cn";
 
+import { SellerAnnouncementsSheet } from "./seller-announcements-sheet";
+import { SellerFeedbackSheet } from "./seller-feedback-sheet";
 import { SellerIcon } from "./icon-map";
 import { SidebarSections } from "./seller-sidebar";
 
+const TOPBAR_OPEN_REGION = 72;
+const TOPBAR_DIRECTION_THRESHOLD = 10;
+
 /**
- * Topbar — the slim workspace rail.
+ * Topbar — a slim workspace rail that gets out of the way while reading.
  *
- * The rail belongs to the WORK, not to the navigation frame, so it
- * sits on the canvas material (one step above the spine) with a
- * single structural rule beneath it. It stays deliberately thin:
- * every pixel it takes is a pixel the ledger does not get.
- *
- *   - Left: the seller's real bootstrap identity (the store name from
- *     `GET /seller/me`). The decorative "Mağaza" chip stays removed —
- *     it restated the adjacent label and carried no backend state.
- *     No truthful business identity or data is lost.
- *
- *   - Tablet only (md to lg): a Menu trigger opens the same
- *     navigation in a Sheet, rendering the spine material and the
- *     identical section list as the desktop spine
- *     (`SidebarSections`), so tablet and desktop can never drift.
- *
- *   - No fabricated utility chrome: no notifications, no
- *     announcements, no assistant health. Those have no seller-facing
- *     backend contract.
+ * Downward scrolling past the opening region slides the rail above the
+ * viewport; upward scrolling, returning near the top, route changes, or
+ * keyboard focus reveal it. A small direction threshold filters trackpad
+ * jitter so tiny reversals do not repeatedly toggle the rail. Movement is
+ * transform-only, and reduced-motion users get an instant state change.
  */
 export function SellerTopbar({
   storeName,
 }: {
-  /**
-   * The seller-facing store / business name returned by
-   * `GET /seller/me`. The layout is responsible for resolving
-   * the bootstrap state and passing either the real name or the
-   * approved generic fallback; this component does not invent
-   * labels.
-   */
+  /** Seller-facing store / business name returned by GET /seller/me. */
   storeName: string;
 }) {
+  const pathname = usePathname();
+  const [isHidden, setIsHidden] = React.useState(false);
+  const [isAnnouncementsOpen, setIsAnnouncementsOpen] = React.useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = React.useState(false);
+  const lastScrollY = React.useRef(0);
+  const directionAnchorY = React.useRef(0);
+  const direction = React.useRef<"up" | "down" | null>(null);
+  const ticking = React.useRef(false);
+  const frame = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    const readScrollY = () =>
+      Math.max(window.scrollY || document.documentElement.scrollTop || 0, 0);
+
+    const initialY = readScrollY();
+    lastScrollY.current = initialY;
+    directionAnchorY.current = initialY;
+    direction.current = null;
+    setIsHidden(false);
+
+    const update = () => {
+      const nextY = readScrollY();
+      const previousY = lastScrollY.current;
+
+      if (nextY < TOPBAR_OPEN_REGION) {
+        setIsHidden(false);
+        direction.current = null;
+        directionAnchorY.current = nextY;
+      } else if (nextY !== previousY) {
+        const nextDirection = nextY > previousY ? "down" : "up";
+
+        if (direction.current !== nextDirection) {
+          direction.current = nextDirection;
+          directionAnchorY.current = previousY;
+        }
+
+        const distance = Math.abs(nextY - directionAnchorY.current);
+        if (distance >= TOPBAR_DIRECTION_THRESHOLD) {
+          setIsHidden(nextDirection === "down");
+        }
+      }
+
+      lastScrollY.current = nextY;
+      ticking.current = false;
+      frame.current = null;
+    };
+
+    const onScroll = () => {
+      if (ticking.current) return;
+      ticking.current = true;
+      frame.current = window.requestAnimationFrame(update);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame.current !== null) window.cancelAnimationFrame(frame.current);
+      frame.current = null;
+      ticking.current = false;
+    };
+  }, [pathname]);
+
+  const handleAnnouncementsOpenChange = (nextOpen: boolean) => {
+    setIsAnnouncementsOpen(nextOpen);
+    if (nextOpen) setIsHidden(false);
+  };
+
+  const handleFeedbackOpenChange = (nextOpen: boolean) => {
+    setIsFeedbackOpen(nextOpen);
+    if (nextOpen) setIsHidden(false);
+  };
+
+  const isDrawerOpen = isAnnouncementsOpen || isFeedbackOpen;
+
   return (
-    <header className="sticky top-0 z-10 border-b border-divider bg-canvas">
-      <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
+    <header
+      onFocusCapture={() => setIsHidden(false)}
+      className={cn(
+        "sticky top-0 border-b border-divider bg-canvas",
+        // Sheet overlay/content use z-20/z-30. While a topbar drawer owns
+        // focus the header steps below it; otherwise it keeps the normal
+        // z-50 scroll-content protection.
+        isDrawerOpen ? "z-10" : "z-50",
+        "transition-[transform,opacity,box-shadow] duration-200 ease-out will-change-transform motion-reduce:transition-none",
+        isHidden
+          ? "pointer-events-none -translate-y-full opacity-0"
+          : "translate-y-0 opacity-100 shadow-[0_8px_24px_rgba(0,0,0,0.08)]",
+      )}
+    >
+      <div className="flex h-14 items-center gap-2 px-4 sm:gap-3 sm:px-6">
         <TabletNavSheet />
         <p
           className="min-w-0 truncate type-row-primary text-foreground"
@@ -59,6 +132,16 @@ export function SellerTopbar({
         >
           {storeName}
         </p>
+        <span
+          aria-hidden="true"
+          className="ml-auto hidden items-center gap-1.5 sm:flex"
+        >
+          <span className="h-px w-8 bg-divider" />
+          <span className="h-px w-3 bg-brand/55" />
+          <span className="h-px w-5 bg-chrome-foreground/20" />
+        </span>
+        <SellerFeedbackSheet onOpenChange={handleFeedbackOpenChange} />
+        <SellerAnnouncementsSheet onOpenChange={handleAnnouncementsOpenChange} />
       </div>
     </header>
   );
@@ -73,7 +156,7 @@ const TabletNavSheet = () => {
       <SheetTrigger
         aria-label="Menüyü aç"
         className={cn(
-          "-ml-2 hidden h-11 w-11 items-center justify-center rounded-control text-muted transition-colors hover:bg-elevated hover:text-foreground md:inline-flex lg:hidden",
+          "-ml-2 hidden h-11 w-11 items-center justify-center rounded-control text-muted transition-[background-color,color,transform] duration-200 hover:scale-[1.03] hover:bg-elevated hover:text-foreground motion-reduce:transform-none md:inline-flex lg:hidden",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
         )}
       >
@@ -83,9 +166,6 @@ const TabletNavSheet = () => {
         side="left"
         className={cn(
           "w-[300px] gap-0 bg-chrome p-0 text-chrome-foreground sm:max-w-sm",
-          // The Sheet's own close control inherits paper-theme ink;
-          // on the dark spine material it needs the chrome ink role
-          // to stay legible and to keep a visible hover step.
           "[&>button]:text-chrome-foreground/70 [&>button:hover]:text-chrome-foreground",
         )}
       >

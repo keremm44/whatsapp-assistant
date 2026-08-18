@@ -14,8 +14,8 @@ import { resolveSellerSettingsFromSession } from "@/lib/seller/assistant-setting
 import { LogoutButton } from "./_logout-button";
 
 /**
- * Sistem Ayarları — business information plus the existing session
- * control. Logout semantics stay in `_logout-button.tsx`.
+ * Sistem Ayarları — business information and session control.
+ * Seller feedback is intentionally available from the persistent topbar.
  */
 export default async function SellerSettingsPage() {
   const bootstrap = await resolveSellerSettingsFromSession();

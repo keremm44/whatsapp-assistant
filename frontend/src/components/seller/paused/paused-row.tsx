@@ -6,6 +6,7 @@ import {
   Image as ImageIcon,
   PauseCircle,
   Shield,
+  ShoppingBag,
   UserX,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ import {
 } from "@/lib/seller/conversations-format";
 import type { ConversationListItem } from "@/lib/seller/conversations";
 import {
+  PAUSED_ACTIVE_ORDER_LABEL,
   PAUSED_OPEN_CONVERSATION_LABEL,
   getPausedReasonNote,
   getPausedReasonPresentation,
@@ -32,6 +34,11 @@ import { cn } from "@/lib/utils/cn";
  * so each row leads with the mapped pause reason (small line icon +
  * label) instead of repeating the page-level "Yanıtlar durduruldu"
  * state on every line. Raw backend reason codes never surface.
+ *
+ * Backend ordering is preserved verbatim. When the backend also
+ * supplies an active order for a paused conversation, the row exposes
+ * that fact as a small recognition signal and slightly strengthens the
+ * customer identity. Rows without an active order stay visually quiet.
  *
  * The whole row stays a single Link to the existing Conversations
  * workbench — the only operational transition; actual control is
@@ -56,12 +63,16 @@ export function PausedRow({
     reason.label,
   );
   const href = pausedConversationHref(item.customer.id);
+  const hasActiveOrder = item.activeOrder !== null;
+  const accessibleParts = [display.primary];
+  if (hasActiveOrder) accessibleParts.push(PAUSED_ACTIVE_ORDER_LABEL);
+  accessibleParts.push(reason.label, PAUSED_OPEN_CONVERSATION_LABEL);
 
   return (
     <li className="border-b border-divider last:border-b-0">
       <Link
         href={href as Route}
-        aria-label={`${display.primary} — ${reason.label}. ${PAUSED_OPEN_CONVERSATION_LABEL}`}
+        aria-label={accessibleParts.join(" — ")}
         className={cn(
           "group flex min-h-11 items-start gap-3 px-4 py-3 transition-colors sm:px-5",
           "hover:bg-selected/45 focus-visible:bg-selected/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
@@ -72,7 +83,10 @@ export function PausedRow({
         <span className="min-w-0 flex-1 space-y-1">
           <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
             <span
-              className="min-w-0 truncate text-[13.5px] font-medium leading-snug text-foreground"
+              className={cn(
+                "min-w-0 truncate text-[13.5px] leading-snug text-foreground",
+                hasActiveOrder ? "font-semibold" : "font-medium",
+              )}
               title={display.primary}
             >
               {display.primary}
@@ -89,7 +103,14 @@ export function PausedRow({
             ) : null}
           </span>
 
-          {/* Reason first — the row's actual information. */}
+          {hasActiveOrder ? (
+            <span className="inline-flex w-fit items-center gap-1.5 text-[12px] font-semibold leading-snug text-primary-text">
+              <ShoppingBag aria-hidden="true" size={13} strokeWidth={1.75} />
+              <span>{PAUSED_ACTIVE_ORDER_LABEL}</span>
+            </span>
+          ) : null}
+
+          {/* Reason first — the row's actual pause information. */}
           <span className="block text-[12.5px] font-medium leading-snug text-foreground/90">
             {reason.label}
           </span>

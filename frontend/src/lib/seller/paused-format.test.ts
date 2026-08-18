@@ -21,6 +21,7 @@ import {
   getPausedReasonLabel,
   getPausedReasonNote,
   getPausedReasonPresentation,
+  PAUSED_ACTIVE_ORDER_LABEL,
   PAUSED_EMPTY_COPY,
   PAUSED_OPEN_CONVERSATION_LABEL,
   PAUSED_STATE_LABEL,
@@ -144,6 +145,20 @@ test("rows do not repeat the page-level paused state as a per-row chip", () => {
   for (const code of ["manual_pause", "security", "violation"]) {
     assert.notEqual(getPausedReasonPresentation(code).label, PAUSED_STATE_LABEL);
   }
+});
+
+test("active-order recognition is asymmetric and driven by backend activeOrder context", () => {
+  assert.equal(PAUSED_ACTIVE_ORDER_LABEL, "Sipariş var");
+  const dir = path.dirname(fileURLToPath(import.meta.url));
+  const source = readFileSync(
+    path.resolve(dir, "../../components/seller/paused/paused-row.tsx"),
+    "utf8",
+  );
+  assert.match(source, /const hasActiveOrder = item\.activeOrder !== null/);
+  assert.match(source, /hasActiveOrder \? \(/);
+  assert.match(source, /PAUSED_ACTIVE_ORDER_LABEL/);
+  assert.doesNotMatch(source, /Sipariş yok/);
+  assert.doesNotMatch(source, /\.sort\(/);
 });
 
 test("paused load-more uses the shared stale-context lifecycle helpers", () => {

@@ -15,6 +15,8 @@ import { resolveDashboardTasksFromSession } from "@/lib/seller/dashboard-tasks-s
 import { buildDashboardFreshnessSignature } from "@/lib/seller/freshness";
 import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
 
+const cardEnterDelay = (index: number) => Math.min(index, 4) * 50;
+
 /**
  * Seller dashboard — the seller's daily attention surface.
  *
@@ -263,7 +265,7 @@ function NormalOnlyLayout({
             <li
               key={task.id}
               className="work-card card-enter overflow-hidden rounded-sheet bg-raised"
-              style={{ animationDelay: `${index * 50}ms` }}
+              style={{ animationDelay: `${cardEnterDelay(index)}ms` }}
             >
               <CompactTaskCard task={task} />
             </li>
@@ -313,7 +315,7 @@ function PrimaryColumn({
           <li
             key={task.id}
             className="work-card card-enter overflow-hidden rounded-sheet bg-raised"
-            style={{ animationDelay: `${index * 50}ms` }}
+            style={{ animationDelay: `${cardEnterDelay(index)}ms` }}
           >
             <PriorityCard task={task} />
           </li>

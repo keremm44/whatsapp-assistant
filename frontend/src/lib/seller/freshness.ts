@@ -56,6 +56,7 @@ export type PausedListFreshnessInput = {
     customer: { id: number };
     lastMessage: { id: number } | null;
     control: { version: number } | null;
+    activeOrder: { id: number; version: number } | null;
     needsAttention: boolean;
     attentionReason: string | null;
   }[];
@@ -63,13 +64,22 @@ export type PausedListFreshnessInput = {
 
 /**
  * Paused queue signature: real global filtered total + first-page
- * conversation identity. A total-only change (row 21 appearing
- * while the first 20 stay put) must still surface Yenile.
+ * conversation identity + active-order identity. Active orders affect
+ * both backend ordering and the visible “Sipariş var” recognition
+ * signal, so an order appearing/disappearing must surface Yenile even
+ * if the message/control identity is unchanged.
  */
 export const buildPausedListFreshnessSignature = (
   input: PausedListFreshnessInput,
-): string =>
-  `total:${input.total}|rows:${buildConversationListFreshnessSignature(input.conversations)}`;
+): string => {
+  const rows = input.conversations
+    .map((row) => {
+      const base = buildConversationListFreshnessSignature([row]);
+      return `${base}:${row.activeOrder?.id ?? 0}:${row.activeOrder?.version ?? 0}`;
+    })
+    .join(",");
+  return `total:${input.total}|rows:${rows}`;
+};
 
 export const buildConversationListFreshnessSignature = (
   conversations: readonly {
