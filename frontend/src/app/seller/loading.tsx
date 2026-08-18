@@ -22,9 +22,9 @@ export default function SellerLoading() {
             <div className="skeleton h-8 w-full max-w-[360px] rounded-sm" />
             <div className="skeleton h-4 w-full max-w-[520px] rounded-sm" />
             <div className="flex items-center gap-1.5 pt-1">
-              <div className="h-px w-8 bg-primary/45" />
+              <div className="h-px w-8 bg-divider" />
               <div className="h-px w-3 bg-brand/55" />
-              <div className="h-px w-5 bg-divider" />
+              <div className="h-px w-5 bg-chrome-foreground/20" />
             </div>
           </div>
 
