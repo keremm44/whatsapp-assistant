@@ -1,7 +1,9 @@
 import * as React from "react";
 import {
+  Bell,
   BookOpen,
   Box,
+  ChevronDown,
   ClipboardList,
   HelpCircle,
   LayoutDashboard,
@@ -43,6 +45,8 @@ export const SELLER_ICON_MAP = {
   Settings,
   Menu,
   Store,
+  Bell,
+  ChevronDown,
 } as const satisfies Record<string, LucideIcon>;
 
 export type SellerIconName = keyof typeof SELLER_ICON_MAP;
