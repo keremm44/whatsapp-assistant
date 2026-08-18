@@ -7,6 +7,7 @@ import { ConversationDetailPanel } from "@/components/seller/conversations/conve
 import { ConversationListPanel } from "@/components/seller/conversations/conversation-list-panel";
 import { ConversationsWorkbench } from "@/components/seller/conversations/conversations-workbench";
 import { ConversationContextRail } from "@/components/seller/conversations/context-rail";
+import { WorkbenchScrollMemory } from "@/components/seller/navigation/workbench-scroll-memory";
 import { PageContainer } from "@/components/shared/page-container";
 
 import {
@@ -60,6 +61,7 @@ export default async function SellerConversationDetailPage({
 
   const query = await searchParams;
   const attentionOnly = query.filter === "attention";
+  const navigationContext = attentionOnly ? "attention" : "all";
 
   const [listBootstrap, workspace] = await Promise.all([
     resolveConversationListFromSession({ attentionOnly }),
@@ -84,11 +86,18 @@ export default async function SellerConversationDetailPage({
         mobileView="detail"
         hasContextRail={hasContext}
         list={
-          <ConversationListPanel
-            bootstrap={listBootstrap}
-            attentionOnly={attentionOnly}
-            selectedCustomerId={customerId}
-          />
+          <WorkbenchScrollMemory
+            namespace="conversations"
+            context={navigationContext}
+            trackViewport={false}
+            resetPathname="/seller/conversations"
+          >
+            <ConversationListPanel
+              bootstrap={listBootstrap}
+              attentionOnly={attentionOnly}
+              selectedCustomerId={customerId}
+            />
+          </WorkbenchScrollMemory>
         }
         center={
           workspace.state === "ready" && detail ? (
