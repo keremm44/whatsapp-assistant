@@ -3,7 +3,6 @@ import * as React from "react";
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
-import { MarketingSectionHeading } from "@/components/marketing/section-heading";
 
 export function OnboardingSection() {
   return (
@@ -11,11 +10,19 @@ export function OnboardingSection() {
       id="kurulum"
       className="mx-auto w-full max-w-[1080px] scroll-mt-20 px-4 py-14 md:px-6 md:py-20 lg:px-8"
     >
-      <MarketingSectionHeading
-        eyebrow="Kurulum"
-        title="Müşteri görmeden önce siz görürsünüz."
-        description="İşletmenizi anlatır, test sohbetinde nasıl cevap verdiğini kontrol eder ve ancak hazır olduğunuzda WhatsApp’a bağlarsınız."
-      />
+      <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)] md:items-end md:gap-12">
+        <p className="type-meta font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+          Canlıya çıkmadan önce · 05
+        </p>
+        <div>
+          <h2 className="font-display text-[34px] font-semibold leading-[40px] tracking-[-0.025em] text-foreground sm:text-[46px] sm:leading-[52px]">
+            Müşteri görmeden önce siz görürsünüz.
+          </h2>
+          <p className="mt-3 max-w-2xl type-body text-muted">
+            İşletmenizi anlatır, test sohbetinde nasıl cevap verdiğini kontrol eder ve ancak hazır olduğunuzda WhatsApp’a bağlarsınız.
+          </p>
+        </div>
+      </div>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[250px_minmax(0,1fr)] lg:items-start lg:gap-10">
         <MarketingReveal variant="product" className="lg:order-2">
@@ -72,7 +79,7 @@ function SetupRail() {
 
 function TestConversation() {
   return (
-    <div className="overflow-hidden rounded-sheet border border-boundary bg-sunken shadow-surface">
+    <div className="border-y border-boundary bg-sunken">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider bg-chrome px-4 py-3.5 sm:px-6">
         <div>
           <p className="type-meta font-semibold text-chrome-foreground">Test sohbeti</p>
