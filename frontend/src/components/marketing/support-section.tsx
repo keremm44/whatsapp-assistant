@@ -59,7 +59,7 @@ function FinalProof() {
     <div className="relative flex h-full min-h-[330px] flex-col justify-between overflow-hidden rounded-sheet border border-primary/25 bg-chrome px-6 py-7 shadow-surface sm:px-8 sm:py-9">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full border border-identity/15 bg-identity/5 blur-3xl"
+        className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full border border-brand/15 bg-brand/5 blur-3xl"
       />
 
       <div className="relative max-w-xl">
