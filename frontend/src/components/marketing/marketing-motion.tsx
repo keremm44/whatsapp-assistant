@@ -64,37 +64,6 @@ export function MarketingReveal({
   );
 }
 
-export function BlurHeadline({
-  text,
-  className,
-}: {
-  text: string;
-  className?: string;
-}) {
-  const reduced = useReducedMotion();
-  const { ref, visible } = useInViewOnce<HTMLHeadingElement>(0.2);
-  const words = React.useMemo(() => text.split(' '), [text]);
-
-  return (
-    <h1 ref={ref} className={className}>
-      {words.map((word, index) => (
-        <React.Fragment key={`${word}-${index}`}>
-          <span
-            className={cn(
-              styles.blurWord,
-              (visible || reduced) && styles.blurWordVisible,
-            )}
-            style={{ transitionDelay: reduced ? '0ms' : `${index * 48}ms` }}
-          >
-            {word}
-          </span>
-          {index < words.length - 1 ? ' ' : null}
-        </React.Fragment>
-      ))}
-    </h1>
-  );
-}
-
 /**
  * A restrained True-Focus-inspired phrase sequence. All phrases remain
  * readable throughout; focus only adds structural cyan emphasis. It runs
@@ -191,7 +160,11 @@ const NAV_ITEMS = [
   { href: '#kurulum', label: 'Kurulum', id: 'kurulum' },
 ] as const;
 
-export function MarketingDockNav() {
+export function MarketingDockNav({
+  onNavigate,
+}: {
+  onNavigate?: () => void;
+}) {
   const [activeId, setActiveId] = React.useState<string>('nasil-calisir');
 
   React.useEffect(() => {
@@ -220,6 +193,7 @@ export function MarketingDockNav() {
         <a
           key={item.id}
           href={item.href}
+          onClick={onNavigate}
           aria-current={activeId === item.id ? 'location' : undefined}
           className={cn(styles.dockItem, activeId === item.id && styles.dockItemActive)}
         >
