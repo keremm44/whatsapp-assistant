@@ -12,11 +12,11 @@ test("robots indexes the public site without exposing workspace routes", () => {
   const robots = appFile("robots.ts");
 
   assert.match(robots, /allow: "\/"/);
-  assert.match(robots, /"\/admin\/"/);
-  assert.match(robots, /"\/auth\/"/);
+  assert.match(robots, /"\/admin"/);
+  assert.match(robots, /"\/auth"/);
   assert.match(robots, /"\/giris"/);
-  assert.match(robots, /"\/preview\/"/);
-  assert.match(robots, /"\/seller\/"/);
+  assert.match(robots, /"\/preview"/);
+  assert.match(robots, /"\/seller"/);
   assert.match(robots, /siteConfig\.url/);
 });
 
