@@ -46,3 +46,20 @@ test("application entry remains honest and non-interactive while the flow is una
   assert.match(header, /Başvuru yap/);
   assert.doesNotMatch(header, /<button[^>]*disabled/);
 });
+
+test("all public hash anchors can arm the direction-aware header suppression", () => {
+  const header = read("marketing-header.tsx");
+
+  assert.match(header, /a\[href\^=\\"#\\"\]/);
+  assert.match(header, /suppressHideUntil/);
+});
+
+test("demo reuses the shared proof story and chat bubbles expose the customer speaker", () => {
+  const demo = read("demo-section.tsx");
+  const bubbles = read("chat-bubbles.tsx");
+
+  assert.match(demo, /MARKETING_STORY\.customerQuestion/);
+  assert.match(demo, /MARKETING_STORY\.unknownAnswer/);
+  assert.match(demo, /MARKETING_STORY\.returnSystemOutcome/);
+  assert.match(bubbles, /Müşteri: /);
+});
