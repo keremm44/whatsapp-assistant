@@ -18,7 +18,7 @@ export function OnboardingSection() {
       />
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[250px_minmax(0,1fr)] lg:items-start lg:gap-10">
-        <MarketingReveal className="lg:order-2">
+        <MarketingReveal variant="product" className="lg:order-2">
           <TestConversation />
         </MarketingReveal>
         <div className="lg:order-1">
