@@ -46,7 +46,7 @@ const OWNERSHIP_STAGES: Array<{
     tabLabel: "Asistana geri verin",
     stateLabel: "Asistan aktif",
     title: "Asistan yeniden devrede.",
-    body: "Yeni mesajlarda kaldığı yerden devam eder.",
+    body: "Asistan yeni mesajlarda yeniden devreye girer.",
   },
 ];
 
@@ -248,9 +248,11 @@ function CoralJourney() {
           </FlowStep>
 
           <FlowStep index="02" label="Asistan durur" visible={visibleSteps >= 2}>
-            <StatusChip tone="paused">Yanıtlar durduruldu</StatusChip>
+            <p className="type-meta font-semibold text-muted-foreground">
+              Otomatik yanıt
+            </p>
             <p className="mt-3 font-heading text-lg font-semibold text-foreground">
-              Otomatik yanıt durdu
+              Durur
             </p>
             <p className="mt-2 type-row-secondary text-muted">
               Müşteriye otomatik cevap gönderilmez.
