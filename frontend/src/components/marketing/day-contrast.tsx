@@ -54,12 +54,12 @@ function WithAssistant() {
     <div className="h-full overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-divider bg-chrome px-5 py-4 sm:px-6">
         <div>
-          <p className="type-meta font-semibold text-primary">Asistanla</p>
+          <p className="type-meta font-semibold text-muted-foreground">Asistanla</p>
           <p className="mt-1 font-heading text-xl font-semibold tracking-[-0.015em] text-foreground">
             Rutin konuşma akar; dikkatiniz gereken konu ayrılır.
           </p>
         </div>
-        <span className="rounded-control border border-primary bg-selected px-2.5 py-1 type-meta font-semibold text-primary">
+        <span className="rounded-control border border-boundary bg-recessed px-2.5 py-1 type-meta font-semibold text-foreground">
           Kontrol sizde
         </span>
       </div>
@@ -74,7 +74,6 @@ function WithAssistant() {
           eyebrow="Karar gereken konu"
           title="Size ayrılır"
           body="Gerçekten sizin kararınızı isteyen konu görünür biçimde önünüze gelir."
-          primary
         />
       </div>
     </div>
@@ -94,23 +93,19 @@ function OutcomeArtefact({
   eyebrow,
   title,
   body,
-  primary = false,
 }: {
   eyebrow: string;
   title: string;
   body: string;
-  primary?: boolean;
 }) {
   return (
     <div className="rounded-sheet border border-boundary bg-sunken px-4 py-4">
       <div className="flex items-center gap-2">
         <span
           aria-hidden="true"
-          className={primary ? "h-2 w-2 rounded-full bg-primary" : "h-2 w-2 rounded-full bg-muted-foreground"}
+          className="h-2 w-2 rounded-full bg-muted-foreground"
         />
-        <p className={primary ? "type-meta font-semibold text-primary" : "type-meta font-semibold text-muted-foreground"}>
-          {eyebrow}
-        </p>
+        <p className="type-meta font-semibold text-muted-foreground">{eyebrow}</p>
       </div>
       <p className="mt-3 font-heading text-lg font-semibold text-foreground">{title}</p>
       <p className="mt-1.5 type-row-secondary text-muted">{body}</p>
