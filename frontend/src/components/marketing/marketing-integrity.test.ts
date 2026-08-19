@@ -50,7 +50,7 @@ test("application entry remains honest and non-interactive while the flow is una
 test("all public hash anchors can arm the direction-aware header suppression", () => {
   const header = read("marketing-header.tsx");
 
-  assert.match(header, /a\[href\^=\\"#\\"\]/);
+  assert.match(header, /a\[href\^="#"\]/);
   assert.match(header, /suppressHideUntil/);
 });
 
