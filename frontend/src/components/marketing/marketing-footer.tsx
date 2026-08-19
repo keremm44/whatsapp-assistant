@@ -9,7 +9,7 @@ import { BrandMark } from "@/components/shared/brand-mark";
  */
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-boundary/40 bg-chrome">
+    <footer className="border-t border-divider bg-chrome">
       <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 px-4 py-10 md:flex-row md:items-center md:justify-between md:px-6 lg:px-8">
         <div className="space-y-3">
           <BrandMark subtitle="Sakin Ustalık" />
