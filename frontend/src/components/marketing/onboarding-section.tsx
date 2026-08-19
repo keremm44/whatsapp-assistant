@@ -5,11 +5,6 @@ import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
 
-/**
- * Onboarding — framed as a calm seller journey rather than a technical
- * setup checklist. The emotional endpoint is still the real proof:
- * seeing the assistant speak before customers do.
- */
 export function OnboardingSection() {
   return (
     <section
@@ -18,11 +13,11 @@ export function OnboardingSection() {
     >
       <MarketingSectionHeading
         eyebrow="Kurulum"
-        title="Önce işletmenizi anlatın. Sonra müşteriden önce siz deneyin."
-        description="Teknik bir proje kurmazsınız. İşletmenizi, ürünlerinizi ve sınırlarınızı anlatırsınız; asistanı müşteriye açmadan önce test sohbetinde nasıl davrandığını görürsünüz."
+        title="İşletmenizi anlatın, önce siz deneyin."
+        description="Teknik bir proje kurmazsınız. Bize nasıl çalıştığınızı anlatır, asistanı müşteriye açmadan önce test edersiniz."
       />
 
-      <div className="mt-12 grid gap-8 lg:grid-cols-[330px_minmax(0,1fr)] lg:items-start lg:gap-10">
+      <div className="mt-10 grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:gap-10">
         <SetupRail />
         <MarketingReveal>
           <TestConversation />
@@ -34,19 +29,17 @@ export function OnboardingSection() {
 
 function SetupRail() {
   const steps = [
-    ["İşletmenizi tanıyalım", "Mağazanızı ve müşterilerinizin sizden neler beklediğini anlatın."],
-    ["Ürünlerinizi anlatalım", "Müşterilerin en çok soracağı ürün ve teslimat bilgilerini ekleyin."],
-    ["Sınırlarını siz belirleyin", "İade, teslimat ve nasıl cevap vermesini istediğinizi söyleyin."],
-    ["Önce siz konuşun", "Müşteri görmeden önce asistanı test sohbetinde deneyin."],
+    ["İşletmenizi anlatın", "Ürünleriniz, teslimatınız ve kurallarınızla ilgili temel bilgileri ekleyin."],
+    ["Önce siz deneyin", "Müşteriden önce test sohbetinde nasıl cevap verdiğini görün."],
     ["Hazır olduğunuzda açın", "Son kontrolünüzden sonra WhatsApp’a bağlayıp kullanmaya başlayın."],
   ] as const;
 
   return (
     <ol className="relative border-l border-divider pl-6">
       {steps.map(([title, body], index) => {
-        const isTest = index === 3;
+        const isTest = index === 1;
         return (
-          <li key={title} className="relative pb-7 last:pb-0">
+          <li key={title} className="relative pb-8 last:pb-0">
             <span
               aria-hidden="true"
               className={
@@ -75,39 +68,23 @@ function TestConversation() {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider bg-chrome/50 px-4 py-3.5 sm:px-5">
         <div>
           <p className="type-meta font-semibold text-chrome-foreground">Önce siz deneyin</p>
-          <p className="mt-0.5 type-meta text-chrome-foreground/55">{MARKETING_STORY.storeLabel} · test sohbeti</p>
+          <p className="mt-0.5 type-meta text-chrome-foreground/55">{MARKETING_STORY.storeLabel}</p>
         </div>
         <span className="rounded-control border border-boundary px-2.5 py-1 type-meta font-semibold text-muted-foreground">
           Müşteriye açık değil
         </span>
       </div>
 
-      <div className="grid gap-5 px-4 py-5 sm:px-6 sm:py-6 xl:grid-cols-[minmax(0,1fr)_220px]">
-        <div className="space-y-4">
-          <ChatBubble from="customer">{MARKETING_STORY.customerQuestion}</ChatBubble>
-          <ChatBubble from="assistant">{MARKETING_STORY.assistantAnswer}</ChatBubble>
-          <ChatBubble from="customer">{MARKETING_STORY.unknownQuestion}</ChatBubble>
-          <ChatBubble from="assistant">{MARKETING_STORY.unknownAnswer}</ChatBubble>
+      <div className="space-y-4 px-4 py-5 sm:px-6 sm:py-6">
+        <ChatBubble from="customer">{MARKETING_STORY.customerQuestion}</ChatBubble>
+        <ChatBubble from="assistant">{MARKETING_STORY.assistantAnswer}</ChatBubble>
+        <div className="border-t border-divider pt-4">
+          <p className="type-row-primary text-foreground">Hazır olduğuna siz karar verirsiniz.</p>
+          <p className="mt-1 type-body text-muted">
+            Canlıya çıkmadan önce konuşma biçimini kendi gözünüzle görürsünüz.
+          </p>
         </div>
-
-        <aside className="border-t border-divider pt-4 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
-          <p className="type-meta font-semibold text-primary">Canlıdan önce gördüğünüz</p>
-          <div className="mt-4 space-y-4">
-            <ProofPoint title="Doğru bildiğini cevaplar" body="Kayıtlı ürün bilgisi konuşmaya yansır." />
-            <ProofPoint title="Bilmediğinde durur" body="Uydurmak yerine sınırını açıkça gösterir." />
-            <ProofPoint title="Siz karar verirsiniz" body="Hazır hissetmeden müşteriye açmak zorunda değilsiniz." />
-          </div>
-        </aside>
       </div>
-    </div>
-  );
-}
-
-function ProofPoint({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="border-l-2 border-boundary pl-3">
-      <p className="type-meta font-semibold text-foreground">{title}</p>
-      <p className="mt-1 type-meta text-muted-foreground">{body}</p>
     </div>
   );
 }
