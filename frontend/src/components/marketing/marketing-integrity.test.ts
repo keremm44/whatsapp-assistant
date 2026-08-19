@@ -72,6 +72,28 @@ test("reveal motion is progressive enhancement and does not flicker visible cont
   assert.match(control, /if \(alreadyInViewport\) return;/);
 });
 
+test("marketing motion fails open when IntersectionObserver is unavailable", () => {
+  const motion = read("marketing-motion.tsx");
+  const control = read("control-section.tsx");
+
+  assert.match(
+    motion,
+    /media\.matches \|\| typeof IntersectionObserver === ['"]undefined['"]\) return;/,
+  );
+  assert.match(
+    motion,
+    /if \(typeof IntersectionObserver === ['"]undefined['"]\) \{\s*setVisible\(true\);\s*return;/,
+  );
+  assert.match(
+    motion,
+    /sections\.length === 0 \|\| typeof IntersectionObserver === ['"]undefined['"]\) return;/,
+  );
+  assert.match(
+    control,
+    /media\.matches \|\| typeof IntersectionObserver === "undefined"\) return;/,
+  );
+});
+
 test("desktop dock visibility and active state are derived rather than fabricated", () => {
   const motion = read("marketing-motion.tsx");
   const motionCss = read("marketing-motion.module.css");
@@ -111,6 +133,15 @@ test("primary marketing controls keep real mobile touch targets", () => {
   assert.match(control, /min-h-11/);
   assert.match(demo, /min-h-11/);
   assert.match(footer, /min-h-11/);
+});
+
+test("marketing header can shrink safely on narrow mobile widths", () => {
+  const header = read("marketing-header.tsx");
+
+  assert.match(header, /grid-cols-\[minmax\(0,1fr\)_auto\]/);
+  assert.match(header, /lg:grid-cols-\[minmax\(0,1fr\)_auto_minmax\(0,1fr\)\]/);
+  assert.match(header, /min-h-11 min-w-0 w-fit max-w-full/);
+  assert.match(header, /className="min-w-0 \[&>span:last-child\]:hidden/);
 });
 
 test("application entry remains honest and non-interactive while the flow is unavailable", () => {
