@@ -12,7 +12,7 @@ type DemoStep = {
   id: string;
   from: "customer" | "assistant" | "system";
   text: string;
-  tone?: "paused" | "neutral";
+  tone?: "attention" | "paused" | "neutral";
   replies?: { label: string; next: string }[];
 };
 
@@ -92,7 +92,7 @@ const DEMO_STEPS: Record<string, DemoStep> = {
   returnOutcome: {
     id: "returnOutcome",
     from: "system",
-    tone: "paused",
+    tone: "attention",
     text: MARKETING_STORY.returnSystemOutcome,
   },
 };
