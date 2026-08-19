@@ -12,7 +12,7 @@ type DemoStep = {
   id: string;
   from: "customer" | "assistant" | "system";
   text: string;
-  tone?: "attention" | "paused" | "neutral";
+  tone?: "attention" | "neutral";
   replies?: { label: string; next: string }[];
 };
 
