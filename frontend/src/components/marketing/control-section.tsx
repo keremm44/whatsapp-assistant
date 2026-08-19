@@ -62,7 +62,7 @@ export function ControlSection() {
         description="Asistan rutin konuşmayı yürütür. Karar gerçekten size ait olduğunda durur; siz devralabilir, işiniz bittiğinde yeniden asistana bırakabilirsiniz."
       />
 
-      <div className="mt-7 max-w-4xl border-l-2 border-primary/55 pl-5 sm:pl-6">
+      <div className="mt-7 max-w-4xl border-l-2 border-primary pl-5 sm:pl-6">
         <TrueFocusLine
           words={["Bilir.", "Cevaplar.", "Bilmezse durur.", "Size bırakır."]}
           className="font-heading text-[24px] font-semibold leading-9 tracking-[-0.015em] text-foreground sm:text-[32px] sm:leading-10"
@@ -85,11 +85,11 @@ function ControlStage() {
   const activeIndex = OWNERSHIP_STAGES.findIndex((item) => item.id === stage);
 
   return (
-    <div className="overflow-hidden rounded-sheet border border-boundary/70 bg-raised shadow-surface">
+    <div className="overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface">
       <div
         role="tablist"
         aria-label="Örnek konuşma kontrolü"
-        className="relative grid border-b border-divider bg-chrome/45 sm:grid-cols-3"
+        className="relative grid border-b border-divider bg-chrome sm:grid-cols-3"
       >
         {OWNERSHIP_STAGES.map((item, index) => {
           const selected = item.id === stage;
@@ -104,7 +104,7 @@ function ControlStage() {
                 "relative px-4 py-3.5 text-left text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:text-center",
                 selected
                   ? "bg-chrome-hover text-chrome-foreground"
-                  : "text-chrome-foreground/58 hover:bg-chrome-hover/50 hover:text-chrome-foreground/85",
+                  : "text-chrome-foreground/60 hover:bg-chrome-hover hover:text-chrome-foreground",
               )}
             >
               <span className="mr-2 type-meta text-chrome-foreground/40">
@@ -184,7 +184,7 @@ function ControlStage() {
             <button
               type="button"
               onClick={() => setStage("assistant")}
-              className="mt-7 inline-flex self-start rounded-control border border-boundary px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-hover/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="mt-7 inline-flex self-start rounded-control border border-boundary px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               Tekrar göster
             </button>
@@ -231,29 +231,19 @@ function CoralJourney() {
     };
   }, []);
 
-  const coralWidth = visibleSteps < 3 ? "0%" : visibleSteps === 3 ? "25%" : "50%";
-
   return (
     <div ref={rootRef} className="mt-14 border-y border-divider py-10 sm:mt-16 sm:py-12">
       <div className="max-w-3xl">
-        <p className="type-eyebrow text-attention">Karar gereken yerde</p>
+        <p className="type-eyebrow text-muted-foreground">Karar gereken yerde</p>
         <h3 className="mt-3 font-display text-[32px] font-semibold leading-[38px] tracking-[-0.025em] text-foreground sm:text-[44px] sm:leading-[50px]">
           Durur. Konuyu size bırakır.
         </h3>
       </div>
 
-      <div className="relative mt-8 overflow-hidden rounded-sheet border border-boundary/70 bg-sunken shadow-surface">
+      <div className="relative mt-8 overflow-hidden rounded-sheet border border-boundary bg-sunken shadow-surface">
         <div
           aria-hidden="true"
           className="absolute left-[12.5%] right-[12.5%] top-[42px] hidden h-px bg-divider lg:block"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute left-[37.5%] top-[42px] hidden h-px bg-attention lg:block"
-          style={{
-            width: coralWidth,
-            transition: "width 300ms cubic-bezier(0.2, 0, 0, 1)",
-          }}
         />
 
         <div className="relative grid lg:grid-cols-4">
@@ -263,8 +253,9 @@ function CoralJourney() {
             </ChatBubble>
           </FlowStep>
 
-          <FlowStep index="02" label="Asistan durur" attention visible={visibleSteps >= 2}>
-            <p className="font-heading text-lg font-semibold text-foreground">
+          <FlowStep index="02" label="Asistan durur" visible={visibleSteps >= 2}>
+            <StatusChip tone="paused">Yanıtlar durdu</StatusChip>
+            <p className="mt-3 font-heading text-lg font-semibold text-foreground">
               Otomatik yanıt durdu
             </p>
             <p className="mt-2 type-row-secondary text-muted">
@@ -272,16 +263,16 @@ function CoralJourney() {
             </p>
           </FlowStep>
 
-          <FlowStep index="03" label="Durum" attention visible={visibleSteps >= 3}>
-            <div className="flex min-h-[88px] items-center justify-center rounded-sheet border border-attention/25 bg-attention-soft/55 px-4 text-center">
+          <FlowStep index="03" label="Durum" visible={visibleSteps >= 3} attentionState>
+            <div className="flex min-h-[88px] items-center justify-center rounded-sheet border border-attention bg-attention-soft px-4 text-center">
               <p className="font-heading text-lg font-semibold text-attention">
                 İade incelemesi
               </p>
             </div>
           </FlowStep>
 
-          <FlowStep index="04" label="Siz görürsünüz" attention last visible={visibleSteps >= 4}>
-            <div className="rounded-sheet border border-boundary/60 bg-raised p-4">
+          <FlowStep index="04" label="Siz görürsünüz" last visible={visibleSteps >= 4} attentionState>
+            <div className="rounded-sheet border border-boundary bg-raised p-4">
               <StatusChip tone="attention">İncelemeniz gerekiyor</StatusChip>
               <p className="mt-3 type-row-secondary text-foreground">
                 {MARKETING_STORY.returnQuestion}
@@ -298,14 +289,14 @@ function FlowStep({
   index,
   label,
   children,
-  attention = false,
+  attentionState = false,
   last = false,
   visible,
 }: {
   index: string;
   label: string;
   children: React.ReactNode;
-  attention?: boolean;
+  attentionState?: boolean;
   last?: boolean;
   visible: boolean;
 }) {
@@ -320,9 +311,9 @@ function FlowStep({
       <div className="mb-5 flex items-center gap-2">
         <span
           className={cn(
-            "relative z-10 flex h-7 min-w-7 items-center justify-center rounded-full border bg-sunken px-1 type-meta font-semibold transition-colors duration-300",
-            attention && visible
-              ? "border-attention/40 text-attention"
+            "relative z-10 flex h-7 min-w-7 items-center justify-center rounded-full border bg-sunken px-1 type-meta font-semibold",
+            attentionState && visible
+              ? "border-attention text-attention"
               : "border-boundary text-muted-foreground",
           )}
         >
@@ -330,8 +321,8 @@ function FlowStep({
         </span>
         <span
           className={cn(
-            "type-meta font-semibold transition-colors duration-300",
-            attention && visible ? "text-attention" : "text-foreground",
+            "type-meta font-semibold",
+            attentionState && visible ? "text-attention" : "text-muted-foreground",
           )}
         >
           {label}
