@@ -1,6 +1,7 @@
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { BlurHeadline, MarketingReveal } from "@/components/marketing/marketing-motion";
+import { SystemNote } from "@/components/marketing/system-note";
 
 /**
  * Hero — first screen: one clear promise, then the product proving it.
@@ -10,7 +11,7 @@ import { BlurHeadline, MarketingReveal } from "@/components/marketing/marketing-
  */
 export function Hero() {
   return (
-    <section className="border-b border-divider bg-canvas">
+    <section className="border-b border-boundary bg-canvas">
       <div className="mx-auto grid w-full max-w-[1180px] gap-x-12 gap-y-7 px-4 pb-14 pt-12 md:px-6 md:pb-20 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)] lg:grid-rows-[auto_auto] lg:items-center lg:gap-y-7 lg:px-8 lg:pb-24">
         <div className="flex flex-col items-start gap-5 lg:col-start-1 lg:row-start-1">
           <p className="type-eyebrow text-muted-foreground">WhatsApp asistanı</p>
@@ -38,7 +39,7 @@ export function Hero() {
             </a>
             <a
               href="#panel"
-              className="rounded-control border border-boundary px-5 py-3 text-base font-medium text-foreground transition-colors hover:border-primary/45 hover:bg-hover/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+              className="rounded-control border border-boundary px-5 py-3 text-base font-medium text-foreground transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
             >
               Satıcı panelini görün
             </a>
@@ -54,13 +55,13 @@ export function Hero() {
 
 function HeroConversation() {
   return (
-    <div className="overflow-hidden rounded-sheet border border-boundary/70 bg-sunken shadow-surface">
-      <div className="flex items-center justify-between gap-3 border-b border-divider bg-chrome/55 px-4 py-3 sm:px-5">
+    <div className="overflow-hidden rounded-sheet border border-boundary bg-sunken shadow-surface">
+      <div className="flex items-center justify-between gap-3 border-b border-divider bg-chrome px-4 py-3 sm:px-5">
         <div>
           <p className="type-meta font-semibold text-chrome-foreground">
             {MARKETING_STORY.storeLabel}
           </p>
-          <p className="mt-0.5 type-meta text-chrome-foreground/55">
+          <p className="mt-0.5 type-meta text-chrome-foreground/60">
             Örnek konuşma · ürün bilgisi + sınır davranışı
           </p>
         </div>
@@ -76,12 +77,9 @@ function HeroConversation() {
         <ChatBubble from="customer">{MARKETING_STORY.unknownQuestion}</ChatBubble>
         <ChatBubble from="assistant">{MARKETING_STORY.unknownAnswer}</ChatBubble>
 
-        <div className="mt-1 border-t border-divider pt-4">
-          <p className="type-meta font-semibold text-muted-foreground">Sistemin yaptığı</p>
-          <p className="mt-1 type-body text-foreground">
-            Cevap kayıtlı değilse soru satıcının cevaplanamayan sorular listesine düşer.
-          </p>
-        </div>
+        <SystemNote tone="neutral" label="Sistemin yaptığı">
+          Cevap kayıtlı değilse soru satıcının cevaplanamayan sorular listesine düşer.
+        </SystemNote>
       </div>
     </div>
   );
