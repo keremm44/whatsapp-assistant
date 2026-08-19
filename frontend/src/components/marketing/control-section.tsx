@@ -4,12 +4,8 @@ import * as React from "react";
 
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
-import {
-  MarketingReveal,
-  TrueFocusLine,
-} from "@/components/marketing/marketing-motion";
-import { MarketingSectionHeading } from "@/components/marketing/section-heading";
-import { StoryThreadMarker } from "@/components/marketing/story-thread";
+import { TrueFocusLine } from "@/components/marketing/marketing-motion";
+import { OwnershipLedgerRow } from "@/components/marketing/story-thread";
 import { StatusChip } from "@/components/shared/status-chip";
 import { cn } from "@/lib/utils/cn";
 
@@ -55,24 +51,32 @@ export function ControlSection() {
   return (
     <section
       id="kontrol"
-      className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 py-16 md:px-6 md:py-24 lg:px-8"
+      className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 py-14 md:px-6 md:py-20 lg:px-8"
     >
-      <MarketingSectionHeading
-        eyebrow="Kontrol"
-        title="Konuşmayı istediğiniz anda devralırsınız."
-        description="Asistan rutin konuşmayı yürütür. Karar gerçekten size ait olduğunda durur; siz devralabilir, işiniz bittiğinde yeniden asistana bırakabilirsiniz."
-      />
-
-      <div className="mt-7 max-w-4xl border-l-2 border-boundary pl-5 sm:pl-6">
-        <TrueFocusLine
-          words={["Bilir.", "Cevaplar.", "Bilmezse durur.", "Size bırakır."]}
-          className="font-heading text-[24px] font-semibold leading-9 tracking-[-0.015em] text-foreground sm:text-[32px] sm:leading-10"
-        />
+      <div className="grid gap-7 md:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] md:items-end md:gap-12">
+        <div>
+          <p className="type-meta font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Ownership · 02
+          </p>
+          <h2 className="mt-3 font-display text-[34px] font-semibold leading-[40px] tracking-[-0.025em] text-foreground sm:text-[46px] sm:leading-[52px]">
+            Konuşmayı istediğiniz anda devralırsınız.
+          </h2>
+        </div>
+        <div>
+          <p className="max-w-2xl type-body text-muted">
+            Asistan rutin konuşmayı yürütür. Siz devraldığınız anda bekler; işiniz
+            bittiğinde aynı konuşmayı yeniden asistana bırakabilirsiniz.
+          </p>
+          <TrueFocusLine
+            words={["Bilir.", "Cevaplar.", "Bilmezse durur.", "Size bırakır."]}
+            className="mt-5 font-heading text-[20px] font-semibold leading-8 tracking-[-0.012em] text-foreground sm:text-[24px]"
+          />
+        </div>
       </div>
 
-      <MarketingReveal variant="product" className="mt-11">
+      <div className="mt-10">
         <ControlStage />
-      </MarketingReveal>
+      </div>
 
       <CoralJourney />
     </section>
@@ -86,7 +90,7 @@ function ControlStage() {
   const activeIndex = OWNERSHIP_STAGES.findIndex((item) => item.id === stage);
 
   return (
-    <div className="overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface">
+    <div className="border-y border-divider">
       <div
         role="group"
         aria-label="Örnek konuşma kontrolü"
@@ -131,8 +135,8 @@ function ControlStage() {
         })}
       </div>
 
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="border-b border-divider bg-sunken px-4 py-5 sm:px-6 sm:py-6 lg:border-b-0 lg:border-r">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="border-b border-divider bg-sunken px-4 py-6 sm:px-6 lg:border-b-0 lg:border-r">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <p className="type-meta font-semibold text-foreground">
               {MARKETING_STORY.storeLabel}
@@ -147,22 +151,16 @@ function ControlStage() {
           </div>
 
           <div className="space-y-3">
-            <ChatBubble from="customer">
-              {MARKETING_STORY.customerQuestion}
-            </ChatBubble>
+            <ChatBubble from="customer">{MARKETING_STORY.customerQuestion}</ChatBubble>
             {stage === "seller" ? (
-              <div className="ml-auto max-w-[85%] rounded-[5px] border border-boundary bg-recessed px-3.5 py-3">
-                <p className="type-meta font-semibold text-muted-foreground">
-                  Kontrol sizde
-                </p>
+              <div className="ml-auto max-w-[85%] border-l-2 border-boundary bg-recessed px-3.5 py-3">
+                <p className="type-meta font-semibold text-muted-foreground">Kontrol sizde</p>
                 <p className="mt-1 type-body text-foreground">
                   Asistan bu konuşmaya yeni yanıt göndermez.
                 </p>
               </div>
             ) : (
-              <ChatBubble from="assistant">
-                {MARKETING_STORY.assistantAnswer}
-              </ChatBubble>
+              <ChatBubble from="assistant">{MARKETING_STORY.assistantAnswer}</ChatBubble>
             )}
           </div>
         </div>
@@ -170,9 +168,7 @@ function ControlStage() {
         <div className="flex min-h-[240px] flex-col justify-between px-5 py-6 sm:px-6">
           <div>
             <div className="flex items-center gap-2">
-              <span className="type-meta font-semibold text-primary">
-                0{activeIndex + 1}
-              </span>
+              <span className="type-meta font-semibold text-primary">0{activeIndex + 1}</span>
               <span aria-hidden="true" className="h-px flex-1 bg-divider" />
             </div>
             <h3 className="mt-5 font-heading text-xl font-semibold leading-7 text-foreground">
@@ -185,7 +181,7 @@ function ControlStage() {
             <button
               type="button"
               onClick={() => setStage(current.next!)}
-              className="mt-7 inline-flex min-h-11 items-center self-start rounded-control bg-primary-button px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-button-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-raised"
+              className="mt-7 inline-flex min-h-11 items-center self-start rounded-control bg-primary-button px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-button-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
             >
               {current.action}
             </button>
@@ -207,6 +203,7 @@ function ControlStage() {
 function CoralJourney() {
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const [visibleSteps, setVisibleSteps] = React.useState(4);
+  const record = MARKETING_STORY.ledger.returnReview;
 
   React.useEffect(() => {
     const node = rootRef.current;
@@ -227,9 +224,7 @@ function CoralJourney() {
         observer.disconnect();
 
         [1, 2, 3, 4].forEach((step, index) => {
-          timers.push(
-            window.setTimeout(() => setVisibleSteps(step), index * 230),
-          );
+          timers.push(window.setTimeout(() => setVisibleSteps(step), index * 230));
         });
       },
       { threshold: 0.28 },
@@ -243,58 +238,53 @@ function CoralJourney() {
   }, []);
 
   return (
-    <div ref={rootRef} className="mt-14 border-y border-divider py-10 sm:mt-16 sm:py-12">
-      <StoryThreadMarker
-        step="02"
-        label="Karar gereken yer"
-        detail="Otomasyon burada durur; kayıt seller-attention durumuna geçer."
-        className="mb-5 max-w-xl"
-      />
-
+    <div ref={rootRef} className="mt-14 sm:mt-16">
       <div className="max-w-3xl">
-        <p className="type-eyebrow text-muted-foreground">Karar gereken yerde</p>
+        <p className="type-meta font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+          Aynı gün · {record.time}
+        </p>
         <h3 className="mt-3 font-display text-[32px] font-semibold leading-[38px] tracking-[-0.025em] text-foreground sm:text-[44px] sm:leading-[50px]">
-          Durur. Konuyu size bırakır.
+          Yetkisinin bittiği yerde durur.
         </h3>
       </div>
 
-      <div className="mt-8 overflow-hidden rounded-sheet border border-boundary bg-sunken shadow-surface">
-        <div className="grid lg:grid-cols-4">
-          <FlowStep index="01" label="Müşteri" visible={visibleSteps >= 1}>
-            <ChatBubble from="customer">
-              {MARKETING_STORY.returnQuestion}
-            </ChatBubble>
-          </FlowStep>
+      <OwnershipLedgerRow
+        time={record.time}
+        topic={record.topic}
+        message={record.message}
+        owner={record.owner}
+        outcome={record.outcome}
+        tone="attention"
+        className="mt-6"
+      />
 
-          <FlowStep index="02" label="Asistan durur" visible={visibleSteps >= 2}>
-            <p className="type-meta font-semibold text-muted-foreground">
-              Otomatik yanıt
-            </p>
-            <p className="mt-3 font-heading text-lg font-semibold text-foreground">
-              Durur
-            </p>
-            <p className="mt-2 type-row-secondary text-muted">
-              Müşteriye otomatik cevap gönderilmez.
-            </p>
-          </FlowStep>
+      <div className="grid border-y border-divider lg:grid-cols-4">
+        <FlowStep index="01" label="Müşteri" visible={visibleSteps >= 1}>
+          <p className="type-body text-foreground">“{MARKETING_STORY.returnQuestion}”</p>
+        </FlowStep>
 
-          <FlowStep index="03" label="Durum" visible={visibleSteps >= 3}>
-            <div className="flex min-h-[88px] items-center justify-center rounded-sheet border border-attention bg-attention-soft px-4 text-center">
-              <p className="font-heading text-lg font-semibold text-attention">
-                İade incelemesi
-              </p>
-            </div>
-          </FlowStep>
+        <FlowStep index="02" label="Asistan" visible={visibleSteps >= 2}>
+          <p className="font-heading text-lg font-semibold text-foreground">Yanıt göndermez.</p>
+          <p className="mt-2 type-row-secondary text-muted">
+            Karar satıcıya ait olduğu için otomatik konuşma burada kesilir.
+          </p>
+        </FlowStep>
 
-          <FlowStep index="04" label="Siz görürsünüz" last visible={visibleSteps >= 4}>
-            <div className="rounded-sheet border border-boundary bg-raised p-4">
-              <StatusChip tone="attention">İncelemeniz gerekiyor</StatusChip>
-              <p className="mt-3 type-row-secondary text-foreground">
-                {MARKETING_STORY.returnQuestion}
-              </p>
-            </div>
-          </FlowStep>
-        </div>
+        <FlowStep index="03" label="Durum" visible={visibleSteps >= 3}>
+          <div className="border-l-2 border-attention pl-4">
+            <p className="type-meta font-semibold text-attention">Seller attention</p>
+            <p className="mt-2 font-heading text-lg font-semibold text-foreground">
+              İade incelemesi
+            </p>
+          </div>
+        </FlowStep>
+
+        <FlowStep index="04" label="Panel" last visible={visibleSteps >= 4}>
+          <StatusChip tone="attention">İncelemeniz gerekiyor</StatusChip>
+          <p className="mt-3 type-row-secondary text-foreground">
+            Aynı konuşma seller work item olarak görünür.
+          </p>
+        </FlowStep>
       </div>
     </div>
   );
@@ -322,12 +312,9 @@ function FlowStep({
       )}
     >
       <div className="mb-5 flex items-center gap-2">
-        <span className="relative z-10 flex h-7 min-w-7 items-center justify-center rounded-full border border-boundary bg-sunken px-1 type-meta font-semibold text-muted-foreground">
-          {index}
-        </span>
-        <span className="type-meta font-semibold text-muted-foreground">
-          {label}
-        </span>
+        <span className="type-meta font-semibold text-muted-foreground">{index}</span>
+        <span aria-hidden="true" className="h-px flex-1 bg-divider" />
+        <span className="type-meta font-semibold text-muted-foreground">{label}</span>
       </div>
       {children}
     </div>
