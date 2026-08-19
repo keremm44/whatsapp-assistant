@@ -7,12 +7,24 @@ import { fileURLToPath } from "node:url";
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const read = (name: string) => readFileSync(path.join(directory, name), "utf8");
 
-test("hero promise and product proof are visible without hydration-gated reveal primitives", () => {
+test("hero is server-visible and no longer uses the classic split mockup composition", () => {
   const hero = read("hero.tsx");
 
   assert.match(hero, /<h1\b/);
-  assert.doesNotMatch(hero, /BlurHeadline/);
+  assert.match(hero, /Her mesaj dikkatinizi istememeli/);
+  assert.match(hero, /OwnershipLedgerRow/);
   assert.doesNotMatch(hero, /MarketingReveal/);
+  assert.doesNotMatch(hero, /lg:grid-cols-\[minmax\(0,0\.9fr\)_minmax\(480px,1\.1fr\)\]/);
+});
+
+test("daily value contrast is folded into the hero instead of a standalone section", () => {
+  const page = read("../../app/(public)/page.tsx");
+  const hero = read("hero.tsx");
+
+  assert.doesNotMatch(page, /DayContrast/);
+  assert.match(hero, /id="nasil-calisir"/);
+  assert.match(hero, /Rutin konuşmalar/);
+  assert.match(hero, /Karar gerekenler/);
 });
 
 test("seller dashboard proof uses canonical presentation copy without fake marketing links", () => {
@@ -41,22 +53,18 @@ test("marketing attention notes use the canonical attention surface", () => {
   assert.doesNotMatch(systemNote, /bg-accent-muted/);
 });
 
-test("return review stays attention and never masquerades as assistant-paused", () => {
+test("return review stays seller-attention and never masquerades as assistant-paused", () => {
   const control = read("control-section.tsx");
   const demo = read("demo-section.tsx");
   const panel = read("panel-section.tsx");
 
   assert.match(demo, /returnOutcome:[\s\S]*?tone: "attention"/);
   assert.doesNotMatch(demo, /tone\?: "attention" \| "paused"/);
-  assert.match(
-    panel,
-    /<SystemNote tone="attention" label="Konuşmadan gelen durum">/,
-  );
+  assert.match(control, /tone="attention"/);
+  assert.match(control, /StatusChip tone="attention"/);
+  assert.match(panel, /tone="attention"/);
   assert.doesNotMatch(control, /Yanıtlar durduruldu/);
-  assert.match(
-    control,
-    /Asistan bekler; bu konuşmanın yanıtlarını siz yönetirsiniz\./,
-  );
+  assert.match(control, /Asistan bekler; bu konuşmanın yanıtlarını siz yönetirsiniz\./);
   assert.match(control, /Asistan yeni mesajlarda yeniden devreye girer\./);
 });
 
@@ -104,15 +112,13 @@ test("desktop dock visibility and active state are derived rather than fabricate
   assert.doesNotMatch(motionCss, /\.dock\s*\{[^}]*\bdisplay\s*:/s);
 });
 
-test("public loading keeps the hero container and desktop proof geometry", () => {
+test("public loading mirrors the full-width ownership ledger instead of the retired split hero", () => {
   const loading = read("../../app/(public)/loading.tsx");
 
   assert.match(loading, /max-w-\[1180px\]/);
-  assert.match(
-    loading,
-    /lg:grid-cols-\[minmax\(0,0\.9fr\)_minmax\(480px,1\.1fr\)\]/,
-  );
-  assert.match(loading, /lg:row-span-2/);
+  assert.match(loading, /\["08:42", "09:17", "10:21", "11:03"\]/);
+  assert.match(loading, /md:grid-cols-\[72px_minmax\(0,1fr\)_220px\]/);
+  assert.doesNotMatch(loading, /minmax\(0,0\.9fr\)_minmax\(480px,1\.1fr\)/);
 });
 
 test("public layout offers a focus-only skip link to a focusable main landmark", () => {
@@ -125,11 +131,13 @@ test("public layout offers a focus-only skip link to a focusable main landmark",
 
 test("primary marketing controls keep real mobile touch targets", () => {
   const header = read("marketing-header.tsx");
+  const hero = read("hero.tsx");
   const control = read("control-section.tsx");
   const demo = read("demo-section.tsx");
   const footer = read("marketing-footer.tsx");
 
   assert.match(header, /min-h-11/);
+  assert.match(hero, /min-h-11/);
   assert.match(control, /min-h-11/);
   assert.match(demo, /min-h-11/);
   assert.match(footer, /min-h-11/);
@@ -169,17 +177,27 @@ test("demo reuses the shared proof story and chat bubbles expose the customer sp
   assert.match(bubbles, /Müşteri: /);
 });
 
-test("living thread continues from conversation to seller-attention work item", () => {
+test("one 11:03 return record continues from the hero through control into seller work", () => {
+  const story = read("marketing-story.ts");
   const hero = read("hero.tsx");
   const control = read("control-section.tsx");
   const panel = read("panel-section.tsx");
+
+  assert.match(story, /returnReview:[\s\S]*?time: "11:03"/);
+  assert.match(hero, /ledger\.returnReview/);
+  assert.match(control, /MARKETING_STORY\.ledger\.returnReview/);
+  assert.match(panel, /MARKETING_STORY\.ledger\.returnReview/);
+  assert.match(panel, /MARKETING_STORY\.returnQuestion/);
+});
+
+test("ownership ledger is a ruled workday grammar, not another rounded feature-card primitive", () => {
   const thread = read("story-thread.tsx");
 
-  assert.match(hero, /step="01"[\s\S]*?label="Konuşma"/);
-  assert.match(control, /step="02"[\s\S]*?label="Karar gereken yer"/);
-  assert.match(panel, /step="03"[\s\S]*?label="Panel kaydı"[\s\S]*?tone="attention"/);
-  assert.match(thread, /border-attention bg-attention-soft text-attention/);
-  assert.match(thread, /h-5 w-px bg-divider/);
+  assert.match(thread, /export function OwnershipLedgerRow/);
+  assert.match(thread, /md:grid-cols-\[72px_minmax\(0,1fr\)_220px\]/);
+  assert.match(thread, /border-t border-divider/);
+  assert.match(thread, /border-attention bg-attention/);
+  assert.doesNotMatch(thread, /OwnershipLedgerRow[\s\S]*?rounded-sheet/);
 });
 
 test("ownership selector uses one moving material plate instead of three selected fills", () => {
@@ -192,19 +210,20 @@ test("ownership selector uses one moving material plate instead of three selecte
   assert.doesNotMatch(control, /selected\s*\?\s*"bg-chrome-hover/);
 });
 
-test("marketing reveal grammar distinguishes editorial, product, and state roles", () => {
+test("marketing reveal grammar still distinguishes editorial, product, and state roles", () => {
   const motion = read("marketing-motion.tsx");
   const motionCss = read("marketing-motion.module.css");
   const demo = read("demo-section.tsx");
   const panel = read("panel-section.tsx");
+  const onboarding = read("onboarding-section.tsx");
 
   assert.match(motion, /'editorial' \| 'product' \| 'state'/);
   assert.match(motionCss, /\.revealEditorial/);
   assert.match(motionCss, /\.revealProduct/);
   assert.match(motionCss, /\.revealState/);
   assert.match(demo, /variant="product"/);
-  assert.match(panel, /variant="state"/);
   assert.match(panel, /variant="product"/);
+  assert.match(onboarding, /variant="product"/);
 });
 
 test("demo message rhythm delays the response and animates only mounted additions", () => {
@@ -218,4 +237,15 @@ test("demo message rhythm delays the response and animates only mounted addition
   assert.match(motion, /export function MarketingMessageArrival/);
   assert.match(motionCss, /translateY\(4px\)/);
   assert.match(motionCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.messageArrival/);
+});
+
+test("final resolves ownership without returning to a giant CTA card", () => {
+  const support = read("support-section.tsx");
+
+  assert.match(support, /Ownership sonucu/);
+  assert.match(support, />\s*Asistanda\s*</);
+  assert.match(support, />\s*Sizde\s*</);
+  assert.match(support, /WhatsApp işinizi böyle bölüştürün/);
+  assert.doesNotMatch(support, /rounded-sheet/);
+  assert.doesNotMatch(support, /min-h-\[360px\]/);
 });
