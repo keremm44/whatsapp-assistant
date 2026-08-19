@@ -7,7 +7,7 @@ type SystemNoteTone = "neutral" | "paused" | "attention";
 const TONE_CLASSES: Record<SystemNoteTone, string> = {
   neutral: "border-l-boundary bg-recessed",
   paused: "border-l-paused bg-paused-muted",
-  attention: "border-l-attention bg-accent-muted",
+  attention: "border-l-attention bg-attention-soft",
 };
 
 const LABEL_CLASSES: Record<SystemNoteTone, string> = {
