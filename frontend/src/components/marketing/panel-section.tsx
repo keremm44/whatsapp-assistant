@@ -4,6 +4,7 @@ import { ArrowUpRight, ChevronRight } from "lucide-react";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
+import { StoryThreadMarker } from "@/components/marketing/story-thread";
 import { SystemNote } from "@/components/marketing/system-note";
 import { DASHBOARD_TASK_PRESENTATION } from "@/components/seller/dashboard/task-presentation";
 import { StatusChip } from "@/components/shared/status-chip";
@@ -23,13 +24,21 @@ export function PanelSection() {
           description="Müşteri mesajını ve sizden ne beklendiğini, satıcı panelindeki gerçek çalışma düzenine yakın bir görünümde takip edersiniz."
         />
 
-        <MarketingReveal className="mt-10 max-w-2xl">
+        <StoryThreadMarker
+          step="03"
+          label="Panel kaydı"
+          detail="Aynı müdahale ihtiyacı artık çalışma listenizde görünür."
+          tone="attention"
+          className="mt-10 max-w-xl"
+        />
+
+        <MarketingReveal variant="state" className="mt-4 max-w-2xl">
           <SystemNote tone="attention" label="Konuşmadan gelen durum">
             Otomatik yanıt durdu. Konuşma iade incelemesine geçti.
           </SystemNote>
         </MarketingReveal>
 
-        <MarketingReveal className="mt-6">
+        <MarketingReveal variant="product" className="mt-6">
           <SellerDashboardProof />
         </MarketingReveal>
       </div>
