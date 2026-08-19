@@ -8,7 +8,6 @@ import {
   MarketingMessageArrival,
   MarketingReveal,
 } from "@/components/marketing/marketing-motion";
-import { MarketingSectionHeading } from "@/components/marketing/section-heading";
 import { SystemNote } from "@/components/marketing/system-note";
 import { cn } from "@/lib/utils/cn";
 
@@ -152,16 +151,24 @@ export function DemoSection() {
   const isAtLeaf = !current?.replies || current.replies.length === 0;
 
   return (
-    <section id="dene" className="scroll-mt-16 border-y border-boundary bg-sunken">
-      <div className="mx-auto w-full max-w-[1260px] px-4 py-20 md:px-6 md:py-28 lg:px-8">
-        <MarketingSectionHeading
-          eyebrow="Deneyin"
-          title="Nasıl konuştuğunu kendiniz görün."
-          description="Bir soru seçin. Normal cevabı da, bilmediği veya durması gereken yeri de aynı konuşmada görün."
-        />
+    <section id="dene" className="scroll-mt-16 border-y border-divider bg-sunken">
+      <div className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-22 lg:px-8">
+        <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)] md:items-end md:gap-12">
+          <p className="type-meta font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Canlı olmayan kontrollü demo · 03
+          </p>
+          <div>
+            <h2 className="font-display text-[34px] font-semibold leading-[40px] tracking-[-0.025em] text-foreground sm:text-[46px] sm:leading-[52px]">
+              Şimdi aynı davranışı siz deneyin.
+            </h2>
+            <p className="mt-3 max-w-2xl type-body text-muted">
+              Normal cevabı da, bilmediği veya karar gerektiren noktada nasıl durduğunu da aynı konuşmada görün.
+            </p>
+          </div>
+        </div>
 
-        <MarketingReveal variant="product" className="mt-12">
-          <div className="overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface">
+        <MarketingReveal variant="product" className="mt-10">
+          <div className="border-y border-boundary bg-raised">
             <div className="flex items-center justify-between gap-3 border-b border-divider px-4 py-3 sm:px-6">
               <p className="type-meta font-semibold text-muted-foreground">
                 {MARKETING_STORY.storeLabel} · örnek konuşma
@@ -189,9 +196,7 @@ export function DemoSection() {
                 if (step.from === "system") {
                   return (
                     <MarketingMessageArrival key={`${stepId}-${index}`} kind="system">
-                      <SystemNote tone={step.tone ?? "neutral"}>
-                        {step.text}
-                      </SystemNote>
+                      <SystemNote tone={step.tone ?? "neutral"}>{step.text}</SystemNote>
                     </MarketingMessageArrival>
                   );
                 }
@@ -207,11 +212,7 @@ export function DemoSection() {
               {isReplyPending ? (
                 <div aria-hidden="true" className="h-11" />
               ) : !isAtLeaf ? (
-                <div
-                  className="flex flex-wrap gap-2"
-                  role="group"
-                  aria-label="Müşteri soruları"
-                >
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Müşteri soruları">
                   {current.replies?.map((reply) => (
                     <button
                       key={reply.next}
