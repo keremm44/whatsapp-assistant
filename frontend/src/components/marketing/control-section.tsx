@@ -196,18 +196,16 @@ function ControlStage() {
 
 function CoralJourney() {
   const rootRef = React.useRef<HTMLDivElement | null>(null);
-  const [visibleSteps, setVisibleSteps] = React.useState(0);
+  const [visibleSteps, setVisibleSteps] = React.useState(4);
 
   React.useEffect(() => {
     const node = rootRef.current;
     if (!node) return;
 
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (media.matches) {
-      setVisibleSteps(4);
-      return;
-    }
+    if (media.matches) return;
 
+    setVisibleSteps(0);
     const timers: number[] = [];
     const observer = new IntersectionObserver(
       ([entry]) => {
