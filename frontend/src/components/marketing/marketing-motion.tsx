@@ -27,6 +27,11 @@ function useInViewOnce<T extends HTMLElement>(threshold = 0.16) {
     const node = ref.current;
     if (!node || visible) return;
 
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -60,7 +65,7 @@ export function MarketingReveal({
     if (!node) return;
 
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (media.matches) return;
+    if (media.matches || typeof IntersectionObserver === 'undefined') return;
 
     const rect = node.getBoundingClientRect();
     const alreadyInViewport = rect.top < window.innerHeight && rect.bottom > 0;
@@ -204,7 +209,7 @@ export function MarketingDockNav() {
     const sections = NAV_ITEMS.map((item) => document.getElementById(item.id)).filter(
       (section): section is HTMLElement => section !== null,
     );
-    if (sections.length === 0) return;
+    if (sections.length === 0 || typeof IntersectionObserver === 'undefined') return;
 
     intersectionRatios.current.clear();
     sections.forEach((section) => intersectionRatios.current.set(section.id, 0));
