@@ -3,36 +3,49 @@ import * as React from "react";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
 
 /**
- * Destek — the risk-reducer placed late, after the seller has started to
- * want the product. It represents only the support model the product
- * actually provides: the in-panel feedback channel with tracked status,
- * and announcements. No "7/24 canlı destek" or phone-support promises
- * are invented. One contiguous ledger, not a gallery of cards.
+ * Support — a quiet risk-reducer, followed by one real next step: return
+ * to the product conversation. No application/signup flow is implied.
  */
 export function SupportSection() {
   return (
-    <section className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-20 lg:px-8">
-      <MarketingSectionHeading
-        eyebrow="Yanınızdayız"
-        title="Yalnız kalmazsınız."
-        description="Kurulumda veya sonrasında bir şey olduğunda, sizi dinleyen gerçek bir kanal her zaman vardır."
-      />
+    <section className="border-t border-divider bg-sunken">
+      <div className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-20 lg:px-8">
+        <MarketingSectionHeading
+          eyebrow="Yanınızdayız"
+          title="Kurulumdan sonra da ne olduğunu görürsünüz."
+          description="Panel içindeki geri bildirim ve duyuru kanalları, sorunları ve önemli gelişmeleri aynı ürün yüzeyinde takip etmenizi sağlar."
+        />
 
-      <div className="mt-10 overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
-        <ul role="list" className="divide-y divide-divider">
-          <SupportRow
-            title="Panelin içinde"
-            body="Öneri, sorun veya şikayetinizi panelden iletirsiniz; durumu “Gönderildi → İnceleniyor → Çözüldü” olarak takip edersiniz."
-          />
-          <SupportRow
-            title="Duyurular"
-            body="Önemli gelişmeler ve sistem bilgilendirmeleri doğrudan panelinizden duyurulur."
-          />
-          <SupportRow
-            title="Kurulum yanınızda"
-            body="İşletmenizi hazırlarken ve canlıya çıkmadan önce test aşamasında yalnız bırakılmazsınız."
-          />
-        </ul>
+        <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
+          <div className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
+            <ul role="list" className="divide-y divide-divider">
+              <SupportRow
+                title="Panelin içinde"
+                body="Öneri, sorun veya şikayetinizi panelden iletir; durumunu aynı yerde takip edersiniz."
+              />
+              <SupportRow
+                title="Duyurular"
+                body="Önemli gelişmeler ve sistem bilgilendirmeleri doğrudan panelinizde görünür."
+              />
+              <SupportRow
+                title="Canlıdan önce test"
+                body="Asistan müşteriye açılmadan önce test sohbetinde nasıl davrandığını siz görürsünüz."
+              />
+            </ul>
+          </div>
+
+          <div className="border-l-2 border-primary/55 pl-5">
+            <p className="font-heading text-xl font-semibold leading-8 text-foreground">
+              En iyi kanıt, konuşmayı kendiniz görmek.
+            </p>
+            <a
+              href="#dene"
+              className="mt-4 inline-flex rounded-control bg-primary-button px-5 py-3 text-base font-medium text-primary-foreground transition-colors hover:bg-primary-button-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-sunken"
+            >
+              Konuşmasına dönün
+            </a>
+          </div>
+        </div>
       </div>
     </section>
   );
