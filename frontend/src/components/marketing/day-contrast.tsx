@@ -35,7 +35,7 @@ export function DayContrast() {
             tone="after"
             label="Asistanla"
             items={[
-              "Sık sorulan sorular kayıtlı bilgilerle anında yanıtlanır",
+              "Sık sorulan sorular kayıtlı bilgilerle otomatik olarak yanıtlanır",
               "Sipariş ve kargo akışı konuşma içinde ilerler",
               "Siz yalnızca gerçekten gereken yerde devreye girersiniz",
               "Panel size bakılması gerekeni öncelik sırasıyla gösterir",

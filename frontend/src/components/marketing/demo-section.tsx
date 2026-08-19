@@ -9,15 +9,15 @@ import { cn } from "@/lib/utils/cn";
 /**
  * "Müşteri gibi deneyin" — a scripted, offline conversation sample.
  *
- * This is NOT a live model: the replies are the product's real template
- * / product-info / escalation sentences, replayed so the seller hears
- * the assistant's actual tone and sees its actual limits. The label is
- * honest about this on purpose.
+ * This is NOT a live model: the conversation is derived from the
+ * product's real template / product-info / escalation sentences and its
+ * hand-off behaviour, so the seller hears the assistant's actual tone
+ * and sees its actual limits. The label is honest about this on purpose.
  */
 
 type DemoStep = {
   id: string;
-  from: "customer" | "assistant";
+  from: "customer" | "assistant" | "system";
   text: string;
   note?: string;
   replies?: { label: string; next: string }[];
@@ -97,11 +97,11 @@ const DEMO_STEPS: Record<string, DemoStep> = {
     text: "Ürünüm kırık geldi, iade etmek istiyorum.",
     replies: [],
   },
-  returnAnswer: {
-    id: "returnAnswer",
-    from: "assistant",
-    text: "Bu konuşma satıcı incelemesine bırakıldı.",
-    note: "Asistan bu konuşmada otomatik yanıtı durdurur; konuşma size “İade incelemesi” olarak düşer.",
+  returnOutcome: {
+    id: "returnOutcome",
+    from: "system",
+    text: "Otomatik yanıt durduruldu; müşteriye cevap gönderilmez.",
+    note: "Konuşma “İade incelemesi” durumuna geçer ve panelinizde “İncelemeniz gerekiyor” olarak görünür.",
   },
 };
 
@@ -111,7 +111,7 @@ const ANSWER_AFTER: Record<string, string> = {
   price: "priceAnswer",
   shipping: "shippingAnswer",
   unknown: "unknownAnswer",
-  return: "returnAnswer",
+  return: "returnOutcome",
 };
 
 export function DemoSection() {
@@ -155,6 +155,29 @@ export function DemoSection() {
             <div className="flex min-h-[360px] flex-col justify-end gap-3 px-4 py-5">
               {history.map((stepId) => {
                 const step = DEMO_STEPS[stepId];
+                if (step.from === "system") {
+                  // A product-behaviour note, not a WhatsApp message:
+                  // visually distinct so it can never read as an
+                  // assistant reply or a customer bubble.
+                  return (
+                    <div
+                      key={stepId}
+                      className="rounded-sheet border border-boundary bg-recessed px-3.5 py-3"
+                    >
+                      <p className="type-meta font-semibold text-muted-foreground">
+                        Sistem davranışı
+                      </p>
+                      <p className="mt-1 type-body text-foreground">
+                        {step.text}
+                      </p>
+                      {step.note ? (
+                        <p className="mt-1 type-row-secondary text-muted">
+                          {step.note}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                }
                 return (
                   <div key={stepId} className="space-y-1.5">
                     <ChatBubble from={step.from}>{step.text}</ChatBubble>
@@ -202,10 +225,8 @@ export function DemoSection() {
               Dürüstlük notu
             </p>
             <p className="type-body text-muted">
-              Bu örnek konuşma, canlı bir yapay zeka bağlantısı kullanmaz.
-              Cevaplar ürünün gerçek şablonları, ürün bilgisi yanıtları ve
-              satıcıya devretme davranışıdır — birebir ürünün içinde nasıl
-              yazıldığıyla aynı metinlerdir.
+              Bu örnek, canlı bir yapay zeka bağlantısı kullanmaz. Konuşma,
+              ürünün gerçek yanıt ve devretme davranışlarından türetilmiştir.
             </p>
           </div>
         </div>

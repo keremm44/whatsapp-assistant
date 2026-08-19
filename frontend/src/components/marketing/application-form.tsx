@@ -121,6 +121,9 @@ export function ApplicationForm() {
           required
           maxLength={SELLER_APPLICATION_LIMITS.fullNameMax}
           aria-invalid={fieldErrors.fullName ? "true" : undefined}
+          aria-describedby={
+            fieldErrors.fullName ? "app-name-error" : undefined
+          }
           disabled={isSubmitting}
         />
       </Field>
@@ -138,6 +141,9 @@ export function ApplicationForm() {
           required
           maxLength={SELLER_APPLICATION_LIMITS.storeNameMax}
           aria-invalid={fieldErrors.storeName ? "true" : undefined}
+          aria-describedby={
+            fieldErrors.storeName ? "app-store-error" : undefined
+          }
           disabled={isSubmitting}
         />
       </Field>
@@ -153,6 +159,7 @@ export function ApplicationForm() {
           required
           maxLength={SELLER_APPLICATION_LIMITS.phoneMaxDigits + 3}
           aria-invalid={fieldErrors.phone ? "true" : undefined}
+          aria-describedby={fieldErrors.phone ? "app-phone-error" : undefined}
           disabled={isSubmitting}
         />
       </Field>
@@ -167,6 +174,7 @@ export function ApplicationForm() {
           autoComplete="email"
           maxLength={SELLER_APPLICATION_LIMITS.emailMax}
           aria-invalid={fieldErrors.email ? "true" : undefined}
+          aria-describedby={fieldErrors.email ? "app-email-error" : undefined}
           disabled={isSubmitting}
         />
       </Field>
@@ -184,6 +192,9 @@ export function ApplicationForm() {
           placeholder="Örn. seramik kupa, giyim, kozmetik"
           maxLength={SELLER_APPLICATION_LIMITS.categoryMax}
           aria-invalid={fieldErrors.productCategory ? "true" : undefined}
+          aria-describedby={
+            fieldErrors.productCategory ? "app-category-error" : undefined
+          }
           disabled={isSubmitting}
         />
       </Field>
@@ -203,6 +214,9 @@ export function ApplicationForm() {
           placeholder="https://…"
           maxLength={SELLER_APPLICATION_LIMITS.storeLinkMax}
           aria-invalid={fieldErrors.storeLink ? "true" : undefined}
+          aria-describedby={
+            fieldErrors.storeLink ? "app-link-error" : undefined
+          }
           disabled={isSubmitting}
         />
       </Field>
@@ -214,6 +228,8 @@ export function ApplicationForm() {
           onChange={(event) => setField("notes", event.target.value)}
           rows={3}
           maxLength={SELLER_APPLICATION_LIMITS.notesMax}
+          aria-invalid={fieldErrors.notes ? "true" : undefined}
+          aria-describedby={fieldErrors.notes ? "app-notes-error" : undefined}
           disabled={isSubmitting}
           className={cn(
             "w-full rounded-control border border-boundary bg-control px-3 py-2 text-[15px] leading-[22px] text-foreground shadow-inset placeholder:text-muted-foreground transition-colors hover:border-primary/50",

@@ -28,7 +28,7 @@ export function PanelSection() {
             />
             <PanelRow
               title="Bugün bakılabilecekler"
-              body="Yanıt bekleyen sorular daha sakin bir listede durur. Vakit bulduğunuzda yanıtlar, siz yanıtladıkça asistan öğrenir."
+              body="Yanıt bekleyen sorular daha sakin bir listede durur. Siz doğru cevabı kaydedersiniz; aynı soru tekrar geldiğinde asistan bu kayıtlı cevabı kullanabilir."
             />
             <PanelRow
               title="Kayıtlar birbirine bağlı"
