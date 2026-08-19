@@ -6,15 +6,14 @@ import { cn } from "@/lib/utils/cn";
  * Conversation transcript primitives for the marketing site, derived
  * from the seller Conversations workbench (`message-timeline.tsx`).
  *
- * The two sides are separated by DEPTH, not by two competing tints:
+ * The two sides are separated by DEPTH, not by competing signal hues:
  *
- *   incoming  → the customer's side, left, a SUNKEN block with a
- *               structural cue on its leading edge.
- *   outgoing  → the assistant's side, right, a NEUTRAL raised block.
- *               Cyan is a signal, not a material, so the bubble is
- *               never cyan-filled; only the "Asistan yanıtı" overline
- *               keeps the cyan accent (evidence-gated in the product,
- *               labelled here because these are assistant replies).
+ *   incoming  → customer's side, left, SUNKEN with a leading edge.
+ *   outgoing  → assistant's side, right, one RAISED material step.
+ *
+ * Cyan stays reserved for interaction/focus/selection instead of being
+ * spent as an "assistant colour". Speaker labels make the transcript
+ * understandable without relying on alignment alone.
  */
 export function ChatBubble({
   from,
@@ -24,6 +23,7 @@ export function ChatBubble({
   children: React.ReactNode;
 }) {
   const isAssistant = from === "assistant";
+
   return (
     <div
       className={cn("flex w-full", isAssistant ? "justify-end" : "justify-start")}
@@ -32,15 +32,17 @@ export function ChatBubble({
         className={cn(
           "max-w-[85%] rounded-[5px] px-3.5 py-2.5 text-foreground",
           isAssistant
-            ? "bg-selected"
+            ? "border border-boundary bg-raised"
             : "border-l-2 border-boundary bg-sunken",
         )}
       >
         {isAssistant ? (
-          <p className="pb-0.5 type-meta font-semibold text-primary">
+          <p className="pb-0.5 type-meta font-semibold text-muted-foreground">
             Asistan yanıtı
           </p>
-        ) : null}
+        ) : (
+          <span className="sr-only">Müşteri: </span>
+        )}
         {children}
       </div>
     </div>
@@ -73,8 +75,6 @@ export function ChatNote({
 /**
  * A bounded product-evidence sheet — the marketing page's "work sheet"
  * grammar, reserved for proof artifacts rather than feature lists.
- * One quiet material step above the canvas (raised) with a hairline
- * boundary edge and the soft sheet shadow.
  */
 export function ChatProofCard({
   label,
@@ -88,14 +88,14 @@ export function ChatProofCard({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface",
+        "overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface",
         className,
       )}
     >
       <p className="flex items-center gap-1.5 border-b border-divider px-4 py-2.5 type-meta font-semibold text-muted-foreground">
         <span
           aria-hidden="true"
-          className="h-1.5 w-1.5 rounded-full bg-primary/70"
+          className="h-1.5 w-1.5 rounded-full bg-muted-foreground"
         />
         {label}
       </p>
