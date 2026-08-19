@@ -3,58 +3,63 @@ import { ArrowUpRight, ChevronRight } from "lucide-react";
 
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
-import { MarketingSectionHeading } from "@/components/marketing/section-heading";
-import { StoryThreadMarker } from "@/components/marketing/story-thread";
-import { SystemNote } from "@/components/marketing/system-note";
+import { OwnershipLedgerRow } from "@/components/marketing/story-thread";
 import { DASHBOARD_TASK_PRESENTATION } from "@/components/seller/dashboard/task-presentation";
 import { StatusChip } from "@/components/shared/status-chip";
 import type { DashboardTaskType } from "@/lib/seller/dashboard-tasks";
 
 const EXAMPLE_RETURN_TASK_TITLE = "İade / sorun talebi inceleme bekliyor";
 const EXAMPLE_UNANSWERED_TASK_TITLE = "Cevaplanamayan müşteri sorusu";
-const EXAMPLE_CUSTOMER_CONTEXT = "WhatsApp müşterisi";
 
 export function PanelSection() {
+  const record = MARKETING_STORY.ledger.returnReview;
+
   return (
-    <section id="panel" className="scroll-mt-20 bg-canvas">
-      <div className="mx-auto w-full max-w-[1240px] px-4 py-20 md:px-6 md:py-28 lg:px-8">
-        <MarketingSectionHeading
-          eyebrow="Panel"
-          title="Durduğu konuşma kaybolmaz. Önünüze gelir."
-          description="Müşteri mesajını ve sizden ne beklendiğini, satıcı panelindeki gerçek çalışma düzenine yakın bir görünümde takip edersiniz."
-        />
+    <section id="panel" className="scroll-mt-20 bg-canvas py-16 md:py-24">
+      <div className="mx-auto w-full max-w-[1180px] px-4 md:px-6 lg:px-8">
+        <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)] md:items-end md:gap-12">
+          <p className="type-meta font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Seller workspace · 04
+          </p>
+          <div>
+            <h2 className="font-display text-[36px] font-semibold leading-[42px] tracking-[-0.027em] text-foreground sm:text-[50px] sm:leading-[56px]">
+              Durduğu konuşma kaybolmaz. İşe dönüşür.
+            </h2>
+            <p className="mt-3 max-w-2xl type-body text-muted">
+              Az önce gördüğünüz aynı iade konuşması, satıcı panelinde sizden ne beklendiği belli bir work item olarak görünür.
+            </p>
+          </div>
+        </div>
 
-        <StoryThreadMarker
-          step="03"
-          label="Panel kaydı"
-          detail="Aynı müdahale ihtiyacı artık çalışma listenizde görünür."
+        <OwnershipLedgerRow
+          time={record.time}
+          topic={record.topic}
+          message={record.message}
+          owner="Satıcı incelemesi"
+          outcome="İade incelemesi · İncelemeniz gerekiyor"
           tone="attention"
-          className="mt-10 max-w-xl"
+          className="mt-8"
         />
-
-        <MarketingReveal variant="state" className="mt-4 max-w-2xl">
-          <SystemNote tone="attention" label="Konuşmadan gelen durum">
-            Otomatik yanıt durdu. Konuşma iade incelemesine geçti.
-          </SystemNote>
-        </MarketingReveal>
-
-        <MarketingReveal variant="product" className="mt-6">
-          <SellerDashboardProof />
-        </MarketingReveal>
       </div>
+
+      <MarketingReveal variant="product" className="mt-8">
+        <div className="mx-auto w-full max-w-[1380px] border-y border-boundary bg-sunken">
+          <SellerDashboardProof />
+        </div>
+      </MarketingReveal>
     </section>
   );
 }
 
 function SellerDashboardProof() {
   return (
-    <div className="overflow-hidden rounded-sheet border border-boundary bg-canvas shadow-surface">
-      <div className="flex flex-col gap-5 border-b border-divider px-5 py-6 sm:flex-row sm:items-end sm:justify-between sm:gap-10 sm:px-7 sm:py-7">
+    <div>
+      <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-5 border-b border-divider px-4 py-7 sm:flex-row sm:items-end sm:justify-between sm:gap-10 md:px-6 lg:px-8">
         <div className="space-y-2.5">
           <p className="type-meta font-semibold text-muted-foreground">
-            Satıcı paneli · örnek görünüm
+            Satıcı paneli · aynı kayıt
           </p>
-          <h3 className="font-display text-[34px] font-semibold leading-[40px] tracking-[-0.024em] text-foreground sm:text-[40px] sm:leading-[46px]">
+          <h3 className="font-display text-[32px] font-semibold leading-[38px] tracking-[-0.024em] text-foreground sm:text-[40px] sm:leading-[46px]">
             Bugün ilgilenmeniz gerekenler
           </h3>
           <p className="max-w-2xl type-body text-muted">
@@ -64,7 +69,7 @@ function SellerDashboardProof() {
         <WorkloadStats />
       </div>
 
-      <div className="px-5 py-7 sm:px-7 sm:py-8">
+      <div className="mx-auto w-full max-w-[1240px] px-4 py-8 md:px-6 lg:px-8 lg:py-10">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
           <section aria-labelledby="marketing-panel-primary" className="space-y-5">
             <ProofSectionHeading
@@ -78,7 +83,7 @@ function SellerDashboardProof() {
                 taskType="return_review"
                 title={EXAMPLE_RETURN_TASK_TITLE}
                 summary={MARKETING_STORY.returnQuestion}
-                context={EXAMPLE_CUSTOMER_CONTEXT}
+                context={`${MARKETING_STORY.ledger.returnReview.time} · WhatsApp müşterisi`}
               />
             </div>
           </section>
@@ -86,7 +91,7 @@ function SellerDashboardProof() {
           <aside className="flex flex-col gap-5">
             <section
               aria-labelledby="marketing-panel-secondary"
-              className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface"
+              className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised"
             >
               <header className="flex items-baseline gap-2.5 border-b border-divider px-4 py-3.5 sm:px-5">
                 <h4
@@ -95,17 +100,14 @@ function SellerDashboardProof() {
                 >
                   Bugün bakılabilecekler
                 </h4>
-                <span
-                  aria-hidden="true"
-                  className="type-meta type-figure text-muted-foreground"
-                >
+                <span aria-hidden="true" className="type-meta type-figure text-muted-foreground">
                   1
                 </span>
               </header>
               <SecondaryProofRow
                 taskType="unanswered_question"
                 title={EXAMPLE_UNANSWERED_TASK_TITLE}
-                context={EXAMPLE_CUSTOMER_CONTEXT}
+                context={`${MARKETING_STORY.ledger.unknown.time} · WhatsApp müşterisi`}
               />
             </section>
 
@@ -128,7 +130,7 @@ function WorkloadStats() {
     <dl
       role="status"
       aria-label="Örnek görünümde ilgilenmeniz gereken 2 konu"
-      className="grid w-full shrink-0 grid-cols-3 divide-x divide-divider self-start overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface sm:w-auto sm:min-w-[360px]"
+      className="grid w-full shrink-0 grid-cols-3 divide-x divide-divider self-start border-y border-divider sm:w-auto sm:min-w-[360px]"
     >
       {stats.map((stat) => (
         <div key={stat.label} className="px-4 py-3 sm:px-5">
@@ -159,10 +161,7 @@ function ProofSectionHeading({
         <h4 id={id} className="type-section text-foreground">
           {title}
         </h4>
-        <span
-          aria-hidden="true"
-          className="type-row-secondary type-figure text-muted-foreground"
-        >
+        <span aria-hidden="true" className="type-row-secondary type-figure text-muted-foreground">
           {count}
         </span>
       </div>
@@ -260,12 +259,9 @@ function QuietSummaryProof() {
   return (
     <section
       aria-labelledby="marketing-panel-summary"
-      className="rounded-sheet border border-boundary/60 bg-raised px-4 py-4 shadow-surface sm:px-5"
+      className="border-y border-divider px-1 py-4 sm:px-0"
     >
-      <h4
-        id="marketing-panel-summary"
-        className="type-meta font-semibold text-muted-foreground"
-      >
+      <h4 id="marketing-panel-summary" className="type-meta font-semibold text-muted-foreground">
         Özet
       </h4>
       <dl className="mt-3 space-y-2">
@@ -275,22 +271,10 @@ function QuietSummaryProof() {
               <div className="my-1.5 h-px bg-divider" aria-hidden="true" />
             ) : null}
             <div className="flex items-center justify-between type-row-secondary">
-              <dt
-                className={
-                  row.emphasize
-                    ? "font-semibold text-foreground"
-                    : "text-muted-foreground"
-                }
-              >
+              <dt className={row.emphasize ? "font-semibold text-foreground" : "text-muted-foreground"}>
                 {row.label}
               </dt>
-              <dd
-                className={
-                  row.emphasize
-                    ? "tabular-nums font-semibold text-foreground"
-                    : "tabular-nums text-muted"
-                }
-              >
+              <dd className={row.emphasize ? "tabular-nums font-semibold text-foreground" : "tabular-nums text-muted"}>
                 {row.value}
               </dd>
             </div>
