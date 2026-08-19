@@ -1,5 +1,6 @@
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
+import { StoryThreadMarker } from "@/components/marketing/story-thread";
 import { SystemNote } from "@/components/marketing/system-note";
 
 /**
@@ -28,6 +29,12 @@ export function Hero() {
         </div>
 
         <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <StoryThreadMarker
+            step="01"
+            label="Konuşma"
+            detail="Müşteri mesajı ürün davranışının başlangıç noktasıdır."
+            className="mb-2"
+          />
           <HeroConversation />
         </div>
 
