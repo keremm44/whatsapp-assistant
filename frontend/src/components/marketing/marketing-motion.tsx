@@ -19,16 +19,6 @@ function useReducedMotion() {
   return reduced;
 }
 
-function useMotionReady() {
-  const [ready, setReady] = React.useState(false);
-
-  React.useEffect(() => {
-    setReady(true);
-  }, []);
-
-  return ready;
-}
-
 function useInViewOnce<T extends HTMLElement>(threshold = 0.16) {
   const ref = React.useRef<T | null>(null);
   const [visible, setVisible] = React.useState(false);
@@ -61,16 +51,47 @@ export function MarketingReveal({
   children: React.ReactNode;
   className?: string;
 }) {
-  const reduced = useReducedMotion();
-  const motionReady = useMotionReady();
-  const { ref, visible } = useInViewOnce<HTMLDivElement>();
+  const ref = React.useRef<HTMLDivElement | null>(null);
+  const [motionReady, setMotionReady] = React.useState(false);
+  const [visible, setVisible] = React.useState(true);
+
+  React.useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (media.matches) return;
+
+    const rect = node.getBoundingClientRect();
+    const alreadyInViewport = rect.top < window.innerHeight && rect.bottom > 0;
+    if (alreadyInViewport) {
+      setMotionReady(true);
+      setVisible(true);
+      return;
+    }
+
+    setMotionReady(true);
+    setVisible(false);
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setVisible(true);
+        observer.disconnect();
+      },
+      { threshold: 0.16 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div
       ref={ref}
       className={cn(
         motionReady && styles.reveal,
-        (!motionReady || visible || reduced) && styles.revealVisible,
+        (!motionReady || visible) && styles.revealVisible,
         className,
       )}
     >
@@ -176,7 +197,8 @@ const NAV_ITEMS = [
 ] as const;
 
 export function MarketingDockNav() {
-  const [activeId, setActiveId] = React.useState<string>('nasil-calisir');
+  const [activeId, setActiveId] = React.useState<string | null>(null);
+  const intersectionRatios = React.useRef(new Map<string, number>());
 
   React.useEffect(() => {
     const sections = NAV_ITEMS.map((item) => document.getElementById(item.id)).filter(
@@ -184,18 +206,37 @@ export function MarketingDockNav() {
     );
     if (sections.length === 0) return;
 
+    intersectionRatios.current.clear();
+    sections.forEach((section) => intersectionRatios.current.set(section.id, 0));
+
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible?.target.id) setActiveId(visible.target.id);
+        entries.forEach((entry) => {
+          intersectionRatios.current.set(
+            entry.target.id,
+            entry.isIntersecting ? entry.intersectionRatio : 0,
+          );
+        });
+
+        let nextId: string | null = null;
+        let bestRatio = 0;
+        NAV_ITEMS.forEach((item) => {
+          const ratio = intersectionRatios.current.get(item.id) ?? 0;
+          if (ratio > bestRatio) {
+            bestRatio = ratio;
+            nextId = item.id;
+          }
+        });
+        setActiveId(nextId);
       },
       { rootMargin: '-20% 0px -58% 0px', threshold: [0.1, 0.3, 0.6] },
     );
 
     sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      intersectionRatios.current.clear();
+    };
   }, []);
 
   return (
