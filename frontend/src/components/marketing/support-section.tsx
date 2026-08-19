@@ -5,7 +5,7 @@ import { MarketingSectionHeading } from "@/components/marketing/section-heading"
 
 export function SupportSection() {
   return (
-    <section className="border-t border-boundary bg-sunken">
+    <section className="border-t border-divider bg-sunken">
       <div className="mx-auto w-full max-w-[1240px] px-4 py-20 md:px-6 md:py-28 lg:px-8">
         <MarketingSectionHeading
           eyebrow="Yanınızdayız"
