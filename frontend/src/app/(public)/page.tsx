@@ -1,28 +1,38 @@
-import Link from "next/link";
+import { ApplySection } from "@/components/marketing/apply-section";
+import { ControlSection } from "@/components/marketing/control-section";
+import { DayContrast } from "@/components/marketing/day-contrast";
+import { DemoSection } from "@/components/marketing/demo-section";
+import { DifficultCases } from "@/components/marketing/difficult-cases";
+import { Hero } from "@/components/marketing/hero";
+import { OnboardingSection } from "@/components/marketing/onboarding-section";
+import { PanelSection } from "@/components/marketing/panel-section";
+import { SupportSection } from "@/components/marketing/support-section";
 
 /**
- * Foundation landing page — minimal and restrained on purpose. The real
- * hero, pain mirror, and proof sections arrive in the marketing step.
+ * Public marketing site — the seller's mental journey, in order:
+ *
+ *   1. Hero         — "Bu benim için olabilir." (pain, one proof)
+ *   2. Day contrast — "İşimi gerçekten azaltır mı?"
+ *   3. Control      — "Yanlış cevap verir mi? Kontrolsüz mü?"
+ *   4. Demo         — "Nasıl konuştuğunu kendim göreyim."
+ *   5. Difficult    — "İade / sorun / beklenmeyen durumda ne yapar?"
+ *   6. Panel        — "Ne olduğunu görür müyüm, ne yapacağımı bilir miyim?"
+ *   7. Onboarding   — "Kurması zor mu?"
+ *   8. Support      — "Yalnız mı kalırım?"
+ *   9. Apply        — "Denemek istiyorum." (real application endpoint)
  */
 export default function HomePage() {
   return (
-    <section className="mx-auto flex min-h-[60vh] max-w-3xl flex-col items-center justify-center gap-6 px-6 py-24 text-center">
-      <p className="text-sm text-muted-foreground">Sakin Ustalık</p>
-      <h1 className="font-heading text-3xl text-foreground sm:text-4xl">
-        WhatsApp&apos;ta tekrar eden işleri asistanınız yönetsin.
-      </h1>
-      <p className="max-w-xl text-base text-muted-foreground">
-        Bilmediğinde uydurmaz. Karar gerektiğinde sizi devreye alır. Kontrol
-        her zaman sizde.
-      </p>
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <Link
-          href="/giris"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          Satıcı girişi
-        </Link>
-      </div>
-    </section>
+    <div className="bg-background">
+      <Hero />
+      <DayContrast />
+      <ControlSection />
+      <DemoSection />
+      <DifficultCases />
+      <PanelSection />
+      <OnboardingSection />
+      <SupportSection />
+      <ApplySection />
+    </div>
   );
 }
