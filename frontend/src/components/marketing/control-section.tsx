@@ -205,6 +205,10 @@ function CoralJourney() {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (media.matches) return;
 
+    const rect = node.getBoundingClientRect();
+    const alreadyInViewport = rect.top < window.innerHeight && rect.bottom > 0;
+    if (alreadyInViewport) return;
+
     setVisibleSteps(0);
     const timers: number[] = [];
     const observer = new IntersectionObserver(
