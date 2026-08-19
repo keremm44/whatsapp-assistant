@@ -2,26 +2,14 @@
 
 import * as React from "react";
 
-import { ChatBubble, ChatNote } from "@/components/marketing/chat-bubbles";
+import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
 import { cn } from "@/lib/utils/cn";
-
-/**
- * "Müşteri gibi deneyin" — a scripted, offline conversation sample.
- *
- * This is NOT a live model: the conversation is derived from the
- * product's real template / product-info / escalation sentences and its
- * hand-off behaviour, so the seller hears the assistant's actual tone
- * and sees its actual limits. The transcript language mirrors the seller
- * Conversations workbench (incoming sunken, outgoing neutral, cyan only
- * as the "Asistan yanıtı" accent, coral only for seller attention).
- */
 
 type DemoStep = {
   id: string;
   from: "customer" | "assistant" | "system";
   text: string;
-  note?: string;
   tone?: "attention" | "neutral";
   replies?: { label: string; next: string }[];
 };
@@ -92,7 +80,6 @@ const DEMO_STEPS: Record<string, DemoStep> = {
     id: "unknownAnswer",
     from: "assistant",
     text: "Bu konuda kayıtlı net bir bilgimiz bulunmuyor. Sorunuzu satıcımıza iletiyorum.",
-    note: "Soru, panelde “Cevaplanamayan sorular” listesine düşer; asistan cevap uydurmaz.",
   },
   return: {
     id: "return",
@@ -104,12 +91,10 @@ const DEMO_STEPS: Record<string, DemoStep> = {
     id: "returnOutcome",
     from: "system",
     tone: "attention",
-    text: "Otomatik yanıt durduruldu; müşteriye cevap gönderilmez.",
-    note: "Konuşma “İade incelemesi” durumuna geçer ve panelinizde “İncelemeniz gerekiyor” olarak görünür.",
+    text: "Otomatik yanıt durdu. Bu konuşma artık satıcı incelemesinde.",
   },
 };
 
-/** Which step follows a chosen customer reply. */
 const ANSWER_AFTER: Record<string, string> = {
   microwave: "microwaveAnswer",
   price: "priceAnswer",
@@ -130,116 +115,81 @@ export function DemoSection() {
   };
 
   const reset = () => setHistory(["start"]);
-
   const isAtLeaf = !current?.replies || current.replies.length === 0;
 
   return (
-    <section
-      id="dene"
-      className="scroll-mt-16 border-y border-divider bg-sunken"
-    >
+    <section id="dene" className="scroll-mt-16 border-y border-divider bg-sunken">
       <div className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-20 lg:px-8">
         <MarketingSectionHeading
           eyebrow="Deneyin"
           title="Nasıl konuştuğunu kendiniz görün."
-          description="Müşteri gibi birkaç soru sorun. Cevaplar ürünün gerçek davranışını yansıtır — sınırlarıyla birlikte."
+          description="Bir soru seçin. Normal cevabı da, bilmediği veya durması gereken yeri de aynı konuşmada görün."
         />
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
-          <div className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
-            <div className="flex items-center justify-between gap-3 border-b border-divider px-4 py-2.5">
-              <p className="type-meta font-semibold text-muted-foreground">
-                Kişiye özel kupa mağazası — örnek konuşma
-              </p>
-              <button
-                type="button"
-                onClick={reset}
-                className="rounded-control px-2.5 py-1 type-meta font-semibold text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
-                Yeniden başlat
-              </button>
-            </div>
-            <div className="flex min-h-[360px] flex-col justify-end gap-3 px-4 py-5">
-              {history.map((stepId) => {
-                const step = DEMO_STEPS[stepId];
-                if (step.from === "system") {
-                  // A product-behaviour note, not a WhatsApp message:
-                  // rendered full-width and visually distinct so it can
-                  // never read as an assistant reply or customer bubble.
-                  return <SystemNote key={stepId} step={step} />;
-                }
-                return (
-                  <div key={stepId} className="space-y-1.5">
-                    <ChatBubble from={step.from}>{step.text}</ChatBubble>
-                    {step.note ? (
-                      <ChatNote
-                        align={step.from === "assistant" ? "right" : "left"}
-                      >
-                        {step.note}
-                      </ChatNote>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="border-t border-divider bg-sunken px-4 py-3.5">
-              {!isAtLeaf ? (
-                <div
-                  className="flex flex-wrap gap-2"
-                  role="group"
-                  aria-label="Müşteri soruları"
-                >
-                  {current.replies?.map((reply) => (
-                    <button
-                      key={reply.next}
-                      type="button"
-                      onClick={() => choose(reply.next)}
-                      className={cn(
-                        "rounded-control border border-boundary/60 bg-raised px-3 py-2 text-sm font-medium text-foreground",
-                        "transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                      )}
-                    >
-                      {reply.label}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex items-center justify-between gap-3">
-                  <p className="type-meta text-muted-foreground">
-                    Bu senaryo bitti. Başka bir soruyla yeniden deneyin.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={reset}
-                    className="rounded-control px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    Yeniden başlat
-                  </button>
-                </div>
-              )}
-            </div>
+        <div className="mt-10 overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
+          <div className="flex items-center justify-between gap-3 border-b border-divider px-4 py-2.5">
+            <p className="type-meta font-semibold text-muted-foreground">
+              Kişiye özel kupa mağazası · örnek konuşma
+            </p>
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-control px-2.5 py-1 type-meta font-semibold text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              Yeniden başlat
+            </button>
           </div>
 
-          <div className="space-y-4 lg:pt-10">
-            <p className="type-eyebrow text-muted-foreground">Dürüstlük notu</p>
-            <p className="type-body text-muted">
-              Bu örnek, canlı bir yapay zeka bağlantısı kullanmaz. Konuşma,
-              ürünün gerçek yanıt ve devretme davranışlarından türetilmiştir.
-            </p>
+          <div className="flex min-h-[360px] flex-col justify-end gap-3 px-4 py-5 sm:px-6">
+            {history.map((stepId) => {
+              const step = DEMO_STEPS[stepId];
+              if (step.from === "system") {
+                return <SystemNote key={stepId} step={step} />;
+              }
+              return <ChatBubble key={stepId} from={step.from}>{step.text}</ChatBubble>;
+            })}
+          </div>
+
+          <div className="border-t border-divider bg-sunken px-4 py-3.5 sm:px-6">
+            {!isAtLeaf ? (
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Müşteri soruları">
+                {current.replies?.map((reply) => (
+                  <button
+                    key={reply.next}
+                    type="button"
+                    onClick={() => choose(reply.next)}
+                    className={cn(
+                      "rounded-control border border-boundary/60 bg-raised px-3 py-2 text-sm font-medium text-foreground",
+                      "transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    )}
+                  >
+                    {reply.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="type-meta text-muted-foreground">Başka bir senaryoyu da deneyebilirsiniz.</p>
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="rounded-control px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  Yeniden başlat
+                </button>
+              </div>
+            )}
           </div>
         </div>
+
+        <p className="mt-4 type-meta text-muted-foreground">
+          Bu alan canlı yapay zeka bağlantısı değil; ürünün gerçek konuşma ve devretme davranışlarını gösteren kontrollü bir örnektir.
+        </p>
       </div>
     </section>
   );
 }
 
-/**
- * A system-behaviour band. It is NOT a message bubble: full-width, with
- * a leading edge and a "Sistem davranışı" label. The return scenario
- * carries seller attention, so only that one uses the coral soft fill;
- * everything else stays neutral. No success/warning/paused hue is
- * borrowed for a meaning it does not have.
- */
 function SystemNote({ step }: { step: DemoStep }) {
   const attention = step.tone === "attention";
   return (
@@ -251,18 +201,8 @@ function SystemNote({ step }: { step: DemoStep }) {
           : "border-l-boundary bg-recessed",
       )}
     >
-      <p
-        className={cn(
-          "type-meta font-semibold",
-          attention ? "text-attention" : "text-muted-foreground",
-        )}
-      >
-        Sistem davranışı
-      </p>
+      <p className={cn("type-meta font-semibold", attention ? "text-attention" : "text-muted-foreground")}>Sistem</p>
       <p className="mt-1 type-body text-foreground">{step.text}</p>
-      {step.note ? (
-        <p className="mt-1 type-row-secondary text-muted">{step.note}</p>
-      ) : null}
     </div>
   );
 }
