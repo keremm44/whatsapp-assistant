@@ -43,6 +43,8 @@ Frontend business authority değildir; backend state veya auth kararını yenide
 ## 5. Tasarım ve erişilebilirlik
 
 - Var olan design token/class yapılarını kullan; görev istemedikçe yeni görsel dil icat etme.
+- Seller workspace'teki güncel `Instrument` tema ve semantik renk rolleri ürünün önemli görsel kaynaklarından biridir. Public/marketing/auth yüzeyleri zorunlu olarak açık temada kalmak zorunda değildir; görev gerektiriyorsa bu dili aynı ürün ailesi içinde uyarlayabilir. Eski root light palette mevcut bir fallback/token kaynağıdır, public yüzey için bağlayıcı art-direction değildir.
+- Public/marketing yüzeyi seller panelinin birebir kopyası olmak zorunda değildir; ancak aynı ürün ailesi bağı korunmalı, özellikle interaction/attention/brand renk anlamları keyfi biçimde yeniden tanımlanmamalıdır.
 - Shared component mevcutsa aynı UI pattern'ini tekrar kodlama.
 - Interactive elementlerin keyboard/focus davranışını koru.
 - Bir satırın tamamı link ise içine ikinci nested interactive control koyma.
