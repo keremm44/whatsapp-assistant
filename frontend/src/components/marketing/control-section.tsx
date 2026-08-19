@@ -1,128 +1,133 @@
 import * as React from "react";
 
-import { ChatProofCard } from "@/components/marketing/chat-bubbles";
+import { ChatBubble } from "@/components/marketing/chat-bubbles";
+import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal, TrueFocusLine } from "@/components/marketing/marketing-motion";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
-import { cn } from "@/lib/utils/cn";
 
 /**
- * Kontrol — the trust section. It answers the seller's sharpest
- * objections ("yanlış cevap verir mi?", "kontrolsüz davranır mı?",
- * "mesaj hakkımı tüketir mi?") with the product's real behaviour:
- *
- *   - the decision source is the seller's own data, not free-form AI;
- *   - it never fabricates: unknown questions are recorded and escalated;
- *   - it only replies to what the customer sends (inbound-triggered);
- *   - the seller can take over or hand back any conversation.
- *
- * The right-side proof shows the real control states with the exact
- * tone mapping the seller panel uses: ordinary states are neutral,
- * "İade incelemesi" is coral attention and "Yanıtlar durduruldu" is
- * the near-neutral paused slate. Cyan never expresses a state.
+ * Control — one conversation, three ownership states. The product UI
+ * carries the proof; copy only explains what the seller is seeing.
  */
 export function ControlSection() {
   return (
-    <section id="kontrol" className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 py-16 md:px-6 md:py-20 lg:px-8">
+    <section
+      id="kontrol"
+      className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 py-16 md:px-6 md:py-20 lg:px-8"
+    >
       <MarketingSectionHeading
         eyebrow="Kontrol"
-        title="Kararları asistan kendi başına vermez."
-        description="Yanlış cevap korkusu gerçektir. Bu yüzden asistan yalnızca sizin verdiğiniz bilgilerle konuşur ve bilmediğini söylemekten çekinmez."
+        title="Konuşmayı istediğiniz anda devralırsınız."
+        description="Asistan yalnızca verdiğiniz bilgilerle ilerler. Karar sizdeyse konuşmayı size bırakır; işiniz bittiğinde aynı yerden asistana geri verirsiniz."
       />
 
-      <div className="mt-6 max-w-3xl rounded-sheet border border-boundary/50 bg-sunken px-5 py-4 shadow-surface">
-        <p className="mb-3 type-meta font-semibold text-muted-foreground">Çalışma prensibi</p>
+      <div className="mt-6 max-w-3xl border-l-2 border-primary/55 pl-4 sm:pl-5">
         <TrueFocusLine
           words={["Bilir.", "Cevaplar.", "Bilmezse", "durur.", "Size", "bırakır."]}
           className="font-heading text-xl font-semibold leading-8 text-foreground sm:text-2xl"
         />
       </div>
 
-      <div className="mt-10 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
-        <div className="space-y-4">
-          <ControlRow
-            title="Sadece sizin bilgilerinizle konuşur."
-            body="Kararın kaynağı ürün bilgileriniz, kurallarınız, hazır cevaplarınız ve sipariş akışıdır. Yapay zeka yalnızca müşterinin ne sorduğunu ayırt eder; işletmeniz adına karar üretmez."
-          />
-          <ControlRow
-            title="Bilmediğinde uydurmaz."
-            body="Kayıtlı bir cevabı yoksa müşteriye bunu söyler ve soruyu size iletir. Soru, panelinizde “Cevaplanamayan sorular” listesine düşer."
-          />
-          <ControlRow
-            title="Gerektiği kadar çalışır."
-            body="Yalnızca müşterinin yazdığı mesaja yanıt verir. Kendiliğinden mesaj yağdırmaz, boş yere mesaj hakkı harcamaz."
-          />
-          <ControlRow
-            title="İstediğiniz an devralırsınız."
-            body="Bir konuşmaya “Ben ilgileneceğim” diyerek girer, “Asistana bırak” diyerek geri verebilirsiniz. Durum her zaman panelde görünür."
-          />
-        </div>
+      <MarketingReveal className="mt-10">
+        <ControlWorkbench />
+      </MarketingReveal>
 
-        <MarketingReveal>
-          <ControlProof />
-        </MarketingReveal>
+      <div className="mt-8 grid gap-5 md:grid-cols-3">
+        <ControlFact
+          title="Bilgi sizden gelir"
+          body="Ürün bilgileri, kurallar ve kayıtlı cevaplar karar kaynağıdır."
+        />
+        <ControlFact
+          title="Bilinmeyen soru kaybolmaz"
+          body="Cevabı yoksa uydurmak yerine soruyu satıcının listesine taşır."
+        />
+        <ControlFact
+          title="Devralma görünürdür"
+          body="Konuşmayla kimin ilgilendiği panelde açıkça görünür."
+        />
       </div>
     </section>
   );
 }
 
-function ControlRow({ title, body }: { title: string; body: string }) {
+function ControlWorkbench() {
   return (
-    <div className="border-l-2 border-boundary pl-4 sm:pl-5">
-      <h3 className="font-heading text-[17px] font-semibold leading-6 text-foreground">
-        {title}
-      </h3>
-      <p className="mt-1 max-w-2xl type-body text-muted">{body}</p>
-    </div>
-  );
-}
+    <div className="overflow-hidden rounded-sheet border border-boundary/70 bg-raised shadow-surface">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="border-b border-divider bg-sunken px-4 py-5 sm:px-6 lg:border-b-0 lg:border-r lg:py-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="type-meta font-semibold text-foreground">
+                {MARKETING_STORY.storeLabel}
+              </p>
+              <p className="mt-0.5 type-meta text-muted-foreground">
+                Aynı konuşma · kontrol yüzeyi
+              </p>
+            </div>
+            <span className="rounded-control bg-selected px-2.5 py-1 type-meta font-semibold text-primary">
+              Asistan aktif
+            </span>
+          </div>
 
-function ControlProof() {
-  return (
-    <div className="space-y-3 lg:sticky lg:top-20">
-      <ChatProofCard label="Konuşma kontrolü — gerçek durumlar">
-        <ControlChip label="Asistan aktif" tone="neutral" />
-        <ControlChip label="Siz ilgileniyorsunuz" tone="neutral" />
-        <ControlChip label="İade incelemesi" tone="attention" />
-        <ControlChip label="Yanıtlar durduruldu" tone="paused" />
-      </ChatProofCard>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-sheet border border-boundary/60 bg-raised px-4 py-3 shadow-surface">
-        <span className="type-row-primary text-foreground">
-          Bu konuşmayla kim ilgileniyor?
-        </span>
-        <span className="rounded-control bg-primary-button px-3 py-1.5 text-sm font-medium text-primary-foreground">
-          Ben ilgileneceğim
-        </span>
+          <div className="space-y-3">
+            <ChatBubble from="customer">{MARKETING_STORY.unknownQuestion}</ChatBubble>
+            <ChatBubble from="assistant">{MARKETING_STORY.unknownAnswer}</ChatBubble>
+          </div>
+        </div>
+
+        <div className="divide-y divide-divider">
+          <OwnershipState
+            label="01 · Asistan aktif"
+            body="Kayıtlı bilgilerle müşteriye yanıt verir."
+            action="Ben ilgileneceğim"
+            active
+          />
+          <OwnershipState
+            label="02 · Siz ilgileniyorsunuz"
+            body="Asistan konuşmaya yeni yanıt göndermez."
+            action="Asistana bırak"
+          />
+          <OwnershipState
+            label="03 · Asistana geri verildi"
+            body="Konuşma aynı bağlamla yeniden asistana döner."
+          />
+        </div>
       </div>
     </div>
   );
 }
 
-function ControlChip({
+function OwnershipState({
   label,
-  tone,
+  body,
+  action,
+  active = false,
 }: {
   label: string;
-  tone: "neutral" | "attention" | "paused";
+  body: string;
+  action?: string;
+  active?: boolean;
 }) {
-  const chipClass = {
-    neutral: "bg-recessed text-foreground",
-    attention: "bg-attention-soft text-attention",
-    paused: "bg-paused-muted text-paused",
-  }[tone];
-  const dotClass = {
-    neutral: "bg-muted-foreground",
-    attention: "bg-attention",
-    paused: "bg-paused",
-  }[tone];
   return (
-    <div
-      className={cn(
-        "inline-flex h-7 items-center gap-1.5 rounded-control px-2.5 type-meta font-semibold",
-        chipClass,
-      )}
-    >
-      <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", dotClass)} />
-      {label}
+    <div className={active ? "bg-selected/55 px-4 py-4" : "px-4 py-4"}>
+      <p className={active ? "type-meta font-semibold text-primary" : "type-meta font-semibold text-muted-foreground"}>
+        {label}
+      </p>
+      <p className="mt-1 type-row-secondary text-muted">{body}</p>
+      {action ? (
+        <span className="mt-3 inline-flex rounded-control border border-boundary px-3 py-1.5 text-sm font-medium text-foreground">
+          {action}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function ControlFact({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="border-t border-divider pt-4">
+      <h3 className="type-row-primary text-foreground">{title}</h3>
+      <p className="mt-1 type-body text-muted">{body}</p>
     </div>
   );
 }
