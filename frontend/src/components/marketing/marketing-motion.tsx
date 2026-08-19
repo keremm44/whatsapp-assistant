@@ -160,11 +160,7 @@ const NAV_ITEMS = [
   { href: '#kurulum', label: 'Kurulum', id: 'kurulum' },
 ] as const;
 
-export function MarketingDockNav({
-  onNavigate,
-}: {
-  onNavigate?: () => void;
-}) {
+export function MarketingDockNav() {
   const [activeId, setActiveId] = React.useState<string>('nasil-calisir');
 
   React.useEffect(() => {
@@ -193,7 +189,6 @@ export function MarketingDockNav({
         <a
           key={item.id}
           href={item.href}
-          onClick={onNavigate}
           aria-current={activeId === item.id ? 'location' : undefined}
           className={cn(styles.dockItem, activeId === item.id && styles.dockItemActive)}
         >
