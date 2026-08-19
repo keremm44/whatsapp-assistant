@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { MarketingDockNav } from "@/components/marketing/marketing-motion";
 import { BrandMark } from "@/components/shared/brand-mark";
 
 /**
@@ -13,16 +14,19 @@ import { BrandMark } from "@/components/shared/brand-mark";
  */
 export function MarketingHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-boundary/40 bg-chrome">
-      <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center justify-between gap-3 px-4 md:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 border-b border-boundary/40 bg-chrome/95 backdrop-blur-md">
+      <div className="mx-auto grid h-14 w-full max-w-[1180px] grid-cols-[1fr_auto] items-center gap-3 px-4 md:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
         <Link
           href="/"
           aria-label="WhatsApp Asistan ana sayfa"
-          className="rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="w-fit rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <BrandMark subtitle="Sakin Ustalık" />
         </Link>
-        <nav aria-label="Üst menü" className="flex items-center gap-1 sm:gap-2">
+
+        <MarketingDockNav />
+
+        <nav aria-label="Hesap menüsü" className="flex items-center justify-end gap-1 sm:gap-2">
           <Link
             href="/giris"
             className="rounded-control px-3 py-2 text-sm font-medium text-chrome-foreground/70 transition-colors hover:bg-chrome-hover hover:text-chrome-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
