@@ -53,6 +53,10 @@ test("return review stays attention and never masquerades as assistant-paused", 
     /<SystemNote tone="attention" label="Konuşmadan gelen durum">/,
   );
   assert.doesNotMatch(control, /Yanıtlar durduruldu/);
+  assert.match(
+    control,
+    /Asistan bekler; bu konuşmanın yanıtlarını siz yönetirsiniz\./,
+  );
   assert.match(control, /Asistan yeni mesajlarda yeniden devreye girer\./);
 });
 
@@ -82,6 +86,18 @@ test("public loading keeps the hero container and desktop proof geometry", () =>
     /lg:grid-cols-\[minmax\(0,0\.9fr\)_minmax\(480px,1\.1fr\)\]/,
   );
   assert.match(loading, /lg:row-span-2/);
+});
+
+test("primary marketing controls keep real mobile touch targets", () => {
+  const header = read("marketing-header.tsx");
+  const control = read("control-section.tsx");
+  const demo = read("demo-section.tsx");
+  const footer = read("marketing-footer.tsx");
+
+  assert.match(header, /min-h-11/);
+  assert.match(control, /min-h-11/);
+  assert.match(demo, /min-h-11/);
+  assert.match(footer, /min-h-11/);
 });
 
 test("application entry remains honest and non-interactive while the flow is unavailable", () => {
