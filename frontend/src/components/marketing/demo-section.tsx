@@ -12,7 +12,9 @@ import { cn } from "@/lib/utils/cn";
  * This is NOT a live model: the conversation is derived from the
  * product's real template / product-info / escalation sentences and its
  * hand-off behaviour, so the seller hears the assistant's actual tone
- * and sees its actual limits. The label is honest about this on purpose.
+ * and sees its actual limits. The transcript language mirrors the seller
+ * Conversations workbench (incoming sunken, outgoing neutral, cyan only
+ * as the "Asistan yanıtı" accent, coral only for seller attention).
  */
 
 type DemoStep = {
@@ -20,6 +22,7 @@ type DemoStep = {
   from: "customer" | "assistant" | "system";
   text: string;
   note?: string;
+  tone?: "attention" | "neutral";
   replies?: { label: string; next: string }[];
 };
 
@@ -100,6 +103,7 @@ const DEMO_STEPS: Record<string, DemoStep> = {
   returnOutcome: {
     id: "returnOutcome",
     from: "system",
+    tone: "attention",
     text: "Otomatik yanıt durduruldu; müşteriye cevap gönderilmez.",
     note: "Konuşma “İade incelemesi” durumuna geçer ve panelinizde “İncelemeniz gerekiyor” olarak görünür.",
   },
@@ -130,7 +134,10 @@ export function DemoSection() {
   const isAtLeaf = !current?.replies || current.replies.length === 0;
 
   return (
-    <section id="dene" className="border-y border-divider bg-chrome/60 scroll-mt-16">
+    <section
+      id="dene"
+      className="scroll-mt-16 border-y border-divider bg-sunken"
+    >
       <div className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-20 lg:px-8">
         <MarketingSectionHeading
           eyebrow="Deneyin"
@@ -139,7 +146,7 @@ export function DemoSection() {
         />
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
-          <div className="overflow-hidden rounded-sheet border border-boundary/60 bg-surface shadow-surface">
+          <div className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
             <div className="flex items-center justify-between gap-3 border-b border-divider px-4 py-2.5">
               <p className="type-meta font-semibold text-muted-foreground">
                 Kişiye özel kupa mağazası — örnek konuşma
@@ -157,45 +164,38 @@ export function DemoSection() {
                 const step = DEMO_STEPS[stepId];
                 if (step.from === "system") {
                   // A product-behaviour note, not a WhatsApp message:
-                  // visually distinct so it can never read as an
-                  // assistant reply or a customer bubble.
-                  return (
-                    <div
-                      key={stepId}
-                      className="rounded-sheet border border-boundary bg-recessed px-3.5 py-3"
-                    >
-                      <p className="type-meta font-semibold text-muted-foreground">
-                        Sistem davranışı
-                      </p>
-                      <p className="mt-1 type-body text-foreground">
-                        {step.text}
-                      </p>
-                      {step.note ? (
-                        <p className="mt-1 type-row-secondary text-muted">
-                          {step.note}
-                        </p>
-                      ) : null}
-                    </div>
-                  );
+                  // rendered full-width and visually distinct so it can
+                  // never read as an assistant reply or customer bubble.
+                  return <SystemNote key={stepId} step={step} />;
                 }
                 return (
                   <div key={stepId} className="space-y-1.5">
                     <ChatBubble from={step.from}>{step.text}</ChatBubble>
-                    {step.note ? <ChatNote>{step.note}</ChatNote> : null}
+                    {step.note ? (
+                      <ChatNote
+                        align={step.from === "assistant" ? "right" : "left"}
+                      >
+                        {step.note}
+                      </ChatNote>
+                    ) : null}
                   </div>
                 );
               })}
             </div>
-            <div className="border-t border-divider bg-recessed/40 px-4 py-3.5">
+            <div className="border-t border-divider bg-sunken px-4 py-3.5">
               {!isAtLeaf ? (
-                <div className="flex flex-wrap gap-2" role="group" aria-label="Müşteri soruları">
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="group"
+                  aria-label="Müşteri soruları"
+                >
                   {current.replies?.map((reply) => (
                     <button
                       key={reply.next}
                       type="button"
                       onClick={() => choose(reply.next)}
                       className={cn(
-                        "rounded-control border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground",
+                        "rounded-control border border-boundary/60 bg-raised px-3 py-2 text-sm font-medium text-foreground",
                         "transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                       )}
                     >
@@ -221,9 +221,7 @@ export function DemoSection() {
           </div>
 
           <div className="space-y-4 lg:pt-10">
-            <p className="type-meta font-semibold uppercase tracking-[0.09em] text-primary-text">
-              Dürüstlük notu
-            </p>
+            <p className="type-eyebrow text-muted-foreground">Dürüstlük notu</p>
             <p className="type-body text-muted">
               Bu örnek, canlı bir yapay zeka bağlantısı kullanmaz. Konuşma,
               ürünün gerçek yanıt ve devretme davranışlarından türetilmiştir.
@@ -232,5 +230,39 @@ export function DemoSection() {
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * A system-behaviour band. It is NOT a message bubble: full-width, with
+ * a leading edge and a "Sistem davranışı" label. The return scenario
+ * carries seller attention, so only that one uses the coral soft fill;
+ * everything else stays neutral. No success/warning/paused hue is
+ * borrowed for a meaning it does not have.
+ */
+function SystemNote({ step }: { step: DemoStep }) {
+  const attention = step.tone === "attention";
+  return (
+    <div
+      className={cn(
+        "rounded-control border-l-[3px] px-3.5 py-3",
+        attention
+          ? "border-l-attention bg-attention-soft"
+          : "border-l-boundary bg-recessed",
+      )}
+    >
+      <p
+        className={cn(
+          "type-meta font-semibold",
+          attention ? "text-attention" : "text-muted-foreground",
+        )}
+      >
+        Sistem davranışı
+      </p>
+      <p className="mt-1 type-body text-foreground">{step.text}</p>
+      {step.note ? (
+        <p className="mt-1 type-row-secondary text-muted">{step.note}</p>
+      ) : null}
+    </div>
   );
 }

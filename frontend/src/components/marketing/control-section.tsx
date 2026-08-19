@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { ChatProofCard } from "@/components/marketing/chat-bubbles";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
+import { cn } from "@/lib/utils/cn";
 
 /**
  * Kontrol — the trust section. It answers the seller's sharpest
@@ -13,8 +14,10 @@ import { MarketingSectionHeading } from "@/components/marketing/section-heading"
  *   - it only replies to what the customer sends (inbound-triggered);
  *   - the seller can take over or hand back any conversation.
  *
- * The right-side proof shows the real control states and the single
- * handoff action exactly as the panel presents them.
+ * The right-side proof shows the real control states with the exact
+ * tone mapping the seller panel uses: ordinary states are neutral,
+ * "İade incelemesi" is coral attention and "Yanıtlar durduruldu" is
+ * the near-neutral paused slate. Cyan never expresses a state.
  */
 export function ControlSection() {
   return (
@@ -53,7 +56,7 @@ export function ControlSection() {
 
 function ControlRow({ title, body }: { title: string; body: string }) {
   return (
-    <div className="border-l-2 border-primary-muted pl-4 sm:pl-5">
+    <div className="border-l-2 border-boundary pl-4 sm:pl-5">
       <h3 className="font-heading text-[17px] font-semibold leading-6 text-foreground">
         {title}
       </h3>
@@ -64,21 +67,24 @@ function ControlRow({ title, body }: { title: string; body: string }) {
 
 /**
  * The real control surface, rendered as a quiet proof artifact. The chip
- * labels are the backend's own display names; the single action follows
- * the V1 handoff model ("Ben ilgileneceğim" when the assistant is
- * active). This is a mockup derived from the real conversation header.
+ * labels are the backend's own display names; the tone map mirrors the
+ * seller panel's `CONTROL_STATE_CHIP_TONE` exactly.
  */
 function ControlProof() {
   return (
     <div className="space-y-3 lg:sticky lg:top-20">
       <ChatProofCard label="Konuşma kontrolü — gerçek durumlar">
-        <ControlChip label="Asistan aktif" tone="active" />
-        <ControlChip label="Siz ilgileniyorsunuz" tone="taken" />
-        <ControlChip label="İade incelemesi" tone="review" />
+        <ControlChip label="Asistan aktif" tone="neutral" />
+        <ControlChip label="Siz ilgileniyorsunuz" tone="neutral" />
+        <ControlChip label="İade incelemesi" tone="attention" />
         <ControlChip label="Yanıtlar durduruldu" tone="paused" />
       </ChatProofCard>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-sheet border border-boundary/60 bg-surface px-4 py-3 shadow-surface">
-        <span className="type-row-primary text-foreground">Bu konuşmayla kim ilgileniyor?</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-sheet border border-boundary/60 bg-raised px-4 py-3 shadow-surface">
+        <span className="type-row-primary text-foreground">
+          Bu konuşmayla kim ilgileniyor?
+        </span>
+        {/* Static mockup of the V1 handoff action — not an interactive
+            control; the real button lives in the seller panel. */}
         <span className="rounded-control bg-primary-button px-3 py-1.5 text-sm font-medium text-primary-foreground">
           Ben ilgileneceğim
         </span>
@@ -92,18 +98,27 @@ function ControlChip({
   tone,
 }: {
   label: string;
-  tone: "active" | "taken" | "review" | "paused";
+  tone: "neutral" | "attention" | "paused";
 }) {
+  const chipClass = {
+    neutral: "bg-recessed text-foreground",
+    attention: "bg-attention-soft text-attention",
+    paused: "bg-paused-muted text-paused",
+  }[tone];
   const dotClass = {
-    active: "bg-primary",
-    taken: "bg-info",
-    review: "bg-attention",
+    neutral: "bg-muted-foreground",
+    attention: "bg-attention",
     paused: "bg-paused",
   }[tone];
   return (
-    <div className="flex items-center gap-2 rounded-control border border-border bg-surface px-3 py-2">
-      <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
-      <span className="type-row-secondary font-semibold text-foreground">{label}</span>
+    <div
+      className={cn(
+        "inline-flex h-7 items-center gap-1.5 rounded-control px-2.5 type-meta font-semibold",
+        chipClass,
+      )}
+    >
+      <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", dotClass)} />
+      {label}
     </div>
   );
 }

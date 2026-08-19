@@ -1,4 +1,3 @@
-import { ApplySection } from "@/components/marketing/apply-section";
 import { ControlSection } from "@/components/marketing/control-section";
 import { DayContrast } from "@/components/marketing/day-contrast";
 import { DemoSection } from "@/components/marketing/demo-section";
@@ -19,11 +18,10 @@ import { SupportSection } from "@/components/marketing/support-section";
  *   6. Panel        — "Ne olduğunu görür müyüm, ne yapacağımı bilir miyim?"
  *   7. Onboarding   — "Kurması zor mu?"
  *   8. Support      — "Yalnız mı kalırım?"
- *   9. Apply        — "Denemek istiyorum." (real application endpoint)
  */
 export default function HomePage() {
   return (
-    <div className="bg-background">
+    <div className="bg-canvas">
       <Hero />
       <DayContrast />
       <ControlSection />
@@ -32,7 +30,6 @@ export default function HomePage() {
       <PanelSection />
       <OnboardingSection />
       <SupportSection />
-      <ApplySection />
     </div>
   );
 }

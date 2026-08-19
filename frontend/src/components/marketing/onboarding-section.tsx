@@ -6,7 +6,8 @@ import { MarketingSectionHeading } from "@/components/marketing/section-heading"
  * Kurulum — answers "işletmemi öğretmek zor mu?" with the real
  * onboarding concepts the backend supports (10 steps), grouped into four
  * human beats so it reads as a short, understandable progression rather
- * than a long form. It makes no claim about a finished wizard UI.
+ * than a long form. One contiguous ledger, not a grid of cards; it
+ * makes no claim about a finished wizard UI.
  */
 export function OnboardingSection() {
   return (
@@ -14,10 +15,10 @@ export function OnboardingSection() {
       <MarketingSectionHeading
         eyebrow="Kurulum"
         title="Kurulum, işletmenizi tanıtmaktan ibaret."
-        description="Asistanı siz eğitirsiniz; o da sizin bilgilerinizle konuşur. Her adımın neden istendiği açıktır, gereksiz teknik detay yoktur."
+        description="Asistanı siz bilgilerinizle hazırlarsınız; o da bu bilgilerle konuşur. Her adımın neden istendiği açıktır, gereksiz teknik detay yoktur."
       />
 
-      <ol className="mt-10 grid gap-px overflow-hidden rounded-sheet border border-boundary/60 bg-divider shadow-surface sm:grid-cols-2">
+      <ol className="mt-10 divide-y divide-divider overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
         <OnboardingStep
           index={1}
           title="İşletme ve mağaza"
@@ -58,10 +59,10 @@ function OnboardingStep({
   body: string;
 }) {
   return (
-    <li className="flex items-start gap-4 bg-surface px-5 py-6">
+    <li className="flex items-start gap-4 px-5 py-4">
       <span
         aria-hidden="true"
-        className="type-figure mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-control bg-primary-muted font-display text-[13px] font-semibold text-primary-text"
+        className="type-figure mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-control bg-recessed font-display text-[13px] font-semibold text-muted-foreground"
       >
         {index}
       </span>

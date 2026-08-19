@@ -3,14 +3,18 @@ import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Conversation bubble primitives for the marketing site.
+ * Conversation transcript primitives for the marketing site, derived
+ * from the seller Conversations workbench (`message-timeline.tsx`).
  *
- * These are static, honest proof artifacts — a bounded "work sheet" that
- * holds a short message exchange. Incoming (customer) bubbles sit on the
- * recessed material; outgoing (assistant) bubbles sit on the selected
- * petrol wash so the assistant's voice reads as "the product speaking".
- * No state colour is ever used here: type comes from the layout, never
- * from a hue.
+ * The two sides are separated by DEPTH, not by two competing tints:
+ *
+ *   incoming  → the customer's side, left, a SUNKEN block with a
+ *               structural cue on its leading edge.
+ *   outgoing  → the assistant's side, right, a NEUTRAL raised block.
+ *               Cyan is a signal, not a material, so the bubble is
+ *               never cyan-filled; only the "Asistan yanıtı" overline
+ *               keeps the cyan accent (evidence-gated in the product,
+ *               labelled here because these are assistant replies).
  */
 export function ChatBubble({
   from,
@@ -22,35 +26,55 @@ export function ChatBubble({
   const isAssistant = from === "assistant";
   return (
     <div
-      className={cn(
-        "flex w-full",
-        isAssistant ? "justify-end" : "justify-start",
-      )}
+      className={cn("flex w-full", isAssistant ? "justify-end" : "justify-start")}
     >
       <div
         className={cn(
-          "max-w-[85%] rounded-sheet px-3.5 py-2 type-body",
+          "max-w-[85%] rounded-[5px] px-3.5 py-2.5 text-foreground",
           isAssistant
-            ? "bg-primary-muted text-foreground"
-            : "bg-recessed text-foreground",
+            ? "bg-selected"
+            : "border-l-2 border-boundary bg-sunken",
         )}
       >
+        {isAssistant ? (
+          <p className="pb-0.5 type-meta font-semibold text-primary">
+            Asistan yanıtı
+          </p>
+        ) : null}
         {children}
       </div>
     </div>
   );
 }
 
-/** A small honest annotation under a bubble ("what the system did"). */
-export function ChatNote({ children }: { children: React.ReactNode }) {
+/**
+ * A small honest annotation under a bubble ("what the system did"),
+ * never a WhatsApp message. Aligned under whichever side it annotates.
+ */
+export function ChatNote({
+  children,
+  align = "left",
+}: {
+  children: React.ReactNode;
+  align?: "left" | "right";
+}) {
   return (
-    <p className="type-meta text-muted-foreground">{children}</p>
+    <p
+      className={cn(
+        "type-meta text-muted-foreground",
+        align === "right" && "text-right",
+      )}
+    >
+      {children}
+    </p>
   );
 }
 
 /**
- * A bounded conversation proof card — the marketing page's only "card"
- * grammar, reserved for product evidence rather than feature lists.
+ * A bounded product-evidence sheet — the marketing page's "work sheet"
+ * grammar, reserved for proof artifacts rather than feature lists.
+ * One quiet material step above the canvas (raised) with a hairline
+ * boundary edge and the soft sheet shadow.
  */
 export function ChatProofCard({
   label,
@@ -64,12 +88,15 @@ export function ChatProofCard({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-sheet border border-boundary/60 bg-surface shadow-surface",
+        "overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface",
         className,
       )}
     >
       <p className="flex items-center gap-1.5 border-b border-divider px-4 py-2.5 type-meta font-semibold text-muted-foreground">
-        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary/70" />
+        <span
+          aria-hidden="true"
+          className="h-1.5 w-1.5 rounded-full bg-primary/70"
+        />
         {label}
       </p>
       <div className="space-y-2.5 px-4 py-4">{children}</div>

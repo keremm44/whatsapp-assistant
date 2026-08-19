@@ -283,12 +283,15 @@
 }
 
 /*
- * SELLER WORKSPACE — "INSTRUMENT" (dark)
+ * INSTRUMENT — the shared dark product theme (seller workspace + public
+ * marketing).
  *
- * The seller workspace lives under `.seller-theme` (set on the root
- * <div> in `seller-shell.tsx`). Everything here overrides the
- * canonical palette ONLY for the seller subtree; admin, auth and
- * public surfaces stay on the light root theme.
+ * The seller workspace applies it via `.seller-theme` (set on the root
+ * <div> in `seller-shell.tsx`); the public marketing site applies it via
+ * `.marketing-theme` in `(public)/layout.tsx`. The two class names share
+ * ONE block so the palette stays a single source of truth, while each
+ * surface keeps its own selector for any future surface-specific
+ * behaviour. Admin and auth surfaces stay on the light root theme.
  *
  * WHAT THIS DIRECTION KEEPS from the Working Ledger pilot:
  *   - ledger row discipline: contiguous work sheets divided by rules,
@@ -340,6 +343,7 @@
  *   Content TYPE is never colour-coded: an order and a return with the
  *   same lifecycle state get the same tone.
  */
+.marketing-theme,
 .seller-theme {
   color-scheme: dark;
 
@@ -581,7 +585,8 @@
     outline-offset: 2px;
   }
 
-  .seller-theme :focus-visible {
+  .seller-theme :focus-visible,
+  .marketing-theme :focus-visible {
     outline-width: 2.5px;
   }
 
@@ -591,7 +596,8 @@
   }
 
   /* Text selection needs a visibly brighter well on dark material. */
-  .seller-theme ::selection {
+  .seller-theme ::selection,
+  .marketing-theme ::selection {
     background-color: rgb(var(--color-primary-rgb) / 0.32);
     color: var(--color-foreground);
   }

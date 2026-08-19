@@ -9,7 +9,8 @@ import { MarketingSectionHeading } from "@/components/marketing/section-heading"
  * People judge automation by how it fails. This section shows the real
  * failure handling: returns/complaints move the conversation into
  * "İade incelemesi" and stop auto-replies; unknown questions are
- * recorded for the seller. No "AI çözer" narrative.
+ * recorded for the seller. No "AI çözer" narrative. The four
+ * supporting points are one contiguous ledger, not a stack of cards.
  */
 export function DifficultCases() {
   return (
@@ -35,36 +36,36 @@ export function DifficultCases() {
           </p>
         </ChatProofCard>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <CaseCard
-            title="İade ve sorunlar size düşer"
-            body="Hasarlı ürün, yanlış ürün, baskı sorunu, teslimat sorunu — asistan bunları müşteriyle çözmeye çalışmaz; kayıt açar ve inceleme için size bırakır."
-          />
-          <CaseCard
-            title="Bilmediği soruyu fark eder"
-            body="Cevaplayamadığı soruyu uydurmak yerine kaydeder ve size iletir. Siz yanıtladığınızda aynı soruya gelecekte bu yanıtla döner."
-          />
-          <CaseCard
-            title="Sınır bilir"
-            body="Uygunsuz veya tekrarlayan kötüye kullanımda müşteriyi geçici olarak susturabilir ve sizi bilgilendirir."
-          />
-          <CaseCard
-            title="Devraldığınızda sabit kalır"
-            body="Siz ilgilendiğinizi söyleyene kadar konuşma size aittir. Asistan siz bırakana kadar araya girmez."
-          />
+        <div className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
+          <ul role="list" className="divide-y divide-divider">
+            <CaseRow
+              title="İade ve sorunlar size düşer"
+              body="Hasarlı ürün, yanlış ürün, baskı sorunu, teslimat sorunu — asistan bunları müşteriyle çözmeye çalışmaz; kayıt açar ve inceleme için size bırakır."
+            />
+            <CaseRow
+              title="Bilmediği soruyu fark eder"
+              body="Cevaplayamadığı soruyu uydurmak yerine kaydeder ve size iletir. Siz doğru cevabı kaydettiğinizde aynı soruya gelecekte bu cevapla dönebilir."
+            />
+            <CaseRow
+              title="Sınır bilir"
+              body="Uygunsuz veya tekrarlayan kötüye kullanımda müşteriyi geçici olarak susturabilir ve sizi bilgilendirir."
+            />
+            <CaseRow
+              title="Devraldığınızda sabit kalır"
+              body="Siz ilgilendiğinizi söyleyene kadar konuşma size aittir. Asistan siz bırakana kadar araya girmez."
+            />
+          </ul>
         </div>
       </div>
     </section>
   );
 }
 
-function CaseCard({ title, body }: { title: string; body: string }) {
+function CaseRow({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-sheet border border-boundary/60 bg-surface p-5 shadow-surface">
-      <h3 className="font-heading text-[16px] font-semibold leading-6 text-foreground">
-        {title}
-      </h3>
-      <p className="mt-1.5 type-body text-muted">{body}</p>
-    </div>
+    <li className="px-5 py-4">
+      <h3 className="type-row-primary text-foreground">{title}</h3>
+      <p className="mt-1 max-w-prose type-body text-muted">{body}</p>
+    </li>
   );
 }

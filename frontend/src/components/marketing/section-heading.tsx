@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils/cn";
  * Marketing section heading.
  *
  * Carries the seller workspace's page-title signature into the public
- * site — an eyebrow, a display title, the three-part rule (petrol +
- * iris + quiet divider) and an optional lead paragraph. The rule is a
- * brand cue, not a state indicator; it never uses the attention hue.
+ * site — a neutral structural eyebrow, a display title, the three-part
+ * rule (interaction cyan + identity iris + quiet divider) and an
+ * optional lead paragraph. The rule is a brand cue, not a state
+ * indicator; it never uses the attention hue.
  */
 export function MarketingSectionHeading({
   eyebrow,
@@ -32,9 +33,7 @@ export function MarketingSectionHeading({
       )}
     >
       {eyebrow ? (
-        <p className="type-meta font-semibold uppercase tracking-[0.09em] text-primary-text">
-          {eyebrow}
-        </p>
+        <p className="type-eyebrow text-muted-foreground">{eyebrow}</p>
       ) : null}
       <h2 className="max-w-3xl font-display text-[28px] font-semibold leading-[34px] tracking-[-0.02em] text-foreground sm:text-[34px] sm:leading-[40px]">
         {title}

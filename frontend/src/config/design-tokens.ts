@@ -122,9 +122,11 @@ export const designTokens = {
   },
 
   /**
-   * SELLER WORKSPACE — "Instrument" (dark).
+   * INSTRUMENT — the shared dark product theme (seller workspace + public
+   * marketing).
    *
-   * Applied by the `.seller-theme` override in src/app/globals.css.
+   * Applied by the shared `.seller-theme` / `.marketing-theme` override
+   * in src/app/globals.css.
    * Recorded here as the art-direction source of truth; components
    * consume these through Tailwind semantic classes (bg-canvas,
    * bg-raised, bg-sunken, text-attention, ...), never as raw hex.
