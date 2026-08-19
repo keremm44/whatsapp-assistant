@@ -94,7 +94,7 @@ export function MarketingHeader() {
         >
           <BrandMark
             subtitle="Sakin Ustalık"
-            className="[&>span:last-child]:hidden sm:[&>span:last-child]:block"
+            className="[&>span:last-child]:hidden min-[375px]:[&>span:last-child]:block"
           />
         </Link>
 
