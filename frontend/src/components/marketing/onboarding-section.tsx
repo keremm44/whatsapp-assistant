@@ -46,7 +46,7 @@ function SetupRail() {
               aria-hidden="true"
               className={
                 isTest
-                  ? "absolute -left-[29px] top-1 flex h-4 w-4 items-center justify-center rounded-full border border-primary/45 bg-selected"
+                  ? "absolute -left-[29px] top-1 flex h-4 w-4 items-center justify-center rounded-full border border-primary bg-selected"
                   : "absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full border border-boundary bg-recessed"
               }
             >
@@ -72,11 +72,11 @@ function SetupRail() {
 
 function TestConversation() {
   return (
-    <div className="overflow-hidden rounded-sheet border border-boundary/70 bg-sunken shadow-surface">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider bg-chrome/50 px-4 py-3.5 sm:px-6">
+    <div className="overflow-hidden rounded-sheet border border-boundary bg-sunken shadow-surface">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider bg-chrome px-4 py-3.5 sm:px-6">
         <div>
           <p className="type-meta font-semibold text-chrome-foreground">Test sohbeti</p>
-          <p className="mt-0.5 type-meta text-chrome-foreground/55">
+          <p className="mt-0.5 type-meta text-chrome-foreground/60">
             {MARKETING_STORY.storeLabel}
           </p>
         </div>
@@ -95,7 +95,7 @@ function TestConversation() {
           <p className="font-heading text-xl font-semibold text-foreground sm:text-2xl">
             Hazır olduğuna siz karar verirsiniz.
           </p>
-          <p className="mt-2 max-w-2xl text-base leading-7 text-foreground/76">
+          <p className="mt-2 max-w-2xl text-base leading-7 text-foreground">
             Cevap biçimini ve verdiğiniz bilgilerin konuşmaya nasıl yansıdığını canlıya çıkmadan önce kontrol edersiniz.
           </p>
         </div>
