@@ -16,8 +16,16 @@ export default function PublicLayout({
 }) {
   return (
     <div className="marketing-theme flex min-h-screen flex-col bg-canvas text-foreground">
+      <a
+        href="#main-content"
+        className="sr-only z-[60] rounded-control bg-primary-button px-4 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:inline-flex focus:min-h-11 focus:items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-canvas"
+      >
+        Ana içeriğe geç
+      </a>
       <MarketingHeader />
-      <main className="flex-1">{children}</main>
+      <main id="main-content" tabIndex={-1} className="flex-1">
+        {children}
+      </main>
       <MarketingFooter />
     </div>
   );
