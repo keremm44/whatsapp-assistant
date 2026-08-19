@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
+import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
 import { SystemNote } from "@/components/marketing/system-note";
 import { cn } from "@/lib/utils/cn";
@@ -21,53 +22,78 @@ const DEMO_STEPS: Record<string, DemoStep> = {
     from: "assistant",
     text: "Merhaba, size nasıl yardımcı olabilirim?",
     replies: [
-      { label: "Kupanız mikrodalgaya girer mi?", next: "microwave" },
+      { label: MARKETING_STORY.customerQuestion, next: "microwave" },
       { label: "Fiyatlarınızı nereden görebilirim?", next: "price" },
       { label: "Kargoya ne zaman verilir?", next: "shipping" },
     ],
   },
-  microwave: { id: "microwave", from: "customer", text: "Kupanız mikrodalgaya girer mi?", replies: [] },
+  microwave: {
+    id: "microwave",
+    from: "customer",
+    text: MARKETING_STORY.customerQuestion,
+    replies: [],
+  },
   microwaveAnswer: {
     id: "microwaveAnswer",
     from: "assistant",
-    text: "Evet, kupalarımız mikrodalgada kullanılabilir.",
+    text: MARKETING_STORY.assistantAnswer,
     replies: [
-      { label: "Hediye kutusu da gönderiyor musunuz?", next: "unknown" },
-      { label: "Ürünüm kırık geldi, iade etmek istiyorum.", next: "return" },
+      { label: MARKETING_STORY.unknownQuestion, next: "unknown" },
+      { label: MARKETING_STORY.returnQuestion, next: "return" },
     ],
   },
-  price: { id: "price", from: "customer", text: "Fiyatlarınızı nereden görebilirim?", replies: [] },
+  price: {
+    id: "price",
+    from: "customer",
+    text: "Fiyatlarınızı nereden görebilirim?",
+    replies: [],
+  },
   priceAnswer: {
     id: "priceAnswer",
     from: "assistant",
     text: "Ürünlerimizi ve fiyatlarını mağazamızdan görüntüleyebilirsiniz.",
     replies: [
-      { label: "Hediye kutusu da gönderiyor musunuz?", next: "unknown" },
-      { label: "Ürünüm kırık geldi, iade etmek istiyorum.", next: "return" },
+      { label: MARKETING_STORY.unknownQuestion, next: "unknown" },
+      { label: MARKETING_STORY.returnQuestion, next: "return" },
     ],
   },
-  shipping: { id: "shipping", from: "customer", text: "Kargoya ne zaman verilir?", replies: [] },
+  shipping: {
+    id: "shipping",
+    from: "customer",
+    text: "Kargoya ne zaman verilir?",
+    replies: [],
+  },
   shippingAnswer: {
     id: "shippingAnswer",
     from: "assistant",
     text: "Siparişiniz yaklaşık 2-4 iş günü içinde kargoya verilir.",
     replies: [
-      { label: "Hediye kutusu da gönderiyor musunuz?", next: "unknown" },
-      { label: "Ürünüm kırık geldi, iade etmek istiyorum.", next: "return" },
+      { label: MARKETING_STORY.unknownQuestion, next: "unknown" },
+      { label: MARKETING_STORY.returnQuestion, next: "return" },
     ],
   },
-  unknown: { id: "unknown", from: "customer", text: "Hediye kutusu da gönderiyor musunuz?", replies: [] },
+  unknown: {
+    id: "unknown",
+    from: "customer",
+    text: MARKETING_STORY.unknownQuestion,
+    replies: [],
+  },
   unknownAnswer: {
     id: "unknownAnswer",
     from: "assistant",
-    text: "Bu konuda kayıtlı net bir bilgimiz bulunmuyor. Sorunuzu satıcımıza iletiyorum.",
+    text: MARKETING_STORY.unknownAnswer,
   },
-  return: { id: "return", from: "customer", text: "Ürünüm kırık geldi, iade etmek istiyorum.", replies: [] },
+  return: {
+    id: "return",
+    from: "customer",
+    text: MARKETING_STORY.returnQuestion,
+    replies: [],
+  },
   returnOutcome: {
     id: "returnOutcome",
     from: "system",
     tone: "paused",
-    text: "Otomatik yanıt durdu. Konuşma iade incelemesine geçti.",
+    text: MARKETING_STORY.returnSystemOutcome,
   },
 };
 
@@ -132,8 +158,14 @@ export function DemoSection() {
 
         <div className="mt-12 overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface">
           <div className="flex items-center justify-between gap-3 border-b border-divider px-4 py-3 sm:px-6">
-            <p className="type-meta font-semibold text-muted-foreground">Kişiye özel kupa mağazası · örnek konuşma</p>
-            <button type="button" onClick={reset} className="rounded-control px-2.5 py-1 type-meta font-semibold text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <p className="type-meta font-semibold text-muted-foreground">
+              {MARKETING_STORY.storeLabel} · örnek konuşma
+            </p>
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-control px-2.5 py-1 type-meta font-semibold text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
               Yeniden başlat
             </button>
           </div>
@@ -156,7 +188,11 @@ export function DemoSection() {
                   </SystemNote>
                 );
               }
-              return <ChatBubble key={stepId} from={step.from}>{step.text}</ChatBubble>;
+              return (
+                <ChatBubble key={stepId} from={step.from}>
+                  {step.text}
+                </ChatBubble>
+              );
             })}
           </div>
 
@@ -164,7 +200,11 @@ export function DemoSection() {
             {isReplyPending ? (
               <div aria-hidden="true" className="h-9" />
             ) : !isAtLeaf ? (
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Müşteri soruları">
+              <div
+                className="flex flex-wrap gap-2"
+                role="group"
+                aria-label="Müşteri soruları"
+              >
                 {current.replies?.map((reply) => (
                   <button
                     key={reply.next}
@@ -181,8 +221,14 @@ export function DemoSection() {
               </div>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="type-meta text-muted-foreground">Başka bir senaryoyu da deneyebilirsiniz.</p>
-                <button type="button" onClick={reset} className="rounded-control px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                <p className="type-meta text-muted-foreground">
+                  Başka bir senaryoyu da deneyebilirsiniz.
+                </p>
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="rounded-control px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
                   Yeniden başlat
                 </button>
               </div>
