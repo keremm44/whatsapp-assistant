@@ -6,7 +6,7 @@ import { MarketingSectionHeading } from "@/components/marketing/section-heading"
 /**
  * Value contrast — deliberately short and asymmetric. This section owns
  * one question only: "Günlük yüküm nasıl değişiyor?" Product behaviour
- * details live later in Demo / Difficult so they are not repeated here.
+ * details live later in Demo / Control so they are not repeated here.
  */
 export function DayContrast() {
   return (
@@ -34,7 +34,7 @@ export function DayContrast() {
 
 function WithoutAssistant() {
   return (
-    <div className="h-full overflow-hidden rounded-sheet border border-boundary/55 bg-recessed/75 shadow-surface">
+    <div className="h-full overflow-hidden rounded-sheet border border-boundary bg-recessed shadow-surface">
       <div className="border-b border-divider px-5 py-4">
         <p className="type-meta font-semibold text-muted-foreground">Asistansız</p>
         <p className="mt-1 font-heading text-lg font-semibold text-foreground">
@@ -51,15 +51,15 @@ function WithoutAssistant() {
 
 function WithAssistant() {
   return (
-    <div className="h-full overflow-hidden rounded-sheet border border-primary/25 bg-raised shadow-surface">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-divider bg-chrome/35 px-5 py-4 sm:px-6">
+    <div className="h-full overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-divider bg-chrome px-5 py-4 sm:px-6">
         <div>
           <p className="type-meta font-semibold text-primary">Asistanla</p>
           <p className="mt-1 font-heading text-xl font-semibold tracking-[-0.015em] text-foreground">
             Rutin konuşma akar; dikkatiniz gereken konu ayrılır.
           </p>
         </div>
-        <span className="rounded-control border border-primary/30 bg-selected/60 px-2.5 py-1 type-meta font-semibold text-primary">
+        <span className="rounded-control border border-primary bg-selected px-2.5 py-1 type-meta font-semibold text-primary">
           Kontrol sizde
         </span>
       </div>
@@ -83,8 +83,8 @@ function WithAssistant() {
 
 function WorkLine({ text }: { text: string }) {
   return (
-    <div className="flex items-start gap-3 border-b border-divider/80 pb-3 last:border-b-0 last:pb-0">
-      <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
+    <div className="flex items-start gap-3 border-b border-divider pb-3 last:border-b-0 last:pb-0">
+      <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />
       <p className="type-body text-muted">{text}</p>
     </div>
   );
@@ -102,7 +102,7 @@ function OutcomeArtefact({
   primary?: boolean;
 }) {
   return (
-    <div className="rounded-sheet border border-boundary/60 bg-sunken px-4 py-4">
+    <div className="rounded-sheet border border-boundary bg-sunken px-4 py-4">
       <div className="flex items-center gap-2">
         <span
           aria-hidden="true"
