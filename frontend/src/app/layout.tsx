@@ -17,7 +17,8 @@ export const metadata: Metadata = {
  * Inter is the canonical display/body family. The variable latin and
  * latin-ext WOFF2 subsets are self-hosted from `public/fonts/` through the
  * `@font-face` declarations in globals.css, with system grotesques as the
- * fallback stack. No remote font request or next/font dependency is needed.
+ * fallback stack. No remote font request or framework font-loader dependency
+ * is needed.
  */
 export default function RootLayout({
   children,
