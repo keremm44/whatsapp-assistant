@@ -1,33 +1,35 @@
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
-import { BlurHeadline, MarketingReveal } from "@/components/marketing/marketing-motion";
 import { SystemNote } from "@/components/marketing/system-note";
 
 /**
  * Hero — first screen: one clear promise, then the product proving it.
+ *
+ * The H1 and product proof intentionally render fully visible on the
+ * server. Motion is progressive enhancement elsewhere on the page; the
+ * primary promise and proof must never wait for hydration or JavaScript.
  * On mobile the conversation appears before the CTAs so the seller sees
  * the product before being asked to act; desktop keeps the two-column
  * Instrument composition.
  */
 export function Hero() {
   return (
-    <section className="border-b border-boundary bg-canvas">
-      <div className="mx-auto grid w-full max-w-[1180px] gap-x-12 gap-y-7 px-4 pb-14 pt-12 md:px-6 md:pb-20 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)] lg:grid-rows-[auto_auto] lg:items-center lg:gap-y-7 lg:px-8 lg:pb-24">
+    <section className="border-b border-divider bg-canvas">
+      <div className="mx-auto grid w-full max-w-[1180px] gap-x-12 gap-y-6 px-4 pb-14 pt-12 md:px-6 md:pb-20 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)] lg:grid-rows-[auto_auto] lg:items-center lg:gap-y-7 lg:px-8 lg:pb-24">
         <div className="flex flex-col items-start gap-5 lg:col-start-1 lg:row-start-1">
           <p className="type-eyebrow text-muted-foreground">WhatsApp asistanı</p>
-          <BlurHeadline
-            text="Tekrar eden konuşmaları sizden önce karşılar."
-            className="max-w-3xl font-display text-[42px] font-semibold leading-[46px] tracking-[-0.026em] text-foreground sm:text-[56px] sm:leading-[60px] lg:text-[64px] lg:leading-[68px]"
-          />
+          <h1 className="max-w-3xl font-display text-[42px] font-semibold leading-[46px] tracking-[-0.026em] text-foreground sm:text-[56px] sm:leading-[60px] lg:text-[64px] lg:leading-[68px]">
+            Tekrar eden konuşmaları sizden önce karşılar.
+          </h1>
           <p className="max-w-xl text-lg leading-8 text-foreground">
             İşletmenizin bilgileriyle konuşur. Bilmediğinde uydurmaz; karar
             gerektiğinde size bırakır.
           </p>
         </div>
 
-        <MarketingReveal className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <HeroConversation />
-        </MarketingReveal>
+        </div>
 
         <div className="flex flex-col items-start gap-3 lg:col-start-1 lg:row-start-2">
           <div className="flex flex-wrap items-center gap-3">
@@ -65,13 +67,16 @@ function HeroConversation() {
             Örnek konuşma · ürün bilgisi + sınır davranışı
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 type-meta font-semibold text-primary">
-          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary" />
+        <span className="inline-flex items-center gap-1.5 type-meta font-semibold text-chrome-foreground/70">
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 rounded-full bg-muted-foreground"
+          />
           Asistan aktif
         </span>
       </div>
 
-      <div className="space-y-4 px-4 py-5 sm:px-6 sm:py-6">
+      <div className="space-y-3 px-4 py-4 sm:space-y-4 sm:px-6 sm:py-6">
         <ChatBubble from="customer">{MARKETING_STORY.customerQuestion}</ChatBubble>
         <ChatBubble from="assistant">{MARKETING_STORY.assistantAnswer}</ChatBubble>
         <ChatBubble from="customer">{MARKETING_STORY.unknownQuestion}</ChatBubble>
