@@ -263,7 +263,7 @@ function CoralJourney() {
             </p>
           </FlowStep>
 
-          <FlowStep index="03" label="Durum" visible={visibleSteps >= 3} attentionState>
+          <FlowStep index="03" label="Durum" visible={visibleSteps >= 3}>
             <div className="flex min-h-[88px] items-center justify-center rounded-sheet border border-attention bg-attention-soft px-4 text-center">
               <p className="font-heading text-lg font-semibold text-attention">
                 İade incelemesi
@@ -271,7 +271,7 @@ function CoralJourney() {
             </div>
           </FlowStep>
 
-          <FlowStep index="04" label="Siz görürsünüz" last visible={visibleSteps >= 4} attentionState>
+          <FlowStep index="04" label="Siz görürsünüz" last visible={visibleSteps >= 4}>
             <div className="rounded-sheet border border-boundary bg-raised p-4">
               <StatusChip tone="attention">İncelemeniz gerekiyor</StatusChip>
               <p className="mt-3 type-row-secondary text-foreground">
@@ -289,14 +289,12 @@ function FlowStep({
   index,
   label,
   children,
-  attentionState = false,
   last = false,
   visible,
 }: {
   index: string;
   label: string;
   children: React.ReactNode;
-  attentionState?: boolean;
   last?: boolean;
   visible: boolean;
 }) {
@@ -309,22 +307,10 @@ function FlowStep({
       )}
     >
       <div className="mb-5 flex items-center gap-2">
-        <span
-          className={cn(
-            "relative z-10 flex h-7 min-w-7 items-center justify-center rounded-full border bg-sunken px-1 type-meta font-semibold",
-            attentionState && visible
-              ? "border-attention text-attention"
-              : "border-boundary text-muted-foreground",
-          )}
-        >
+        <span className="relative z-10 flex h-7 min-w-7 items-center justify-center rounded-full border border-boundary bg-sunken px-1 type-meta font-semibold text-muted-foreground">
           {index}
         </span>
-        <span
-          className={cn(
-            "type-meta font-semibold",
-            attentionState && visible ? "text-attention" : "text-muted-foreground",
-          )}
-        >
+        <span className="type-meta font-semibold text-muted-foreground">
           {label}
         </span>
       </div>
