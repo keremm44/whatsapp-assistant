@@ -58,7 +58,7 @@ function FinalProof() {
   return (
     <div className="flex min-h-[360px] flex-col justify-between overflow-hidden rounded-sheet border border-boundary bg-chrome px-6 py-8 shadow-surface sm:px-9 sm:py-10">
       <div className="max-w-2xl">
-        <p className="type-meta font-semibold text-primary">Son karar sizde</p>
+        <p className="type-meta font-semibold text-muted-foreground">Son karar sizde</p>
         <h3 className="mt-4 font-display text-[38px] font-semibold leading-[44px] tracking-[-0.026em] text-chrome-foreground sm:text-[48px] sm:leading-[54px]">
           Önce görün. Sonra karar verin.
         </h3>
