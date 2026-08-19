@@ -164,7 +164,7 @@ export function DemoSection() {
             <button
               type="button"
               onClick={reset}
-              className="rounded-control px-2.5 py-1 type-meta font-semibold text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="inline-flex min-h-11 items-center rounded-control px-2.5 py-1 type-meta font-semibold text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               Yeniden başlat
             </button>
@@ -198,7 +198,7 @@ export function DemoSection() {
 
           <div className="border-t border-divider bg-sunken px-4 py-4 sm:px-8">
             {isReplyPending ? (
-              <div aria-hidden="true" className="h-9" />
+              <div aria-hidden="true" className="h-11" />
             ) : !isAtLeaf ? (
               <div
                 className="flex flex-wrap gap-2"
@@ -211,7 +211,7 @@ export function DemoSection() {
                     type="button"
                     onClick={() => choose(reply.next)}
                     className={cn(
-                      "rounded-control border border-boundary bg-raised px-3 py-2 text-sm font-medium text-foreground",
+                      "inline-flex min-h-11 items-center rounded-control border border-boundary bg-raised px-3 py-2 text-sm font-medium text-foreground",
                       "transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                     )}
                   >
@@ -227,7 +227,7 @@ export function DemoSection() {
                 <button
                   type="button"
                   onClick={reset}
-                  className="rounded-control px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="inline-flex min-h-11 items-center rounded-control px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   Yeniden başlat
                 </button>
