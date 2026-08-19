@@ -95,6 +95,11 @@ export function BlurHeadline({
   );
 }
 
+/**
+ * A restrained True-Focus-inspired phrase sequence. All phrases remain
+ * readable throughout; focus only adds structural cyan emphasis. It runs
+ * once on entry and then settles into a fully readable static sentence.
+ */
 export function TrueFocusLine({
   words,
   className,
@@ -119,7 +124,7 @@ export function TrueFocusLine({
         return;
       }
       setActiveIndex(index);
-    }, 620);
+    }, 760);
 
     return () => window.clearInterval(timer);
   }, [reduced, visible, words.length]);
@@ -139,6 +144,42 @@ export function TrueFocusLine({
         </span>
       ))}
     </div>
+  );
+}
+
+export function MagneticLink({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const reduced = useReducedMotion();
+  const [offset, setOffset] = React.useState({ x: 0, y: 0 });
+
+  const onPointerMove = (event: React.PointerEvent<HTMLAnchorElement>) => {
+    if (reduced || event.pointerType === 'touch') return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width - 0.5) * 7;
+    const y = ((event.clientY - rect.top) / rect.height - 0.5) * 7;
+    setOffset({ x, y });
+  };
+
+  const reset = () => setOffset({ x: 0, y: 0 });
+
+  return (
+    <a
+      href={href}
+      onPointerMove={onPointerMove}
+      onPointerLeave={reset}
+      onBlur={reset}
+      className={cn(styles.magneticLink, className)}
+      style={{ transform: reduced ? undefined : `translate3d(${offset.x}px, ${offset.y}px, 0)` }}
+    >
+      {children}
+    </a>
   );
 }
 
