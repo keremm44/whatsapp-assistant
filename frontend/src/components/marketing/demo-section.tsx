@@ -152,7 +152,7 @@ export function DemoSection() {
 
   return (
     <section id="dene" className="scroll-mt-16 border-y border-divider bg-sunken">
-      <div className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-22 lg:px-8">
+      <div className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-24 lg:px-8">
         <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)] md:items-end md:gap-12">
           <p className="type-meta font-semibold uppercase tracking-[0.1em] text-muted-foreground">
             Canlı olmayan kontrollü demo · 03
