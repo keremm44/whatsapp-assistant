@@ -21,7 +21,7 @@ export function MarketingFooter() {
         <div className="flex flex-col gap-2 text-sm">
           <Link
             href="/giris"
-            className="w-fit rounded-control text-chrome-foreground/70 transition-colors hover:text-chrome-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="inline-flex min-h-11 w-fit items-center rounded-control text-chrome-foreground/70 transition-colors hover:text-chrome-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             Satıcı girişi
           </Link>
