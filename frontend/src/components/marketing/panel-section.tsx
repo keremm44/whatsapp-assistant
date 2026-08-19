@@ -20,7 +20,7 @@ export function PanelSection() {
         />
 
         <MarketingReveal className="mt-10 max-w-2xl">
-          <SystemNote tone="paused" label="Konuşmadan gelen durum">
+          <SystemNote tone="attention" label="Konuşmadan gelen durum">
             Otomatik yanıt durdu. Konuşma iade incelemesine geçti.
           </SystemNote>
         </MarketingReveal>
