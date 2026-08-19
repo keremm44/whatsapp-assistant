@@ -17,7 +17,7 @@ export function SupportSection() {
           <SupportBridge />
         </MarketingReveal>
 
-        <MarketingReveal className="mt-10">
+        <MarketingReveal variant="product" className="mt-10">
           <FinalProof />
         </MarketingReveal>
       </div>
