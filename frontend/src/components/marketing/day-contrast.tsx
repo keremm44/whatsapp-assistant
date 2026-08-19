@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { MarketingReveal } from "@/components/marketing/marketing-motion";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
 
 /**
@@ -13,14 +14,14 @@ import { MarketingSectionHeading } from "@/components/marketing/section-heading"
  */
 export function DayContrast() {
   return (
-    <section className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-20 lg:px-8">
+    <section id="nasil-calisir" className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 py-16 md:px-6 md:py-20 lg:px-8">
       <MarketingSectionHeading
         eyebrow="Yük"
         title="Telefonun başına bağlayan işleri ayırın."
         description="Asistan tekrar eden konuşmaları üstlenir. Siz yalnızca gerçekten size ihtiyaç duyulan yerde devreye girersiniz."
       />
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-2 lg:gap-8">
+      <MarketingReveal className="mt-10 grid gap-6 lg:grid-cols-2 lg:gap-8">
         <ContrastColumn
           label="Asistansız"
           items={[
@@ -39,7 +40,7 @@ export function DayContrast() {
             "Panel size bakılması gerekeni öncelik sırasıyla gösterir",
           ]}
         />
-      </div>
+      </MarketingReveal>
     </section>
   );
 }
