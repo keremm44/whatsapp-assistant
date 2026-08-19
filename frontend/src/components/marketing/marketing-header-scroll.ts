@@ -23,6 +23,21 @@ export function createMarketingHeaderScrollState(
 }
 
 /**
+ * Make an explicit reveal authoritative for the direction tracker too.
+ * Resetting the direction anchor prevents a tiny follow-up scroll from
+ * reviving a stale hidden state before the movement threshold is crossed.
+ */
+export function revealMarketingHeaderScroll(
+  current: MarketingHeaderScrollState,
+): MarketingHeaderScrollState {
+  return {
+    ...current,
+    directionAnchorY: current.lastScrollY,
+    hidden: false,
+  };
+}
+
+/**
  * Pure direction tracker shared by the public header and its regression
  * tests. Tiny trackpad reversals do not toggle the rail. Anchor navigation
  * may temporarily suppress downward hiding so a deliberate section jump
