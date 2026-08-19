@@ -239,8 +239,8 @@ function SecondaryProofRow({
 
 function QuietSummaryProof() {
   const rows = [
-    { label: "Önce bakılacaklar", value: 1 },
-    { label: "Vakit varsa", value: 1 },
+    { label: "Önce bakılacaklar", value: 1, emphasize: false },
+    { label: "Vakit varsa", value: 1, emphasize: false },
     { label: "Toplam", value: 2, emphasize: true },
   ] as const;
 
