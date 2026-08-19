@@ -102,21 +102,21 @@ export function MarketingHeader() {
           : "translate-y-0 opacity-100",
       )}
     >
-      <div className="mx-auto grid h-14 w-full max-w-[1180px] grid-cols-[1fr_auto] items-center gap-2 px-3 sm:gap-3 sm:px-4 md:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
+      <div className="mx-auto grid h-14 w-full max-w-[1180px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 sm:gap-3 sm:px-4 md:px-6 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:px-8">
         <Link
           href="/"
           aria-label="WhatsApp Asistan ana sayfa"
-          className="inline-flex min-h-11 w-fit items-center rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="inline-flex min-h-11 min-w-0 w-fit max-w-full items-center overflow-hidden rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <BrandMark
             subtitle="Sakin Ustalık"
-            className="[&>span:last-child]:hidden min-[375px]:[&>span:last-child]:block"
+            className="min-w-0 [&>span:last-child]:hidden min-[375px]:[&>span:last-child]:block"
           />
         </Link>
 
         <MarketingDockNav />
 
-        <nav aria-label="Hesap menüsü" className="flex items-center justify-end gap-1 sm:gap-2">
+        <nav aria-label="Hesap menüsü" className="flex shrink-0 items-center justify-end gap-1 sm:gap-2">
           <Link
             href="/giris"
             aria-label="Giriş yapın"
