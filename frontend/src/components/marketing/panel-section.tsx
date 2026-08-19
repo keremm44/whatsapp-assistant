@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
 
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
@@ -60,6 +60,16 @@ function SellerWorkbenchProof() {
                 Konuşma iade incelemesine geçti.
               </p>
             </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 border-b border-divider bg-chrome px-5 py-3 lg:hidden">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-attention/25 bg-attention-soft text-attention">
+            <ArrowDown aria-hidden="true" size={16} strokeWidth={1.8} />
+          </span>
+          <div>
+            <p className="type-meta font-semibold text-attention">Aynı kayıt</p>
+            <p className="type-meta text-chrome-foreground/62">Önce bunlar listesine düşer</p>
           </div>
         </div>
 
