@@ -138,7 +138,15 @@ export function DemoSection() {
             </button>
           </div>
 
-          <div aria-live="polite" className="flex min-h-[430px] flex-col justify-end gap-3 px-4 py-6 sm:px-8 sm:py-8">
+          <div
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions"
+            aria-atomic="false"
+            aria-busy={isReplyPending}
+            aria-label="Örnek müşteri ve asistan konuşması"
+            className="flex min-h-[430px] flex-col justify-end gap-3 px-4 py-6 sm:px-8 sm:py-8"
+          >
             {history.map((stepId) => {
               const step = DEMO_STEPS[stepId];
               if (step.from === "system") {
