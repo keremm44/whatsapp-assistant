@@ -203,7 +203,7 @@ function CoralJourney() {
     if (!node) return;
 
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (media.matches) return;
+    if (media.matches || typeof IntersectionObserver === "undefined") return;
 
     const rect = node.getBoundingClientRect();
     const alreadyInViewport = rect.top < window.innerHeight && rect.bottom > 0;
