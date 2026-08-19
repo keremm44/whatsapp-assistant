@@ -14,7 +14,7 @@ import { BrandMark } from "@/components/shared/brand-mark";
  */
 export function MarketingHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-boundary/40 bg-chrome/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-boundary bg-chrome">
       <div className="mx-auto grid h-14 w-full max-w-[1180px] grid-cols-[1fr_auto] items-center gap-3 px-4 md:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
         <Link
           href="/"
