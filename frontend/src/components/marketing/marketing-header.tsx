@@ -4,28 +4,31 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import {
+  advanceMarketingHeaderScroll,
+  createMarketingHeaderScrollState,
+} from "@/components/marketing/marketing-header-scroll";
 import { MarketingDockNav } from "@/components/marketing/marketing-motion";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { cn } from "@/lib/utils/cn";
 
-const HEADER_OPEN_REGION = 72;
-const HEADER_DIRECTION_THRESHOLD = 10;
+const ANCHOR_HIDE_SUPPRESSION_MS = 500;
 
 /**
  * Public site header — the marketing frame on the Instrument chrome
  * material. It mirrors the seller topbar's proven scroll-direction
  * behaviour: down gets the rail out of the way, up brings it back.
- * Movement is transform-only and focus always reveals the header.
  *
- * The application flow is not wired yet, so "Başvuru yap" remains an
- * accessible disabled control until the real flow exists.
+ * Public-only refinement: an in-page navigation click briefly suppresses
+ * downward hiding so the programmatic section jump does not immediately
+ * make the navigation disappear. Movement is transform-only and focus
+ * always reveals the header.
  */
 export function MarketingHeader() {
   const pathname = usePathname();
   const [isHidden, setIsHidden] = React.useState(false);
-  const lastScrollY = React.useRef(0);
-  const directionAnchorY = React.useRef(0);
-  const direction = React.useRef<"up" | "down" | null>(null);
+  const scrollState = React.useRef(createMarketingHeaderScrollState());
+  const suppressHideUntil = React.useRef(0);
   const ticking = React.useRef(false);
   const frame = React.useRef<number | null>(null);
 
@@ -33,34 +36,21 @@ export function MarketingHeader() {
     const readScrollY = () =>
       Math.max(window.scrollY || document.documentElement.scrollTop || 0, 0);
 
-    const initialY = readScrollY();
-    lastScrollY.current = initialY;
-    directionAnchorY.current = initialY;
-    direction.current = null;
+    scrollState.current = createMarketingHeaderScrollState(readScrollY());
+    suppressHideUntil.current = 0;
     setIsHidden(false);
 
     const update = () => {
-      const nextY = readScrollY();
-      const previousY = lastScrollY.current;
+      const next = advanceMarketingHeaderScroll(
+        scrollState.current,
+        readScrollY(),
+        {
+          suppressDownwardHide: performance.now() < suppressHideUntil.current,
+        },
+      );
 
-      if (nextY < HEADER_OPEN_REGION) {
-        setIsHidden(false);
-        direction.current = null;
-        directionAnchorY.current = nextY;
-      } else if (nextY !== previousY) {
-        const nextDirection = nextY > previousY ? "down" : "up";
-
-        if (direction.current !== nextDirection) {
-          direction.current = nextDirection;
-          directionAnchorY.current = previousY;
-        }
-
-        if (Math.abs(nextY - directionAnchorY.current) >= HEADER_DIRECTION_THRESHOLD) {
-          setIsHidden(nextDirection === "down");
-        }
-      }
-
-      lastScrollY.current = nextY;
+      scrollState.current = next;
+      setIsHidden(next.hidden);
       ticking.current = false;
       frame.current = null;
     };
@@ -80,6 +70,11 @@ export function MarketingHeader() {
     };
   }, [pathname]);
 
+  const handleSectionNavigate = () => {
+    suppressHideUntil.current = performance.now() + ANCHOR_HIDE_SUPPRESSION_MS;
+    setIsHidden(false);
+  };
+
   return (
     <header
       onFocusCapture={() => setIsHidden(false)}
@@ -91,32 +86,37 @@ export function MarketingHeader() {
           : "translate-y-0 opacity-100",
       )}
     >
-      <div className="mx-auto grid h-14 w-full max-w-[1180px] grid-cols-[1fr_auto] items-center gap-3 px-4 md:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
+      <div className="mx-auto grid h-14 w-full max-w-[1180px] grid-cols-[1fr_auto] items-center gap-2 px-3 sm:gap-3 sm:px-4 md:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
         <Link
           href="/"
           aria-label="WhatsApp Asistan ana sayfa"
           className="w-fit rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          <BrandMark subtitle="Sakin Ustalık" />
+          <BrandMark
+            subtitle="Sakin Ustalık"
+            className="[&>span:last-child]:hidden sm:[&>span:last-child]:block"
+          />
         </Link>
 
-        <MarketingDockNav />
+        <MarketingDockNav onNavigate={handleSectionNavigate} />
 
         <nav aria-label="Hesap menüsü" className="flex items-center justify-end gap-1 sm:gap-2">
           <Link
             href="/giris"
-            className="rounded-control px-3 py-2 text-sm font-medium text-chrome-foreground/70 transition-colors hover:bg-chrome-hover hover:text-chrome-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label="Giriş yapın"
+            className="rounded-control px-2.5 py-2 text-sm font-medium text-chrome-foreground/70 transition-colors hover:bg-chrome-hover hover:text-chrome-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:px-3"
           >
-            Giriş yapın
+            <span className="sm:hidden">Giriş</span>
+            <span className="hidden sm:inline">Giriş yapın</span>
           </Link>
-          <button
-            type="button"
-            disabled
-            title="Başvuru akışı şimdilik kapalı"
-            className="cursor-not-allowed rounded-control bg-primary-button px-4 py-2 text-sm font-medium text-primary-foreground opacity-55"
+          <span
+            role="note"
+            aria-label="Başvuru yap — satıcı hesapları şu anda davet ile oluşturulur"
+            title="Başvuru akışı şimdilik kapalı; satıcı hesapları davet ile oluşturulur."
+            className="inline-flex cursor-default items-center rounded-control border border-boundary bg-recessed px-2.5 py-2 text-sm font-medium text-muted-foreground sm:px-3"
           >
             Başvuru yap
-          </button>
+          </span>
         </nav>
       </div>
     </header>
