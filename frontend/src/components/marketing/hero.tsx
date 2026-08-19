@@ -4,14 +4,15 @@ import { BlurHeadline, MarketingReveal } from "@/components/marketing/marketing-
 
 /**
  * Hero — first screen: one clear promise, then the product proving it.
- * The transcript is intentionally present at every breakpoint so the
- * public surface never hides the product's face on mobile.
+ * On mobile the conversation appears before the CTAs so the seller sees
+ * the product before being asked to act; desktop keeps the two-column
+ * Instrument composition.
  */
 export function Hero() {
   return (
     <section className="border-b border-divider bg-canvas">
-      <div className="mx-auto grid w-full max-w-[1180px] gap-10 px-4 pb-14 pt-14 md:px-6 md:pb-20 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)] lg:items-center lg:gap-12 lg:px-8 lg:pb-24">
-        <div className="flex flex-col items-start gap-6">
+      <div className="mx-auto grid w-full max-w-[1180px] gap-x-12 gap-y-7 px-4 pb-14 pt-12 md:px-6 md:pb-20 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)] lg:grid-rows-[auto_auto] lg:items-center lg:gap-y-7 lg:px-8 lg:pb-24">
+        <div className="flex flex-col items-start gap-5 lg:col-start-1 lg:row-start-1">
           <p className="type-eyebrow text-muted-foreground">WhatsApp asistanı</p>
           <BlurHeadline
             text="Tekrar eden konuşmaları sizden önce karşılar."
@@ -21,6 +22,13 @@ export function Hero() {
             İşletmenizin bilgileriyle konuşur. Bilmediğinde uydurmaz; karar
             gerektiğinde size bırakır.
           </p>
+        </div>
+
+        <MarketingReveal className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <HeroConversation />
+        </MarketingReveal>
+
+        <div className="flex flex-col items-start gap-3 lg:col-start-1 lg:row-start-2">
           <div className="flex flex-wrap items-center gap-3">
             <a
               href="#dene"
@@ -39,10 +47,6 @@ export function Hero() {
             Satıcı hesapları davet ile oluşturulur.
           </p>
         </div>
-
-        <MarketingReveal>
-          <HeroConversation />
-        </MarketingReveal>
       </div>
     </section>
   );
