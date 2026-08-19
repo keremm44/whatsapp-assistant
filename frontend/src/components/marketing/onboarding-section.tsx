@@ -1,88 +1,105 @@
 import * as React from "react";
 
+import { ChatBubble } from "@/components/marketing/chat-bubbles";
+import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
 
 /**
- * Kurulum — answers "işletmemi öğretmek zor mu?" with the real
- * onboarding concepts the backend supports (10 steps), grouped into four
- * human beats so it reads as a short, understandable progression rather
- * than a long form. It does not claim a finished wizard UI.
+ * Onboarding — the real emotional endpoint is not a numbered wizard, but
+ * seeing the assistant speak before customers do. The setup beats stay
+ * visible as a quiet rail while the test conversation carries the proof.
  */
 export function OnboardingSection() {
   return (
-    <section id="kurulum" className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 py-16 md:px-6 md:py-20 lg:px-8">
+    <section
+      id="kurulum"
+      className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 py-16 md:px-6 md:py-24 lg:px-8"
+    >
       <MarketingSectionHeading
         eyebrow="Kurulum"
-        title="Kurulum, işletmenizi tanıtmaktan ibaret."
-        description="Asistanı siz bilgilerinizle hazırlarsınız; o da bu bilgilerle konuşur. Her adımın neden istendiği açıktır, gereksiz teknik detay yoktur."
+        title="Müşteriler görmeden önce siz deneyin."
+        description="İşletme, ürün, kargo ve kurallarınızı hazırladıktan sonra asistanı test sohbetinde siz görürsünüz. Canlıya geçmeden önce konuşma biçimini kontrol edersiniz."
       />
 
-      <MarketingReveal className="mt-10">
-        <ol className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
-          <OnboardingStep
-            index={1}
-            title="İşletme ve mağaza"
-            body="Ad, iletişim bilgileri ve ürünlerin satıldığı mağaza bağlantısı."
-          />
-          <OnboardingStep
-            index={2}
-            title="Ürün ve kargo"
-            body="Materyal, ölçü, baskı yöntemi, hazırlık süresi ve kargo şirketi."
-          />
-          <OnboardingStep
-            index={3}
-            title="İade politikası ve kurallar"
-            body="İade süresi, değişim kuralları ve sık sorulanlara hazır cevaplar."
-          />
-          <OnboardingStep
-            index={4}
-            title="Test edip canlıya çıkın"
-            body="Test sohbeti, WhatsApp bağlantısı, canlı test ve ardından aktivasyon."
-            last
-          />
-        </ol>
-      </MarketingReveal>
-
-      <p className="mt-6 max-w-2xl type-body text-muted">
-        Canlıya çıkmadan önce asistanı bir test sohbetinde denersiniz. Müşteriler
-        onu görmeden, siz nasıl konuştuğunu görürsünüz.
-      </p>
+      <div className="mt-12 grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:gap-10">
+        <SetupRail />
+        <MarketingReveal>
+          <TestConversation />
+        </MarketingReveal>
+      </div>
     </section>
   );
 }
 
-function OnboardingStep({
-  index,
-  title,
-  body,
-  last = false,
-}: {
-  index: number;
-  title: string;
-  body: string;
-  last?: boolean;
-}) {
+function SetupRail() {
+  const steps = [
+    ["İşletme", "Mağaza ve iletişim bilgileri"],
+    ["Ürün / kargo", "Ürün özellikleri ve teslimat bilgileri"],
+    ["Kurallar", "İade politikası ve kayıtlı cevaplar"],
+    ["Test", "Müşteri görmeden önce test sohbeti"],
+    ["WhatsApp", "Bağlantı, canlı test ve aktivasyon"],
+  ] as const;
+
   return (
-    <li className="group relative flex items-start gap-4 px-5 py-5 transition-colors duration-150 hover:bg-hover/25">
-      <div className="relative flex shrink-0 flex-col items-center self-stretch">
-        <span
-          aria-hidden="true"
-          className="type-figure relative z-10 flex h-8 w-8 items-center justify-center rounded-full border border-boundary bg-recessed font-display text-[13px] font-semibold text-muted-foreground transition-colors duration-150 group-hover:border-primary/60 group-hover:text-primary"
-        >
-          {index}
+    <ol className="border-l border-divider pl-5">
+      {steps.map(([title, body], index) => {
+        const isTest = title === "Test";
+        return (
+          <li key={title} className="relative pb-6 last:pb-0">
+            <span
+              aria-hidden="true"
+              className={
+                isTest
+                  ? "absolute -left-[23px] top-1 h-2.5 w-2.5 rounded-full bg-primary"
+                  : "absolute -left-[22px] top-1.5 h-2 w-2 rounded-full bg-boundary"
+              }
+            />
+            <p
+              className={
+                isTest
+                  ? "type-meta font-semibold text-primary"
+                  : "type-meta font-semibold text-muted-foreground"
+              }
+            >
+              0{index + 1} · {title}
+            </p>
+            <p className="mt-1 type-row-secondary text-muted">{body}</p>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function TestConversation() {
+  return (
+    <div className="overflow-hidden rounded-sheet border border-boundary/70 bg-sunken shadow-surface">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider bg-chrome/50 px-4 py-3 sm:px-5">
+        <div>
+          <p className="type-meta font-semibold text-chrome-foreground">Test sohbeti</p>
+          <p className="mt-0.5 type-meta text-chrome-foreground/55">
+            {MARKETING_STORY.storeLabel}
+          </p>
+        </div>
+        <span className="rounded-control border border-boundary px-2.5 py-1 type-meta font-semibold text-muted-foreground">
+          Müşteriye açık değil
         </span>
-        {!last ? (
-          <span
-            aria-hidden="true"
-            className="absolute left-1/2 top-8 h-[calc(100%+1.25rem)] w-px -translate-x-1/2 bg-divider"
-          />
-        ) : null}
       </div>
-      <div className="min-w-0 space-y-1 pb-1">
-        <h3 className="type-row-primary text-foreground">{title}</h3>
-        <p className="type-row-secondary text-muted">{body}</p>
+
+      <div className="space-y-4 px-4 py-5 sm:px-6 sm:py-6">
+        <ChatBubble from="customer">{MARKETING_STORY.customerQuestion}</ChatBubble>
+        <ChatBubble from="assistant">{MARKETING_STORY.assistantAnswer}</ChatBubble>
+        <ChatBubble from="customer">{MARKETING_STORY.unknownQuestion}</ChatBubble>
+        <ChatBubble from="assistant">{MARKETING_STORY.unknownAnswer}</ChatBubble>
+
+        <div className="border-t border-divider pt-4">
+          <p className="type-meta font-semibold text-primary">Canlıya çıkmadan gördüğünüz şey</p>
+          <p className="mt-1 type-body text-foreground">
+            Normal cevap kadar, bilmediği yerde nasıl durduğu da test edilir.
+          </p>
+        </div>
       </div>
-    </li>
+    </div>
   );
 }
