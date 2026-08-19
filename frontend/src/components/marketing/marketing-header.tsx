@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   advanceMarketingHeaderScroll,
   createMarketingHeaderScrollState,
+  revealMarketingHeaderScroll,
 } from "@/components/marketing/marketing-header-scroll";
 import { MarketingDockNav } from "@/components/marketing/marketing-motion";
 import { BrandMark } from "@/components/shared/brand-mark";
@@ -32,13 +33,18 @@ export function MarketingHeader() {
   const ticking = React.useRef(false);
   const frame = React.useRef<number | null>(null);
 
+  const revealHeader = React.useCallback(() => {
+    scrollState.current = revealMarketingHeaderScroll(scrollState.current);
+    setIsHidden(false);
+  }, []);
+
   React.useEffect(() => {
     const readScrollY = () =>
       Math.max(window.scrollY || document.documentElement.scrollTop || 0, 0);
 
     const revealForAnchorJump = () => {
       suppressHideUntil.current = performance.now() + ANCHOR_HIDE_SUPPRESSION_MS;
-      setIsHidden(false);
+      revealHeader();
     };
 
     const onDocumentClick = (event: MouseEvent) => {
@@ -83,11 +89,11 @@ export function MarketingHeader() {
       frame.current = null;
       ticking.current = false;
     };
-  }, [pathname]);
+  }, [pathname, revealHeader]);
 
   return (
     <header
-      onFocusCapture={() => setIsHidden(false)}
+      onFocusCapture={revealHeader}
       className={cn(
         "sticky top-0 z-50 border-b border-boundary bg-chrome",
         "transition-[transform,opacity] duration-200 ease-out will-change-transform motion-reduce:transition-none",
