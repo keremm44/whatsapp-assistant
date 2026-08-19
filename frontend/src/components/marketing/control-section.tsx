@@ -106,7 +106,7 @@ function ControlStage() {
                   : "text-chrome-foreground/60 hover:bg-chrome-hover hover:text-chrome-foreground",
               )}
             >
-              <span className="mr-2 type-meta text-chrome-foreground/40">
+              <span className="mr-2 type-meta text-chrome-foreground/60">
                 0{index + 1}
               </span>
               {item.tabLabel}
@@ -175,7 +175,7 @@ function ControlStage() {
             <button
               type="button"
               onClick={() => setStage(current.next!)}
-              className="mt-7 inline-flex self-start rounded-control bg-primary-button px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-button-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-raised"
+              className="mt-7 inline-flex min-h-11 items-center self-start rounded-control bg-primary-button px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-button-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-raised"
             >
               {current.action}
             </button>
@@ -183,7 +183,7 @@ function ControlStage() {
             <button
               type="button"
               onClick={() => setStage("assistant")}
-              className="mt-7 inline-flex self-start rounded-control border border-boundary px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="mt-7 inline-flex min-h-11 items-center self-start rounded-control border border-boundary px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               Tekrar göster
             </button>
