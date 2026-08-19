@@ -50,7 +50,7 @@ export function MarketingSectionHeading({
         <span className="h-px w-10 bg-divider" />
       </span>
       {description ? (
-        <p className="max-w-2xl type-body text-muted">{description}</p>
+        <p className="max-w-2xl type-body text-foreground/74">{description}</p>
       ) : null}
     </div>
   );
