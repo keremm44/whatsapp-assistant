@@ -9,7 +9,7 @@ export function OnboardingSection() {
   return (
     <section
       id="kurulum"
-      className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 py-16 md:px-6 md:py-24 lg:px-8"
+      className="mx-auto w-full max-w-[1080px] scroll-mt-20 px-4 py-14 md:px-6 md:py-20 lg:px-8"
     >
       <MarketingSectionHeading
         eyebrow="Kurulum"
@@ -17,7 +17,7 @@ export function OnboardingSection() {
         description="Teknik bir proje kurmazsınız. Bize nasıl çalıştığınızı anlatır, asistanı müşteriye açmadan önce test edersiniz."
       />
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:gap-10">
+      <div className="mt-9 grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-10">
         <SetupRail />
         <MarketingReveal>
           <TestConversation />
@@ -39,7 +39,7 @@ function SetupRail() {
       {steps.map(([title, body], index) => {
         const isTest = index === 1;
         return (
-          <li key={title} className="relative pb-8 last:pb-0">
+          <li key={title} className="relative pb-7 last:pb-0">
             <span
               aria-hidden="true"
               className={
@@ -50,9 +50,7 @@ function SetupRail() {
             >
               {isTest ? <span className="h-1.5 w-1.5 rounded-full bg-primary" /> : null}
             </span>
-            <p className={isTest ? "type-meta font-semibold text-primary" : "type-meta font-semibold text-muted-foreground"}>
-              0{index + 1}
-            </p>
+            <p className={isTest ? "type-meta font-semibold text-primary" : "type-meta font-semibold text-muted-foreground"}>0{index + 1}</p>
             <h3 className="mt-1 type-row-primary text-foreground">{title}</h3>
             <p className="mt-1 type-row-secondary text-muted">{body}</p>
           </li>
@@ -70,9 +68,7 @@ function TestConversation() {
           <p className="type-meta font-semibold text-chrome-foreground">Önce siz deneyin</p>
           <p className="mt-0.5 type-meta text-chrome-foreground/55">{MARKETING_STORY.storeLabel}</p>
         </div>
-        <span className="rounded-control border border-boundary px-2.5 py-1 type-meta font-semibold text-muted-foreground">
-          Müşteriye açık değil
-        </span>
+        <span className="rounded-control border border-boundary px-2.5 py-1 type-meta font-semibold text-muted-foreground">Müşteriye açık değil</span>
       </div>
 
       <div className="space-y-4 px-4 py-5 sm:px-6 sm:py-6">
@@ -80,9 +76,7 @@ function TestConversation() {
         <ChatBubble from="assistant">{MARKETING_STORY.assistantAnswer}</ChatBubble>
         <div className="border-t border-divider pt-4">
           <p className="type-row-primary text-foreground">Hazır olduğuna siz karar verirsiniz.</p>
-          <p className="mt-1 type-body text-muted">
-            Canlıya çıkmadan önce konuşma biçimini kendi gözünüzle görürsünüz.
-          </p>
+          <p className="mt-1 type-body text-muted">Canlıya çıkmadan önce konuşma biçimini kendi gözünüzle görürsünüz.</p>
         </div>
       </div>
     </div>
