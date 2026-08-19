@@ -20,6 +20,8 @@ test("seller dashboard proof uses canonical presentation copy without fake marke
 
   assert.match(panel, /DASHBOARD_TASK_PRESENTATION/);
   assert.match(panel, /Bugün bakılabilecekler/);
+  assert.match(panel, /İade \/ sorun talebi inceleme bekliyor/);
+  assert.match(panel, /Cevaplanamayan müşteri sorusu/);
   assert.doesNotMatch(panel, /href=["']#dene["']/);
 });
 
@@ -45,12 +47,22 @@ test("return review stays attention and never masquerades as assistant-paused", 
   const panel = read("panel-section.tsx");
 
   assert.match(demo, /returnOutcome:[\s\S]*?tone: "attention"/);
+  assert.doesNotMatch(demo, /tone\?: "attention" \| "paused"/);
   assert.match(
     panel,
     /<SystemNote tone="attention" label="Konuşmadan gelen durum">/,
   );
   assert.doesNotMatch(control, /Yanıtlar durduruldu/);
   assert.match(control, /Asistan yeni mesajlarda yeniden devreye girer\./);
+});
+
+test("reveal motion is progressive enhancement rather than a no-js visibility gate", () => {
+  const motion = read("marketing-motion.tsx");
+  const control = read("control-section.tsx");
+
+  assert.match(motion, /motionReady && styles\.reveal/);
+  assert.match(motion, /!motionReady \|\| visible \|\| reduced/);
+  assert.match(control, /useState\(4\)/);
 });
 
 test("desktop dock visibility is owned by the responsive utility, not the css module", () => {
