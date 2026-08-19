@@ -168,3 +168,54 @@ test("demo reuses the shared proof story and chat bubbles expose the customer sp
   assert.match(demo, /MARKETING_STORY\.returnSystemOutcome/);
   assert.match(bubbles, /Müşteri: /);
 });
+
+test("living thread continues from conversation to seller-attention work item", () => {
+  const hero = read("hero.tsx");
+  const control = read("control-section.tsx");
+  const panel = read("panel-section.tsx");
+  const thread = read("story-thread.tsx");
+
+  assert.match(hero, /step="01"[\s\S]*?label="Konuşma"/);
+  assert.match(control, /step="02"[\s\S]*?label="Karar gereken yer"/);
+  assert.match(panel, /step="03"[\s\S]*?label="Panel kaydı"[\s\S]*?tone="attention"/);
+  assert.match(thread, /border-attention bg-attention-soft text-attention/);
+  assert.match(thread, /h-5 w-px bg-divider/);
+});
+
+test("ownership selector uses one moving material plate instead of three selected fills", () => {
+  const control = read("control-section.tsx");
+
+  assert.match(control, /grid-rows-3/);
+  assert.match(control, /h-1\/3 bg-chrome-hover/);
+  assert.match(control, /translate-y-\[200%\]/);
+  assert.match(control, /sm:translate-x-\[200%\]/);
+  assert.doesNotMatch(control, /selected\s*\?\s*"bg-chrome-hover/);
+});
+
+test("marketing reveal grammar distinguishes editorial, product, and state roles", () => {
+  const motion = read("marketing-motion.tsx");
+  const motionCss = read("marketing-motion.module.css");
+  const demo = read("demo-section.tsx");
+  const panel = read("panel-section.tsx");
+
+  assert.match(motion, /'editorial' \| 'product' \| 'state'/);
+  assert.match(motionCss, /\.revealEditorial/);
+  assert.match(motionCss, /\.revealProduct/);
+  assert.match(motionCss, /\.revealState/);
+  assert.match(demo, /variant="product"/);
+  assert.match(panel, /variant="state"/);
+  assert.match(panel, /variant="product"/);
+});
+
+test("demo message rhythm delays the response and animates only mounted additions", () => {
+  const demo = read("demo-section.tsx");
+  const motion = read("marketing-motion.tsx");
+  const motionCss = read("marketing-motion.module.css");
+
+  assert.match(demo, /const REPLY_STAGGER_MS = 140/);
+  assert.match(demo, /MarketingMessageArrival/);
+  assert.match(demo, /key=\{`\$\{stepId\}-\$\{index\}`\}/);
+  assert.match(motion, /export function MarketingMessageArrival/);
+  assert.match(motionCss, /translateY\(4px\)/);
+  assert.match(motionCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.messageArrival/);
+});
