@@ -39,6 +39,39 @@ test("marketing attention notes use the canonical attention surface", () => {
   assert.doesNotMatch(systemNote, /bg-accent-muted/);
 });
 
+test("return review stays attention and never masquerades as assistant-paused", () => {
+  const control = read("control-section.tsx");
+  const demo = read("demo-section.tsx");
+  const panel = read("panel-section.tsx");
+
+  assert.match(demo, /returnOutcome:[\s\S]*?tone: "attention"/);
+  assert.match(
+    panel,
+    /<SystemNote tone="attention" label="Konuşmadan gelen durum">/,
+  );
+  assert.doesNotMatch(control, /Yanıtlar durduruldu/);
+  assert.match(control, /Asistan yeni mesajlarda yeniden devreye girer\./);
+});
+
+test("desktop dock visibility is owned by the responsive utility, not the css module", () => {
+  const motion = read("marketing-motion.tsx");
+  const motionCss = read("marketing-motion.module.css");
+
+  assert.match(motion, /styles\.dock, ['"]hidden lg:flex['"]/);
+  assert.doesNotMatch(motionCss, /\.dock\s*\{[^}]*\bdisplay\s*:/s);
+});
+
+test("public loading keeps the hero container and desktop proof geometry", () => {
+  const loading = read("../../app/(public)/loading.tsx");
+
+  assert.match(loading, /max-w-\[1180px\]/);
+  assert.match(
+    loading,
+    /lg:grid-cols-\[minmax\(0,0\.9fr\)_minmax\(480px,1\.1fr\)\]/,
+  );
+  assert.match(loading, /lg:row-span-2/);
+});
+
 test("application entry remains honest and non-interactive while the flow is unavailable", () => {
   const header = read("marketing-header.tsx");
 
