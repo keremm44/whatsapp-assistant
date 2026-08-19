@@ -73,9 +73,7 @@ export function ControlSection() {
         <ControlStage />
       </MarketingReveal>
 
-      <MarketingReveal className="mt-16">
-        <CoralJourney />
-      </MarketingReveal>
+      <CoralJourney />
     </section>
   );
 }
@@ -198,31 +196,74 @@ function ControlStage() {
 }
 
 function CoralJourney() {
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const [visibleSteps, setVisibleSteps] = React.useState(0);
+
+  React.useEffect(() => {
+    const node = rootRef.current;
+    if (!node) return;
+
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (media.matches) {
+      setVisibleSteps(4);
+      return;
+    }
+
+    const timers: number[] = [];
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+
+        [1, 2, 3, 4].forEach((step, index) => {
+          timers.push(
+            window.setTimeout(() => setVisibleSteps(step), index * 230),
+          );
+        });
+      },
+      { threshold: 0.28 },
+    );
+
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, []);
+
+  const coralWidth = visibleSteps < 3 ? "0%" : visibleSteps === 3 ? "25%" : "50%";
+
   return (
-    <div className="border-y border-divider py-10 sm:py-12">
+    <div ref={rootRef} className="mt-14 border-y border-divider py-10 sm:mt-16 sm:py-12">
       <div className="max-w-3xl">
-        <p className="type-eyebrow text-attention">Karar gereken an</p>
+        <p className="type-eyebrow text-attention">Karar gereken yerde</p>
         <h3 className="mt-3 font-display text-[32px] font-semibold leading-[38px] tracking-[-0.025em] text-foreground sm:text-[44px] sm:leading-[50px]">
-          Her şeyi çözmeye çalışmaz.
+          Durur. Konuyu size bırakır.
         </h3>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-foreground/78">
-          İade gibi sizin kararınızı isteyen bir mesaj geldiğinde otomatik yanıtı durdurur ve konuyu görünür biçimde size bırakır.
-        </p>
       </div>
 
       <div className="relative mt-8 overflow-hidden rounded-sheet border border-boundary/70 bg-sunken shadow-surface">
         <div
           aria-hidden="true"
-          className="absolute left-[16%] right-[16%] top-[42px] hidden h-px bg-gradient-to-r from-divider via-attention/60 to-attention/80 lg:block"
+          className="absolute left-[12.5%] right-[12.5%] top-[42px] hidden h-px bg-divider lg:block"
         />
+        <div
+          aria-hidden="true"
+          className="absolute left-[37.5%] top-[42px] hidden h-px bg-attention lg:block"
+          style={{
+            width: coralWidth,
+            transition: "width 300ms cubic-bezier(0.2, 0, 0, 1)",
+          }}
+        />
+
         <div className="relative grid lg:grid-cols-4">
-          <FlowStep index="01" label="Müşteri">
+          <FlowStep index="01" label="Müşteri" visible={visibleSteps >= 1}>
             <ChatBubble from="customer">
               {MARKETING_STORY.returnQuestion}
             </ChatBubble>
           </FlowStep>
 
-          <FlowStep index="02" label="Asistan durur" attention>
+          <FlowStep index="02" label="Asistan durur" attention visible={visibleSteps >= 2}>
             <p className="font-heading text-lg font-semibold text-foreground">
               Otomatik yanıt durdu
             </p>
@@ -231,7 +272,7 @@ function CoralJourney() {
             </p>
           </FlowStep>
 
-          <FlowStep index="03" label="Durum" attention>
+          <FlowStep index="03" label="Durum" attention visible={visibleSteps >= 3}>
             <div className="flex min-h-[88px] items-center justify-center rounded-sheet border border-attention/25 bg-attention-soft/55 px-4 text-center">
               <p className="font-heading text-lg font-semibold text-attention">
                 İade incelemesi
@@ -239,7 +280,7 @@ function CoralJourney() {
             </div>
           </FlowStep>
 
-          <FlowStep index="04" label="Siz görürsünüz" attention last>
+          <FlowStep index="04" label="Siz görürsünüz" attention last visible={visibleSteps >= 4}>
             <div className="rounded-sheet border border-boundary/60 bg-raised p-4">
               <StatusChip tone="attention">İncelemeniz gerekiyor</StatusChip>
               <p className="mt-3 type-row-secondary text-foreground">
@@ -259,25 +300,28 @@ function FlowStep({
   children,
   attention = false,
   last = false,
+  visible,
 }: {
   index: string;
   label: string;
   children: React.ReactNode;
   attention?: boolean;
   last?: boolean;
+  visible: boolean;
 }) {
   return (
     <div
       className={cn(
-        "relative px-5 py-6 sm:px-6",
+        "relative px-5 py-6 transition-[opacity,transform] duration-300 sm:px-6",
         !last && "border-b border-divider lg:border-b-0 lg:border-r",
+        visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-35",
       )}
     >
       <div className="mb-5 flex items-center gap-2">
         <span
           className={cn(
-            "relative z-10 flex h-7 min-w-7 items-center justify-center rounded-full border bg-sunken px-1 type-meta font-semibold",
-            attention
+            "relative z-10 flex h-7 min-w-7 items-center justify-center rounded-full border bg-sunken px-1 type-meta font-semibold transition-colors duration-300",
+            attention && visible
               ? "border-attention/40 text-attention"
               : "border-boundary text-muted-foreground",
           )}
@@ -285,11 +329,10 @@ function FlowStep({
           {index}
         </span>
         <span
-          className={
-            attention
-              ? "type-meta font-semibold text-attention"
-              : "type-meta font-semibold text-foreground"
-          }
+          className={cn(
+            "type-meta font-semibold transition-colors duration-300",
+            attention && visible ? "text-attention" : "text-foreground",
+          )}
         >
           {label}
         </span>
