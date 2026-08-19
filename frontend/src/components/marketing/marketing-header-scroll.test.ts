@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   advanceMarketingHeaderScroll,
   createMarketingHeaderScrollState,
+  revealMarketingHeaderScroll,
 } from "./marketing-header-scroll.ts";
 
 test("header stays visible inside the opening region", () => {
@@ -43,4 +44,17 @@ test("anchor navigation can suppress a downward hide without changing the direct
 
   state = advanceMarketingHeaderScroll(state, 612);
   assert.equal(state.hidden, true);
+});
+
+test("explicit focus or anchor reveal clears stale hidden state and resets the movement anchor", () => {
+  let state = createMarketingHeaderScrollState(100);
+  state = advanceMarketingHeaderScroll(state, 120);
+  assert.equal(state.hidden, true);
+
+  state = revealMarketingHeaderScroll(state);
+  assert.equal(state.hidden, false);
+  assert.equal(state.directionAnchorY, state.lastScrollY);
+
+  state = advanceMarketingHeaderScroll(state, 125);
+  assert.equal(state.hidden, false);
 });
