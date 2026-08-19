@@ -79,17 +79,46 @@ const ANSWER_AFTER: Record<string, string> = {
   return: "returnOutcome",
 };
 
+const REPLY_STAGGER_MS = 110;
+
 export function DemoSection() {
   const [history, setHistory] = React.useState<string[]>(["start"]);
+  const [isReplyPending, setIsReplyPending] = React.useState(false);
+  const replyTimer = React.useRef<number | null>(null);
   const currentId = history[history.length - 1];
   const current = DEMO_STEPS[currentId];
 
+  React.useEffect(() => {
+    return () => {
+      if (replyTimer.current !== null) window.clearTimeout(replyTimer.current);
+    };
+  }, []);
+
   const choose = (next: string) => {
+    if (isReplyPending) return;
+
     const replyTarget = ANSWER_AFTER[next] ?? next;
-    setHistory((prev) => [...prev, next, replyTarget]);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    setHistory((prev) => [...prev, next]);
+    setIsReplyPending(true);
+    replyTimer.current = window.setTimeout(
+      () => {
+        setHistory((prev) => [...prev, replyTarget]);
+        setIsReplyPending(false);
+        replyTimer.current = null;
+      },
+      reducedMotion ? 0 : REPLY_STAGGER_MS,
+    );
   };
 
-  const reset = () => setHistory(["start"]);
+  const reset = () => {
+    if (replyTimer.current !== null) window.clearTimeout(replyTimer.current);
+    replyTimer.current = null;
+    setIsReplyPending(false);
+    setHistory(["start"]);
+  };
+
   const isAtLeaf = !current?.replies || current.replies.length === 0;
 
   return (
@@ -109,7 +138,7 @@ export function DemoSection() {
             </button>
           </div>
 
-          <div className="flex min-h-[430px] flex-col justify-end gap-3 px-4 py-6 sm:px-8 sm:py-8">
+          <div aria-live="polite" className="flex min-h-[430px] flex-col justify-end gap-3 px-4 py-6 sm:px-8 sm:py-8">
             {history.map((stepId) => {
               const step = DEMO_STEPS[stepId];
               if (step.from === "system") {
@@ -124,7 +153,9 @@ export function DemoSection() {
           </div>
 
           <div className="border-t border-divider bg-sunken px-4 py-4 sm:px-8">
-            {!isAtLeaf ? (
+            {isReplyPending ? (
+              <div aria-hidden="true" className="h-9" />
+            ) : !isAtLeaf ? (
               <div className="flex flex-wrap gap-2" role="group" aria-label="Müşteri soruları">
                 {current.replies?.map((reply) => (
                   <button
