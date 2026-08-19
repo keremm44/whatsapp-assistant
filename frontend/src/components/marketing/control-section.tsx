@@ -37,7 +37,7 @@ const OWNERSHIP_STAGES: Array<{
     tabLabel: "Siz ilgileniyorsunuz",
     stateLabel: "Siz ilgileniyorsunuz",
     title: "Kontrol sizde.",
-    body: "Siz konuşurken asistan araya girmez.",
+    body: "Asistan bekler; bu konuşmanın yanıtlarını siz yönetirsiniz.",
     action: "Asistana bırak",
     next: "returned",
   },
