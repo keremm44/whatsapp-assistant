@@ -19,6 +19,16 @@ function useReducedMotion() {
   return reduced;
 }
 
+function useMotionReady() {
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    setReady(true);
+  }, []);
+
+  return ready;
+}
+
 function useInViewOnce<T extends HTMLElement>(threshold = 0.16) {
   const ref = React.useRef<T | null>(null);
   const [visible, setVisible] = React.useState(false);
@@ -52,12 +62,17 @@ export function MarketingReveal({
   className?: string;
 }) {
   const reduced = useReducedMotion();
+  const motionReady = useMotionReady();
   const { ref, visible } = useInViewOnce<HTMLDivElement>();
 
   return (
     <div
       ref={ref}
-      className={cn(styles.reveal, (visible || reduced) && styles.revealVisible, className)}
+      className={cn(
+        motionReady && styles.reveal,
+        (!motionReady || visible || reduced) && styles.revealVisible,
+        className,
+      )}
     >
       {children}
     </div>
