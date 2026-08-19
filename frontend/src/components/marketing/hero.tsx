@@ -1,4 +1,5 @@
 import { ChatBubble, ChatProofCard } from "@/components/marketing/chat-bubbles";
+import { BlurHeadline, MarketingReveal } from "@/components/marketing/marketing-motion";
 
 /**
  * Hero — the first screen does one job: "this could be for me."
@@ -14,9 +15,10 @@ export function Hero() {
     <section className="mx-auto grid w-full max-w-[1180px] gap-12 px-4 pb-16 pt-14 md:px-6 md:pt-20 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-center lg:gap-10 lg:px-8 lg:pb-20">
       <div className="flex flex-col items-start gap-6">
         <p className="type-eyebrow text-muted-foreground">WhatsApp asistanı</p>
-        <h1 className="font-display text-[36px] font-semibold leading-[42px] tracking-[-0.022em] text-foreground sm:text-[48px] sm:leading-[54px]">
-          WhatsApp&apos;ta tekrar eden işleri asistanınız yönetsin.
-        </h1>
+        <BlurHeadline
+          text="WhatsApp'ta tekrar eden işleri asistanınız yönetsin."
+          className="font-display text-[36px] font-semibold leading-[42px] tracking-[-0.022em] text-foreground sm:text-[48px] sm:leading-[54px]"
+        />
         <p className="max-w-xl text-lg leading-8 text-muted">
           İşletmenizin bilgileriyle konuşur. Bilmediğinde uydurmaz; karar
           gerektiğinde size bırakır. Kontrol her zaman sizde.
@@ -34,7 +36,7 @@ export function Hero() {
         </p>
       </div>
 
-      <div className="hidden lg:block">
+      <MarketingReveal className="hidden lg:block">
         <ChatProofCard label="Örnek konuşma">
           <ChatBubble from="customer">Kupanız mikrodalgaya girer mi?</ChatBubble>
           <ChatBubble from="assistant">
@@ -46,7 +48,7 @@ export function Hero() {
             satıcımıza iletiyorum.
           </ChatBubble>
         </ChatProofCard>
-      </div>
+      </MarketingReveal>
     </section>
   );
 }
