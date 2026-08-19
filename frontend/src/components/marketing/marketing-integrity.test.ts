@@ -93,6 +93,14 @@ test("public loading keeps the hero container and desktop proof geometry", () =>
   assert.match(loading, /lg:row-span-2/);
 });
 
+test("public layout offers a focus-only skip link to a focusable main landmark", () => {
+  const layout = read("../../app/(public)/layout.tsx");
+
+  assert.match(layout, /href="#main-content"/);
+  assert.match(layout, /Ana içeriğe geç/);
+  assert.match(layout, /<main id="main-content" tabIndex=\{-1\}/);
+});
+
 test("primary marketing controls keep real mobile touch targets", () => {
   const header = read("marketing-header.tsx");
   const control = read("control-section.tsx");
