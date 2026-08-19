@@ -4,13 +4,14 @@ import * as React from "react";
 
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
+import { SystemNote } from "@/components/marketing/system-note";
 import { cn } from "@/lib/utils/cn";
 
 type DemoStep = {
   id: string;
   from: "customer" | "assistant" | "system";
   text: string;
-  tone?: "attention" | "neutral";
+  tone?: "paused" | "neutral";
   replies?: { label: string; next: string }[];
 };
 
@@ -65,8 +66,8 @@ const DEMO_STEPS: Record<string, DemoStep> = {
   returnOutcome: {
     id: "returnOutcome",
     from: "system",
-    tone: "attention",
-    text: "Otomatik yanıt durdu. Bu konuşma artık satıcı incelemesinde.",
+    tone: "paused",
+    text: "Otomatik yanıt durdu. Konuşma iade incelemesine geçti.",
   },
 };
 
@@ -92,7 +93,7 @@ export function DemoSection() {
   const isAtLeaf = !current?.replies || current.replies.length === 0;
 
   return (
-    <section id="dene" className="scroll-mt-16 border-y border-divider bg-sunken">
+    <section id="dene" className="scroll-mt-16 border-y border-boundary bg-sunken">
       <div className="mx-auto w-full max-w-[1260px] px-4 py-20 md:px-6 md:py-28 lg:px-8">
         <MarketingSectionHeading
           eyebrow="Deneyin"
@@ -100,7 +101,7 @@ export function DemoSection() {
           description="Bir soru seçin. Normal cevabı da, bilmediği veya durması gereken yeri de aynı konuşmada görün."
         />
 
-        <div className="mt-12 overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
+        <div className="mt-12 overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface">
           <div className="flex items-center justify-between gap-3 border-b border-divider px-4 py-3 sm:px-6">
             <p className="type-meta font-semibold text-muted-foreground">Kişiye özel kupa mağazası · örnek konuşma</p>
             <button type="button" onClick={reset} className="rounded-control px-2.5 py-1 type-meta font-semibold text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
@@ -111,7 +112,13 @@ export function DemoSection() {
           <div className="flex min-h-[430px] flex-col justify-end gap-3 px-4 py-6 sm:px-8 sm:py-8">
             {history.map((stepId) => {
               const step = DEMO_STEPS[stepId];
-              if (step.from === "system") return <SystemNote key={stepId} step={step} />;
+              if (step.from === "system") {
+                return (
+                  <SystemNote key={stepId} tone={step.tone ?? "neutral"}>
+                    {step.text}
+                  </SystemNote>
+                );
+              }
               return <ChatBubble key={stepId} from={step.from}>{step.text}</ChatBubble>;
             })}
           </div>
@@ -125,7 +132,7 @@ export function DemoSection() {
                     type="button"
                     onClick={() => choose(reply.next)}
                     className={cn(
-                      "rounded-control border border-boundary/60 bg-raised px-3 py-2 text-sm font-medium text-foreground",
+                      "rounded-control border border-boundary bg-raised px-3 py-2 text-sm font-medium text-foreground",
                       "transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                     )}
                   >
@@ -149,15 +156,5 @@ export function DemoSection() {
         </p>
       </div>
     </section>
-  );
-}
-
-function SystemNote({ step }: { step: DemoStep }) {
-  const attention = step.tone === "attention";
-  return (
-    <div className={cn("rounded-control border-l-[3px] px-3.5 py-3", attention ? "border-l-attention bg-attention-soft" : "border-l-boundary bg-recessed")}>
-      <p className={cn("type-meta font-semibold", attention ? "text-attention" : "text-muted-foreground")}>Sistem</p>
-      <p className="mt-1 type-body text-foreground">{step.text}</p>
-    </div>
   );
 }
