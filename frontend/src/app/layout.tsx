@@ -11,14 +11,29 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   metadataBase: new URL(siteConfig.url),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "tr_TR",
+    url: "/",
+    siteName: siteConfig.name,
+    title: siteConfig.name,
+    description: siteConfig.description,
+  },
+  twitter: {
+    card: "summary",
+    title: siteConfig.name,
+    description: siteConfig.description,
+  },
 };
 
 /**
- * The canonical font families (Manrope for headings, Source Sans 3 for body)
- * are declared as CSS variables in src/app/globals.css. To self-host the real
- * font files, drop the WOFF2 files into frontend/public/fonts/ and uncomment
- * the `@font-face` rules in globals.css. Until then, the system font stack
- * preserves the calm, humanist character of the design.
+ * Inter is the canonical display/body family. The variable latin and
+ * latin-ext WOFF2 subsets are self-hosted from `public/fonts/` through the
+ * `@font-face` declarations in globals.css, with system grotesques as the
+ * fallback stack. No remote font request or next/font dependency is needed.
  */
 export default function RootLayout({
   children,
