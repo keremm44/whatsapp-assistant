@@ -87,7 +87,7 @@ function ControlStage() {
   return (
     <div className="overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface">
       <div
-        role="tablist"
+        role="group"
         aria-label="Örnek konuşma kontrolü"
         className="relative grid border-b border-divider bg-chrome sm:grid-cols-3"
       >
@@ -97,8 +97,7 @@ function ControlStage() {
             <button
               key={item.id}
               type="button"
-              role="tab"
-              aria-selected={selected}
+              aria-pressed={selected}
               onClick={() => setStage(item.id)}
               className={cn(
                 "relative px-4 py-3.5 text-left text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:text-center",
@@ -240,13 +239,8 @@ function CoralJourney() {
         </h3>
       </div>
 
-      <div className="relative mt-8 overflow-hidden rounded-sheet border border-boundary bg-sunken shadow-surface">
-        <div
-          aria-hidden="true"
-          className="absolute left-[12.5%] right-[12.5%] top-[42px] hidden h-px bg-divider lg:block"
-        />
-
-        <div className="relative grid lg:grid-cols-4">
+      <div className="mt-8 overflow-hidden rounded-sheet border border-boundary bg-sunken shadow-surface">
+        <div className="grid lg:grid-cols-4">
           <FlowStep index="01" label="Müşteri" visible={visibleSteps >= 1}>
             <ChatBubble from="customer">
               {MARKETING_STORY.returnQuestion}
@@ -254,7 +248,7 @@ function CoralJourney() {
           </FlowStep>
 
           <FlowStep index="02" label="Asistan durur" visible={visibleSteps >= 2}>
-            <StatusChip tone="paused">Yanıtlar durdu</StatusChip>
+            <StatusChip tone="paused">Yanıtlar durduruldu</StatusChip>
             <p className="mt-3 font-heading text-lg font-semibold text-foreground">
               Otomatik yanıt durdu
             </p>
