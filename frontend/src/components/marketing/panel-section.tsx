@@ -9,6 +9,10 @@ import { DASHBOARD_TASK_PRESENTATION } from "@/components/seller/dashboard/task-
 import { StatusChip } from "@/components/shared/status-chip";
 import type { DashboardTaskType } from "@/lib/seller/dashboard-tasks";
 
+const EXAMPLE_RETURN_TASK_TITLE = "İade / sorun talebi inceleme bekliyor";
+const EXAMPLE_UNANSWERED_TASK_TITLE = "Cevaplanamayan müşteri sorusu";
+const EXAMPLE_CUSTOMER_CONTEXT = "WhatsApp müşterisi";
+
 export function PanelSection() {
   return (
     <section id="panel" className="scroll-mt-20 bg-canvas">
@@ -60,12 +64,12 @@ function SellerDashboardProof() {
               count={1}
               description="İncelemeniz gereken konular."
             />
-            <div className="overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface">
+            <div className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
               <PriorityProofRow
                 taskType="return_review"
-                title={DASHBOARD_TASK_PRESENTATION.return_review.label}
+                title={EXAMPLE_RETURN_TASK_TITLE}
                 summary={MARKETING_STORY.returnQuestion}
-                context={MARKETING_STORY.storeLabel}
+                context={EXAMPLE_CUSTOMER_CONTEXT}
               />
             </div>
           </section>
@@ -73,7 +77,7 @@ function SellerDashboardProof() {
           <aside className="flex flex-col gap-5">
             <section
               aria-labelledby="marketing-panel-secondary"
-              className="overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface"
+              className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface"
             >
               <header className="flex items-baseline gap-2.5 border-b border-divider px-4 py-3.5 sm:px-5">
                 <h4
@@ -91,8 +95,8 @@ function SellerDashboardProof() {
               </header>
               <SecondaryProofRow
                 taskType="unanswered_question"
-                title={MARKETING_STORY.unknownQuestion}
-                context={MARKETING_STORY.storeLabel}
+                title={EXAMPLE_UNANSWERED_TASK_TITLE}
+                context={EXAMPLE_CUSTOMER_CONTEXT}
               />
             </section>
 
@@ -115,7 +119,7 @@ function WorkloadStats() {
     <dl
       role="status"
       aria-label="Örnek görünümde ilgilenmeniz gereken 2 konu"
-      className="grid w-full shrink-0 grid-cols-3 divide-x divide-divider self-start overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface sm:w-auto sm:min-w-[360px]"
+      className="grid w-full shrink-0 grid-cols-3 divide-x divide-divider self-start overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface sm:w-auto sm:min-w-[360px]"
     >
       {stats.map((stat) => (
         <div key={stat.label} className="px-4 py-3 sm:px-5">
@@ -176,7 +180,7 @@ function PriorityProofRow({
     <article className="group relative">
       <div className="flex flex-col gap-3 p-4 pl-5 sm:flex-row sm:items-start sm:gap-5 sm:p-5 sm:pl-6">
         <div className="flex min-w-0 items-start gap-4 sm:flex-1 sm:gap-5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-boundary bg-recessed text-muted-foreground">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-boundary/40 bg-recessed text-muted-foreground">
             <Icon aria-hidden="true" size={20} strokeWidth={1.6} />
           </span>
 
@@ -195,7 +199,7 @@ function PriorityProofRow({
 
         <div className="shrink-0 self-start sm:text-right">
           <p className="type-meta text-muted-foreground">Panel aksiyonu</p>
-          <span className="mt-1 inline-flex h-9 items-center gap-1.5 type-row-secondary font-semibold text-primary">
+          <span className="mt-1 inline-flex h-11 items-center gap-1.5 type-row-secondary font-semibold text-primary sm:h-9">
             <span>{meta.cta}</span>
             <ArrowUpRight aria-hidden="true" size={14} strokeWidth={1.9} />
           </span>
@@ -219,7 +223,7 @@ function SecondaryProofRow({
 
   return (
     <div className="flex min-h-[60px] items-start gap-3 px-4 py-3.5 sm:px-5">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-boundary bg-recessed text-muted-foreground">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-boundary/40 bg-recessed text-muted-foreground">
         <Icon aria-hidden="true" size={16} strokeWidth={1.6} />
       </span>
       <div className="min-w-0 flex-1 space-y-0.5">
@@ -247,7 +251,7 @@ function QuietSummaryProof() {
   return (
     <section
       aria-labelledby="marketing-panel-summary"
-      className="rounded-sheet border border-boundary bg-raised px-4 py-4 shadow-surface sm:px-5"
+      className="rounded-sheet border border-boundary/60 bg-raised px-4 py-4 shadow-surface sm:px-5"
     >
       <h4
         id="marketing-panel-summary"
