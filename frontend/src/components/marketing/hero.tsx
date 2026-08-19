@@ -10,14 +10,14 @@ import { BlurHeadline, MarketingReveal } from "@/components/marketing/marketing-
 export function Hero() {
   return (
     <section className="border-b border-divider bg-canvas">
-      <div className="mx-auto grid w-full max-w-[1180px] gap-10 px-4 pb-14 pt-14 md:px-6 md:pb-18 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)] lg:items-center lg:gap-12 lg:px-8 lg:pb-24">
+      <div className="mx-auto grid w-full max-w-[1180px] gap-10 px-4 pb-14 pt-14 md:px-6 md:pb-20 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)] lg:items-center lg:gap-12 lg:px-8 lg:pb-24">
         <div className="flex flex-col items-start gap-6">
           <p className="type-eyebrow text-muted-foreground">WhatsApp asistanı</p>
           <BlurHeadline
             text="Tekrar eden konuşmaları sizden önce karşılar."
             className="max-w-3xl font-display text-[42px] font-semibold leading-[46px] tracking-[-0.026em] text-foreground sm:text-[56px] sm:leading-[60px] lg:text-[64px] lg:leading-[68px]"
           />
-          <p className="max-w-xl text-lg leading-8 text-foreground/88">
+          <p className="max-w-xl text-lg leading-8 text-foreground">
             İşletmenizin bilgileriyle konuşur. Bilmediğinde uydurmaz; karar
             gerektiğinde size bırakır.
           </p>
