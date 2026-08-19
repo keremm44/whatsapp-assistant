@@ -62,7 +62,7 @@ export function ControlSection() {
         description="Asistan rutin konuşmayı yürütür. Karar gerçekten size ait olduğunda durur; siz devralabilir, işiniz bittiğinde yeniden asistana bırakabilirsiniz."
       />
 
-      <div className="mt-7 max-w-4xl border-l-2 border-primary pl-5 sm:pl-6">
+      <div className="mt-7 max-w-4xl border-l-2 border-boundary pl-5 sm:pl-6">
         <TrueFocusLine
           words={["Bilir.", "Cevaplar.", "Bilmezse durur.", "Size bırakır."]}
           className="font-heading text-[24px] font-semibold leading-9 tracking-[-0.015em] text-foreground sm:text-[32px] sm:leading-10"
