@@ -9,6 +9,7 @@ import {
   TrueFocusLine,
 } from "@/components/marketing/marketing-motion";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
+import { StoryThreadMarker } from "@/components/marketing/story-thread";
 import { StatusChip } from "@/components/shared/status-chip";
 import { cn } from "@/lib/utils/cn";
 
@@ -69,7 +70,7 @@ export function ControlSection() {
         />
       </div>
 
-      <MarketingReveal className="mt-11">
+      <MarketingReveal variant="product" className="mt-11">
         <ControlStage />
       </MarketingReveal>
 
@@ -89,8 +90,17 @@ function ControlStage() {
       <div
         role="group"
         aria-label="Örnek konuşma kontrolü"
-        className="relative grid border-b border-divider bg-chrome sm:grid-cols-3"
+        className="relative grid grid-rows-3 overflow-hidden border-b border-divider bg-chrome sm:grid-cols-3 sm:grid-rows-1"
       >
+        <span
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-chrome-hover transition-transform duration-200 ease-out motion-reduce:transition-none sm:inset-y-0 sm:left-0 sm:h-auto sm:w-1/3",
+            activeIndex === 1 && "translate-y-full sm:translate-x-full sm:translate-y-0",
+            activeIndex === 2 && "translate-y-[200%] sm:translate-x-[200%] sm:translate-y-0",
+          )}
+        />
+
         {OWNERSHIP_STAGES.map((item, index) => {
           const selected = item.id === stage;
           return (
@@ -100,10 +110,10 @@ function ControlStage() {
               aria-pressed={selected}
               onClick={() => setStage(item.id)}
               className={cn(
-                "relative px-4 py-3.5 text-left text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:text-center",
+                "relative z-10 min-h-12 px-4 py-3.5 text-left text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:text-center",
                 selected
-                  ? "bg-chrome-hover text-chrome-foreground"
-                  : "text-chrome-foreground/60 hover:bg-chrome-hover hover:text-chrome-foreground",
+                  ? "text-chrome-foreground"
+                  : "text-chrome-foreground/60 hover:text-chrome-foreground",
               )}
             >
               <span className="mr-2 type-meta text-chrome-foreground/60">
@@ -234,6 +244,13 @@ function CoralJourney() {
 
   return (
     <div ref={rootRef} className="mt-14 border-y border-divider py-10 sm:mt-16 sm:py-12">
+      <StoryThreadMarker
+        step="02"
+        label="Karar gereken yer"
+        detail="Otomasyon burada durur; kayıt seller-attention durumuna geçer."
+        className="mb-5 max-w-xl"
+      />
+
       <div className="max-w-3xl">
         <p className="type-eyebrow text-muted-foreground">Karar gereken yerde</p>
         <h3 className="mt-3 font-display text-[32px] font-semibold leading-[38px] tracking-[-0.025em] text-foreground sm:text-[44px] sm:leading-[50px]">
