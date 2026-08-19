@@ -106,7 +106,7 @@ export function MarketingHeader() {
         <Link
           href="/"
           aria-label="WhatsApp Asistan ana sayfa"
-          className="w-fit rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="inline-flex min-h-11 w-fit items-center rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <BrandMark
             subtitle="Sakin Ustalık"
@@ -120,7 +120,7 @@ export function MarketingHeader() {
           <Link
             href="/giris"
             aria-label="Giriş yapın"
-            className="rounded-control px-2.5 py-2 text-sm font-medium text-chrome-foreground/70 transition-colors hover:bg-chrome-hover hover:text-chrome-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:px-3"
+            className="inline-flex min-h-11 items-center rounded-control px-2.5 py-2 text-sm font-medium text-chrome-foreground/70 transition-colors hover:bg-chrome-hover hover:text-chrome-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:px-3"
           >
             <span className="sm:hidden">Giriş</span>
             <span className="hidden sm:inline">Giriş yapın</span>
