@@ -1,114 +1,118 @@
 import * as React from "react";
 
-import { ChatProofCard } from "@/components/marketing/chat-bubbles";
+import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
 
 /**
- * Zor durumlar — the section that earns trust on the error path.
- *
- * People judge automation by how it fails. This section shows the real
- * failure handling: returns/complaints move the conversation into
- * "İade incelemesi" and stop auto-replies; unknown questions are
- * recorded for the seller. No "AI çözer" narrative.
+ * Difficult cases — the same conversation reaches the moment where the
+ * assistant must stop. Coral appears only on the seller-attention path.
  */
 export function DifficultCases() {
   return (
-    <section className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-20 lg:px-8">
-      <MarketingSectionHeading
-        eyebrow="Zor durumlar"
-        title="Hassas durumlarda sizi devreye alır."
-        description="Asistan her şeyi çözmeye çalışmaz. Ne zaman kendisi ilerleyeceğini, ne zaman size bırakacağını bilir."
-      />
+    <section className="border-y border-divider bg-sunken">
+      <div className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-24 lg:px-8">
+        <MarketingSectionHeading
+          eyebrow="Zor durumlar"
+          title="Her şeyi çözmeye çalışmaz. Gerektiğinde durur."
+          description="İade, sorun veya kayıtlı cevabı olmayan bir konu geldiğinde sınırını belli eder ve satıcı müdahalesini görünür hale getirir."
+        />
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-[400px_minmax(0,1fr)] lg:gap-10">
-        <MarketingReveal>
-          <ChatProofCard label="İade akışı — gerçek davranış" className="self-start">
-            <FlowStep index="01" label="Müşteri" text="Ürünüm kırık geldi, iade etmek istiyorum." />
-            <FlowConnector />
-            <FlowStep
-              index="02"
-              label="Sistem"
-              text="Otomatik yanıt durur ve konuşma İade incelemesi durumuna geçer."
-              attention
-            />
-            <FlowConnector />
-            <FlowStep
-              index="03"
-              label="Satıcı"
-              text="Panelde İncelemeniz gerekiyor olarak görünür."
-              attention
-            />
-          </ChatProofCard>
+        <MarketingReveal className="mt-12">
+          <ReturnHandoffPath />
         </MarketingReveal>
 
-        <MarketingReveal>
-          <div className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
-            <ul role="list" className="divide-y divide-divider">
-              <CaseRow
-                title="İade ve sorunlar size düşer"
-                body="Hasarlı ürün, yanlış ürün, baskı sorunu, teslimat sorunu — asistan bunları müşteriyle çözmeye çalışmaz; kayıt açar ve inceleme için size bırakır."
-              />
-              <CaseRow
-                title="Bilmediği soruyu fark eder"
-                body="Cevaplayamadığı soruyu uydurmak yerine kaydeder ve size iletir. Siz doğru cevabı kaydettiğinizde aynı soruya gelecekte bu cevapla dönebilir."
-              />
-              <CaseRow
-                title="Sınır bilir"
-                body="Uygunsuz veya tekrarlayan kötüye kullanımda müşteriyi geçici olarak susturabilir ve sizi bilgilendirir."
-              />
-              <CaseRow
-                title="Devraldığınızda sabit kalır"
-                body="Siz ilgilendiğinizi söyleyene kadar konuşma size aittir. Asistan siz bırakana kadar araya girmez."
-              />
-            </ul>
-          </div>
-        </MarketingReveal>
+        <div className="mt-8 grid gap-5 md:grid-cols-2">
+          <QuietCase
+            title="Bilinmeyen soru"
+            body="Kayıtlı cevap yoksa soru cevaplanamayan sorular listesine düşer; asistan yeni bir işletme kuralı üretmez."
+          />
+          <QuietCase
+            title="Satıcı devralması"
+            body="Siz konuşmayı devraldığınızda asistan araya girmez; konuşma yeniden bırakılana kadar sizde kalır."
+          />
+        </div>
       </div>
     </section>
   );
 }
 
-function FlowStep({
-  index,
-  label,
-  text,
-  attention = false,
-}: {
-  index: string;
-  label: string;
-  text: string;
-  attention?: boolean;
-}) {
+function ReturnHandoffPath() {
+  const steps = [
+    {
+      index: "01",
+      label: "Müşteri",
+      text: MARKETING_STORY.returnQuestion,
+      attention: false,
+    },
+    {
+      index: "02",
+      label: "Sistem",
+      text: MARKETING_STORY.returnSystemOutcome,
+      attention: true,
+    },
+    {
+      index: "03",
+      label: "Satıcı görünürlüğü",
+      text: MARKETING_STORY.returnSellerOutcome,
+      attention: true,
+    },
+  ] as const;
+
   return (
-    <div className="grid grid-cols-[34px_minmax(0,1fr)] gap-3">
-      <span
-        aria-hidden="true"
-        className={attention ? "type-meta font-semibold text-attention" : "type-meta font-semibold text-muted-foreground"}
-      >
-        {index}
-      </span>
-      <div>
-        <p className={attention ? "type-meta font-semibold text-attention" : "type-meta font-semibold text-muted-foreground"}>
-          {label}
-        </p>
-        <p className="mt-0.5 type-body text-foreground">{text}</p>
+    <div className="overflow-hidden rounded-sheet border border-boundary/70 bg-raised shadow-surface">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider bg-chrome/45 px-4 py-3 sm:px-5">
+        <div>
+          <p className="type-meta font-semibold text-foreground">Aynı konuşma · iade yolu</p>
+          <p className="mt-0.5 type-meta text-muted-foreground">
+            {MARKETING_STORY.storeLabel}
+          </p>
+        </div>
+        <span className="rounded-control bg-attention-soft px-2.5 py-1 type-meta font-semibold text-attention">
+          İade incelemesi
+        </span>
       </div>
+
+      <ol className="grid md:grid-cols-3">
+        {steps.map((step, index) => (
+          <li
+            key={step.index}
+            className="relative border-b border-divider px-5 py-6 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span
+                className={
+                  step.attention
+                    ? "type-meta font-semibold text-attention"
+                    : "type-meta font-semibold text-muted-foreground"
+                }
+              >
+                {step.index} · {step.label}
+              </span>
+              {index < steps.length - 1 ? (
+                <span aria-hidden="true" className="hidden text-muted-foreground md:block">
+                  →
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-3 type-body text-foreground">{step.text}</p>
+            {step.attention ? (
+              <span aria-hidden="true" className="mt-5 block h-0.5 w-12 bg-attention" />
+            ) : (
+              <span aria-hidden="true" className="mt-5 block h-px w-12 bg-divider" />
+            )}
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
 
-function FlowConnector() {
+function QuietCase({ title, body }: { title: string; body: string }) {
   return (
-    <div aria-hidden="true" className="ml-4 h-5 w-px bg-divider" />
-  );
-}
-
-function CaseRow({ title, body }: { title: string; body: string }) {
-  return (
-    <li className="px-5 py-4 transition-colors duration-150 hover:bg-hover/25">
+    <div className="border-l-2 border-boundary pl-4 sm:pl-5">
       <h3 className="type-row-primary text-foreground">{title}</h3>
       <p className="mt-1 max-w-prose type-body text-muted">{body}</p>
-    </li>
+    </div>
   );
 }
