@@ -19,10 +19,10 @@ const ANCHOR_HIDE_SUPPRESSION_MS = 500;
  * material. It mirrors the seller topbar's proven scroll-direction
  * behaviour: down gets the rail out of the way, up brings it back.
  *
- * Public-only refinement: an in-page navigation click briefly suppresses
- * downward hiding so the programmatic section jump does not immediately
- * make the navigation disappear. Movement is transform-only and focus
- * always reveals the header.
+ * Public-only refinement: any real in-page anchor click briefly suppresses
+ * downward hiding so the deliberate section jump does not immediately make
+ * the navigation disappear. Movement is transform-only and focus always
+ * reveals the header.
  */
 export function MarketingHeader() {
   const pathname = usePathname();
@@ -35,6 +35,19 @@ export function MarketingHeader() {
   React.useEffect(() => {
     const readScrollY = () =>
       Math.max(window.scrollY || document.documentElement.scrollTop || 0, 0);
+
+    const revealForAnchorJump = () => {
+      suppressHideUntil.current = performance.now() + ANCHOR_HIDE_SUPPRESSION_MS;
+      setIsHidden(false);
+    };
+
+    const onDocumentClick = (event: MouseEvent) => {
+      if (!(event.target instanceof Element)) return;
+      const anchor = event.target.closest<HTMLAnchorElement>('a[href^="#"]');
+      const href = anchor?.getAttribute("href");
+      if (!href || href === "#") return;
+      revealForAnchorJump();
+    };
 
     scrollState.current = createMarketingHeaderScrollState(readScrollY());
     suppressHideUntil.current = 0;
@@ -62,18 +75,15 @@ export function MarketingHeader() {
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("click", onDocumentClick);
     return () => {
       window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("click", onDocumentClick);
       if (frame.current !== null) window.cancelAnimationFrame(frame.current);
       frame.current = null;
       ticking.current = false;
     };
   }, [pathname]);
-
-  const handleSectionNavigate = () => {
-    suppressHideUntil.current = performance.now() + ANCHOR_HIDE_SUPPRESSION_MS;
-    setIsHidden(false);
-  };
 
   return (
     <header
@@ -98,7 +108,7 @@ export function MarketingHeader() {
           />
         </Link>
 
-        <MarketingDockNav onNavigate={handleSectionNavigate} />
+        <MarketingDockNav />
 
         <nav aria-label="Hesap menüsü" className="flex items-center justify-end gap-1 sm:gap-2">
           <Link
