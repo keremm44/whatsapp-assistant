@@ -6,22 +6,17 @@ import { MarketingReveal } from "@/components/marketing/marketing-motion";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
 import { StatusChip } from "@/components/shared/status-chip";
 
-/**
- * Panel proof — derived from the seller Working Ledger rather than a
- * generic dashboard mock. One contiguous work sheet, one clear priority
- * record and a context rail. No fabricated KPI counts.
- */
 export function PanelSection() {
   return (
     <section id="panel" className="scroll-mt-20 bg-canvas">
       <div className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-24 lg:px-8">
         <MarketingSectionHeading
-          eyebrow="Görünürlük"
-          title="Az önce duran konuşma burada kaybolmaz."
-          description="Aynı iade kaydı, satıcı panelinde önceliği ve konuşma bağlamıyla görünür. Ne olduğunu anlamak için farklı ekranlarda iz sürmezsiniz."
+          eyebrow="Panel"
+          title="Size düşen konuyu burada görürsünüz."
+          description="İade, sipariş veya cevap bekleyen bir konu olduğunda neye bakmanız gerektiği konuşma bağlamıyla birlikte görünür."
         />
 
-        <MarketingReveal className="mt-12">
+        <MarketingReveal className="mt-10">
           <SellerWorkbenchProof />
         </MarketingReveal>
       </div>
@@ -35,29 +30,22 @@ function SellerWorkbenchProof() {
       <div className="border-b border-divider bg-chrome px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="type-meta font-semibold text-chrome-foreground/62">Satıcı paneli · örnek görünüm</p>
+            <p className="type-meta font-semibold text-chrome-foreground/62">Satıcı paneli</p>
             <h3 className="mt-1.5 font-heading text-2xl font-semibold tracking-[-0.02em] text-chrome-foreground sm:text-[28px]">
               Bugün ilgilenmeniz gerekenler
             </h3>
           </div>
-          <div className="flex flex-wrap items-center gap-5 border-t border-chrome-foreground/10 pt-2 sm:border-t-0 sm:pt-0">
+          <div className="flex flex-wrap items-center gap-5">
             <WorkloadLabel label="Önce bakılacaklar" active />
             <WorkloadLabel label="Vakit varsa" />
-            <WorkloadLabel label="Toplam" />
           </div>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="border-b border-divider bg-sunken lg:border-b-0 lg:border-r">
           <div className="border-b border-divider px-5 py-4 sm:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="type-eyebrow text-muted-foreground">Önce bunlar</p>
-                <p className="mt-1 type-row-secondary text-muted">Satıcı müdahalesi isteyen kayıtlar</p>
-              </div>
-              <span className="type-meta text-muted-foreground">Öncelik durumdan gelir</span>
-            </div>
+            <p className="type-eyebrow text-muted-foreground">Önce bunlar</p>
           </div>
 
           <article className="group relative bg-raised transition-colors duration-200 hover:bg-elevated/50">
@@ -89,25 +77,17 @@ function SellerWorkbenchProof() {
               </a>
             </div>
           </article>
-
-          <div className="border-t border-divider bg-raised/65 px-5 py-4 sm:px-6">
-            <p className="type-meta font-semibold text-muted-foreground">Sistem durumu</p>
-            <p className="mt-1.5 type-body text-foreground">{MARKETING_STORY.returnSystemOutcome}</p>
-          </div>
         </div>
 
         <aside className="bg-raised p-5 sm:p-6">
           <p className="type-meta font-semibold text-muted-foreground">Bağlam</p>
-          <h4 className="mt-2 font-heading text-lg font-semibold text-foreground">Aynı olay, aynı yerde.</h4>
-
-          <dl className="mt-6 divide-y divide-divider border-y border-divider">
+          <dl className="mt-4 divide-y divide-divider border-y border-divider">
             <ContextRow label="Konuşma" value={MARKETING_STORY.storeLabel} />
             <ContextRow label="Durum" value="İade incelemesi" attention />
             <ContextRow label="Kontrol" value="Otomatik yanıt durdu" />
           </dl>
-
           <p className="mt-5 type-row-secondary text-muted">
-            Konuşmadan iade kaydına geçerken müşteri mesajı ve neden müdahale gerektiği kaybolmaz.
+            Ne olduğunu anlamak için konuşmadan kopmadan ilgili kayda geçersiniz.
           </p>
         </aside>
       </div>
@@ -136,7 +116,7 @@ function ContextRow({
   attention?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-3 py-3">
+    <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-3 py-3">
       <dt className="type-meta text-muted-foreground">{label}</dt>
       <dd className={attention ? "type-row-secondary font-semibold text-attention" : "type-row-secondary text-foreground"}>
         {value}
