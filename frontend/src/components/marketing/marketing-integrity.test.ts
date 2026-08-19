@@ -60,20 +60,25 @@ test("return review stays attention and never masquerades as assistant-paused", 
   assert.match(control, /Asistan yeni mesajlarda yeniden devreye girer\./);
 });
 
-test("reveal motion is progressive enhancement rather than a no-js visibility gate", () => {
+test("reveal motion is progressive enhancement and does not flicker visible content", () => {
   const motion = read("marketing-motion.tsx");
   const control = read("control-section.tsx");
 
+  assert.match(motion, /useState\(true\)/);
+  assert.match(motion, /alreadyInViewport/);
   assert.match(motion, /motionReady && styles\.reveal/);
-  assert.match(motion, /!motionReady \|\| visible \|\| reduced/);
+  assert.match(motion, /\(!motionReady \|\| visible\) && styles\.revealVisible/);
   assert.match(control, /useState\(4\)/);
+  assert.match(control, /if \(alreadyInViewport\) return;/);
 });
 
-test("desktop dock visibility is owned by the responsive utility, not the css module", () => {
+test("desktop dock visibility and active state are derived rather than fabricated", () => {
   const motion = read("marketing-motion.tsx");
   const motionCss = read("marketing-motion.module.css");
 
   assert.match(motion, /styles\.dock, ['"]hidden lg:flex['"]/);
+  assert.match(motion, /useState<string \| null>\(null\)/);
+  assert.match(motion, /intersectionRatios/);
   assert.doesNotMatch(motionCss, /\.dock\s*\{[^}]*\bdisplay\s*:/s);
 });
 
