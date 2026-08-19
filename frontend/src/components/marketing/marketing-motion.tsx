@@ -49,12 +49,22 @@ function useInViewOnce<T extends HTMLElement>(threshold = 0.16) {
   return { ref, visible };
 }
 
+type MarketingRevealVariant = 'editorial' | 'product' | 'state';
+
+const REVEAL_VARIANT_CLASSES: Record<MarketingRevealVariant, string> = {
+  editorial: styles.revealEditorial,
+  product: styles.revealProduct,
+  state: styles.revealState,
+};
+
 export function MarketingReveal({
   children,
   className,
+  variant = 'editorial',
 }: {
   children: React.ReactNode;
   className?: string;
+  variant?: MarketingRevealVariant;
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null);
   const [motionReady, setMotionReady] = React.useState(false);
@@ -84,20 +94,41 @@ export function MarketingReveal({
         setVisible(true);
         observer.disconnect();
       },
-      { threshold: 0.16 },
+      { threshold: variant === 'product' ? 0.12 : 0.16 },
     );
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [variant]);
 
   return (
     <div
       ref={ref}
       className={cn(
         motionReady && styles.reveal,
+        motionReady && REVEAL_VARIANT_CLASSES[variant],
         (!motionReady || visible) && styles.revealVisible,
         className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Newly mounted demo messages get one quiet product-state entrance. */
+export function MarketingMessageArrival({
+  children,
+  kind = 'message',
+}: {
+  children: React.ReactNode;
+  kind?: 'message' | 'system';
+}) {
+  return (
+    <div
+      className={cn(
+        styles.messageArrival,
+        kind === 'system' && styles.messageArrivalSystem,
       )}
     >
       {children}
