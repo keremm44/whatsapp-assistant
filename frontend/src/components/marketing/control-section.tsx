@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { ChatProofCard } from "@/components/marketing/chat-bubbles";
+import { MarketingReveal, TrueFocusLine } from "@/components/marketing/marketing-motion";
 import { MarketingSectionHeading } from "@/components/marketing/section-heading";
 import { cn } from "@/lib/utils/cn";
 
@@ -21,12 +22,20 @@ import { cn } from "@/lib/utils/cn";
  */
 export function ControlSection() {
   return (
-    <section className="mx-auto w-full max-w-[1180px] px-4 py-16 md:px-6 md:py-20 lg:px-8">
+    <section id="kontrol" className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 py-16 md:px-6 md:py-20 lg:px-8">
       <MarketingSectionHeading
         eyebrow="Kontrol"
         title="Kararları asistan kendi başına vermez."
         description="Yanlış cevap korkusu gerçektir. Bu yüzden asistan yalnızca sizin verdiğiniz bilgilerle konuşur ve bilmediğini söylemekten çekinmez."
       />
+
+      <div className="mt-6 max-w-3xl rounded-sheet border border-boundary/50 bg-sunken px-5 py-4 shadow-surface">
+        <p className="mb-3 type-meta font-semibold text-muted-foreground">Çalışma prensibi</p>
+        <TrueFocusLine
+          words={["Bilir.", "Cevaplar.", "Bilmezse", "durur.", "Size", "bırakır."]}
+          className="font-heading text-xl font-semibold leading-8 text-foreground sm:text-2xl"
+        />
+      </div>
 
       <div className="mt-10 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
         <div className="space-y-4">
@@ -48,7 +57,9 @@ export function ControlSection() {
           />
         </div>
 
-        <ControlProof />
+        <MarketingReveal>
+          <ControlProof />
+        </MarketingReveal>
       </div>
     </section>
   );
@@ -65,11 +76,6 @@ function ControlRow({ title, body }: { title: string; body: string }) {
   );
 }
 
-/**
- * The real control surface, rendered as a quiet proof artifact. The chip
- * labels are the backend's own display names; the tone map mirrors the
- * seller panel's `CONTROL_STATE_CHIP_TONE` exactly.
- */
 function ControlProof() {
   return (
     <div className="space-y-3 lg:sticky lg:top-20">
@@ -83,8 +89,6 @@ function ControlProof() {
         <span className="type-row-primary text-foreground">
           Bu konuşmayla kim ilgileniyor?
         </span>
-        {/* Static mockup of the V1 handoff action — not an interactive
-            control; the real button lives in the seller panel. */}
         <span className="rounded-control bg-primary-button px-3 py-1.5 text-sm font-medium text-primary-foreground">
           Ben ilgileneceğim
         </span>
