@@ -48,7 +48,7 @@ export function ControlSection() {
   return (
     <section
       id="kontrol"
-      className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 py-20 md:px-6 md:py-28 lg:px-8"
+      className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 py-12 md:px-6 md:py-16 lg:px-8"
     >
       <div className="grid gap-7 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] md:items-end md:gap-12">
         <div>

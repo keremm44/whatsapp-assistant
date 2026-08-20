@@ -225,10 +225,10 @@ export function MagneticLink({
 }
 
 const NAV_ITEMS = [
-  { href: '#nasil-calisir', label: 'Nasıl çalışır', id: 'nasil-calisir' },
+  { href: '#guven', label: 'Sınır', id: 'guven' },
   { href: '#kontrol', label: 'Kontrol', id: 'kontrol' },
-  { href: '#dene', label: 'Demo', id: 'dene' },
-  { href: '#panel', label: 'Panel', id: 'panel' },
+  { href: '#dene', label: 'Deneyin', id: 'dene' },
+  { href: '#panel', label: 'İşler', id: 'panel' },
   { href: '#kurulum', label: 'Kurulum', id: 'kurulum' },
 ] as const;
 

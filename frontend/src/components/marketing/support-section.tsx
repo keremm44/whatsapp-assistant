@@ -7,8 +7,8 @@ export function SupportSection() {
           Rutin konuşmalar asistanda. Karar gerekenler sizde.
         </h2>
         <p className="mt-5 max-w-xl text-base leading-7 text-muted">
-          WhatsApp işinizi böyle bölüştürün; önce nasıl konuştuğunu ve ne zaman sizi
-          devreye aldığını kendiniz görün.
+          WhatsApp işinizi böyle bölüştürün. Takıldığınızda aynı çalışma yüzeyinden
+          yazarsınız; yalnız bırakılmazsınız.
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-4">

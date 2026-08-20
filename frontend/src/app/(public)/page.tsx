@@ -30,24 +30,24 @@ export const metadata: Metadata = {
 };
 
 /**
- * Public composition uses the seller Instrument language at marketing scale:
+ * Seller-first psychological order (not a feature tour):
  *
- *   Hero      — clear promise + one readable conversation close-up
- *   Daily     — narrow, quiet proof of what leaves the seller's attention
- *   Control   — medium-density real ownership interaction
- *   Demo      — first wide product moment
- *   Critical  — deliberate narrow focus on unknown/return boundaries
- *   Panel     — widest and most product-dense visual peak
- *   Onboarding/support/final — density falls again before the closing action
+ *   Hero      — what this is, one known conversation
+ *   Critical  — will it hurt me? unknown / return / stop
+ *   Daily     — a morning split into routine vs decision
+ *   Control   — I can take over and give it back
+ *   Demo      — try the behaviour
+ *   Panel     — what remains as work
+ *   Onboarding/support — start lightly, you are not alone
  */
 export default function HomePage() {
   return (
     <div className="bg-canvas">
       <Hero />
+      <CriticalStatesSection />
       <DailyLoadSection />
       <ControlSection />
       <DemoSection />
-      <CriticalStatesSection />
       <PanelSection />
       <OnboardingSection />
       <SupportSection />

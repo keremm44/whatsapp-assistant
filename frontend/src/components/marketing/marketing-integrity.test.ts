@@ -21,7 +21,7 @@ test("hero stays server-visible and uses one readable conversation close-up", ()
   assert.doesNotMatch(hero, /MarketingReveal/);
 });
 
-test("public flow separates daily load and critical boundaries around the wide demo", () => {
+test("public flow answers seller fear before demo and work after proof", () => {
   const page = read("../../app/(public)/page.tsx");
 
   assert.match(page, /<DailyLoadSection \/>/);
@@ -30,10 +30,10 @@ test("public flow separates daily load and critical boundaries around the wide d
 
   const order = [
     "<Hero />",
+    "<CriticalStatesSection />",
     "<DailyLoadSection />",
     "<ControlSection />",
     "<DemoSection />",
-    "<CriticalStatesSection />",
     "<PanelSection />",
     "<OnboardingSection />",
     "<SupportSection />",

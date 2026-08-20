@@ -7,7 +7,7 @@ export function CriticalStatesSection() {
   const returnRecord = MARKETING_STORY.ledger.returnReview;
 
   return (
-    <section className="bg-canvas">
+    <section id="guven" className="scroll-mt-20 bg-canvas">
       <div className="mx-auto w-full max-w-[820px] px-4 py-12 md:px-6 md:py-16">
         <MarketingReveal>
           <p className="type-eyebrow text-muted-foreground">Sınır</p>

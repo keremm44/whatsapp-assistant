@@ -9,7 +9,7 @@ export function DailyLoadSection() {
 
   return (
     <section id="nasil-calisir" className="scroll-mt-20 bg-canvas">
-      <div className="mx-auto w-full max-w-[860px] px-4 py-20 md:px-6 md:py-28">
+      <div className="mx-auto w-full max-w-[860px] px-4 py-12 md:px-6 md:py-16">
         <MarketingReveal>
           <p className="type-eyebrow text-muted-foreground">Günlük yük</p>
           <h2 className="mt-3 max-w-3xl font-display text-[34px] font-semibold leading-[40px] tracking-[-0.025em] text-foreground sm:text-[46px] sm:leading-[52px]">

@@ -7,7 +7,7 @@ export function OnboardingSection() {
   return (
     <section
       id="kurulum"
-      className="mx-auto w-full max-w-[920px] scroll-mt-20 px-4 py-20 md:px-6 md:py-28"
+      className="mx-auto w-full max-w-[920px] scroll-mt-20 px-4 py-14 md:px-6 md:py-20"
     >
       <div className="max-w-[760px]">
         <p className="type-eyebrow text-muted-foreground">Canlıya çıkmadan önce</p>

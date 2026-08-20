@@ -1,3 +1,4 @@
+import { FieldGrain } from "@/components/marketing/marketing-frame";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingHeader } from "@/components/marketing/marketing-header";
 
@@ -15,7 +16,8 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="marketing-theme flex min-h-screen flex-col bg-canvas text-foreground">
+    <div className="marketing-theme relative flex min-h-screen flex-col bg-canvas text-foreground">
+      <FieldGrain />
       <a
         href="#main-content"
         className="sr-only z-[60] rounded-control bg-primary-button px-4 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:inline-flex focus:min-h-11 focus:items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-canvas"
@@ -23,7 +25,7 @@ export default function PublicLayout({
         Ana içeriğe geç
       </a>
       <MarketingHeader />
-      <main id="main-content" tabIndex={-1} className="flex-1">
+      <main id="main-content" tabIndex={-1} className="relative z-10 flex-1">
         {children}
       </main>
       <MarketingFooter />
