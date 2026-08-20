@@ -4,7 +4,7 @@ import * as React from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Store } from "lucide-react";
+import { LayoutDashboard } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
 
@@ -69,7 +69,7 @@ export function AdminSidebar() {
                   className="absolute inset-y-2 left-0 w-[2px] rounded-full bg-primary"
                 />
               ) : null}
-              <Store
+              <LayoutDashboard
                 aria-hidden="true"
                 size={20}
                 strokeWidth={1.75}
@@ -77,7 +77,7 @@ export function AdminSidebar() {
                   isActive ? "text-primary" : "text-muted-foreground",
                 )}
               />
-              <span>Mağazalar</span>
+              <span>Genel Bakış</span>
             </Link>
           </li>
         </ul>
