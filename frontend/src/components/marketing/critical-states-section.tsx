@@ -24,7 +24,7 @@ export function CriticalStatesSection() {
         <div className="mt-12 space-y-14">
           <MarketingReveal variant="state">
             <article>
-              <div className="flex items-baseline justify-between gap-4 border-b border-divider pb-4">
+              <div className="flex flex-wrap items-end justify-between gap-4 border-b border-divider pb-4">
                 <div>
                   <p className="type-meta font-semibold text-muted-foreground">Bilinmeyen soru</p>
                   <h3 className="mt-1 font-heading text-xl font-semibold text-foreground sm:text-2xl">
