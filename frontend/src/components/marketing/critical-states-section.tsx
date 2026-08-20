@@ -1,4 +1,3 @@
-import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
 import { SystemNote } from "@/components/marketing/system-note";
@@ -9,68 +8,42 @@ export function CriticalStatesSection() {
 
   return (
     <section className="bg-canvas">
-      <div className="mx-auto w-full max-w-[820px] px-4 py-20 md:px-6 md:py-28">
+      <div className="mx-auto w-full max-w-[820px] px-4 py-12 md:px-6 md:py-16">
         <MarketingReveal>
           <p className="type-eyebrow text-muted-foreground">Sınır</p>
-          <h2 className="mt-3 max-w-3xl font-display text-[34px] font-semibold leading-[40px] tracking-[-0.025em] text-foreground sm:text-[46px] sm:leading-[52px]">
+          <h2 className="mt-3 max-w-3xl font-display text-[28px] font-semibold leading-[34px] tracking-[-0.022em] text-foreground sm:text-[34px] sm:leading-[40px]">
             Bilmediğinde uydurmaz. Karar gerektiğinde durur.
           </h2>
-          <p className="mt-4 max-w-2xl type-body text-muted">
-            Güven, her mesaja cevap vermesinden değil; nerede devam etmeyeceğini
-            bilmesinden gelir.
-          </p>
         </MarketingReveal>
 
-        <div className="mt-12 space-y-14">
+        <div className="mt-8 space-y-8">
           <MarketingReveal variant="state">
-            <article>
-              <div className="flex flex-wrap items-end justify-between gap-4 pb-1">
-                <div>
-                  <p className="type-meta font-semibold text-muted-foreground">Bilinmeyen soru</p>
-                  <h3 className="mt-1 font-heading text-xl font-semibold text-foreground sm:text-2xl">
-                    Net bilgi yoksa bunu açıkça söyler.
-                  </h3>
-                </div>
-                <span className="type-meta text-muted-foreground">
-                  {MARKETING_STORY.ledger.unknown.time}
-                </span>
-              </div>
-              <div className="mt-6 space-y-3">
-                <ChatBubble from="customer">{MARKETING_STORY.unknownQuestion}</ChatBubble>
-                <ChatBubble from="assistant">{MARKETING_STORY.unknownAnswer}</ChatBubble>
+            <article className="grid gap-3 sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-6">
+              <time className="type-meta type-figure font-semibold text-muted-foreground">
+                {MARKETING_STORY.ledger.unknown.time}
+              </time>
+              <div>
+                <p className="type-row-primary text-foreground">
+                  {MARKETING_STORY.unknownQuestion}
+                </p>
+                <p className="mt-2 type-body text-muted">{MARKETING_STORY.unknownAnswer}</p>
               </div>
             </article>
           </MarketingReveal>
 
           <MarketingReveal variant="state">
-            <article className="pt-4">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <p className="type-meta font-semibold text-attention">Karar satıcıda</p>
-                  <h3 className="mt-1 font-heading text-xl font-semibold text-foreground sm:text-2xl">
-                    İade talebinde otomatik konuşma devam etmez.
-                  </h3>
-                </div>
-                <span className="type-meta text-muted-foreground">{returnRecord.time}</span>
-              </div>
-
-              <div className="mt-6 space-y-3">
-                <ChatBubble from="customer">{MARKETING_STORY.returnQuestion}</ChatBubble>
+            <article className="grid gap-3 sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-6">
+              <time className="type-meta type-figure font-semibold text-muted-foreground">
+                {returnRecord.time}
+              </time>
+              <div className="space-y-3">
+                <p className="type-row-primary text-foreground">
+                  {MARKETING_STORY.returnQuestion}
+                </p>
                 <SystemNote tone="attention" label="Otomatik yanıt durur">
                   {MARKETING_STORY.returnSystemOutcome}
                 </SystemNote>
-              </div>
-
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-4 pt-1">
-                <div className="flex flex-wrap items-center gap-3">
-                  <StatusChip tone="attention">İade incelemesi</StatusChip>
-                  <span className="type-row-secondary text-muted-foreground">
-                    {MARKETING_STORY.returnSellerOutcome}
-                  </span>
-                </div>
-                <p className="type-meta text-muted-foreground">
-                  Aynı {returnRecord.time} kaydı aşağıdaki iş sırasına geçer.
-                </p>
+                <StatusChip tone="attention">İade incelemesi</StatusChip>
               </div>
             </article>
           </MarketingReveal>

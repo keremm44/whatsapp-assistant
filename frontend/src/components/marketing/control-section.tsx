@@ -4,7 +4,6 @@ import * as React from "react";
 
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
-import { TrueFocusLine } from "@/components/marketing/marketing-motion";
 import { cn } from "@/lib/utils/cn";
 
 type OwnershipStage = "assistant" | "seller" | "returned";
@@ -63,10 +62,6 @@ export function ControlSection() {
             Asistan rutin konuşmayı yürütür. Siz devraldığınız anda bekler; işiniz
             bittiğinde aynı konuşmayı yeniden asistana bırakabilirsiniz.
           </p>
-          <TrueFocusLine
-            words={["Bilir.", "Cevaplar.", "Bilmezse durur.", "Size bırakır."]}
-            className="mt-5 font-heading text-[20px] font-semibold leading-8 tracking-[-0.012em] text-foreground sm:text-[24px]"
-          />
         </div>
       </div>
 
@@ -159,13 +154,9 @@ function ControlStage() {
           </div>
         </div>
 
-        <div className="flex min-h-[250px] flex-col justify-between px-5 py-6 sm:px-6 sm:py-7">
+        <div className="flex min-h-[220px] flex-col justify-between px-5 py-6 sm:px-6">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="type-meta font-semibold text-primary">0{activeIndex + 1}</span>
-              <span aria-hidden="true" className="h-px flex-1 bg-divider" />
-            </div>
-            <h3 className="mt-5 font-heading text-xl font-semibold leading-7 text-foreground">
+            <h3 className="font-heading text-xl font-semibold leading-7 text-foreground">
               {current.title}
             </h3>
             <p className="mt-2 type-body text-muted">{current.body}</p>

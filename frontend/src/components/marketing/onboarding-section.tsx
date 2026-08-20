@@ -94,16 +94,6 @@ function TestConversation() {
           <ChatBubble from="customer">{MARKETING_STORY.customerQuestion}</ChatBubble>
           <ChatBubble from="assistant">{MARKETING_STORY.assistantAnswer}</ChatBubble>
         </div>
-
-        <div className="mt-7 border-t border-divider pt-6">
-          <p className="font-heading text-xl font-semibold text-foreground sm:text-2xl">
-            Hazır olduğuna siz karar verirsiniz.
-          </p>
-          <p className="mt-2 max-w-2xl text-base leading-7 text-foreground">
-            Cevap biçimini ve verdiğiniz bilgilerin konuşmaya nasıl yansıdığını
-            canlıya çıkmadan önce kontrol edersiniz.
-          </p>
-        </div>
       </div>
     </div>
   );

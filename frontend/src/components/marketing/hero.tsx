@@ -16,8 +16,6 @@ export function Hero() {
         <div className="flex flex-col items-start lg:col-start-1 lg:row-start-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <p className="type-eyebrow text-muted-foreground">WhatsApp asistanı</p>
-            <span aria-hidden="true" className="hidden h-px w-10 bg-divider sm:block" />
-            <p className="type-meta text-muted-foreground">Kontrollü otomasyon · karar sizde</p>
           </div>
 
           <h1 className="mt-5 max-w-[720px] font-display text-[44px] font-semibold leading-[48px] tracking-[-0.03em] text-foreground sm:text-[56px] sm:leading-[60px] lg:text-[62px] lg:leading-[66px]">
@@ -67,9 +65,6 @@ function HeroConversation() {
           <p className="type-meta font-semibold text-chrome-foreground">
             {MARKETING_STORY.storeLabel}
           </p>
-          <p className="mt-0.5 type-meta text-chrome-foreground/60">
-            Örnek müşteri konuşması
-          </p>
           </div>
         </div>
         <span className="inline-flex items-center gap-1.5 type-meta font-semibold text-chrome-foreground/70">
@@ -84,18 +79,6 @@ function HeroConversation() {
       <div className="space-y-3 px-4 py-5 sm:px-6 sm:py-6">
         <ChatBubble from="customer">{MARKETING_STORY.customerQuestion}</ChatBubble>
         <ChatBubble from="assistant">{MARKETING_STORY.assistantAnswer}</ChatBubble>
-        <div className="border-t border-divider pt-4">
-          <ChatBubble from="customer">{MARKETING_STORY.unknownQuestion}</ChatBubble>
-          <div className="mt-3">
-            <ChatBubble from="assistant">{MARKETING_STORY.unknownAnswer}</ChatBubble>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t border-divider bg-recessed px-4 py-3.5 sm:px-6">
-        <p className="type-row-secondary text-muted">
-          Kayıtlı bilgi yoksa cevap uydurmak yerine satıcıya bırakır.
-        </p>
       </div>
     </div>
   );

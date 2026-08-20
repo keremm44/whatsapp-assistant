@@ -174,9 +174,6 @@ export function DemoSection() {
                 <p className="type-meta font-semibold text-chrome-foreground">
                   {MARKETING_STORY.storeLabel}
                 </p>
-                <p className="mt-0.5 type-meta text-chrome-foreground/60">
-                  Kontrollü örnek konuşma
-                </p>
                 </div>
               </div>
               <button

@@ -49,10 +49,6 @@ export function DailyLoadSection() {
             />
           </div>
         </MarketingReveal>
-
-        <p className="mt-5 max-w-2xl type-row-secondary text-muted-foreground">
-          Bunlar örnek kayıtlar; gerçek kullanım miktarı veya tasarruf metriği değildir.
-        </p>
       </div>
     </section>
   );
