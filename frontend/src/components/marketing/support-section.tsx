@@ -2,7 +2,7 @@ import { MarketingReveal } from "@/components/marketing/marketing-motion";
 
 export function SupportSection() {
   return (
-    <section className="border-t border-divider bg-sunken">
+    <section className="bg-sunken">
       <div className="mx-auto w-full max-w-[1100px] px-4 py-20 md:px-6 md:py-28 lg:px-8">
         <div className="mx-auto max-w-[850px]">
           <p className="type-eyebrow text-muted-foreground">Destek</p>
@@ -40,15 +40,11 @@ function SupportBridge() {
   ] as const;
 
   return (
-    <div className="border-y border-divider">
-      {items.map((item, index) => (
+    <div>
+      {items.map((item) => (
         <div
           key={item.index}
-          className={
-            index === 0
-              ? "grid gap-2 py-5 sm:grid-cols-[48px_minmax(0,1fr)] sm:gap-4"
-              : "grid gap-2 border-t border-divider py-5 sm:grid-cols-[48px_minmax(0,1fr)] sm:gap-4"
-          }
+          className="grid gap-2 py-4 sm:grid-cols-[48px_minmax(0,1fr)] sm:gap-4"
         >
           <span className="type-meta font-semibold text-muted-foreground">{item.index}</span>
           <div>
@@ -63,7 +59,7 @@ function SupportBridge() {
 
 function FinalProof() {
   return (
-    <div className="mt-20 border-t border-divider pt-14 sm:mt-24 sm:pt-16">
+    <div className="mt-20 pt-4 sm:mt-24">
       <p className="type-eyebrow text-muted-foreground">Sonuç</p>
       <h3 className="mt-4 max-w-[900px] font-display text-[40px] font-semibold leading-[46px] tracking-[-0.028em] text-foreground sm:text-[56px] sm:leading-[62px]">
         Rutin konuşmalar asistanda. Karar gerekenler sizde.
@@ -84,7 +80,7 @@ function FinalProof() {
           href="#panel"
           className="inline-flex min-h-11 items-center px-1 py-3 text-base font-medium text-foreground underline decoration-divider underline-offset-4 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          Satıcı panelini görün
+          Bugün bakmanız gerekenleri görün
         </a>
       </div>
     </div>

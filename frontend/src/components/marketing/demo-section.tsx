@@ -152,7 +152,7 @@ export function DemoSection() {
   const isAtLeaf = !current?.replies || current.replies.length === 0;
 
   return (
-    <section id="dene" className="scroll-mt-16 border-y border-divider bg-sunken">
+    <section id="dene" className="scroll-mt-16 bg-sunken">
       <div className="mx-auto w-full max-w-[1380px] px-4 py-20 md:px-6 md:py-28 lg:px-8">
         <div className="mx-auto max-w-[920px]">
           <p className="type-eyebrow text-muted-foreground">Deneyin</p>

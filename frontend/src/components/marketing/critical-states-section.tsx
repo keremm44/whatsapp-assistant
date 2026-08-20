@@ -24,7 +24,7 @@ export function CriticalStatesSection() {
         <div className="mt-12 space-y-14">
           <MarketingReveal variant="state">
             <article>
-              <div className="flex flex-wrap items-end justify-between gap-4 border-b border-divider pb-4">
+              <div className="flex flex-wrap items-end justify-between gap-4 pb-1">
                 <div>
                   <p className="type-meta font-semibold text-muted-foreground">Bilinmeyen soru</p>
                   <h3 className="mt-1 font-heading text-xl font-semibold text-foreground sm:text-2xl">
@@ -43,7 +43,7 @@ export function CriticalStatesSection() {
           </MarketingReveal>
 
           <MarketingReveal variant="state">
-            <article className="border-t border-divider pt-10">
+            <article className="pt-4">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p className="type-meta font-semibold text-attention">Karar satıcıda</p>
@@ -61,7 +61,7 @@ export function CriticalStatesSection() {
                 </SystemNote>
               </div>
 
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-divider pt-5">
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-4 pt-1">
                 <div className="flex flex-wrap items-center gap-3">
                   <StatusChip tone="attention">İade incelemesi</StatusChip>
                   <span className="type-row-secondary text-muted-foreground">
@@ -69,7 +69,7 @@ export function CriticalStatesSection() {
                   </span>
                 </div>
                 <p className="type-meta text-muted-foreground">
-                  Aynı {returnRecord.time} kaydı aşağıdaki satıcı paneline geçer.
+                  Aynı {returnRecord.time} kaydı aşağıdaki iş sırasına geçer.
                 </p>
               </div>
             </article>

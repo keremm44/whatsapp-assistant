@@ -10,7 +10,7 @@ import { MARKETING_STORY } from "@/components/marketing/marketing-story";
  */
 export function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-divider bg-canvas">
+    <section className="relative overflow-hidden bg-canvas">
       <Atmosphere />
       <div className="relative mx-auto grid w-full max-w-[1180px] gap-x-12 gap-y-7 px-4 pb-16 pt-12 md:px-6 md:pb-20 md:pt-20 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)] lg:grid-rows-[auto_auto] lg:items-center lg:px-8 lg:pb-24">
         <div className="flex flex-col items-start lg:col-start-1 lg:row-start-1">
@@ -45,7 +45,7 @@ export function Hero() {
               href="#panel"
               className="inline-flex min-h-11 items-center px-2 py-3 text-base font-medium text-foreground underline decoration-divider underline-offset-4 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              Satıcı panelini görün
+              Bugün bakmanız gerekenleri görün
             </a>
           </div>
           <p className="type-meta text-muted-foreground">
