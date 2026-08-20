@@ -1,13 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { siteConfig } from "@/config/site";
-
+/** No public marketing URLs. Login and workspaces stay out of the sitemap. */
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [
-    {
-      url: siteConfig.url,
-      changeFrequency: "weekly",
-      priority: 1,
-    },
-  ];
+  return [];
 }
