@@ -1,5 +1,3 @@
-import * as React from "react";
-
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
