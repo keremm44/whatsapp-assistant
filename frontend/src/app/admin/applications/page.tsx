@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ApplicationInvite } from "@/components/admin/application-invite";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatusChip } from "@/components/shared/status-chip";
+import { StatusChip, type StatusChipTone } from "@/components/shared/status-chip";
 import type { AdminApplication } from "@/lib/admin/applications-api";
 import { resolveAdminApplications } from "@/lib/admin/applications-server";
 
@@ -17,8 +17,8 @@ const labels: Record<AdminApplication["status"], string> = {
   cancelled: "İptal",
 };
 
-const tones: Record<AdminApplication["status"], "primary" | "muted" | "success" | "attention"> = {
-  pending: "primary",
+const tones: Record<AdminApplication["status"], StatusChipTone> = {
+  pending: "muted",
   contacted: "muted",
   approved: "success",
   rejected: "muted",
@@ -33,6 +33,10 @@ function hrefFor(input: { status?: AdminApplication["status"]; application?: num
   if (input.status) params.set("status", input.status);
   if (input.application) params.set("application", String(input.application));
   return `/admin/applications${params.size ? `?${params}` : ""}` as Route;
+}
+
+function tabClass(active: boolean) {
+  return `border-b-2 px-1 py-2 type-meta transition-colors ${active ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`;
 }
 
 export default async function AdminApplicationsPage({
@@ -62,8 +66,8 @@ export default async function AdminApplicationsPage({
 
       <div className="mt-8 grid overflow-hidden rounded-sheet border border-boundary/70 bg-raised shadow-surface lg:grid-cols-[380px_minmax(0,1fr)]">
         <aside className="border-b border-divider lg:border-b-0 lg:border-r">
-          <div className="border-b border-divider p-4">
-            <div className="flex items-center justify-between gap-3">
+          <div className="border-b border-divider px-4 pt-4">
+            <div className="flex items-center justify-between gap-3 pb-2">
               <p className="type-meta font-semibold text-primary">BAŞVURU KUYRUĞU</p>
               {result.state === "ready" ? (
                 <span className="type-figure text-sm font-semibold text-muted-foreground">
@@ -71,18 +75,15 @@ export default async function AdminApplicationsPage({
                 </span>
               ) : null}
             </div>
-            <nav className="mt-3 flex flex-wrap gap-2" aria-label="Başvuru durumu">
-              <Link
-                href={hrefFor({})}
-                className={`rounded-pill px-2 py-1 type-meta ${!status ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-elevated"}`}
-              >
+            <nav className="flex flex-wrap gap-x-4" aria-label="Başvuru durumu">
+              <Link href={hrefFor({})} className={tabClass(!status)}>
                 Tümü
               </Link>
               {statuses.map((item) => (
                 <Link
                   key={item}
                   href={hrefFor({ status: item })}
-                  className={`rounded-pill px-2 py-1 type-meta ${status === item ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-elevated"}`}
+                  className={tabClass(status === item)}
                 >
                   {labels[item]}
                 </Link>
@@ -132,7 +133,7 @@ export default async function AdminApplicationsPage({
           {selected ? (
             <ApplicationDetail application={selected} />
           ) : result.state === "ready" ? (
-            <div className="flex min-h-[420px] items-center justify-center text-center">
+            <div className="hidden min-h-[420px] items-center justify-center text-center lg:flex">
               <div className="max-w-sm">
                 <p className="type-record-identity text-foreground">Başvuru bağlamı</p>
                 <p className="mt-2 type-body text-muted">
