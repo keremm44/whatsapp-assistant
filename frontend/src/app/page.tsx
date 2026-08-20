@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
+import { LandingPage } from "@/components/marketing/landing-page";
 
-/** Arrival is login. There is no public site. */
+/** Public product introduction — the controlled entry point for sellers. */
 export default function HomePage() {
-  redirect("/giris");
+  return <LandingPage />;
 }

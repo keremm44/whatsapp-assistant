@@ -7,11 +7,15 @@ import { fileURLToPath } from "node:url";
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const read = (name: string) => readFileSync(path.join(directory, name), "utf8");
 
-test("root arrival redirects to login", () => {
+test("root arrival renders the public product introduction", () => {
   const page = read("page.tsx");
+  const landing = read("../components/marketing/landing-page.tsx");
 
-  assert.match(page, /redirect\(["']\/giris["']\)/);
-  assert.doesNotMatch(page, /Hero/);
+  assert.match(page, /<LandingPage \/>/);
+  assert.doesNotMatch(page, /redirect\(["']\/giris["']\)/);
+  assert.match(landing, /Müşterileriniz yanıt bulurken, karar sizde kalsın/);
+  assert.match(landing, /Bilmediği soruyu size bırakır/);
+  assert.match(landing, /href="\/giris"/);
 });
 
 test("login page remains the unauthenticated entry", () => {
@@ -21,19 +25,19 @@ test("login page remains the unauthenticated entry", () => {
   assert.match(giris, /<LoginForm \/>/);
 });
 
-test("robots does not advertise a public marketing site", () => {
+test("robots allows the public introduction but protects workspaces", () => {
   const robots = read("robots.ts");
 
-  assert.match(robots, /disallow:/);
+  assert.match(robots, /allow: "\/"/);
   assert.match(robots, /"\/giris"/);
   assert.match(robots, /"\/seller"/);
   assert.match(robots, /"\/admin"/);
-  assert.doesNotMatch(robots, /allow: "\/"/);
 });
 
-test("sitemap lists no public pages", () => {
+test("sitemap includes only the public introduction", () => {
   const sitemap = read("sitemap.ts");
 
-  assert.match(sitemap, /return \[\]/);
-  assert.doesNotMatch(sitemap, /siteConfig\.url/);
+  assert.match(sitemap, /url: siteConfig\.url/);
+  assert.doesNotMatch(sitemap, /\/seller/);
+  assert.doesNotMatch(sitemap, /\/giris/);
 });

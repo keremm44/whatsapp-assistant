@@ -1,6 +1,15 @@
 import type { MetadataRoute } from "next";
 
-/** No public marketing URLs. Login and workspaces stay out of the sitemap. */
+import { siteConfig } from "@/config/site";
+
+/** The public introduction is the only indexable product surface. */
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [];
+  return [
+    {
+      url: siteConfig.url,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 1,
+    },
+  ];
 }
