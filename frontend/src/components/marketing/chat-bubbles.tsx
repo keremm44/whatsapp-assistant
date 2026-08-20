@@ -30,10 +30,10 @@ export function ChatBubble({
     >
       <div
         className={cn(
-          "max-w-[85%] rounded-[5px] px-3.5 py-2.5 text-foreground",
+          "max-w-[85%] px-3.5 py-2.5 text-[15px] leading-6 text-foreground",
           isAssistant
-            ? "border border-boundary bg-raised"
-            : "border-l-2 border-boundary bg-sunken",
+            ? "rounded-[14px_14px_4px_14px] border border-boundary/80 bg-raised shadow-1"
+            : "rounded-[14px_14px_14px_4px] border-l-2 border-boundary bg-sunken",
         )}
       >
         {isAssistant ? (

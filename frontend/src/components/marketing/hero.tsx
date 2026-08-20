@@ -1,4 +1,5 @@
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
+import { Atmosphere, WindowLights } from "@/components/marketing/marketing-frame";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 
 /**
@@ -9,8 +10,9 @@ import { MARKETING_STORY } from "@/components/marketing/marketing-story";
  */
 export function Hero() {
   return (
-    <section className="border-b border-divider bg-canvas">
-      <div className="mx-auto grid w-full max-w-[1180px] gap-x-12 gap-y-7 px-4 pb-16 pt-12 md:px-6 md:pb-20 md:pt-20 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)] lg:grid-rows-[auto_auto] lg:items-center lg:px-8 lg:pb-24">
+    <section className="relative overflow-hidden border-b border-divider bg-canvas">
+      <Atmosphere />
+      <div className="relative mx-auto grid w-full max-w-[1180px] gap-x-12 gap-y-7 px-4 pb-16 pt-12 md:px-6 md:pb-20 md:pt-20 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)] lg:grid-rows-[auto_auto] lg:items-center lg:px-8 lg:pb-24">
         <div className="flex flex-col items-start lg:col-start-1 lg:row-start-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <p className="type-eyebrow text-muted-foreground">WhatsApp asistanı</p>
@@ -57,15 +59,18 @@ export function Hero() {
 
 function HeroConversation() {
   return (
-    <div className="overflow-hidden rounded-sheet border border-boundary bg-sunken shadow-surface">
+    <div className="overflow-hidden rounded-sheet border border-boundary bg-sunken shadow-2">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider bg-chrome px-4 py-3.5 sm:px-5">
-        <div>
+        <div className="flex min-w-0 items-center gap-3">
+          <WindowLights />
+          <div>
           <p className="type-meta font-semibold text-chrome-foreground">
             {MARKETING_STORY.storeLabel}
           </p>
           <p className="mt-0.5 type-meta text-chrome-foreground/60">
             Örnek müşteri konuşması
           </p>
+          </div>
         </div>
         <span className="inline-flex items-center gap-1.5 type-meta font-semibold text-chrome-foreground/70">
           <span

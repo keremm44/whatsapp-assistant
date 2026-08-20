@@ -1,4 +1,5 @@
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
+import { WindowLights } from "@/components/marketing/marketing-frame";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
 
@@ -74,11 +75,14 @@ function TestConversation() {
   return (
     <div className="overflow-hidden rounded-sheet border border-boundary bg-sunken shadow-surface">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider bg-chrome px-4 py-3.5 sm:px-6">
-        <div>
+        <div className="flex min-w-0 items-center gap-3">
+          <WindowLights />
+          <div>
           <p className="type-meta font-semibold text-chrome-foreground">Test sohbeti</p>
           <p className="mt-0.5 type-meta text-chrome-foreground/60">
             {MARKETING_STORY.storeLabel}
           </p>
+          </div>
         </div>
         <span className="rounded-control border border-boundary px-2.5 py-1 type-meta font-semibold text-muted-foreground">
           Müşteriye açık değil

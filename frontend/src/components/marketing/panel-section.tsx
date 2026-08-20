@@ -37,11 +37,65 @@ export function PanelSection() {
       </div>
 
       <MarketingReveal variant="product" className="mt-10">
-        <div className="mx-auto w-full max-w-[1560px] border-y border-boundary bg-canvas lg:min-h-[720px]">
-          <SellerDashboardProof />
+        <div className="mx-auto w-full max-w-[1560px] border-y border-boundary bg-chrome lg:min-h-[720px]">
+          <WorkspaceProof />
         </div>
       </MarketingReveal>
     </section>
+  );
+}
+
+function WorkspaceProof() {
+  const nav = [
+    { label: "Genel Bakış", active: true },
+    { label: "Konuşmalar", active: false },
+    { label: "Sipariş Bilgileri", active: false },
+    { label: "İade ve Sorunlar", active: false },
+  ] as const;
+
+  return (
+    <div className="flex min-h-[inherit] overflow-hidden">
+      <aside
+        aria-hidden="true"
+        className="hidden w-[212px] shrink-0 flex-col border-r border-boundary/70 bg-chrome px-3 py-5 lg:flex"
+      >
+        <p className="px-3 font-display text-[13px] font-semibold tracking-[-0.012em] text-chrome-foreground">
+          WhatsApp Asistan
+        </p>
+        <p className="mt-0.5 px-3 type-meta text-chrome-foreground/45">
+          Mağaza yönetimi
+        </p>
+        <p className="mb-1.5 mt-6 flex items-center gap-2 px-3">
+          <span className="h-px w-2.5 bg-chrome-foreground/25" />
+          <span className="type-eyebrow text-chrome-foreground/40">İşler</span>
+        </p>
+        <ul className="flex flex-col gap-0.5">
+          {nav.map((item) => (
+            <li
+              key={item.label}
+              className={
+                item.active
+                  ? "relative flex h-10 items-center rounded-control bg-raised px-3 text-[13px] font-semibold text-foreground"
+                  : "flex h-10 items-center rounded-control px-3 text-[13px] text-chrome-foreground/65"
+              }
+            >
+              {item.active ? (
+                <span className="absolute inset-y-1 left-0 w-[3px] rounded-l-control bg-primary" />
+              ) : null}
+              {item.label}
+            </li>
+          ))}
+        </ul>
+      </aside>
+      <div className="min-w-0 flex-1 bg-canvas">
+        <div className="flex h-12 items-center border-b border-boundary/60 bg-chrome px-4">
+          <p className="type-meta font-semibold text-chrome-foreground/70">
+            Genel Bakış
+          </p>
+        </div>
+        <SellerDashboardProof />
+      </div>
+    </div>
   );
 }
 

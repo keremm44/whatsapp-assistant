@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
+import { WindowLights } from "@/components/marketing/marketing-frame";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import {
   MarketingMessageArrival,
@@ -165,15 +166,18 @@ export function DemoSection() {
         </div>
 
         <MarketingReveal variant="product" className="mt-10">
-          <div className="overflow-hidden rounded-sheet border border-boundary bg-raised shadow-surface">
+          <div className="overflow-hidden rounded-sheet border border-boundary bg-raised shadow-2">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider bg-chrome px-4 py-3.5 sm:px-7">
-              <div>
+              <div className="flex min-w-0 items-center gap-3">
+                <WindowLights />
+                <div>
                 <p className="type-meta font-semibold text-chrome-foreground">
                   {MARKETING_STORY.storeLabel}
                 </p>
                 <p className="mt-0.5 type-meta text-chrome-foreground/60">
                   Kontrollü örnek konuşma
                 </p>
+                </div>
               </div>
               <button
                 type="button"

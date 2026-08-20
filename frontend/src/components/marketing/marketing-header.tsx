@@ -95,7 +95,7 @@ export function MarketingHeader() {
     <header
       onFocusCapture={revealHeader}
       className={cn(
-        "sticky top-0 z-50 border-b border-boundary bg-chrome",
+        "sticky top-0 z-50 border-b border-boundary bg-chrome/92 backdrop-blur-md",
         "transition-[transform,opacity] duration-200 ease-out will-change-transform motion-reduce:transition-none",
         isHidden
           ? "pointer-events-none -translate-y-full opacity-0"
