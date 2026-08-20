@@ -30,9 +30,10 @@ import { SellerTopbar } from "./seller-topbar";
  *   the canonical palette CSS variables so every Tailwind utility
  *   inside the seller workspace resolves to an "Instrument" value:
  *   a cool blue-graphite material ladder, interaction cyan and
- *   coral seller attention. Admin, auth and public surfaces sit
- *   outside this wrapper and stay on the light root theme — the
- *   dark workspace is seller-only.
+ *   coral seller attention. This describes the seller shell itself;
+ *   it does not impose a light-theme requirement on public, auth or
+ *   future product surfaces. Those surfaces may reuse or adapt the
+ *   Instrument language when their own product direction calls for it.
  */
 export function SellerShell({
   children,

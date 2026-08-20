@@ -84,8 +84,8 @@ export function AccessUnavailable({
       role="status"
       aria-live="polite"
       className={cn(
-        "mx-auto flex w-full max-w-md flex-col items-center justify-center gap-3 px-4 text-center",
-        compact ? "py-4" : "min-h-[60vh] py-12",
+        "marketing-theme mx-auto flex w-full max-w-md flex-col items-center justify-center gap-3 px-4 text-center text-foreground",
+        compact ? "py-4" : "min-h-screen bg-canvas py-12",
         className,
       )}
     >

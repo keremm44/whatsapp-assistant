@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-6 text-center">
+    <div className="marketing-theme marketing-field flex min-h-screen flex-col items-center justify-center gap-3 bg-canvas px-6 text-center text-foreground">
       <p className="text-sm text-muted-foreground">404</p>
       <h1 className="font-heading text-2xl text-foreground">
         Aradığınız sayfa bulunamadı
@@ -12,7 +12,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
-        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         Ana sayfaya dön
       </Link>

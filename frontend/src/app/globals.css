@@ -283,12 +283,15 @@
 }
 
 /*
- * SELLER WORKSPACE — "INSTRUMENT" (dark)
+ * INSTRUMENT — the shared dark product theme (seller workspace + public
+ * marketing).
  *
- * The seller workspace lives under `.seller-theme` (set on the root
- * <div> in `seller-shell.tsx`). Everything here overrides the
- * canonical palette ONLY for the seller subtree; admin, auth and
- * public surfaces stay on the light root theme.
+ * The seller workspace applies it via `.seller-theme` (set on the root
+ * <div> in `seller-shell.tsx`); the public marketing site applies it via
+ * `.marketing-theme` in `(public)/layout.tsx`. The two class names share
+ * ONE block so the palette stays a single source of truth, while each
+ * surface keeps its own selector for any future surface-specific
+ * behaviour. Admin and auth surfaces stay on the light root theme.
  *
  * WHAT THIS DIRECTION KEEPS from the Working Ledger pilot:
  *   - ledger row discipline: contiguous work sheets divided by rules,
@@ -340,6 +343,7 @@
  *   Content TYPE is never colour-coded: an order and a return with the
  *   same lifecycle state get the same tone.
  */
+.marketing-theme,
 .seller-theme {
   color-scheme: dark;
 
@@ -581,7 +585,8 @@
     outline-offset: 2px;
   }
 
-  .seller-theme :focus-visible {
+  .seller-theme :focus-visible,
+  .marketing-theme :focus-visible {
     outline-width: 2.5px;
   }
 
@@ -591,7 +596,8 @@
   }
 
   /* Text selection needs a visibly brighter well on dark material. */
-  .seller-theme ::selection {
+  .seller-theme ::selection,
+  .marketing-theme ::selection {
     background-color: rgb(var(--color-primary-rgb) / 0.32);
     color: var(--color-foreground);
   }
@@ -840,5 +846,46 @@
         rgb(var(--color-primary-rgb) / 0.05),
         transparent 60%
       );
+  }
+
+  /* Public introduction: a composed Instrument field rather than an
+     empty marketing canvas. The pattern is deliberately restrained;
+     it creates depth around the product previews without competing
+     with readable product copy. */
+  .marketing-field {
+    background-image:
+      linear-gradient(rgb(var(--color-divider-rgb) / 0.2) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--color-divider-rgb) / 0.2) 1px, transparent 1px),
+      radial-gradient(760px 480px at 8% 8%, rgb(var(--color-primary-rgb) / 0.12), transparent 68%),
+      radial-gradient(680px 480px at 96% 19%, rgb(var(--color-brand-rgb) / 0.11), transparent 66%);
+    background-size: 48px 48px, 48px 48px, auto, auto;
+  }
+
+  .marketing-preview {
+    background-image:
+      linear-gradient(135deg, rgb(var(--color-raised-rgb) / 0.98), rgb(var(--color-overlay-rgb) / 0.88)),
+      linear-gradient(rgb(var(--color-divider-rgb) / 0.22) 1px, transparent 1px);
+    background-size: auto, 100% 36px;
+  }
+
+  .marketing-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(320px 180px at 90% 10%, rgb(var(--color-primary-rgb) / 0.08), transparent 72%);
+  }
+
+  .marketing-cta-orbit {
+    position: absolute;
+    top: -190px;
+    right: -100px;
+    width: 420px;
+    height: 420px;
+    border: 1px solid rgb(var(--color-brand-rgb) / 0.2);
+    border-radius: 9999px;
+    box-shadow:
+      0 0 0 36px rgb(var(--color-brand-rgb) / 0.03),
+      0 0 0 92px rgb(var(--color-primary-rgb) / 0.025);
   }
 }
