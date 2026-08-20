@@ -1,6 +1,5 @@
 import { AdminOverview } from "@/components/admin/dashboard/admin-overview";
 import { PageContainer } from "@/components/shared/page-container";
-import { PageHeader } from "@/components/shared/page-header";
 import { resolveAdminOverviewFromSession } from "@/lib/admin/overview-server";
 
 /** Admin landing — real operational overview composed from the existing
@@ -10,11 +9,6 @@ export default async function AdminHomePage() {
 
   return (
     <PageContainer size="wide" className="py-8 sm:py-10">
-      <PageHeader
-        caption="YÖNETİM"
-        title="Yönetim Merkezi"
-        description="Başvuruları, mağaza durumlarını ve yönetim kararını bekleyen operasyonel konuları tek yerde takip edin."
-      />
       <AdminOverview snapshot={snapshot} />
     </PageContainer>
   );
