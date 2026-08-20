@@ -1,1 +1,92 @@
-import{apiFetchWithAccessToken}from"@/lib/api/authenticated";export type AdminApplication={id:number;fullName:string;storeName:string;phone:string;email:string|null;storeLink:string|null;productCategory:string|null;notes:string|null;adminNote:string|null;status:"pending"|"contacted"|"approved"|"rejected"|"cancelled";createdAt:string};const o=(x:unknown):Record<string,unknown>=>{if(!x||typeof x!=="object"||Array.isArray(x))throw Error("admin_applications_invalid");return x as Record<string,unknown>};const s=(r:Record<string,unknown>,k:string)=>{const v=r[k];if(typeof v!=="string"||!v)throw Error("admin_applications_invalid_"+k);return v};const ns=(r:Record<string,unknown>,k:string)=>r[k]===null||r[k]===undefined?null:s(r,k);const row=(x:unknown):AdminApplication=>{const r=o(x),id=r.id;if(typeof id!=="number"||!Number.isInteger(id)||id<1)throw Error("admin_applications_invalid_id");const status=s(r,"status");if(!["pending","contacted","approved","rejected","cancelled"].includes(status))throw Error("admin_applications_invalid_status");return{id,fullName:s(r,"full_name"),storeName:s(r,"store_name"),phone:s(r,"phone"),email:ns(r,"email"),storeLink:ns(r,"store_link"),productCategory:ns(r,"product_category"),notes:ns(r,"notes"),adminNote:ns(r,"admin_note"),status:status as AdminApplication["status"],createdAt:s(r,"created_at")}};export const fetchAdminApplications=async(token:string,status?:AdminApplication["status"]):Promise<{total:number;applications:AdminApplication[]}>=>{const q=status?`?status=${status}&limit=100`:"?limit=100";const r=o(await apiFetchWithAccessToken<unknown>(`/admin/applications${q}`,token,{cache:"no-store"}));const a=r.applications;if(!Array.isArray(a)||typeof r.toplam!=="number")throw Error("admin_applications_invalid_list");return{total:r.toplam,applications:a.map(row)}};export const inviteAdminApplication=async(token:string,id:number,input:{email?:string;adminNote?:string})=>apiFetchWithAccessToken<unknown>(`/admin/applications/${id}/invite`,token,{method:"POST",body:JSON.stringify({email:input.email||undefined,admin_note:input.adminNote||undefined}),cache:"no-store"});
+import { apiFetchWithAccessToken } from "@/lib/api/authenticated";
+
+export type AdminApplication = {
+  id: number;
+  fullName: string;
+  storeName: string;
+  phone: string;
+  email: string | null;
+  storeLink: string | null;
+  productCategory: string | null;
+  notes: string | null;
+  adminNote: string | null;
+  status: "pending" | "contacted" | "approved" | "rejected" | "cancelled";
+  createdAt: string;
+};
+
+const object = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("admin_applications_invalid");
+  }
+  return value as Record<string, unknown>;
+};
+
+const string = (row: Record<string, unknown>, key: string) => {
+  const value = row[key];
+  if (typeof value !== "string" || !value) {
+    throw new Error(`admin_applications_invalid_${key}`);
+  }
+  return value;
+};
+
+const nullableString = (row: Record<string, unknown>, key: string) =>
+  row[key] === null || row[key] === undefined ? null : string(row, key);
+
+const parseApplication = (value: unknown): AdminApplication => {
+  const row = object(value);
+  const id = row.id;
+  if (typeof id !== "number" || !Number.isInteger(id) || id < 1) {
+    throw new Error("admin_applications_invalid_id");
+  }
+  const status = string(row, "status");
+  if (!["pending", "contacted", "approved", "rejected", "cancelled"].includes(status)) {
+    throw new Error("admin_applications_invalid_status");
+  }
+  return {
+    id,
+    fullName: string(row, "full_name"),
+    storeName: string(row, "store_name"),
+    phone: string(row, "phone"),
+    email: nullableString(row, "email"),
+    storeLink: nullableString(row, "store_link"),
+    productCategory: nullableString(row, "product_category"),
+    notes: nullableString(row, "notes"),
+    adminNote: nullableString(row, "admin_note"),
+    status: status as AdminApplication["status"],
+    createdAt: string(row, "created_at"),
+  };
+};
+
+export async function fetchAdminApplications(
+  token: string,
+  status?: AdminApplication["status"],
+): Promise<{ total: number; applications: AdminApplication[] }> {
+  const query = new URLSearchParams({ limit: "500" });
+  if (status) query.set("status", status);
+  const response = object(
+    await apiFetchWithAccessToken<unknown>(`/admin/applications?${query}`, token, {
+      cache: "no-store",
+    }),
+  );
+  if (!Array.isArray(response.applications) || typeof response.toplam !== "number") {
+    throw new Error("admin_applications_invalid_list");
+  }
+  return {
+    total: response.toplam,
+    applications: response.applications.map(parseApplication),
+  };
+}
+
+export const inviteAdminApplication = async (
+  token: string,
+  id: number,
+  input: { email?: string; adminNote?: string },
+) =>
+  apiFetchWithAccessToken<unknown>(`/admin/applications/${id}/invite`, token, {
+    method: "POST",
+    body: JSON.stringify({
+      email: input.email || undefined,
+      admin_note: input.adminNote || undefined,
+    }),
+    cache: "no-store",
+  });
