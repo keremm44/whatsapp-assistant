@@ -1,4 +1,5 @@
 import * as React from "react";
+import { CircleDot, ShieldCheck, Sparkles } from "lucide-react";
 
 /**
  * Dashboard header — the top of today's work docket.
@@ -34,21 +35,45 @@ export function DashboardHeader({
   const hasSplit = typeof high === "number" && typeof normal === "number";
 
   return (
-    <div className="flex flex-col gap-5 pb-7 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
-      <div className="space-y-2.5">
-        <h1 className="type-page-title text-foreground">{title}</h1>
-        {description ? (
-          <p className="max-w-2xl type-body text-muted">{description}</p>
-        ) : null}
-      </div>
-      {total > 0 ? (
-        hasSplit ? (
-          <WorkloadStats total={total} high={high!} normal={normal!} />
+    <header className="dashboard-hero relative overflow-hidden rounded-floating border border-boundary/70 px-5 py-6 shadow-surface sm:px-7 sm:py-7 lg:px-8">
+      <div className="dashboard-hero-orbit" aria-hidden="true" />
+      <div className="relative flex flex-col gap-7 xl:flex-row xl:items-end xl:justify-between">
+        <div className="max-w-2xl space-y-4">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex items-center gap-2 border-l-2 border-primary/70 py-1 pl-2.5 type-meta font-semibold text-primary">
+              <CircleDot aria-hidden="true" size={13} strokeWidth={2.2} />
+              Kontrol merkezi
+            </span>
+            <span className="inline-flex items-center gap-1.5 type-meta text-muted-foreground">
+              <Sparkles aria-hidden="true" size={13} strokeWidth={1.8} className="text-brand" />
+              Günlük çalışma görünümü
+            </span>
+          </div>
+          <div className="space-y-2.5">
+            <h1 className="type-page-title max-w-xl text-foreground">{title}</h1>
+            {description ? (
+              <p className="max-w-xl type-body text-muted">{description}</p>
+            ) : null}
+          </div>
+          <p className="flex max-w-xl items-start gap-2.5 type-row-secondary text-muted-foreground">
+            <ShieldCheck aria-hidden="true" size={17} strokeWidth={1.8} className="mt-0.5 shrink-0 text-success" />
+            <span>İnceleme gerektiren kayıtlar ayrı tutulur; karar gerektiren noktalar sizin görünürlüğünüzde kalır.</span>
+          </p>
+        </div>
+        {total > 0 ? (
+          hasSplit ? (
+            <WorkloadStats total={total} high={high!} normal={normal!} />
+          ) : (
+            <WorkloadCount total={total} />
+          )
         ) : (
-          <WorkloadCount total={total} />
-        )
-      ) : null}
-    </div>
+          <div className="dashboard-hero-calm flex items-center gap-3 self-start rounded-sheet border border-success/25 px-4 py-3 xl:self-auto">
+            <ShieldCheck aria-hidden="true" size={18} strokeWidth={1.9} className="shrink-0 text-success" />
+            <p className="type-row-secondary text-muted">Şu an inceleme bekleyen bir kayıt yok.</p>
+          </div>
+        )}
+      </div>
+    </header>
   );
 }
 
@@ -77,7 +102,7 @@ function WorkloadStats({
     <dl
       role="status"
       aria-label={`İlgilenmeniz gereken ${total} konu`}
-      className="grid w-full shrink-0 grid-cols-3 divide-x divide-divider self-start overflow-hidden rounded-sheet bg-raised shadow-surface border border-boundary/60 sm:w-auto sm:min-w-[360px]"
+      className="dashboard-workload grid w-full shrink-0 grid-cols-3 divide-x divide-divider self-start overflow-hidden rounded-sheet border border-boundary/70 sm:w-auto sm:min-w-[372px]"
     >
       {stats.map((stat) => (
         <div key={stat.label} className="px-4 py-3 sm:px-5">
