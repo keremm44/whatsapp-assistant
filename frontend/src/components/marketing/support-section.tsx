@@ -1,5 +1,3 @@
-import * as React from "react";
-
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
 
 export function SupportSection() {
