@@ -1,1 +1,168 @@
-import{apiFetchWithAccessToken}from"@/lib/api/authenticated";export type AdminAnnouncement={id:number;title:string;message:string;audienceType:"ALL_SELLERS"|"SELECTED_SELLERS";targetCount:number;readCount:number;publishedAt:string};const o=(x:unknown):Record<string,unknown>=>{if(!x||typeof x!=="object"||Array.isArray(x))throw Error("admin_announcements_invalid");return x as Record<string,unknown>};const s=(r:Record<string,unknown>,k:string)=>{const v=r[k];if(typeof v!=="string"||!v)throw Error("admin_announcements_invalid_"+k);return v};const n=(r:Record<string,unknown>,k:string)=>{const v=r[k];if(typeof v!=="number"||!Number.isInteger(v)||v<0)throw Error("admin_announcements_invalid_"+k);return v};const row=(x:unknown):AdminAnnouncement=>{const r=o(x),a=s(r,"audience_type");if(a!=="ALL_SELLERS"&&a!=="SELECTED_SELLERS")throw Error("admin_announcements_invalid_audience");return{id:n(r,"id"),title:s(r,"title"),message:s(r,"message"),audienceType:a,targetCount:n(r,"target_count"),readCount:n(r,"read_count"),publishedAt:s(r,"published_at")}};export const fetchAdminAnnouncements=async(t:string)=>{const r=o(await apiFetchWithAccessToken<unknown>("/admin/announcements?limit=30&offset=0",t,{cache:"no-store"}));if(!Array.isArray(r.announcements))throw Error("admin_announcements_invalid_list");return r.announcements.map(row)};export const createAdminAnnouncement=async(t:string,title:string,message:string,sellerIds?:number[])=>row(o(await apiFetchWithAccessToken<unknown>("/admin/announcements",t,{method:"POST",body:JSON.stringify({title,message,audience:sellerIds?.length?{type:"SELECTED_SELLERS",seller_ids:sellerIds}:{type:"ALL_SELLERS"}})})).announcement);
+import { apiFetchWithAccessToken } from "@/lib/api/authenticated";
+
+export type AdminAnnouncementAudienceType = "ALL_SELLERS" | "SELECTED_SELLERS";
+
+export type AdminAnnouncementTarget = {
+  seller: {
+    id: number;
+    name: string | null;
+    storeName: string | null;
+  };
+  readAt: string | null;
+};
+
+export type AdminAnnouncement = {
+  id: number;
+  title: string;
+  message: string;
+  audienceType: AdminAnnouncementAudienceType;
+  targetCount: number;
+  readCount: number;
+  publishedAt: string;
+  createdAt?: string;
+  targets?: AdminAnnouncementTarget[];
+};
+
+export type AdminAnnouncementPage = {
+  total: number;
+  limit: number;
+  offset: number;
+  announcements: AdminAnnouncement[];
+};
+
+const object = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("admin_announcements_invalid");
+  }
+  return value as Record<string, unknown>;
+};
+
+const string = (row: Record<string, unknown>, key: string) => {
+  const value = row[key];
+  if (typeof value !== "string" || !value) {
+    throw new Error(`admin_announcements_invalid_${key}`);
+  }
+  return value;
+};
+
+const optionalString = (row: Record<string, unknown>, key: string) => {
+  const value = row[key];
+  if (value === null || value === undefined) return null;
+  return string(row, key);
+};
+
+const number = (row: Record<string, unknown>, key: string) => {
+  const value = row[key];
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new Error(`admin_announcements_invalid_${key}`);
+  }
+  return value;
+};
+
+const parseTarget = (value: unknown): AdminAnnouncementTarget => {
+  const row = object(value);
+  const seller = object(row.seller);
+  return {
+    seller: {
+      id: number(seller, "id"),
+      name: optionalString(seller, "name"),
+      storeName: optionalString(seller, "store_name"),
+    },
+    readAt: optionalString(row, "read_at"),
+  };
+};
+
+const parseAnnouncement = (value: unknown): AdminAnnouncement => {
+  const row = object(value);
+  const audienceType = string(row, "audience_type");
+  if (audienceType !== "ALL_SELLERS" && audienceType !== "SELECTED_SELLERS") {
+    throw new Error("admin_announcements_invalid_audience");
+  }
+
+  const targetCount = number(row, "target_count");
+  const readCount = number(row, "read_count");
+  if (readCount > targetCount) {
+    throw new Error("admin_announcements_invalid_read_count");
+  }
+
+  const result: AdminAnnouncement = {
+    id: number(row, "id"),
+    title: string(row, "title"),
+    message: string(row, "message"),
+    audienceType,
+    targetCount,
+    readCount,
+    publishedAt: string(row, "published_at"),
+  };
+
+  if (typeof row.created_at === "string" && row.created_at) {
+    result.createdAt = row.created_at;
+  }
+
+  if (Array.isArray(row.targets)) {
+    result.targets = row.targets.map(parseTarget);
+    if (result.targets.length !== targetCount) {
+      throw new Error("admin_announcements_invalid_targets");
+    }
+  }
+
+  return result;
+};
+
+export async function fetchAdminAnnouncements(
+  token: string,
+  input: { limit?: number; offset?: number } = {},
+): Promise<AdminAnnouncementPage> {
+  const limit = input.limit ?? 30;
+  const offset = input.offset ?? 0;
+  const response = object(
+    await apiFetchWithAccessToken<unknown>(
+      `/admin/announcements?limit=${limit}&offset=${offset}`,
+      token,
+      { cache: "no-store" },
+    ),
+  );
+  if (!Array.isArray(response.announcements)) {
+    throw new Error("admin_announcements_invalid_list");
+  }
+  return {
+    total: number(response, "total"),
+    limit: number(response, "limit"),
+    offset: number(response, "offset"),
+    announcements: response.announcements.map(parseAnnouncement),
+  };
+}
+
+export async function fetchAdminAnnouncementDetail(
+  token: string,
+  id: number,
+): Promise<AdminAnnouncement> {
+  const response = object(
+    await apiFetchWithAccessToken<unknown>(`/admin/announcements/${id}`, token, {
+      cache: "no-store",
+    }),
+  );
+  return parseAnnouncement(response.announcement);
+}
+
+export async function createAdminAnnouncement(
+  token: string,
+  title: string,
+  message: string,
+  sellerIds?: number[],
+): Promise<AdminAnnouncement> {
+  const response = object(
+    await apiFetchWithAccessToken<unknown>("/admin/announcements", token, {
+      method: "POST",
+      body: JSON.stringify({
+        title,
+        message,
+        audience: sellerIds?.length
+          ? { type: "SELECTED_SELLERS", seller_ids: sellerIds }
+          : { type: "ALL_SELLERS" },
+      }),
+      cache: "no-store",
+    }),
+  );
+  return parseAnnouncement(response.announcement);
+}
