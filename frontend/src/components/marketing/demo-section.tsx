@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
-import { WindowLights } from "@/components/marketing/marketing-frame";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import {
   MarketingMessageArrival,
@@ -152,107 +151,90 @@ export function DemoSection() {
   const isAtLeaf = !current?.replies || current.replies.length === 0;
 
   return (
-    <section id="dene" className="scroll-mt-16 bg-sunken">
-      <div className="mx-auto w-full max-w-[1380px] px-4 py-14 md:px-6 md:py-20 lg:px-8">
-        <div className="mx-auto max-w-[920px]">
-          <p className="type-eyebrow text-muted-foreground">Deneyin</p>
-          <h2 className="mt-3 font-display text-[36px] font-semibold leading-[42px] tracking-[-0.027em] text-foreground sm:text-[50px] sm:leading-[56px]">
-            Şimdi aynı davranışı siz deneyin.
-          </h2>
-          <p className="mt-4 max-w-2xl type-body text-muted">
-            Bir müşteri sorusu seçin. Normal cevabı da, bilmediği veya karar
-            gerektiren noktada nasıl durduğunu da aynı konuşmada görün.
-          </p>
-        </div>
+    <section id="dene" className="scroll-mt-16 bg-canvas">
+      <div className="mx-auto w-full max-w-[720px] px-5 py-12 md:py-16">
+        <h2 className="font-display text-[28px] font-semibold leading-[34px] tracking-[-0.022em] text-foreground">
+          Şimdi aynı davranışı siz deneyin.
+        </h2>
+        <p className="mt-4 type-body text-muted">
+          Bir müşteri sorusu seçin. Kayıtlı cevabı da, durduğu yeri de aynı
+          kayıtta görün.
+        </p>
 
-        <MarketingReveal variant="product" className="mt-10">
-          <div className="overflow-hidden rounded-sheet border border-boundary bg-raised shadow-2">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider bg-chrome px-4 py-3.5 sm:px-7">
-              <div className="flex min-w-0 items-center gap-3">
-                <WindowLights />
-                <div>
-                <p className="type-meta font-semibold text-chrome-foreground">
-                  {MARKETING_STORY.storeLabel}
-                </p>
-                </div>
+        <MarketingReveal variant="product" className="mt-8">
+          <div className="flex items-center justify-between gap-3">
+            <p className="type-meta text-muted-foreground">{MARKETING_STORY.storeLabel}</p>
+            <button
+              type="button"
+              onClick={reset}
+              className="inline-flex min-h-11 items-center rounded-control px-2 type-meta font-semibold text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              Yeniden başlat
+            </button>
+          </div>
+
+          <div
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions"
+            aria-atomic="false"
+            aria-busy={isReplyPending}
+            aria-label="Örnek müşteri ve asistan konuşması"
+            className="mt-3 border-y border-divider py-2"
+          >
+            {history.map((stepId, index) => {
+              const step = DEMO_STEPS[stepId];
+              if (step.from === "system") {
+                return (
+                  <MarketingMessageArrival key={`${stepId}-${index}`} kind="system">
+                    <div className="py-3">
+                      <SystemNote tone={step.tone ?? "neutral"}>{step.text}</SystemNote>
+                    </div>
+                  </MarketingMessageArrival>
+                );
+              }
+              return (
+                <MarketingMessageArrival key={`${stepId}-${index}`}>
+                  <div className={index > 0 ? "border-t border-divider" : undefined}>
+                    <ChatBubble from={step.from}>{step.text}</ChatBubble>
+                  </div>
+                </MarketingMessageArrival>
+              );
+            })}
+          </div>
+
+          <div className="mt-4">
+            {isReplyPending ? (
+              <div aria-hidden="true" className="h-11" />
+            ) : !isAtLeaf ? (
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Müşteri soruları">
+                {current.replies?.map((reply) => (
+                  <button
+                    key={reply.next}
+                    type="button"
+                    onClick={() => choose(reply.next)}
+                    className={cn(
+                      "inline-flex min-h-11 items-center rounded-control border border-boundary px-3 py-2 text-sm font-medium text-foreground",
+                      "transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    )}
+                  >
+                    {reply.label}
+                  </button>
+                ))}
               </div>
+            ) : (
               <button
                 type="button"
                 onClick={reset}
-                className="inline-flex min-h-11 items-center rounded-control px-2.5 py-1 type-meta font-semibold text-chrome-foreground/80 transition-colors hover:bg-chrome-hover hover:text-chrome-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="inline-flex min-h-11 items-center rounded-control px-3 py-2 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 Yeniden başlat
               </button>
-            </div>
-
-            <div
-              role="log"
-              aria-live="polite"
-              aria-relevant="additions"
-              aria-atomic="false"
-              aria-busy={isReplyPending}
-              aria-label="Örnek müşteri ve asistan konuşması"
-              className="flex min-h-[500px] flex-col justify-end gap-3 bg-sunken px-4 py-7 sm:min-h-[560px] sm:px-10 sm:py-10"
-            >
-              <div className="mx-auto flex w-full max-w-[960px] flex-col gap-3">
-                {history.map((stepId, index) => {
-                  const step = DEMO_STEPS[stepId];
-                  if (step.from === "system") {
-                    return (
-                      <MarketingMessageArrival key={`${stepId}-${index}`} kind="system">
-                        <SystemNote tone={step.tone ?? "neutral"}>{step.text}</SystemNote>
-                      </MarketingMessageArrival>
-                    );
-                  }
-                  return (
-                    <MarketingMessageArrival key={`${stepId}-${index}`}>
-                      <ChatBubble from={step.from}>{step.text}</ChatBubble>
-                    </MarketingMessageArrival>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="border-t border-divider bg-raised px-4 py-4 sm:px-8">
-              <div className="mx-auto max-w-[960px]">
-                {isReplyPending ? (
-                  <div aria-hidden="true" className="h-11" />
-                ) : !isAtLeaf ? (
-                  <div className="flex flex-wrap gap-2" role="group" aria-label="Müşteri soruları">
-                    {current.replies?.map((reply) => (
-                      <button
-                        key={reply.next}
-                        type="button"
-                        onClick={() => choose(reply.next)}
-                        className={cn(
-                          "inline-flex min-h-11 items-center rounded-control border border-boundary bg-recessed px-3 py-2 text-sm font-medium text-foreground",
-                          "transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                        )}
-                      >
-                        {reply.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="type-meta text-muted-foreground">
-                      Başka bir senaryoyu da deneyebilirsiniz.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={reset}
-                      className="inline-flex min-h-11 items-center rounded-control px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    >
-                      Yeniden başlat
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         </MarketingReveal>
 
-        <p className="mx-auto mt-4 max-w-[920px] type-meta text-muted-foreground">
+        <p className="mt-4 type-meta text-muted-foreground">
           Bu alan canlı yapay zeka bağlantısı değil; ürünün gerçek konuşma ve
           devretme davranışlarını gösteren kontrollü bir örnektir.
         </p>

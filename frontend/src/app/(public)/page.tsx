@@ -30,19 +30,12 @@ export const metadata: Metadata = {
 };
 
 /**
- * Seller-first psychological order (not a feature tour):
- *
- *   Hero      — what this is, one known conversation
- *   Critical  — will it hurt me? unknown / return / stop
- *   Daily     — a morning split into routine vs decision
- *   Control   — I can take over and give it back
- *   Demo      — try the behaviour
- *   Panel     — what remains as work
- *   Onboarding/support — start lightly, you are not alone
+ * Public site is one dark operations document, not a landing of cards.
+ * Seller fear → day split → control → try → remaining work → start → close.
  */
 export default function HomePage() {
   return (
-    <div className="bg-canvas">
+    <article className="bg-canvas">
       <Hero />
       <CriticalStatesSection />
       <DailyLoadSection />
@@ -51,6 +44,6 @@ export default function HomePage() {
       <PanelSection />
       <OnboardingSection />
       <SupportSection />
-    </div>
+    </article>
   );
 }

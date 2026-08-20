@@ -8,17 +8,16 @@ export function CriticalStatesSection() {
 
   return (
     <section id="guven" className="scroll-mt-20 bg-canvas">
-      <div className="mx-auto w-full max-w-[820px] px-4 py-12 md:px-6 md:py-16">
+      <div className="mx-auto w-full max-w-[720px] px-5 py-12 md:py-16">
         <MarketingReveal>
-          <p className="type-eyebrow text-muted-foreground">Sınır</p>
-          <h2 className="mt-3 max-w-3xl font-display text-[28px] font-semibold leading-[34px] tracking-[-0.022em] text-foreground sm:text-[34px] sm:leading-[40px]">
+          <h2 className="font-display text-[28px] font-semibold leading-[34px] tracking-[-0.022em] text-foreground">
             Bilmediğinde uydurmaz. Karar gerektiğinde durur.
           </h2>
         </MarketingReveal>
 
-        <div className="mt-8 space-y-8">
+        <div className="mt-8 border-y border-divider">
           <MarketingReveal variant="state">
-            <article className="grid gap-3 sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-6">
+            <article className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-4 py-5">
               <time className="type-meta type-figure font-semibold text-muted-foreground">
                 {MARKETING_STORY.ledger.unknown.time}
               </time>
@@ -32,7 +31,7 @@ export function CriticalStatesSection() {
           </MarketingReveal>
 
           <MarketingReveal variant="state">
-            <article className="grid gap-3 sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-6">
+            <article className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-4 border-t border-divider py-5">
               <time className="type-meta type-figure font-semibold text-muted-foreground">
                 {returnRecord.time}
               </time>
