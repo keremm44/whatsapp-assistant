@@ -7,8 +7,8 @@ import { MARKETING_STORY } from "@/components/marketing/marketing-story";
  */
 export function Hero() {
   return (
-    <section className="bg-canvas">
-      <div className="mx-auto w-full max-w-[720px] px-5 pb-12 pt-16 md:pb-16 md:pt-24">
+    <section>
+      <div className="mx-auto w-full max-w-[720px] px-5 pb-8 pt-10 md:pb-10 md:pt-14">
         <p className="type-eyebrow text-muted-foreground">WhatsApp asistanı</p>
         <h1 className="mt-5 font-display text-[40px] font-semibold leading-[46px] tracking-[-0.03em] text-foreground sm:text-[52px] sm:leading-[58px]">
           Tekrar eden WhatsApp konuşmalarını sizden önce karşılar.
@@ -18,11 +18,11 @@ export function Hero() {
           Karar sizdeyse konuşmayı size bırakır.
         </p>
 
-        <div className="mt-10">
+        <div className="mt-7">
           <HeroConversation />
         </div>
 
-        <div className="mt-10 flex flex-col items-start gap-3">
+        <div className="mt-7 flex flex-col items-start gap-3">
           <a
             href="#dene"
             className="inline-flex min-h-11 items-center rounded-control bg-primary-button px-5 py-3 text-base font-medium text-primary-foreground transition-colors hover:bg-primary-button-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"

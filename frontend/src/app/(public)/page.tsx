@@ -35,7 +35,7 @@ export const metadata: Metadata = {
  */
 export default function HomePage() {
   return (
-    <article className="bg-canvas">
+    <article>
       <Hero />
       <CriticalStatesSection />
       <DailyLoadSection />

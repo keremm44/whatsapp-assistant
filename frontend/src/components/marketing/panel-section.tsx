@@ -9,7 +9,7 @@ const EXAMPLE_UNANSWERED_TASK_TITLE = "Cevaplanamayan müşteri sorusu";
 
 export function PanelSection() {
   return (
-    <section id="panel" className="scroll-mt-20 bg-canvas py-12 md:py-16">
+    <section id="panel" className="scroll-mt-20 py-8 md:py-10">
       <div className="mx-auto w-full max-w-[720px] px-5">
         <h2 className="font-display text-[28px] font-semibold leading-[34px] tracking-[-0.022em] text-foreground">
           Durduğu konuşma kaybolmaz. Yapılacak işe dönüşür.

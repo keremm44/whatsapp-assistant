@@ -8,8 +8,8 @@ export function DailyLoadSection() {
   const ledger = MARKETING_STORY.ledger;
 
   return (
-    <section id="nasil-calisir" className="scroll-mt-20 bg-canvas">
-      <div className="mx-auto w-full max-w-[720px] px-5 py-12 md:py-16">
+    <section id="nasil-calisir" className="scroll-mt-20">
+      <div className="mx-auto w-full max-w-[720px] px-5 py-8 md:py-10">
         <MarketingReveal>
           <h2 className="font-display text-[28px] font-semibold leading-[34px] tracking-[-0.022em] text-foreground">
             Gününüzü tekrar eden sorular değil, kararlar bölsün.

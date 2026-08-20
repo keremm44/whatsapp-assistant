@@ -1,6 +1,9 @@
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 
-/** Quiet window chrome — product instrument, not a SaaS mockup gradient. */
+import styles from "@/components/marketing/marketing-chassis.module.css";
+
+/** Quiet window chrome — unused on the document surface, kept for tests/tools. */
 export function WindowLights({ className }: { className?: string }) {
   return (
     <span
@@ -14,39 +17,43 @@ export function WindowLights({ className }: { className?: string }) {
   );
 }
 
-export function Atmosphere({ className }: { className?: string }) {
+export function InstrumentChassis({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
-    <div
-      aria-hidden="true"
-      className={cn(
-        "pointer-events-none absolute inset-0 overflow-hidden",
-        className,
-      )}
-    >
-      <div className="absolute -left-24 -top-32 h-[420px] w-[520px] rounded-full bg-primary/[0.07] blur-3xl" />
-      <div className="absolute -right-16 top-24 h-[280px] w-[320px] rounded-full bg-brand/[0.06] blur-3xl" />
+    <div className={styles.shell}>
+      <div className={styles.field} aria-hidden="true">
+        <div className={styles.well} />
+        <div className={styles.wellAlt} />
+        <div className={styles.gridFine} />
+        <div className={styles.gridCoarse} />
+        <div className={styles.scan} />
+        <div className={styles.noise} />
+        <div className={styles.vignette} />
+      </div>
+      <span className={`${styles.corner} ${styles.tl}`} aria-hidden="true" />
+      <span className={`${styles.corner} ${styles.tr}`} aria-hidden="true" />
+      <span className={`${styles.corner} ${styles.bl}`} aria-hidden="true" />
+      <span className={`${styles.corner} ${styles.br}`} aria-hidden="true" />
+      <span className={`${styles.rail} ${styles.railLeft}`} aria-hidden="true" />
+      <span className={`${styles.rail} ${styles.railRight}`} aria-hidden="true" />
+      <div className={styles.body}>{children}</div>
     </div>
   );
 }
 
-/** Site-wide instrument field: faint grid + one cool well. Not empty, not busy. */
-export function FieldGrain() {
+export function InstrumentSpec() {
   return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-    >
-      <div className="absolute -left-1/4 top-[-10%] h-[40vh] w-[55vw] rounded-full bg-primary/[0.03] blur-3xl" />
-      <div
-        className="absolute inset-0 opacity-[0.12]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, rgb(var(--color-boundary-rgb) / 0.7) 1px, transparent 1px), linear-gradient(to bottom, rgb(var(--color-boundary-rgb) / 0.7) 1px, transparent 1px)",
-          backgroundSize: "96px 96px",
-          maskImage:
-            "radial-gradient(ellipse at 50% 0%, black 10%, transparent 70%)",
-        }}
-      />
-    </div>
+    <p className={styles.spec} aria-hidden="true">
+      <span>Kontrollü asistan</span>
+      <span className={styles.specDot}>/</span>
+      <span>Kayıtlı bilgi</span>
+      <span className={styles.specDot}>/</span>
+      <span>Uydurmaz</span>
+      <span className={styles.specDot}>/</span>
+      <span>Karar sizde</span>
+    </p>
   );
 }

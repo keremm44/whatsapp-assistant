@@ -48,7 +48,7 @@ export function ControlSection() {
   return (
     <section
       id="kontrol"
-      className="mx-auto w-full max-w-[720px] scroll-mt-20 px-5 py-12 md:py-16"
+      className="mx-auto w-full max-w-[720px] scroll-mt-20 px-5 py-8 md:py-10"
     >
       <h2 className="font-display text-[28px] font-semibold leading-[34px] tracking-[-0.022em] text-foreground">
         Konuşmayı istediğiniz anda devralırsınız.

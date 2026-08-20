@@ -1,7 +1,7 @@
 export function SupportSection() {
   return (
-    <section className="bg-canvas">
-      <div className="mx-auto w-full max-w-[720px] px-5 py-16 md:py-24">
+    <section>
+      <div className="mx-auto w-full max-w-[720px] px-5 py-10 md:py-14">
         <h2 className="font-display text-[32px] font-semibold leading-[38px] tracking-[-0.028em] text-foreground sm:text-[40px] sm:leading-[46px]">
           Rutin konuşmalar asistanda. Karar gerekenler sizde.
         </h2>

@@ -151,8 +151,8 @@ export function DemoSection() {
   const isAtLeaf = !current?.replies || current.replies.length === 0;
 
   return (
-    <section id="dene" className="scroll-mt-16 bg-canvas">
-      <div className="mx-auto w-full max-w-[720px] px-5 py-12 md:py-16">
+    <section id="dene" className="scroll-mt-16">
+      <div className="mx-auto w-full max-w-[720px] px-5 py-8 md:py-10">
         <h2 className="font-display text-[28px] font-semibold leading-[34px] tracking-[-0.022em] text-foreground">
           Şimdi aynı davranışı siz deneyin.
         </h2>
