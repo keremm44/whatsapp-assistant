@@ -3,7 +3,6 @@ import { ArrowUpRight, ChevronRight } from "lucide-react";
 
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
-import { OwnershipLedgerRow } from "@/components/marketing/story-thread";
 import { DASHBOARD_TASK_PRESENTATION } from "@/components/seller/dashboard/task-presentation";
 import { StatusChip } from "@/components/shared/status-chip";
 import type { DashboardTaskType } from "@/lib/seller/dashboard-tasks";
@@ -15,35 +14,30 @@ export function PanelSection() {
   const record = MARKETING_STORY.ledger.returnReview;
 
   return (
-    <section id="panel" className="scroll-mt-20 bg-canvas py-16 md:py-24">
+    <section id="panel" className="scroll-mt-20 bg-canvas py-20 md:py-28">
       <div className="mx-auto w-full max-w-[1180px] px-4 md:px-6 lg:px-8">
-        <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)] md:items-end md:gap-12">
-          <p className="type-meta font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            Seller workspace · 04
+        <div className="max-w-[900px]">
+          <p className="type-eyebrow text-muted-foreground">Satıcı paneli</p>
+          <h2 className="mt-3 font-display text-[36px] font-semibold leading-[42px] tracking-[-0.027em] text-foreground sm:text-[50px] sm:leading-[56px]">
+            Durduğu konuşma kaybolmaz. Yapılacak işe dönüşür.
+          </h2>
+          <p className="mt-4 max-w-2xl type-body text-muted">
+            Az önce gördüğünüz aynı iade konuşması, satıcı panelinde sizden ne
+            beklendiği belli bir çalışma kaydı olarak görünür.
           </p>
-          <div>
-            <h2 className="font-display text-[36px] font-semibold leading-[42px] tracking-[-0.027em] text-foreground sm:text-[50px] sm:leading-[56px]">
-              Durduğu konuşma kaybolmaz. İşe dönüşür.
-            </h2>
-            <p className="mt-3 max-w-2xl type-body text-muted">
-              Az önce gördüğünüz aynı iade konuşması, satıcı panelinde sizden ne beklendiği belli bir work item olarak görünür.
-            </p>
-          </div>
         </div>
 
-        <OwnershipLedgerRow
-          time={record.time}
-          topic={record.topic}
-          message={record.message}
-          owner="Satıcı incelemesi"
-          outcome="İade incelemesi · İncelemeniz gerekiyor"
-          tone="attention"
-          className="mt-8"
-        />
+        <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-l-2 border-attention pl-4">
+          <span className="type-meta type-figure font-semibold text-muted-foreground">
+            {record.time}
+          </span>
+          <span className="type-row-secondary text-foreground">{record.message}</span>
+          <StatusChip tone="attention">İncelemeniz gerekiyor</StatusChip>
+        </div>
       </div>
 
-      <MarketingReveal variant="product" className="mt-8">
-        <div className="mx-auto w-full max-w-[1380px] border-y border-boundary bg-sunken">
+      <MarketingReveal variant="product" className="mt-10">
+        <div className="mx-auto w-full max-w-[1560px] border-y border-boundary bg-sunken lg:min-h-[720px]">
           <SellerDashboardProof />
         </div>
       </MarketingReveal>
@@ -53,67 +47,63 @@ export function PanelSection() {
 
 function SellerDashboardProof() {
   return (
-    <div>
-      <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-5 border-b border-divider px-4 py-7 sm:flex-row sm:items-end sm:justify-between sm:gap-10 md:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-[1320px] px-4 py-8 md:px-6 md:py-10 lg:px-8 lg:py-12">
+      <div className="flex flex-col gap-5 pb-7 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
         <div className="space-y-2.5">
           <p className="type-meta font-semibold text-muted-foreground">
-            Satıcı paneli · aynı kayıt
+            Satıcı paneli · örnek görünüm
           </p>
-          <h3 className="font-display text-[32px] font-semibold leading-[38px] tracking-[-0.024em] text-foreground sm:text-[40px] sm:leading-[46px]">
-            Bugün ilgilenmeniz gerekenler
-          </h3>
+          <h3 className="type-page-title text-foreground">Bugün ilgilenmeniz gerekenler</h3>
           <p className="max-w-2xl type-body text-muted">
-            Satıcı müdahalesi isteyen konular öncelik sırasıyla görünür.
+            Satıcı müdahalesi isteyen konular burada öncelik sırasıyla görünecek.
           </p>
         </div>
         <WorkloadStats />
       </div>
 
-      <div className="mx-auto w-full max-w-[1240px] px-4 py-8 md:px-6 lg:px-8 lg:py-10">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-          <section aria-labelledby="marketing-panel-primary" className="space-y-5">
-            <ProofSectionHeading
-              id="marketing-panel-primary"
-              title="Önce bunlar"
-              count={1}
-              description="İncelemeniz gereken konular."
+      <div className="mt-8 flex flex-col gap-10 lg:mt-10 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-8">
+        <section aria-labelledby="marketing-panel-primary" className="space-y-5">
+          <ProofSectionHeading
+            id="marketing-panel-primary"
+            title="Önce bunlar"
+            count={1}
+            description="İncelemeniz gereken konular."
+          />
+          <div className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
+            <PriorityProofRow
+              taskType="return_review"
+              title={EXAMPLE_RETURN_TASK_TITLE}
+              summary={MARKETING_STORY.returnQuestion}
+              context={`${MARKETING_STORY.ledger.returnReview.time} · WhatsApp müşterisi`}
             />
-            <div className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface">
-              <PriorityProofRow
-                taskType="return_review"
-                title={EXAMPLE_RETURN_TASK_TITLE}
-                summary={MARKETING_STORY.returnQuestion}
-                context={`${MARKETING_STORY.ledger.returnReview.time} · WhatsApp müşterisi`}
-              />
-            </div>
+          </div>
+        </section>
+
+        <aside className="flex flex-col gap-5 lg:sticky lg:top-20">
+          <section
+            aria-labelledby="marketing-panel-secondary"
+            className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface"
+          >
+            <header className="flex items-baseline gap-2.5 border-b border-divider px-4 py-3.5 sm:px-5">
+              <h4
+                id="marketing-panel-secondary"
+                className="font-heading text-[17px] font-semibold leading-6 text-foreground"
+              >
+                Bugün bakılabilecekler
+              </h4>
+              <span aria-hidden="true" className="type-meta type-figure text-muted-foreground">
+                1
+              </span>
+            </header>
+            <SecondaryProofRow
+              taskType="unanswered_question"
+              title={EXAMPLE_UNANSWERED_TASK_TITLE}
+              context={`${MARKETING_STORY.ledger.unknown.time} · WhatsApp müşterisi`}
+            />
           </section>
 
-          <aside className="flex flex-col gap-5">
-            <section
-              aria-labelledby="marketing-panel-secondary"
-              className="overflow-hidden rounded-sheet border border-boundary/60 bg-raised"
-            >
-              <header className="flex items-baseline gap-2.5 border-b border-divider px-4 py-3.5 sm:px-5">
-                <h4
-                  id="marketing-panel-secondary"
-                  className="font-heading text-[17px] font-semibold leading-6 text-foreground"
-                >
-                  Bugün bakılabilecekler
-                </h4>
-                <span aria-hidden="true" className="type-meta type-figure text-muted-foreground">
-                  1
-                </span>
-              </header>
-              <SecondaryProofRow
-                taskType="unanswered_question"
-                title={EXAMPLE_UNANSWERED_TASK_TITLE}
-                context={`${MARKETING_STORY.ledger.unknown.time} · WhatsApp müşterisi`}
-              />
-            </section>
-
-            <QuietSummaryProof />
-          </aside>
-        </div>
+          <QuietSummaryProof />
+        </aside>
       </div>
     </div>
   );
@@ -129,8 +119,8 @@ function WorkloadStats() {
   return (
     <dl
       role="status"
-      aria-label="Örnek görünümde ilgilenmeniz gereken 2 konu"
-      className="grid w-full shrink-0 grid-cols-3 divide-x divide-divider self-start border-y border-divider sm:w-auto sm:min-w-[360px]"
+      aria-label="İlgilenmeniz gereken 2 konu"
+      className="grid w-full shrink-0 grid-cols-3 divide-x divide-divider self-start overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface sm:w-auto sm:min-w-[360px]"
     >
       {stats.map((stat) => (
         <div key={stat.label} className="px-4 py-3 sm:px-5">
@@ -207,7 +197,7 @@ function PriorityProofRow({
 
         <div className="shrink-0 self-start sm:text-right">
           <p className="type-meta text-muted-foreground">Panel aksiyonu</p>
-          <span className="mt-1 inline-flex h-11 items-center gap-1.5 type-row-secondary font-semibold text-primary sm:h-9">
+          <span className="mt-1 inline-flex h-11 items-center gap-1.5 rounded-control px-2 type-row-secondary font-semibold text-primary sm:h-9">
             <span>{meta.cta}</span>
             <ArrowUpRight aria-hidden="true" size={14} strokeWidth={1.9} />
           </span>
@@ -259,7 +249,7 @@ function QuietSummaryProof() {
   return (
     <section
       aria-labelledby="marketing-panel-summary"
-      className="border-y border-divider px-1 py-4 sm:px-0"
+      className="rounded-sheet border border-boundary/60 bg-raised px-4 py-4 shadow-surface sm:px-5"
     >
       <h4 id="marketing-panel-summary" className="type-meta font-semibold text-muted-foreground">
         Özet
