@@ -12,8 +12,15 @@ export function AdminOverview({ snapshot }: { snapshot: AdminOverviewSnapshot })
   const pending = totalOf(snapshot.pendingApplications);
   const activation = totalOf(snapshot.activationReviews);
   const feedback = totalOf(snapshot.openFeedback);
-  const allReady = pending !== null && activation !== null && feedback !== null;
-  const total = allReady ? pending + activation + feedback : null;
+  const workload =
+    pending !== null && activation !== null && feedback !== null
+      ? {
+          pending,
+          activation,
+          feedback,
+          total: pending + activation + feedback,
+        }
+      : null;
 
   return (
     <div className="space-y-8 lg:space-y-10">
@@ -24,16 +31,16 @@ export function AdminOverview({ snapshot }: { snapshot: AdminOverviewSnapshot })
             Başvuru, aktivasyon ve seller geri bildirimleri gerçek operasyon kuyruklarından burada özetlenir.
           </p>
         </div>
-        {allReady ? (
+        {workload ? (
           <dl
             role="status"
-            aria-label={`Yönetim dikkatinde toplam ${total} konu`}
+            aria-label={`Yönetim dikkatinde toplam ${workload.total} konu`}
             className="grid w-full shrink-0 grid-cols-4 divide-x divide-divider self-start overflow-hidden rounded-sheet border border-boundary/60 bg-raised shadow-surface sm:w-auto sm:min-w-[470px]"
           >
-            <WorkloadStat label="Başvurular" value={pending} />
-            <WorkloadStat label="Aktivasyon" value={activation} />
-            <WorkloadStat label="Geri bildirim" value={feedback} />
-            <WorkloadStat label="Toplam" value={total} />
+            <WorkloadStat label="Başvurular" value={workload.pending} />
+            <WorkloadStat label="Aktivasyon" value={workload.activation} />
+            <WorkloadStat label="Geri bildirim" value={workload.feedback} />
+            <WorkloadStat label="Toplam" value={workload.total} />
           </dl>
         ) : null}
       </div>
@@ -44,7 +51,9 @@ export function AdminOverview({ snapshot }: { snapshot: AdminOverviewSnapshot })
             <div>
               <div className="flex items-baseline gap-2">
                 <h2 className="type-section text-foreground">Önce bunlar</h2>
-                {total !== null ? <span className="type-figure type-meta text-muted-foreground">{total}</span> : null}
+                {workload ? (
+                  <span className="type-figure type-meta text-muted-foreground">{workload.total}</span>
+                ) : null}
               </div>
               <p className="mt-1 type-row-secondary text-muted">Yönetim kararı veya incelemesi bekleyen işler.</p>
             </div>
@@ -57,7 +66,6 @@ export function AdminOverview({ snapshot }: { snapshot: AdminOverviewSnapshot })
               readyCopy="Yeni mağaza adaylarını inceleyin ve uygunsa davet sürecini başlatın."
               emptyCopy="Şu anda yeni başvuru yok."
               icon={ClipboardCheck}
-              tone="primary"
             />
             <PriorityRow
               href="/admin/sellers?status=admin_review_pending"
@@ -66,7 +74,7 @@ export function AdminOverview({ snapshot }: { snapshot: AdminOverviewSnapshot })
               readyCopy="Kurulumu tamamlanan mağazaların aktivasyon kararını verin."
               emptyCopy="Şu anda aktivasyon onayı bekleyen mağaza yok."
               icon={CircleAlert}
-              tone="attention"
+              attention
             />
             <PriorityRow
               href="/admin/feedback?status=OPEN"
@@ -75,7 +83,6 @@ export function AdminOverview({ snapshot }: { snapshot: AdminOverviewSnapshot })
               readyCopy="Seller’lardan gelen açık geri bildirimleri gözden geçirin."
               emptyCopy="Şu anda açık geri bildirim yok."
               icon={MessageSquareText}
-              tone="primary"
             />
           </div>
         </div>
@@ -88,11 +95,11 @@ export function AdminOverview({ snapshot }: { snapshot: AdminOverviewSnapshot })
 
 function WorkloadStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="px-4 py-3 sm:px-5">
-      <dd className="type-figure font-display text-[26px] font-semibold leading-none tracking-[-0.02em] text-foreground">
+    <div className="px-3 py-3 sm:px-5">
+      <dd className="type-figure font-display text-[24px] font-semibold leading-none tracking-[-0.02em] text-foreground sm:text-[26px]">
         {value}
       </dd>
-      <dt className="mt-1.5 type-meta text-muted-foreground">{label}</dt>
+      <dt className="mt-1.5 break-words type-meta text-muted-foreground">{label}</dt>
     </div>
   );
 }
@@ -104,7 +111,7 @@ function PriorityRow({
   readyCopy,
   emptyCopy,
   icon: Icon,
-  tone,
+  attention = false,
 }: {
   href: Route;
   label: string;
@@ -112,12 +119,14 @@ function PriorityRow({
   readyCopy: string;
   emptyCopy: string;
   icon: typeof ClipboardCheck;
-  tone: "primary" | "attention";
+  attention?: boolean;
 }) {
   const ready = source.state === "ready";
   const count = ready ? source.data.total : null;
   const isEmpty = count === 0;
-  const iconClass = tone === "attention" ? "border-attention/30 text-attention" : "border-primary/30 text-primary";
+  const iconClass = attention
+    ? "border-attention/30 text-attention"
+    : "border-boundary/70 text-muted-foreground";
 
   return (
     <Link
