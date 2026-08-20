@@ -65,7 +65,7 @@ export function CriticalStatesSection() {
                 <div className="flex flex-wrap items-center gap-3">
                   <StatusChip tone="attention">İade incelemesi</StatusChip>
                   <span className="type-row-secondary text-muted-foreground">
-                    Panelde İncelemeniz gerekiyor olarak görünür.
+                    {MARKETING_STORY.returnSellerOutcome}
                   </span>
                 </div>
                 <p className="type-meta text-muted-foreground">
