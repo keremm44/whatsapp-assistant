@@ -108,6 +108,7 @@ export function LandingPage() {
             <ul className="mt-7 space-y-3.5">
               {[
                 "İade ve özel değerlendirme isteyen konular ayrılır.",
+                "Güvenle ilerletilemeyen konuşmalar durdurulur.",
                 "Yanıtlanamayan sorular görünür kalır.",
                 "Konuşmalarınız ve mağaza bağlamınız tek yerde toplanır.",
               ].map((item) => (
@@ -143,7 +144,7 @@ export function LandingPage() {
               <SetupStep
                 number="02"
                 title="Önemli yanıtları belirleyin"
-                description="Mağazanıza özgü yaklaşım gerektiren bilgileri ve yanıt çerçevesini oluşturun."
+                description="Sık sorulan konuları, mağazanıza özgü bilgileri ve özel yaklaşım gerektiren yanıtları belirleyin."
               />
               <SetupStep
                 number="03"
@@ -269,9 +270,10 @@ function PanelPreview() {
             <span className="flex h-10 min-w-10 items-center justify-center rounded-control border border-attention/35 bg-attention-soft px-2 type-figure font-display text-[18px] font-semibold text-attention">2</span>
           </div>
           <div className="mt-5 space-y-3">
-            <PreviewTask label="İade incelemesi" title="Özel değerlendirme bekleyen müşteri talebi" attention />
-            <PreviewTask label="Sipariş incelemesi" title="Karar gerektiren sipariş notu" attention />
-            <PreviewTask label="Yanıt bekleyen soru" title="Mağaza bilgisinde eksik kalan konu" />
+            <PreviewTask label="İade incelemesi" title="Özel değerlendirme bekleyen müşteri talebi" tone="attention" />
+            <PreviewTask label="Sipariş incelemesi" title="Karar gerektiren sipariş notu" tone="attention" />
+            <PreviewTask label="Yanıtı durdurulan konuşma" title="Satıcı değerlendirmesi bekleyen müşteri konuşması" tone="paused" />
+            <PreviewTask label="Yanıt bekleyen soru" title="Mağaza bilgisinde eksik kalan konu" tone="primary" />
           </div>
         </div>
       </div>
@@ -282,10 +284,24 @@ function PanelPreview() {
   );
 }
 
-function PreviewTask({ label, title, attention = false }: { label: string; title: string; attention?: boolean }) {
+function PreviewTask({
+  label,
+  title,
+  tone,
+}: {
+  label: string;
+  title: string;
+  tone: "attention" | "paused" | "primary";
+}) {
+  const railTone = {
+    attention: "bg-attention",
+    paused: "bg-paused",
+    primary: "bg-primary",
+  }[tone];
+
   return (
     <div className="flex items-center gap-3 rounded-sheet border border-boundary/60 bg-raised px-3 py-3 sm:px-4">
-      <span className={`h-8 w-1 rounded-full ${attention ? "bg-attention" : "bg-primary"}`} aria-hidden="true" />
+      <span className={`h-8 w-1 rounded-full ${railTone}`} aria-hidden="true" />
       <div className="min-w-0 flex-1">
         <p className="type-meta text-muted-foreground">{label}</p>
         <p className="mt-1 truncate type-row-primary text-foreground">{title}</p>
