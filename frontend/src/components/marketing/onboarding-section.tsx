@@ -8,29 +8,24 @@ export function OnboardingSection() {
   return (
     <section
       id="kurulum"
-      className="mx-auto w-full max-w-[1080px] scroll-mt-20 px-4 py-14 md:px-6 md:py-20 lg:px-8"
+      className="mx-auto w-full max-w-[920px] scroll-mt-20 px-4 py-20 md:px-6 md:py-28"
     >
-      <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)] md:items-end md:gap-12">
-        <p className="type-meta font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-          Canlıya çıkmadan önce · 05
+      <div className="max-w-[760px]">
+        <p className="type-eyebrow text-muted-foreground">Canlıya çıkmadan önce</p>
+        <h2 className="mt-3 font-display text-[34px] font-semibold leading-[40px] tracking-[-0.025em] text-foreground sm:text-[46px] sm:leading-[52px]">
+          Müşteri görmeden önce siz görürsünüz.
+        </h2>
+        <p className="mt-4 max-w-2xl type-body text-muted">
+          İşletmenizi anlatır, test sohbetinde nasıl cevap verdiğini kontrol eder ve
+          ancak hazır olduğunuzda WhatsApp’a bağlarsınız.
         </p>
-        <div>
-          <h2 className="font-display text-[34px] font-semibold leading-[40px] tracking-[-0.025em] text-foreground sm:text-[46px] sm:leading-[52px]">
-            Müşteri görmeden önce siz görürsünüz.
-          </h2>
-          <p className="mt-3 max-w-2xl type-body text-muted">
-            İşletmenizi anlatır, test sohbetinde nasıl cevap verdiğini kontrol eder ve ancak hazır olduğunuzda WhatsApp’a bağlarsınız.
-          </p>
-        </div>
       </div>
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-[250px_minmax(0,1fr)] lg:items-start lg:gap-10">
-        <MarketingReveal variant="product" className="lg:order-2">
+      <div className="mt-12 grid gap-10 lg:grid-cols-[230px_minmax(0,1fr)] lg:items-start">
+        <SetupRail />
+        <MarketingReveal variant="product">
           <TestConversation />
         </MarketingReveal>
-        <div className="lg:order-1">
-          <SetupRail />
-        </div>
       </div>
     </section>
   );
@@ -48,7 +43,7 @@ function SetupRail() {
       {steps.map(([title, body], index) => {
         const isTest = index === 1;
         return (
-          <li key={title} className="relative pb-7 last:pb-0">
+          <li key={title} className="relative pb-8 last:pb-0">
             <span
               aria-hidden="true"
               className={
@@ -79,7 +74,7 @@ function SetupRail() {
 
 function TestConversation() {
   return (
-    <div className="border-y border-boundary bg-sunken">
+    <div className="overflow-hidden rounded-sheet border border-boundary bg-sunken shadow-surface">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider bg-chrome px-4 py-3.5 sm:px-6">
         <div>
           <p className="type-meta font-semibold text-chrome-foreground">Test sohbeti</p>
@@ -103,7 +98,8 @@ function TestConversation() {
             Hazır olduğuna siz karar verirsiniz.
           </p>
           <p className="mt-2 max-w-2xl text-base leading-7 text-foreground">
-            Cevap biçimini ve verdiğiniz bilgilerin konuşmaya nasıl yansıdığını canlıya çıkmadan önce kontrol edersiniz.
+            Cevap biçimini ve verdiğiniz bilgilerin konuşmaya nasıl yansıdığını
+            canlıya çıkmadan önce kontrol edersiniz.
           </p>
         </div>
       </div>
