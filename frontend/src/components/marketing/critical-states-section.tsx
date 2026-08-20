@@ -1,5 +1,3 @@
-import * as React from "react";
-
 import { ChatBubble } from "@/components/marketing/chat-bubbles";
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
@@ -71,7 +69,7 @@ export function CriticalStatesSection() {
                   </span>
                 </div>
                 <p className="type-meta text-muted-foreground">
-                  Aynı {returnRecord.time} kaydı aşağıdaki seller workspace’e geçer.
+                  Aynı {returnRecord.time} kaydı aşağıdaki satıcı paneline geçer.
                 </p>
               </div>
             </article>
