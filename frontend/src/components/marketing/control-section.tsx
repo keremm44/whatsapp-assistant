@@ -90,7 +90,6 @@ function ControlStage() {
         aria-label="Örnek konuşma kontrolü"
         className="relative grid grid-rows-3 overflow-hidden border-b border-divider bg-chrome sm:grid-cols-3 sm:grid-rows-1"
       >
-      >
         <span
           aria-hidden="true"
           className={cn(
