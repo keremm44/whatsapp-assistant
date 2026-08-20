@@ -1,0 +1,14 @@
+import { apiFetchWithAccessToken } from "@/lib/api/authenticated";
+import { ADMIN_SELLER_SYSTEM_STATUSES, type AdminSellerSystemStatus } from "./seller-format";
+
+export type AdminSeller = { id:number; name:string; storeName:string; systemStatus:AdminSellerSystemStatus; onboardingCompleted:boolean; aiEnabled:boolean; createdAt:string; updatedAt:string; storeLink?:string|null; onboardingStatus?:string };
+export type AdminSellerPage = { total:number; limit:number; offset:number; sellers:AdminSeller[] };
+const statusSet = new Set<string>(ADMIN_SELLER_SYSTEM_STATUSES);
+const rec=(x:unknown):Record<string,unknown>=>{if(typeof x!=="object"||x===null||Array.isArray(x))throw new Error("admin_sellers_invalid_envelope");return x as Record<string,unknown>};
+const str=(r:Record<string,unknown>,k:string)=>{const v=r[k];if(typeof v!=="string"||!v)throw new Error(`admin_sellers_invalid_${k}`);return v};
+const num=(r:Record<string,unknown>,k:string)=>{const v=r[k];if(typeof v!=="number"||!Number.isInteger(v)||v<0)throw new Error(`admin_sellers_invalid_${k}`);return v};
+const bool=(r:Record<string,unknown>,k:string)=>{const v=r[k];if(typeof v!=="boolean")throw new Error(`admin_sellers_invalid_${k}`);return v};
+const seller=(raw:unknown,detail:boolean):AdminSeller=>{const r=rec(raw);const status=str(r,"system_status");if(!statusSet.has(status))throw new Error("admin_sellers_invalid_system_status");const out:AdminSeller={id:num(r,"id"),name:str(r,"name"),storeName:str(r,"store_name"),systemStatus:status as AdminSellerSystemStatus,onboardingCompleted:bool(r,"onboarding_completed"),aiEnabled:bool(r,"ai_enabled"),createdAt:str(r,"created_at"),updatedAt:str(r,"updated_at")};if(detail){out.storeLink=r.store_link===null?null:str(r,"store_link");out.onboardingStatus=str(r,"onboarding_status")}return out};
+export const fetchAdminSellers=async(token:string,input:{q?:string;status?:AdminSellerSystemStatus;limit?:number;offset?:number}={}):Promise<AdminSellerPage>=>{const p=new URLSearchParams();if(input.q)p.set("q",input.q);if(input.status)p.set("system_status",input.status);p.set("limit",String(input.limit??20));p.set("offset",String(input.offset??0));const r=rec(await apiFetchWithAccessToken<unknown>(`/admin/sellers?${p}`,token,{cache:"no-store"}));const rows=r.sellers;if(!Array.isArray(rows))throw new Error("admin_sellers_invalid_sellers");return{total:num(r,"total"),limit:num(r,"limit"),offset:num(r,"offset"),sellers:rows.map(x=>seller(x,false))}};
+export const fetchAdminSeller=async(token:string,id:number):Promise<AdminSeller>=>{const r=rec(await apiFetchWithAccessToken<unknown>(`/admin/sellers/${id}`,token,{cache:"no-store"}));return seller(r.seller,true)};
+export const activateAdminSeller=async(token:string,id:number):Promise<AdminSeller>=>{const r=rec(await apiFetchWithAccessToken<unknown>(`/admin/sellers/${id}/activate`,token,{method:"POST",body:JSON.stringify({approved:true}),cache:"no-store"}));return seller(r.seller,true)};

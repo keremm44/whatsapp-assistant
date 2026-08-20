@@ -23,7 +23,7 @@ import { AdminTopbar } from "./admin-topbar";
  */
 export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="marketing-theme min-h-screen bg-canvas text-foreground">
       <div className="flex">
         <AdminSidebar />
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">

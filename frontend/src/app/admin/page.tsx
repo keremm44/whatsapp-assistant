@@ -1,36 +1,21 @@
-import { EmptyState } from "@/components/shared/empty-state";
+import { AdminOverview } from "@/components/admin/dashboard/admin-overview";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
+import { resolveAdminOverviewFromSession } from "@/lib/admin/overview-server";
 
-/**
- * Admin landing page.
- *
- * Currently the only admin destination is "Mağazalar". There is
- * no /admin/sellers contract on the backend yet, so the page is
- * a deliberate placeholder. The placeholder copy is calm and
- * neutral; it does not expose implementation jargon (e.g. a
- * missing endpoint) and it does not invent fake data.
- *
- * The page reads as a future home for the seller / store
- * directory. As soon as the backend exposes a real contract,
- * this surface will list real rows. Until then it stays quiet.
- */
-export default function AdminHomePage() {
+/** Admin landing — real operational overview composed from the existing
+ * admin application, seller, feedback and announcement read endpoints. */
+export default async function AdminHomePage() {
+  const snapshot = await resolveAdminOverviewFromSession();
+
   return (
-    <PageContainer className="py-8 sm:py-10">
+    <PageContainer size="wide" className="py-8 sm:py-10">
       <PageHeader
-        caption="Yönetim"
-        title="Mağazalar"
-        description="Sistemdeki mağazaları bu alandan takip edeceksiniz."
+        caption="YÖNETİM"
+        title="Yönetim Merkezi"
+        description="Başvuruları, mağaza durumlarını ve yönetim kararını bekleyen operasyonel konuları tek yerde takip edin."
       />
-      <div className="mt-8">
-        <EmptyState
-          variant="compact"
-          caption="Mağazalar"
-          title="Mağaza listesi burada görünecek."
-          description="Bu alan mağaza yönetimine bağlandığında, sistemdeki mağazalar burada listelenecek."
-        />
-      </div>
+      <AdminOverview snapshot={snapshot} />
     </PageContainer>
   );
 }

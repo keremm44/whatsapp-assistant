@@ -1,0 +1,10 @@
+import "server-only";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { fetchAdminSeller, fetchAdminSellers, type AdminSeller, type AdminSellerPage } from "./sellers-api";
+import type { AdminSellerSystemStatus } from "./seller-format";
+export type SellerListBootstrap={state:"ready";page:AdminSellerPage}|{state:"unavailable"}|{state:"auth_rejected"};
+export type SellerDetailBootstrap={state:"ready";seller:AdminSeller}|{state:"not_found"}|{state:"unavailable"}|{state:"auth_rejected"};
+const token=async()=>{try{const s=await createSupabaseServerClient();const {data,error}=await s.auth.getSession();return error?null:data.session?.access_token??null}catch{return null}};
+const state=(e:unknown)=>e&&typeof e==="object"&&"status" in e?(e as {status?:number}).status:0;
+export const resolveAdminSellersFromSession=async(input:{q?:string;status?:AdminSellerSystemStatus;limit?:number;offset?:number}):Promise<SellerListBootstrap>=>{const t=await token();if(!t)return{state:"unavailable"};try{return{state:"ready",page:await fetchAdminSellers(t,input)}}catch(e){return state(e)===401?{state:"auth_rejected"}:{state:"unavailable"}}};
+export const resolveAdminSellerFromSession=async(id:number):Promise<SellerDetailBootstrap>=>{const t=await token();if(!t)return{state:"unavailable"};try{return{state:"ready",seller:await fetchAdminSeller(t,id)}}catch(e){if(state(e)===404)return{state:"not_found"};return state(e)===401?{state:"auth_rejected"}:{state:"unavailable"}}};
