@@ -1,5 +1,3 @@
-import * as React from "react";
-
 import { MARKETING_STORY } from "@/components/marketing/marketing-story";
 import { MarketingReveal } from "@/components/marketing/marketing-motion";
 import { cn } from "@/lib/utils/cn";
@@ -25,6 +23,7 @@ export function DailyLoadSection() {
 
         <MarketingReveal className="mt-10" variant="state">
           <div
+            role="list"
             className="border-y border-divider"
             aria-label="Örnek bir iş günündeki konuşma sonuçları"
           >
@@ -78,6 +77,7 @@ function WorkdayFragment({
 
   return (
     <article
+      role="listitem"
       className={cn(
         "grid gap-3 py-5 sm:grid-cols-[76px_minmax(0,1fr)_170px] sm:items-center sm:gap-6",
         !last && "border-b border-divider",
