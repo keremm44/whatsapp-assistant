@@ -269,16 +269,45 @@ function PanelPreview() {
             </div>
             <span className="flex h-10 min-w-10 items-center justify-center rounded-control border border-attention/35 bg-attention-soft px-2 type-figure font-display text-[18px] font-semibold text-attention">2</span>
           </div>
-          <div className="mt-5 space-y-3">
-            <PreviewTask label="İade incelemesi" title="Özel değerlendirme bekleyen müşteri talebi" tone="attention" />
-            <PreviewTask label="Sipariş incelemesi" title="Karar gerektiren sipariş notu" tone="attention" />
-            <PreviewTask label="Yanıtı durdurulan konuşma" title="Satıcı değerlendirmesi bekleyen müşteri konuşması" tone="paused" />
-            <PreviewTask label="Yanıt bekleyen soru" title="Mağaza bilgisinde eksik kalan konu" tone="primary" />
+          <div className="mt-5 md:grid md:grid-cols-[minmax(0,1fr)_132px] md:gap-4">
+            <div className="space-y-3">
+              <PreviewTask label="İade incelemesi" title="Özel değerlendirme bekleyen müşteri talebi" tone="attention" />
+              <PreviewTask label="Sipariş incelemesi" title="Karar gerektiren sipariş notu" tone="attention" />
+              <PreviewTask label="Yanıtı durdurulan konuşma" title="Satıcı değerlendirmesi bekleyen müşteri konuşması" tone="paused" />
+              <PreviewTask label="Yanıt bekleyen soru" title="Mağaza bilgisinde eksik kalan konu" tone="primary" />
+            </div>
+            <aside className="mt-4 hidden border-l border-divider pl-4 md:mt-0 md:block" aria-label="Müşteri bağlamı örneği">
+              <p className="type-meta font-semibold text-muted-foreground">MÜŞTERİ BAĞLAMI</p>
+              <div className="mt-3 space-y-3">
+                <ContextSignal label="Aktif sipariş" value="Sipariş bilgisi" />
+                <ContextSignal label="Açık konu" value="İnceleme bekliyor" attention />
+                <ContextSignal label="Yanıt bekleyen" value="Bilgi eksik" />
+              </div>
+            </aside>
           </div>
         </div>
       </div>
       <p className="relative z-10 px-1 pt-3 type-meta text-muted-foreground">
         Örnek çalışma görünümü
+      </p>
+    </div>
+  );
+}
+
+function ContextSignal({
+  label,
+  value,
+  attention = false,
+}: {
+  label: string;
+  value: string;
+  attention?: boolean;
+}) {
+  return (
+    <div className="border-l border-divider pl-2.5">
+      <p className="type-meta text-muted-foreground">{label}</p>
+      <p className={`mt-0.5 type-row-secondary ${attention ? "text-attention" : "text-muted"}`}>
+        {value}
       </p>
     </div>
   );
