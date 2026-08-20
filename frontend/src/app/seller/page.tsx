@@ -103,7 +103,7 @@ export default async function SellerOverviewPage() {
 
   if (bootstrap.state !== "ready") {
     return (
-      <PageContainer className="seller-dashboard-field relative isolate overflow-hidden py-6 sm:py-8 lg:py-10">
+      <PageContainer className="py-8 sm:py-10">
         <DashboardHeader total={0} />
         <div className="mt-8">
           <AccessUnavailable compact contextLabel="İş listesi" />
@@ -125,7 +125,7 @@ export default async function SellerOverviewPage() {
   const hasNormal = normalTasks.length > 0;
 
   return (
-    <PageContainer className="seller-dashboard-field relative isolate overflow-hidden py-6 sm:py-8 lg:py-10">
+    <PageContainer className="py-8 sm:py-10">
       <DashboardHeader
         total={total}
         high={highTasks.length}
