@@ -37,7 +37,7 @@ export function PanelSection() {
       </div>
 
       <MarketingReveal variant="product" className="mt-10">
-        <div className="mx-auto w-full max-w-[1560px] border-y border-boundary bg-sunken lg:min-h-[720px]">
+        <div className="mx-auto w-full max-w-[1560px] border-y border-boundary bg-canvas lg:min-h-[720px]">
           <SellerDashboardProof />
         </div>
       </MarketingReveal>
