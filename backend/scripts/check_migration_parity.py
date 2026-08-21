@@ -45,8 +45,18 @@ def discover_local_versions(migrations_dir: Path = MIGRATIONS_DIR) -> list[str]:
 
 
 def normalize_remote_versions(rows: Iterable[dict]) -> list[str]:
-    versions = sorted({str(row.get("version", "")).strip().zfill(3) for row in rows})
-    return [version for version in versions if version]
+    versions: set[str] = set()
+    for row in rows:
+        raw_version = row.get("version")
+        if raw_version is None:
+            continue
+        version = str(raw_version).strip()
+        if not version:
+            continue
+        if version.isdigit():
+            version = version.zfill(3)
+        versions.add(version)
+    return sorted(versions)
 
 
 def compare_versions(local_versions: Iterable[str], remote_versions: Iterable[str]) -> tuple[list[str], list[str]]:
