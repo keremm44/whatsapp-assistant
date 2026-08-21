@@ -36,6 +36,19 @@ def test_worker_claim_migration_uses_skip_locked_and_recovers_stale_claims() -> 
     assert "FROM PUBLIC, anon, authenticated" in sql
 
 
+def test_outbound_poll_migration_only_returns_due_pending_rows() -> None:
+    from pathlib import Path
+
+    sql = Path("migrations/040_add_whatsapp_outbound_dispatch_poll.sql").read_text(
+        encoding="utf-8"
+    )
+    assert "next_whatsapp_delivery_outbox_id" in sql
+    assert "o.status = 'PENDING'" in sql
+    assert "o.next_attempt_at <= NOW()" in sql
+    assert "SET search_path = pg_catalog, public" in sql
+    assert "FROM PUBLIC, anon, authenticated" in sql
+
+
 def test_worker_claims_processes_and_completes_successfully(monkeypatch) -> None:
     calls: list[tuple[str, Any]] = []
     monkeypatch.setattr(worker, "claim_next_whatsapp_event", lambda worker_id: {"durum": "başarılı", "event": _row()})
@@ -68,6 +81,24 @@ def test_worker_marks_invalid_queued_payload_failed_without_runtime(monkeypatch)
 
     assert worker.process_one("worker-a") is True
     assert calls == [{"outcome": "FAILED", "error_code": "invalid_queued_event"}]
+
+
+def test_outbound_worker_is_idle_when_sending_is_disabled(monkeypatch) -> None:
+    monkeypatch.setattr(worker, "get_settings", lambda: type("Settings", (), {"whatsapp_send_enabled": False})())
+    monkeypatch.setattr(worker, "get_next_whatsapp_delivery_outbox_id", lambda: (_ for _ in ()).throw(AssertionError("DB must not run")))
+
+    assert worker.process_one_outbound() is False
+
+
+def test_outbound_worker_discovers_then_uses_existing_atomic_dispatch(monkeypatch) -> None:
+    settings = type("Settings", (), {"whatsapp_send_enabled": True})()
+    calls: list[tuple[int, object]] = []
+    monkeypatch.setattr(worker, "get_settings", lambda: settings)
+    monkeypatch.setattr(worker, "get_next_whatsapp_delivery_outbox_id", lambda: {"durum": "başarılı", "outbox_id": 91})
+    monkeypatch.setattr(worker, "dispatch_whatsapp_outbox", lambda outbox_id, current_settings: calls.append((outbox_id, current_settings)) or {"durum": "başarılı", "delivery_state": "SENT"})
+
+    assert worker.process_one_outbound() is True
+    assert calls == [(91, settings)]
 
 
 def test_worker_stops_cleanly_when_queue_is_empty(monkeypatch) -> None:

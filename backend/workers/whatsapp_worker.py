@@ -7,7 +7,10 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from database.whatsapp_delivery import get_next_whatsapp_delivery_outbox_id
 from database.whatsapp_event_queue import claim_next_whatsapp_event, complete_whatsapp_event
+from settings import get_settings
+from whatsapp_sender import dispatch_whatsapp_outbox
 from whatsapp_webhook.models import InboundMessageEvent, MessageStatusEvent
 from whatsapp_webhook.runtime import process_inbound_message, process_status_event
 
@@ -52,9 +55,32 @@ def process_one(worker_id: str) -> bool:
     return True
 
 
+def process_one_outbound() -> bool:
+    """Discover one due outbox row; sender performs the authoritative claim."""
+    settings = get_settings()
+    if not settings.whatsapp_send_enabled:
+        return False
+
+    candidate = get_next_whatsapp_delivery_outbox_id()
+    if candidate.get("durum") == "boş":
+        return False
+    outbox_id = candidate.get("outbox_id")
+    if candidate.get("durum") != "başarılı" or not isinstance(outbox_id, int):
+        logger.error("WhatsApp outbox discovery başarısız")
+        return False
+
+    result = dispatch_whatsapp_outbox(outbox_id, current_settings=settings)
+    if result.get("durum") == "hata":
+        logger.error("WhatsApp outbox dispatch başarısız: reason_code=%s", result.get("reason_code"))
+    return True
+
+
 def main() -> None:
     worker_id = os.getenv("WHATSAPP_WORKER_ID", f"{socket.gethostname()}-{os.getpid()}")
     while True:
-        if not process_one(worker_id): time.sleep(1)
+        inbound_worked = process_one(worker_id)
+        outbound_worked = process_one_outbound()
+        if not inbound_worked and not outbound_worked:
+            time.sleep(1)
 
 if __name__ == "__main__": main()
