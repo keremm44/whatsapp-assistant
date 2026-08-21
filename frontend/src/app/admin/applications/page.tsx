@@ -196,7 +196,7 @@ function ApplicationDetail({ application }: { application: AdminApplication }) {
       {canInvite ? (
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-divider pt-5">
           <p className="max-w-xl type-row-secondary text-muted">
-            Davet, bu başvuruyu seller hesabına dönüştürür. Backend yalnızca yeni veya iletişime geçilmiş başvurularda bu aksiyona izin verir.
+            Davet, bu başvuruyu seller hesabına dönüştürür. Yalnızca yeni veya iletişime geçilmiş başvurularda gönderilebilir.
           </p>
           <ApplicationInvite id={application.id} email={application.email} />
         </div>
