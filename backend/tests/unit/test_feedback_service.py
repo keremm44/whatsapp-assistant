@@ -16,11 +16,15 @@ SELLER_FEEDBACK = {
     "created_at": "2026-08-16T10:00:00+00:00",
     "updated_at": "2026-08-16T10:00:00+00:00",
     "resolved_at": None,
+    "admin_reply": None,
+    "admin_replied_at": None,
 }
 
 ADMIN_FEEDBACK = SELLER_FEEDBACK | {
     "seller": {"id": 42, "name": "Ada", "store_name": "Ada Store"},
     "admin_note": None,
+    "admin_reply": None,
+    "admin_replied_at": None,
 }
 
 
@@ -69,6 +73,8 @@ def test_submit_feedback_passes_authenticated_seller_and_public_fields(monkeypat
                 "message": "Mesaj",
                 "status": "OPEN",
                 "admin_note": "internal",
+                "admin_reply": None,
+                "admin_replied_at": None,
                 "version": 1,
                 "created_at": "c",
                 "updated_at": "u",
@@ -185,6 +191,8 @@ def test_admin_update_passes_only_provided_fields_and_resolved_result(monkeypatc
                 "id": feedback_id,
                 "status": "RESOLVED",
                 "admin_note": None,
+    "admin_reply": None,
+    "admin_replied_at": None,
                 "version": 4,
                 "resolved_at": "2026-08-16T10:00:00+00:00",
             },
@@ -204,6 +212,7 @@ def test_admin_update_passes_only_provided_fields_and_resolved_result(monkeypatc
     assert result["feedback"]["resolved_at"] is not None
     assert captured["update_status"] is True
     assert captured["update_admin_note"] is False
+    assert captured["update_admin_reply"] is False
     assert captured["expected_version"] == 3
 
 
@@ -271,3 +280,34 @@ def test_admin_update_requires_mutable_field_and_rejects_null_status() -> None:
         service.AdminFeedbackUpdateRequest(expected_version=1)
     with pytest.raises(ValidationError):
         service.AdminFeedbackUpdateRequest(expected_version=1, status=None)
+
+
+def test_admin_update_accepts_separate_seller_reply(monkeypatch) -> None:
+    captured = {}
+
+    def fake_update(feedback_id, expected_version, **kwargs):
+        captured.update(kwargs)
+        return {
+            "durum": "başarılı",
+            "changed": True,
+            "feedback": ADMIN_FEEDBACK | {
+                "admin_note": "İç not",
+                "admin_reply": "Sorununuz çözüldü.",
+                "admin_replied_at": "2026-08-21T10:00:00+00:00",
+                "status": "RESOLVED",
+                "resolved_at": "2026-08-21T10:00:00+00:00",
+            },
+        }
+
+    monkeypatch.setattr(service, "update_admin_feedback_record", fake_update)
+    result = service.update_admin_feedback(8, service.AdminFeedbackUpdateRequest(
+        expected_version=3, status="RESOLVED", admin_note="İç not",
+        admin_reply="  Sorununuz çözüldü.  ",
+    ))
+
+    assert result["ok"] is True
+    assert result["feedback"]["admin_note"] == "İç not"
+    assert result["feedback"]["admin_reply"] == "Sorununuz çözüldü."
+    assert captured["update_admin_note"] is True
+    assert captured["update_admin_reply"] is True
+    assert captured["admin_reply"] == "Sorununuz çözüldü."

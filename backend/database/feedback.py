@@ -131,6 +131,8 @@ def update_admin_feedback_record(
     admin_note: str | None,
     update_status: bool,
     update_admin_note: bool,
+    admin_reply: str | None,
+    update_admin_reply: bool,
 ) -> dict[str, Any]:
     try:
         result = get_supabase().rpc(
@@ -142,6 +144,8 @@ def update_admin_feedback_record(
                 "status_value": status,
                 "update_admin_note": update_admin_note,
                 "admin_note_value": admin_note,
+                "update_admin_reply": update_admin_reply,
+                "admin_reply_value": admin_reply,
             },
         ).execute()
     except Exception:
