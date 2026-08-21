@@ -2,25 +2,22 @@ import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
-  fetchAdminFeedback,
-  fetchAdminFeedbackDetail,
-  type AdminFeedback,
-  type AdminFeedbackPage,
-} from "./feedback-api";
-import type {
-  AdminFeedbackCategory,
-  AdminFeedbackStatus,
-} from "./feedback-format";
+  fetchAdminAnnouncementDetail,
+  fetchAdminAnnouncements,
+  type AdminAnnouncement,
+  type AdminAnnouncementPage,
+} from "./announcements-api";
 
-export type AdminFeedbackListBootstrap =
-  | { state: "ready"; page: AdminFeedbackPage }
+export type AdminAnnouncementListBootstrap =
+  | { state: "ready"; page: AdminAnnouncementPage }
   | { state: "unavailable" };
-export type AdminFeedbackDetailBootstrap =
-  | { state: "ready"; feedback: AdminFeedback }
+
+export type AdminAnnouncementDetailBootstrap =
+  | { state: "ready"; announcement: AdminAnnouncement }
   | { state: "not_found" }
   | { state: "unavailable" };
 
-const access = async () => {
+async function accessToken() {
   try {
     const supabase = await createSupabaseServerClient();
     const session = await supabase.auth.getSession();
@@ -28,27 +25,23 @@ const access = async () => {
   } catch {
     return null;
   }
-};
+}
 
 const statusCode = (error: unknown) =>
   error && typeof error === "object" && "status" in error
     ? (error as { status?: unknown }).status
     : 0;
 
-export async function resolveAdminFeedbackList(input: {
-  status?: AdminFeedbackStatus;
-  category?: AdminFeedbackCategory;
-  sellerId?: number;
+export async function resolveAdminAnnouncements(input: {
   limit?: number;
   offset?: number;
-}): Promise<AdminFeedbackListBootstrap> {
-  const token = await access();
+} = {}): Promise<AdminAnnouncementListBootstrap> {
+  const token = await accessToken();
   if (!token) return { state: "unavailable" };
   try {
     return {
       state: "ready",
-      page: await fetchAdminFeedback(token, {
-        ...input,
+      page: await fetchAdminAnnouncements(token, {
         limit: input.limit ?? 30,
         offset: input.offset ?? 0,
       }),
@@ -58,13 +51,16 @@ export async function resolveAdminFeedbackList(input: {
   }
 }
 
-export async function resolveAdminFeedbackDetail(
+export async function resolveAdminAnnouncementDetail(
   id: number,
-): Promise<AdminFeedbackDetailBootstrap> {
-  const token = await access();
+): Promise<AdminAnnouncementDetailBootstrap> {
+  const token = await accessToken();
   if (!token) return { state: "unavailable" };
   try {
-    return { state: "ready", feedback: await fetchAdminFeedbackDetail(token, id) };
+    return {
+      state: "ready",
+      announcement: await fetchAdminAnnouncementDetail(token, id),
+    };
   } catch (error) {
     return statusCode(error) === 404
       ? { state: "not_found" }
