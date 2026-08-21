@@ -12,6 +12,7 @@ import {
 import { resolveAdminSellersFromSession } from "@/lib/admin/sellers-server";
 
 const PAGE_SIZE = 30;
+const SELLER_PICKER_PAGE_SIZE = 50;
 const one = (value: string | string[] | undefined) =>
   typeof value === "string" ? value : undefined;
 
@@ -35,7 +36,7 @@ export default async function AdminAnnouncementsPage({
 
   const [list, sellerDirectory] = await Promise.all([
     resolveAdminAnnouncements({ limit: PAGE_SIZE, offset }),
-    resolveAdminSellersFromSession({ limit: 100, offset: 0 }),
+    resolveAdminSellersFromSession({ limit: SELLER_PICKER_PAGE_SIZE, offset: 0 }),
   ]);
   const detail =
     Number.isInteger(selectedId) && selectedId > 0
@@ -43,6 +44,7 @@ export default async function AdminAnnouncementsPage({
       : null;
 
   const sellers = sellerDirectory.state === "ready" ? sellerDirectory.page.sellers : [];
+  const sellerTotal = sellerDirectory.state === "ready" ? sellerDirectory.page.total : 0;
   const total = list.state === "ready" ? list.page.total : 0;
   const hasPrevious = pageNumber > 1;
   const hasNext = list.state === "ready" && offset + list.page.announcements.length < total;
@@ -56,7 +58,7 @@ export default async function AdminAnnouncementsPage({
       />
 
       <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(420px,.95fr)] xl:items-start">
-        <AnnouncementForm sellers={sellers} />
+        <AnnouncementForm initialSellers={sellers} initialSellerTotal={sellerTotal} />
 
         <section className="overflow-hidden rounded-sheet border border-boundary/70 bg-raised shadow-surface">
           <div className="flex items-start justify-between gap-4 border-b border-divider px-5 py-4 sm:px-6">
