@@ -574,7 +574,7 @@ def seller_conversations(
     ]
     | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Seller'ın konuşmalarını panel read modelinde listeler."""
@@ -642,7 +642,7 @@ def seller_dashboard_tasks(
         pattern="^(return_review|order_review|unanswered_question)$",
     ),
     limit: int = Query(default=50, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Bugün ilgilenmeniz gerekenler iş kuyruğunu döndürür."""
@@ -864,7 +864,7 @@ def seller_orders(
     customer_id: int | None = Query(default=None, ge=1),
     external_order_number: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Satıcının siparişlerini tenant scope'unda listeler."""
@@ -1145,7 +1145,7 @@ def seller_return_issue_requests(
     issue_type: str | None = Query(default=None, max_length=48),
     external_order_number: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Satıcının kalıcı iade/sorun taleplerini tenant scope'unda listeler."""
@@ -1345,7 +1345,7 @@ def seller_unanswered_questions(
         pattern="^(action_required|answered|dismissed|all)$",
     ),
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Seller'ın cevaplanamayan soru gruplarını tenant scope'unda listeler."""
@@ -1472,7 +1472,7 @@ def seller_submit_feedback(
 @router.get("/seller/feedback")
 def seller_feedback_list(
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Seller'ın yalnız kendi feedback kayıtlarını en yeniden eskiye listeler."""
@@ -1504,7 +1504,7 @@ def admin_feedback_list(
     category: FeedbackCategory | None = Query(default=None),
     seller_id: int | None = Query(default=None, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     _: AuthContext = Depends(require_admin),
 ) -> dict[str, Any]:
     """Admin workflow kuyruğunu güvenli seller özeti ve filtrelerle listeler."""
@@ -1580,7 +1580,7 @@ def admin_publish_announcement(
 @router.get("/admin/announcements")
 def admin_announcement_list(
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     _: AuthContext = Depends(require_admin),
 ) -> dict[str, Any]:
     """Admin duyurularını hedef ve okundu sayılarıyla listeler."""
@@ -1605,7 +1605,7 @@ def admin_announcement_detail(
 @router.get("/seller/announcements")
 def seller_announcement_list(
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Seller'ın yalnız explicit hedeflendiği duyuruları tenant scope'unda listeler."""

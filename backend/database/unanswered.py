@@ -354,10 +354,10 @@ def list_unanswered_question_groups(
         return {"durum": "doğrulama_hatası", "mesaj": "view değeri geçersiz."}
     if not _is_positive_int(limit) or limit > 100:
         return {"durum": "doğrulama_hatası", "mesaj": "limit 1 ile 100 arasında olmalıdır."}
-    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0 or offset > 10_000:
         return {
             "durum": "doğrulama_hatası",
-            "mesaj": "offset negatif olmayan tam sayı olmalıdır.",
+            "mesaj": "offset 0 ile 10.000 arasında tam sayı olmalıdır.",
         }
 
     try:

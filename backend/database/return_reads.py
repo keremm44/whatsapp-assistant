@@ -110,8 +110,8 @@ def list_return_issue_requests(
         return {"durum": "doğrulama_hatası", "mesaj": "view değeri geçersiz."}
     if not _is_positive_int(limit) or limit > 100:
         return {"durum": "doğrulama_hatası", "mesaj": "limit 1 ile 100 arasında olmalıdır."}
-    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
-        return {"durum": "doğrulama_hatası", "mesaj": "offset negatif olmayan tam sayı olmalıdır."}
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0 or offset > 10_000:
+        return {"durum": "doğrulama_hatası", "mesaj": "offset 0 ile 10.000 arasında tam sayı olmalıdır."}
     if customer_id is not None and not _is_positive_int(customer_id):
         return {"durum": "doğrulama_hatası", "mesaj": "customer_id pozitif tam sayı olmalıdır."}
     if issue_type is not None and issue_type not in RETURN_ISSUE_TYPES:

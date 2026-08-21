@@ -370,8 +370,8 @@ def list_orders(
         return {"durum": "doğrulama_hatası", "mesaj": "view değeri geçersiz."}
     if limit < 1 or limit > 100:
         return {"durum": "doğrulama_hatası", "mesaj": "limit 1 ile 100 arasında olmalıdır."}
-    if offset < 0:
-        return {"durum": "doğrulama_hatası", "mesaj": "offset negatif olamaz."}
+    if offset < 0 or offset > 10_000:
+        return {"durum": "doğrulama_hatası", "mesaj": "offset 0 ile 10.000 arasında olmalıdır."}
     try:
         query = (
             get_supabase().table("orders").select("*").eq("seller_id", seller_id)
