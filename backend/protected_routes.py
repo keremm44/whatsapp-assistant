@@ -59,6 +59,7 @@ from unanswered_question_service import (
     set_seller_answer,
 )
 from seller_media_service import get_seller_message_media
+from seller_cache import seller_read_cache
 from seller_panel_service import (
     get_conversation_detail as get_seller_panel_conversation_detail,
     list_conversations as list_seller_panel_conversations,
@@ -701,6 +702,7 @@ def seller_mutate_conversation_control(
     )
     if not result.get("ok"):
         _raise_from_control_service(result)
+    seller_read_cache.invalidate_seller(context.seller_id)
     return {key: value for key, value in result.items() if key != "ok"}
 
 
@@ -1245,6 +1247,7 @@ def seller_return_issue_request_action(
             result,
             default_message="İade/sorun talebi güncellenemedi.",
         )
+    seller_read_cache.invalidate_seller(context.seller_id)
 
     return {
         "action": body.action,
@@ -1449,6 +1452,7 @@ def seller_unanswered_question_action(
             result,
             default_message="Cevaplanamayan soru güncellenemedi.",
         )
+    seller_read_cache.invalidate_seller(context.seller_id)
 
     group = result["group"]
     if isinstance(group, dict) and "seller_action_required" not in group:
