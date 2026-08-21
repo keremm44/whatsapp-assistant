@@ -283,13 +283,27 @@ def test_image_message_keeps_only_provider_media_reference() -> None:
     assert event.media_id == "media-42"
 
 
-def test_actionable_events_are_not_acknowledged_before_runtime_bridge(
+def test_actionable_events_are_acknowledged_after_durable_inbox_enqueue(
     client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    import whatsapp_webhook.routes as webhook_routes
+
+    monkeypatch.setattr(
+        webhook_routes,
+        "enqueue_webhook_events",
+        lambda events: {"durum": "başarılı", "queued": len(events), "duplicates": 0},
+    )
+
     response = _post_signed(client, _text_payload())
 
-    assert response.status_code == 503
-    assert response.json()["detail"]["code"] == "whatsapp_runtime_not_ready"
+    assert response.status_code == 200
+    assert response.json() == {
+        "received": True,
+        "events": 1,
+        "queued": 1,
+        "duplicates": 0,
+    }
 
 
 def test_signed_malformed_json_returns_400(client: TestClient) -> None:

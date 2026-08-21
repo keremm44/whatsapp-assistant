@@ -112,44 +112,36 @@ def _status_event(status_value: str = "delivered") -> MessageStatusEvent:
     )
 
 
-def test_route_keeps_actionable_events_disabled_by_default(monkeypatch) -> None:
-    def unexpected(events: Any) -> dict[str, Any]:
-        raise AssertionError("runtime must not run while disabled")
+def test_route_queues_actionable_events_even_when_runtime_is_disabled(monkeypatch) -> None:
+    calls: list[Any] = []
 
-    monkeypatch.setattr(routes, "process_webhook_events", unexpected)
+    def fake_enqueue(events: Any) -> dict[str, Any]:
+        events = list(events)
+        calls.append(events)
+        return {"durum": "başarılı", "queued": len(events), "duplicates": 0}
+
+    monkeypatch.setattr(routes, "enqueue_webhook_events", fake_enqueue)
     client = TestClient(_app(runtime_enabled=False))
 
     response = _signed_post(client, _text_payload())
 
-    assert response.status_code == 503
-    assert response.json()["detail"]["code"] == "whatsapp_runtime_not_ready"
-
-
-def test_enabled_route_dispatches_only_after_signature_and_parse(monkeypatch) -> None:
-    calls: list[Any] = []
-
-    def fake_process(events: Any) -> dict[str, Any]:
-        events = list(events)
-        calls.append(events)
-        return {"durum": "başarılı", "processed": len(events)}
-
-    monkeypatch.setattr(routes, "process_webhook_events", fake_process)
-    client = TestClient(_app(runtime_enabled=True))
-
-    response = _signed_post(client, _text_payload())
-
     assert response.status_code == 200
-    assert response.json() == {"received": True, "events": 1}
+    assert response.json() == {
+        "received": True,
+        "events": 1,
+        "queued": 1,
+        "duplicates": 0,
+    }
     assert len(calls) == 1
     assert isinstance(calls[0][0], InboundMessageEvent)
 
 
-def test_invalid_signature_never_reaches_runtime(monkeypatch) -> None:
+def test_invalid_signature_never_reaches_inbox(monkeypatch) -> None:
     def unexpected(events: Any) -> dict[str, Any]:
-        raise AssertionError("runtime must not run before signature verification")
+        raise AssertionError("inbox must not run before signature verification")
 
-    monkeypatch.setattr(routes, "process_webhook_events", unexpected)
-    client = TestClient(_app(runtime_enabled=True))
+    monkeypatch.setattr(routes, "enqueue_webhook_events", unexpected)
+    client = TestClient(_app(runtime_enabled=False))
 
     response = client.post(
         "/webhooks/whatsapp",
@@ -160,25 +152,25 @@ def test_invalid_signature_never_reaches_runtime(monkeypatch) -> None:
     assert response.status_code == 401
 
 
-def test_runtime_failure_maps_to_safe_503_reason(monkeypatch) -> None:
+def test_inbox_failure_maps_to_safe_503_reason(monkeypatch) -> None:
     monkeypatch.setattr(
         routes,
-        "process_webhook_events",
+        "enqueue_webhook_events",
         lambda events: {
             "durum": "hata",
-            "reason_code": "whatsapp_channel_unavailable",
+            "reason_code": "whatsapp_inbox_enqueue_failed",
             "internal": "must-not-leak",
         },
     )
-    client = TestClient(_app(runtime_enabled=True))
+    client = TestClient(_app(runtime_enabled=False))
 
     response = _signed_post(client, _text_payload())
 
     assert response.status_code == 503
     detail = response.json()["detail"]
     assert detail == {
-        "code": "whatsapp_channel_unavailable",
-        "message": "WhatsApp event güvenli biçimde tamamlanamadı.",
+        "code": "whatsapp_inbox_unavailable",
+        "message": "WhatsApp eventi güvenli biçimde kuyruğa alınamadı.",
     }
     assert "must-not-leak" not in response.text
 

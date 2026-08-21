@@ -9,8 +9,8 @@ from fastapi.responses import PlainTextResponse
 
 from settings import AppSettings, get_settings
 
+from .inbox import enqueue_webhook_events
 from .parser import WebhookPayloadError, parse_whatsapp_webhook
-from .runtime import process_webhook_events
 from .security import WebhookBodyTooLarge, read_bounded_body, verify_meta_signature
 
 
@@ -108,29 +108,29 @@ async def receive_whatsapp_webhook(
     if not events:
         return {"received": True, "events": 0}
 
-    if not bool(getattr(current_settings, "whatsapp_runtime_enabled", False)):
+    # Do not run chat/AI/database orchestration inside Meta's HTTP request.
+    # Once a signed event is durably queued, acknowledge it quickly; a separate
+    # worker owns business processing and outbound dispatch.
+    queue_result = enqueue_webhook_events(events)
+    if queue_result.get("durum") != "başarılı":
+        reason_code = queue_result.get("reason_code")
+        if reason_code == "whatsapp_webhook_event_limit_exceeded":
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="Webhook event sayısı izin verilen sınırı aşıyor.",
+            )
         raise _service_unavailable(
-            "whatsapp_runtime_not_ready",
-            "WhatsApp event işleme katmanı henüz etkinleştirilmedi.",
+            "whatsapp_inbox_unavailable",
+            "WhatsApp eventi güvenli biçimde kuyruğa alınamadı.",
         )
 
-    runtime_result = process_webhook_events(events)
-    if runtime_result.get("durum") != "başarılı":
-        reason_code = runtime_result.get("reason_code")
-        safe_code = (
-            reason_code
-            if isinstance(reason_code, str) and reason_code.startswith("whatsapp_")
-            else "whatsapp_runtime_processing_failed"
-        )
-        raise _service_unavailable(
-            safe_code,
-            "WhatsApp event güvenli biçimde tamamlanamadı.",
-        )
-
-    processed = runtime_result.get("processed")
-    processed_count = (
-        processed
-        if isinstance(processed, int) and not isinstance(processed, bool) and processed >= 0
-        else 0
-    )
-    return {"received": True, "events": processed_count}
+    queued = queue_result.get("queued")
+    duplicates = queue_result.get("duplicates")
+    return {
+        "received": True,
+        "events": len(events),
+        "queued": queued if isinstance(queued, int) and queued >= 0 else 0,
+        "duplicates": (
+            duplicates if isinstance(duplicates, int) and duplicates >= 0 else 0
+        ),
+    }
