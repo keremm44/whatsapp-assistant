@@ -374,7 +374,9 @@ def list_orders(
         return {"durum": "doğrulama_hatası", "mesaj": "offset 0 ile 10.000 arasında olmalıdır."}
     try:
         query = (
-            get_supabase().table("orders").select("*").eq("seller_id", seller_id)
+            get_supabase().table("orders")
+            .select("id,seller_id,customer_id,product_id,product_name_snapshot,external_order_number,customer_phone_snapshot,image_message_id,custom_text,status,review_reason_code,review_reason_note,version,created_at,updated_at,completed_at")
+            .eq("seller_id", seller_id)
             .order("updated_at", desc=True).range(offset, offset + limit - 1)
         )
         if view == "action_required":
