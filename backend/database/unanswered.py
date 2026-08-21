@@ -363,7 +363,7 @@ def list_unanswered_question_groups(
     try:
         query = (
             get_supabase().table("unanswered_question_groups")
-            .select("*")
+            .select("id,canonical_question,status,answer_text,occurrence_count,first_seen_at,last_seen_at,version")
             .eq("seller_id", seller_id)
             .order("last_seen_at", desc=True)
             .order("id", desc=True)
