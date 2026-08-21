@@ -9,6 +9,7 @@ from .conversations import (
 )
 from .returns import RETURN_ISSUE_STATUS_SELLER_REVIEW_REQUIRED
 from .unanswered import UNANSWERED_STATUS_OPEN
+from seller_cache import seller_read_cache
 
 
 def get_supabase():
@@ -80,7 +81,7 @@ def _count_paused_or_taken_over(seller_id: int) -> dict[str, Any]:
     return {"durum": "başarılı", "count": count}
 
 
-def get_seller_action_counts(seller_id: int) -> dict[str, Any]:
+def _get_seller_action_counts_uncached(seller_id: int) -> dict[str, Any]:
     """Seller-scoped hafif action-count read model.
 
     Three independent lightweight counts via indexed columns:
@@ -110,3 +111,13 @@ def get_seller_action_counts(seller_id: int) -> dict[str, Any]:
         "unanswered_open": r2["count"],
         "paused_or_taken_over": r3["count"],
     }
+
+
+def get_seller_action_counts(seller_id: int) -> dict[str, Any]:
+    """Short-lived, tenant-scoped cache around dashboard action counts."""
+    if not _is_positive_int(seller_id):
+        return _get_seller_action_counts_uncached(seller_id)
+    return seller_read_cache.get_or_load(
+        "seller_action_counts", seller_id,
+        lambda: _get_seller_action_counts_uncached(seller_id),
+    )
