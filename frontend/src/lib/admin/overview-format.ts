@@ -1,6 +1,15 @@
+export type AdminLatestAnnouncementItem = {
+  title: string;
+  message: string;
+  importance: "NORMAL" | "IMPORTANT";
+  imageUrl: string | null;
+  targetCount: number;
+  readCount: number;
+};
+
 export type AdminLatestAnnouncement = {
   total: number;
-  latest: { title: string; targetCount: number; readCount: number } | null;
+  latest: AdminLatestAnnouncementItem | null;
 };
 
 const PREFIX = "admin_overview_invalid_";
@@ -63,10 +72,21 @@ export const parseAdminLatestAnnouncement = (
 
   const latest = announcements[0];
   if (!isRecord(latest)) throw contractError("announcement_item");
+  const importance = readString(latest, "importance");
+  if (importance !== "NORMAL" && importance !== "IMPORTANT") {
+    throw contractError("importance_shape");
+  }
+  const imageUrl = latest.image_url;
+  if (imageUrl !== null && (typeof imageUrl !== "string" || !imageUrl.startsWith("https://"))) {
+    throw contractError("image_url_shape");
+  }
   return {
     total,
     latest: {
       title: readString(latest, "title"),
+      message: readString(latest, "message"),
+      importance,
+      imageUrl,
       targetCount: readNonNegativeInt(latest, "target_count"),
       readCount: readNonNegativeInt(latest, "read_count"),
     },

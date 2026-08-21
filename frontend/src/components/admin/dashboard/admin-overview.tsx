@@ -3,17 +3,23 @@ import {
   CircleAlert,
   ClipboardCheck,
   MessageSquareText,
+  ArrowUpRight,
 } from "lucide-react";
+import Link from "next/link";
 
 import { StatusChip } from "@/components/shared/status-chip";
 import type {
   AdminOverviewSnapshot,
   AdminOverviewSource,
 } from "@/lib/admin/overview";
+import type { AdminLatestAnnouncementItem } from "@/lib/admin/overview-format";
 
 export function AdminOverview({ snapshot }: { snapshot: AdminOverviewSnapshot }) {
   return (
     <div className="space-y-8 lg:space-y-10">
+      {snapshot.latestAnnouncement.state === "ready" && snapshot.latestAnnouncement.data.latest?.importance === "IMPORTANT" ? (
+        <ImportantAnnouncementBanner announcement={snapshot.latestAnnouncement.data.latest} />
+      ) : null}
       <section aria-label="Yönetim öncelikleri" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <OverviewMeasure
           label="Yeni başvurular"
@@ -126,12 +132,34 @@ function OverviewMeasure({
   );
 }
 
+function ImportantAnnouncementBanner({
+  announcement,
+}: {
+    announcement: AdminLatestAnnouncementItem;
+}) {
+  return (
+    <section className="overflow-hidden rounded-sheet border border-attention/30 bg-attention/10 shadow-surface" aria-label="Önemli duyuru">
+      <div className="grid items-stretch lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="p-5 sm:p-6">
+          <p className="type-meta font-semibold tracking-[0.08em] text-attention">ÖNEMLİ DUYURU</p>
+          <h2 className="mt-2 type-section text-foreground">{announcement.title}</h2>
+          <p className="mt-2 line-clamp-3 max-w-2xl whitespace-pre-wrap type-body text-muted">{announcement.message}</p>
+          <Link href="/admin/announcements" className="mt-4 inline-flex items-center gap-1.5 type-row-secondary font-semibold text-primary hover:underline">
+            Duyurulara git <ArrowUpRight aria-hidden="true" size={15} />
+          </Link>
+        </div>
+        {announcement.imageUrl ? <div className="aspect-video bg-sunken lg:aspect-auto"><img src={announcement.imageUrl} alt="" className="h-full w-full object-cover" /></div> : null}
+      </div>
+    </section>
+  );
+}
+
 function AnnouncementMeasure({
   source,
 }: {
   source: AdminOverviewSource<{
     total: number;
-    latest: { title: string; targetCount: number; readCount: number } | null;
+    latest: { title: string; message: string; importance: "NORMAL" | "IMPORTANT"; imageUrl: string | null; targetCount: number; readCount: number } | null;
   }>;
 }) {
   const ready = source.state === "ready";

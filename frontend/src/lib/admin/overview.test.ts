@@ -30,6 +30,9 @@ test("admin overview exposes only the latest announcement's real delivery counts
     announcements: [
       {
         title: "Kısa bakım duyurusu",
+        message: "Planlı bakım yapılacaktır.",
+        importance: "IMPORTANT",
+        image_url: null,
         target_count: 12,
         read_count: 5,
       },
@@ -40,6 +43,9 @@ test("admin overview exposes only the latest announcement's real delivery counts
     total: 2,
     latest: {
       title: "Kısa bakım duyurusu",
+      message: "Planlı bakım yapılacaktır.",
+      importance: "IMPORTANT",
+      imageUrl: null,
       targetCount: 12,
       readCount: 5,
     },
