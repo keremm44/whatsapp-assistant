@@ -38,6 +38,10 @@ function feedbackHref(input: {
   return `/admin/feedback${params.size ? `?${params}` : ""}` as Route;
 }
 
+function tabClass(active: boolean) {
+  return `border-b-2 px-1 py-2 type-meta transition-colors ${active ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`;
+}
+
 export default async function AdminFeedbackPage({
   searchParams,
 }: {
@@ -85,41 +89,41 @@ export default async function AdminFeedbackPage({
 
       <div className="mt-8 grid overflow-hidden rounded-sheet border border-boundary/70 bg-raised shadow-surface lg:grid-cols-[380px_minmax(0,1fr)]">
         <aside className="border-b border-divider lg:border-b-0 lg:border-r">
-          <div className="space-y-3 border-b border-divider p-4">
-            <div className="flex items-center justify-between gap-3">
+          <div className="border-b border-divider px-4 pt-4">
+            <div className="flex items-center justify-between gap-3 pb-2">
               <p className="type-meta font-semibold text-primary">GERİ BİLDİRİM KUYRUĞU</p>
               {list.state === "ready" ? (
                 <span className="type-figure text-sm font-semibold text-muted-foreground">{total}</span>
               ) : null}
             </div>
-            <nav className="flex flex-wrap gap-2" aria-label="Geri bildirim durumu">
+            <nav className="flex flex-wrap gap-x-4" aria-label="Geri bildirim durumu">
               {[undefined, ...ADMIN_FEEDBACK_STATUSES].map((item) => (
                 <Link
                   key={item ?? "all"}
                   href={feedbackHref({ status: item, category, sellerId })}
-                  className={`rounded-pill px-2 py-1 type-meta ${status === item ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-elevated"}`}
+                  className={tabClass(status === item)}
                 >
                   {item ? ADMIN_FEEDBACK_STATUS[item].label : "Tümü"}
                 </Link>
               ))}
             </nav>
-            <nav className="flex flex-wrap gap-2" aria-label="Geri bildirim türü">
+            <nav className="flex flex-wrap gap-x-4 border-t border-divider/70" aria-label="Geri bildirim türü">
               {[undefined, ...ADMIN_FEEDBACK_CATEGORIES].map((item) => (
                 <Link
                   key={item ?? "all"}
                   href={feedbackHref({ status, category: item, sellerId })}
-                  className={`rounded-pill px-2 py-1 type-meta ${category === item ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-elevated"}`}
+                  className={tabClass(category === item)}
                 >
                   {item ? ADMIN_FEEDBACK_CATEGORY_LABEL[item] : "Tüm türler"}
                 </Link>
               ))}
             </nav>
             {sellerId ? (
-              <div className="flex items-center justify-between gap-3 border-t border-divider pt-3">
+              <div className="flex items-center justify-between gap-3 border-t border-divider py-3">
                 <span className="type-meta text-muted-foreground">Mağaza filtresi · #{sellerId}</span>
                 <Link
                   href={feedbackHref({ status, category })}
-                  className="type-meta font-semibold text-primary"
+                  className="type-meta font-semibold text-primary hover:underline"
                 >
                   Kaldır
                 </Link>
