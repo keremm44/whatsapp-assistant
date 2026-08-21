@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.check_migration_parity import compare_versions, discover_local_versions
+from scripts.check_migration_parity import (
+    compare_versions,
+    discover_local_versions,
+    normalize_remote_versions,
+)
 
 
 def test_local_migration_chain_is_contiguous() -> None:
@@ -27,6 +31,17 @@ def test_parity_detects_database_versions_missing_from_repo() -> None:
 
     assert missing == []
     assert unexpected == ["044"]
+
+
+def test_remote_version_normalization_ignores_empty_values() -> None:
+    rows = [
+        {"version": "42"},
+        {"version": " 043 "},
+        {"version": ""},
+        {"version": None},
+    ]
+
+    assert normalize_remote_versions(rows) == ["042", "043"]
 
 
 def test_local_chain_rejects_a_gap(tmp_path: Path) -> None:
