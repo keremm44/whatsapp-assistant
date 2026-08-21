@@ -21,6 +21,7 @@ def _announcement_rpc_response(data: Any) -> dict[str, Any]:
             "announcement",
             "announcements",
             "total",
+            "unread_count",
             "announcement_id",
             "is_read",
             "read_at",
@@ -41,6 +42,8 @@ def create_announcement_record(
     *,
     title: str,
     message: str,
+    importance: str,
+    image_url: str | None,
     audience_type: str,
     seller_ids: list[int] | None,
 ) -> dict[str, Any]:
@@ -51,6 +54,8 @@ def create_announcement_record(
                 "creator_profile_id": creator_profile_id,
                 "title_value": title,
                 "message_value": message,
+                "importance_value": importance,
+                "image_url_value": image_url,
                 "audience_type_value": audience_type,
                 "seller_ids_value": seller_ids,
             },
@@ -137,4 +142,17 @@ def mark_seller_announcement_read_record(
         ).execute()
     except Exception:
         return {"durum": "hata", "mesaj": "Duyuru okundu olarak işaretlenemedi."}
+    return _announcement_rpc_response(result.data)
+
+
+def get_seller_announcement_unread_count_record(
+    seller_id: int,
+) -> dict[str, Any]:
+    try:
+        result = get_supabase().rpc(
+            "get_seller_announcements_unread_count",
+            {"target_seller_id": seller_id},
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "mesaj": "Okunmamış duyuru sayısı okunamadı."}
     return _announcement_rpc_response(result.data)

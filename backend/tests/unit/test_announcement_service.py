@@ -10,6 +10,7 @@ from announcement_service import (
     get_seller_announcement,
     list_admin_announcements,
     list_seller_announcements,
+    get_seller_announcement_unread_count,
     mark_seller_announcement_read,
 )
 
@@ -19,6 +20,8 @@ ADMIN_ANNOUNCEMENT = {
     "title": "Planlı bakım",
     "message": "Pazar günü bakım yapılacaktır.",
     "audience_type": "ALL_SELLERS",
+    "importance": "NORMAL",
+    "image_url": None,
     "created_by_profile_id": 3,
     "target_count": 12,
     "read_count": 4,
@@ -31,6 +34,8 @@ SELLER_ANNOUNCEMENT = {
     "title": "Planlı bakım",
     "message": "Pazar günü bakım yapılacaktır.",
     "audience_type": "ALL_SELLERS",
+    "importance": "NORMAL",
+    "image_url": None,
     "is_read": False,
     "read_at": None,
     "published_at": "2026-08-16T10:00:00+00:00",
@@ -145,6 +150,7 @@ def test_seller_list_projects_only_seller_safe_fields(monkeypatch) -> None:
         lambda seller_id, **kwargs: {
             "durum": "başarılı",
             "total": 1,
+            "unread_count": 1,
             "announcements": [
                 SELLER_ANNOUNCEMENT
                 | {"created_by_profile_id": 3, "target_count": 12, "secret": "no"}
@@ -187,6 +193,7 @@ def test_mark_read_preserves_first_write_and_repeat_semantics(monkeypatch) -> No
             "is_read": True,
             "read_at": "2026-08-16T12:00:00+00:00",
             "changed": next(calls),
+            "unread_count": 1,
         }
 
     monkeypatch.setattr(
@@ -237,3 +244,75 @@ def test_malformed_successful_announcement_row_maps_to_unavailable(
 
     assert result["ok"] is False
     assert result["kind"] == "unavailable"
+
+
+def test_seller_unread_count_requires_strict_non_negative_integer(monkeypatch) -> None:
+    monkeypatch.setattr(
+        announcement_service,
+        "get_seller_announcement_unread_count_record",
+        lambda seller_id: {"durum": "başarılı", "unread_count": 4},
+    )
+
+    result = get_seller_announcement_unread_count(42)
+
+    assert result == {"ok": True, "unread_count": 4}
+
+
+def test_seller_unread_count_rejects_malformed_database_value(monkeypatch) -> None:
+    monkeypatch.setattr(
+        announcement_service,
+        "get_seller_announcement_unread_count_record",
+        lambda seller_id: {"durum": "başarılı", "unread_count": "4"},
+    )
+
+    result = get_seller_announcement_unread_count(42)
+
+    assert result["ok"] is False
+    assert result["kind"] == "unavailable"
+
+
+@pytest.mark.parametrize(
+    "image_url",
+    ["http://cdn.example.com/image.jpg", "data:image/png;base64,abc", "https://user:pass@example.com/a"],
+)
+def test_create_rejects_non_public_https_image_url(image_url: str) -> None:
+    with pytest.raises(ValidationError):
+        AdminAnnouncementCreateRequest.model_validate(
+            {
+                "title": "Duyuru",
+                "message": "İçerik",
+                "image_url": image_url,
+                "importance": "IMPORTANT",
+                "audience": {"type": "ALL_SELLERS"},
+            }
+        )
+
+
+def test_create_preserves_important_announcement_presentation_fields(monkeypatch) -> None:
+    monkeypatch.setattr(
+        announcement_service,
+        "create_announcement_record",
+        lambda *args, **kwargs: {
+            "durum": "başarılı",
+            "announcement": ADMIN_ANNOUNCEMENT
+            | {
+                "importance": "IMPORTANT",
+                "image_url": "https://cdn.example.com/banner.jpg",
+            },
+        },
+    )
+    request = AdminAnnouncementCreateRequest.model_validate(
+        {
+            "title": "Önemli",
+            "message": "İçerik",
+            "importance": "IMPORTANT",
+            "image_url": "https://cdn.example.com/banner.jpg",
+            "audience": {"type": "ALL_SELLERS"},
+        }
+    )
+
+    result = announcement_service.create_announcement(3, request)
+
+    assert result["ok"] is True
+    assert result["announcement"]["importance"] == "IMPORTANT"
+    assert result["announcement"]["image_url"] == "https://cdn.example.com/banner.jpg"
