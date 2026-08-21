@@ -924,6 +924,7 @@ def get_seller_return_issue_request_detail(
         "customer": state.get("customer"),
         "order": state.get("order"),
         "evidence": state.get("evidence") or [],
+        "evidence_has_more": state.get("evidence_has_more") is True,
         "missing_fields": state["missing_fields"],
     }
 

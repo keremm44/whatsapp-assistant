@@ -319,6 +319,8 @@ export type ReturnRequestDetail = {
   customer: ReturnCustomer | null;
   order: ReturnOrderRef | null;
   evidence: ReturnEvidenceItem[];
+  /** More metadata can be fetched in bounded pages; images stay lazy. */
+  evidenceHasMore: boolean;
   missingFields: ReturnMissingField[];
 };
 
@@ -530,6 +532,7 @@ const parseReturnDetail = (raw: unknown): ReturnRequestDetail => {
     customer: parseReturnCustomer(readKey(raw, "customer")),
     order: parseReturnOrderRef(readKey(raw, "order")),
     evidence: ((evidenceRaw ?? []) as unknown[]).map(parseReturnEvidenceItem),
+    evidenceHasMore: readKey(raw, "evidence_has_more") === true,
     missingFields: parseReturnMissingFields(readKey(raw, "missing_fields")),
   };
 };
@@ -600,6 +603,13 @@ export const parseReturnListResponse = (raw: unknown): ReturnListPage =>
 export const parseReturnDetailResponse = (
   raw: unknown,
 ): ReturnRequestDetail => parseReturnDetail(raw);
+
+export const parseReturnEvidencePageResponse = (raw: unknown): { evidence: ReturnEvidenceItem[]; hasMore: boolean } => {
+  if (!isPlainObject(raw) || !Array.isArray(readKey(raw, "evidence")) || typeof readKey(raw, "has_more") !== "boolean") {
+    throw contractError("evidence_page");
+  }
+  return { evidence: (readKey(raw, "evidence") as unknown[]).map(parseReturnEvidenceItem), hasMore: readKey(raw, "has_more") as boolean };
+};
 
 export const parseMarkReturnHandledResponse = (
   raw: unknown,

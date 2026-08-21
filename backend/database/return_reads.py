@@ -82,12 +82,9 @@ def get_return_issue_request_detail(seller_id: int, request_id: int) -> dict[str
         return request_result
     request_row = request_result["request"]
     try:
-        evidence_result = (
-            get_supabase().table("return_issue_request_evidence")
-            .select("id,seller_id,request_id,message_id,created_at")
-            .eq("seller_id", seller_id).eq("request_id", request_id)
-            .order("created_at").order("id").execute()
-        )
+        evidence_page = list_return_issue_evidence(seller_id, request_id)
+        if evidence_page.get("durum") != "başarılı":
+            return evidence_page
         customer_result = (
             get_supabase().table("customers")
             .select("id,seller_id,whatsapp_number,name")
@@ -108,7 +105,8 @@ def get_return_issue_request_detail(seller_id: int, request_id: int) -> dict[str
             "request": request_row,
             "customer": customer_result.data[0] if customer_result.data else None,
             "order": order_row,
-            "evidence": evidence_result.data,
+            "evidence": evidence_page["evidence"],
+            "evidence_has_more": evidence_page["has_more"],
         }
     except Exception:
         return {"durum": "hata", "mesaj": "İade/sorun talebi detayı okunamadı."}

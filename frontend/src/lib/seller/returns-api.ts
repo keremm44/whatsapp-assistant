@@ -26,6 +26,7 @@ import type { ApiBlobPayload } from "@/lib/api/client";
 import {
   parseMarkReturnHandledResponse,
   parseReturnDetailResponse,
+  parseReturnEvidencePageResponse,
   parseReturnIssueSettingsList,
   parseReturnIssueSettingUpdate,
   parseReturnListResponse,
@@ -97,6 +98,20 @@ export const fetchReturnDetail = async (
     { signal: options?.signal, cache: options?.cache ?? "no-store" },
   );
   return parseReturnDetailResponse(raw);
+};
+
+export const fetchReturnEvidencePage = async (
+  accessToken: string,
+  requestId: number,
+  offset: number,
+  options?: { signal?: AbortSignal },
+): Promise<{ evidence: import("./returns").ReturnEvidenceItem[]; hasMore: boolean }> => {
+  const raw = await apiFetchWithAccessToken<unknown>(
+    `/seller/return-issue-requests/${requestId}/evidence?limit=24&offset=${offset}`,
+    accessToken,
+    { signal: options?.signal, cache: "no-store" },
+  );
+  return parseReturnEvidencePageResponse(raw);
 };
 
 export type MarkReturnHandledOptions = {

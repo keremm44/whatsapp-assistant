@@ -1197,6 +1197,7 @@ def seller_return_issue_request_detail(
         "customer": result.get("customer"),
         "order": result.get("order"),
         "evidence": result.get("evidence") or [],
+        "evidence_has_more": result.get("evidence_has_more") is True,
         "missing_fields": result.get("missing_fields") or [],
     }
 
