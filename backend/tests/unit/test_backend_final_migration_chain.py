@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_migration_chain_is_contiguous_000_through_041() -> None:
+def test_migration_chain_is_contiguous_000_through_042() -> None:
     migrations = sorted(Path("migrations").glob("[0-9][0-9][0-9]_*.sql"))
     versions = [path.name[:3] for path in migrations]
-    assert versions == [f"{version:03d}" for version in range(42)]
+    assert versions == [f"{version:03d}" for version in range(43)]
 
 
 def test_023_024_025_files_match_live_names() -> None:

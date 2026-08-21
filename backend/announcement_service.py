@@ -131,7 +131,10 @@ def _project_admin_announcement(
         return None
     if value.get("audience_type") not in {"ALL_SELLERS", "SELECTED_SELLERS"}:
         return None
-    if value.get("importance") not in {"NORMAL", "IMPORTANT"} or not _is_optional_url(value.get("image_url")):
+    if (
+        value.get("importance") not in {"NORMAL", "IMPORTANT"}
+        or not _is_optional_url(value.get("image_url"))
+    ):
         return None
     if not _is_nonempty_string(value.get("title")) or not _is_nonempty_string(
         value.get("message")
@@ -197,7 +200,10 @@ def _project_seller_announcement(value: Any) -> dict[str, Any] | None:
         return None
     if value.get("audience_type") not in {"ALL_SELLERS", "SELECTED_SELLERS"}:
         return None
-    if value.get("importance") not in {"NORMAL", "IMPORTANT"} or not _is_optional_url(value.get("image_url")):
+    if (
+        value.get("importance") not in {"NORMAL", "IMPORTANT"}
+        or not _is_optional_url(value.get("image_url"))
+    ):
         return None
     if not _is_nonempty_string(value.get("title")) or not _is_nonempty_string(
         value.get("message")
