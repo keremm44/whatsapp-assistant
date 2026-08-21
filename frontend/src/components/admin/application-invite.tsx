@@ -26,17 +26,22 @@ export function ApplicationInvite({
   const [inviteEmail, setInviteEmail] = useState(email ?? "");
   const [adminNote, setAdminNote] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [submitting, setSubmitting] = useState(false);
+  const [refreshPending, startTransition] = useTransition();
+  const pending = submitting || refreshPending;
 
   const send = async () => {
+    if (submitting || !inviteEmail.trim()) return;
     setMessage(null);
-    const token = await getBrowserAccessToken();
-    if (!token) {
-      setMessage("Oturum bilgisi alınamadı.");
-      return;
-    }
+    setSubmitting(true);
 
     try {
+      const token = await getBrowserAccessToken();
+      if (!token) {
+        setMessage("Oturum bilgisi alınamadı.");
+        return;
+      }
+
       await inviteAdminApplication(token, id, {
         email: inviteEmail.trim() || undefined,
         adminNote: adminNote.trim() || undefined,
@@ -53,15 +58,24 @@ export function ApplicationInvite({
           ? "Bu başvuru artık davet edilebilir durumda değil. Sayfayı yenileyip tekrar kontrol edin."
           : "Davet şu anda gönderilemedi.",
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <>
-      <Button type="button" size="md" onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        size="md"
+        onClick={() => {
+          setMessage(null);
+          setOpen(true);
+        }}
+      >
         Seller daveti gönder
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(nextOpen) => !submitting && setOpen(nextOpen)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Seller daveti</DialogTitle>
@@ -78,7 +92,8 @@ export function ApplicationInvite({
                 onChange={(event) => setInviteEmail(event.target.value)}
                 type="email"
                 autoComplete="email"
-                className="mt-1 block w-full rounded-control border border-boundary bg-control px-3 py-2 type-row-secondary text-foreground"
+                disabled={submitting}
+                className="mt-1 block w-full rounded-control border border-boundary bg-control px-3 py-2 type-row-secondary text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               />
             </label>
             <label className="block type-meta text-muted-foreground">
@@ -87,8 +102,9 @@ export function ApplicationInvite({
                 value={adminNote}
                 onChange={(event) => setAdminNote(event.target.value)}
                 maxLength={1000}
+                disabled={submitting}
                 placeholder="Davet kararına ilişkin isteğe bağlı iç not"
-                className="mt-1 min-h-24 w-full rounded-control border border-boundary bg-control px-3 py-2 type-row-secondary text-foreground"
+                className="mt-1 min-h-24 w-full rounded-control border border-boundary bg-control px-3 py-2 type-row-secondary text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               />
             </label>
             {message ? (
@@ -108,7 +124,7 @@ export function ApplicationInvite({
               İptal
             </Button>
             <Button type="button" onClick={send} disabled={pending || !inviteEmail.trim()}>
-              {pending ? "Gönderiliyor…" : "Daveti gönder"}
+              {submitting ? "Gönderiliyor…" : "Daveti gönder"}
             </Button>
           </div>
         </DialogContent>
