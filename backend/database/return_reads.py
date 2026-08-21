@@ -141,7 +141,8 @@ def get_return_issue_type_settings(seller_id: int) -> dict[str, Any]:
         return {"durum": "doğrulama_hatası", "mesaj": "seller_id pozitif tam sayı olmalıdır."}
     try:
         result = (
-            get_supabase().table("return_issue_type_settings").select("*")
+            get_supabase().table("return_issue_type_settings")
+            .select("issue_type,image_requirement,version,updated_at")
             .eq("seller_id", seller_id).order("issue_type").execute()
         )
         return {"durum": "başarılı", "settings": result.data}
