@@ -33,6 +33,10 @@ function directoryHref(input: {
   return `/admin/sellers${params.size ? `?${params}` : ""}` as Route;
 }
 
+function tabClass(active: boolean) {
+  return `border-b-2 px-1 py-2 type-meta transition-colors ${active ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`;
+}
+
 export default async function AdminSellersPage({
   searchParams,
 }: {
@@ -74,14 +78,14 @@ export default async function AdminSellersPage({
 
       <div className="mt-8 grid overflow-hidden rounded-sheet border border-boundary/70 bg-raised shadow-surface lg:grid-cols-[380px_minmax(0,1fr)]">
         <aside className="border-b border-divider lg:border-b-0 lg:border-r">
-          <div className="border-b border-divider p-4">
-            <div className="flex items-center justify-between gap-3">
+          <div className="border-b border-divider px-4 pt-4">
+            <div className="flex items-center justify-between gap-3 pb-2">
               <p className="type-meta font-semibold text-primary">MAĞAZA DİZİNİ</p>
               {list.state === "ready" ? (
                 <span className="type-figure text-sm font-semibold text-muted-foreground">{total}</span>
               ) : null}
             </div>
-            <form className="mt-3 flex gap-2">
+            <form className="mt-2 flex gap-2 pb-2">
               {status ? <input type="hidden" name="status" value={status} /> : null}
               <input
                 name="q"
@@ -93,12 +97,12 @@ export default async function AdminSellersPage({
                 Ara
               </button>
             </form>
-            <nav className="mt-3 flex flex-wrap gap-2" aria-label="Mağaza durumu">
+            <nav className="flex flex-wrap gap-x-4" aria-label="Mağaza durumu">
               {[undefined, ...ADMIN_SELLER_SYSTEM_STATUSES].map((item) => (
                 <Link
                   key={item ?? "all"}
                   href={directoryHref({ q, status: item })}
-                  className={`rounded-pill px-2 py-1 type-meta ${status === item ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-elevated"}`}
+                  className={tabClass(status === item)}
                 >
                   {item ? ADMIN_SELLER_STATUS_PRESENTATION[item].label : "Tümü"}
                 </Link>
