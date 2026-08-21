@@ -49,6 +49,32 @@ def get_return_issue_request_by_id(seller_id: int, request_id: int) -> dict[str,
         return {"durum": "hata", "mesaj": "İade/sorun talebi okunamadı."}
 
 
+def list_return_issue_evidence(
+    seller_id: int, request_id: int, *, limit: int = 24, offset: int = 0
+) -> dict[str, Any]:
+    """Read one bounded, tenant-scoped evidence page (metadata only)."""
+    if not _is_positive_int(seller_id) or not _is_positive_int(request_id):
+        return {"durum": "doğrulama_hatası", "mesaj": "Geçersiz kanıt isteği."}
+    if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 100:
+        return {"durum": "doğrulama_hatası", "mesaj": "limit 1 ile 100 arasında olmalıdır."}
+    if not isinstance(offset, int) or isinstance(offset, bool) or not 0 <= offset <= 10_000:
+        return {"durum": "doğrulama_hatası", "mesaj": "offset 0 ile 10.000 arasında olmalıdır."}
+    try:
+        # Fetch one look-ahead row; it avoids an expensive count while
+        # allowing the client to offer an honest “more evidence” action.
+        result = (
+            get_supabase().table("return_issue_request_evidence")
+            .select("id,seller_id,request_id,message_id,created_at")
+            .eq("seller_id", seller_id).eq("request_id", request_id)
+            .order("created_at").order("id").range(offset, offset + limit)
+            .execute()
+        )
+        rows = result.data or []
+        return {"durum": "başarılı", "evidence": rows[:limit], "has_more": len(rows) > limit}
+    except Exception:
+        return {"durum": "hata", "mesaj": "Kanıtlar okunamadı."}
+
+
 def get_return_issue_request_detail(seller_id: int, request_id: int) -> dict[str, Any]:
     import database
     request_result = database.get_return_issue_request_by_id(seller_id, request_id)
