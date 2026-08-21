@@ -117,6 +117,8 @@ export function AnnouncementForm({
 
   const hasPreviousDirectoryPage = directory.offset > 0;
   const hasNextDirectoryPage = directory.offset + directory.sellers.length < directory.total;
+  const firstShown = directory.total === 0 ? 0 : directory.offset + 1;
+  const lastShown = Math.min(directory.offset + directory.sellers.length, directory.total);
 
   return (
     <div className="rounded-sheet border border-boundary/70 bg-raised shadow-surface">
@@ -221,7 +223,7 @@ export function AnnouncementForm({
                 </Button>
               </form>
               <p className="mt-2 type-meta text-muted-foreground">
-                {directory.total} sonuç · {directory.offset + 1}-{Math.min(directory.offset + directory.sellers.length, directory.total)} gösteriliyor
+                {directory.total} sonuç · {firstShown}-{lastShown} gösteriliyor
               </p>
             </div>
 
