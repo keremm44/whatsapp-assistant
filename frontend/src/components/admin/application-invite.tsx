@@ -68,6 +68,7 @@ export function ApplicationInvite({
       <Button
         type="button"
         size="md"
+        disabled={pending}
         onClick={() => {
           setMessage(null);
           setOpen(true);
