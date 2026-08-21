@@ -12,7 +12,7 @@ def get_active_rules(seller_id: int) -> dict[str, Any]:
     try:
         result = (
             get_supabase().table("rules")
-            .select("*").eq("seller_id", seller_id).eq("is_active", True).execute()
+            .select(SELLER_RULE_SELECT).eq("seller_id", seller_id).eq("is_active", True).execute()
         )
         return {"durum": "başarılı", "kurallar": result.data}
     except Exception as exc:
