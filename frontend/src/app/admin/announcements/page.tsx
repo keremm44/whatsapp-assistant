@@ -16,8 +16,15 @@ export default async function Page() {
 
   return (
     <PageContainer size="wide" className="py-8 sm:py-10">
-      <PageHeader caption="YÖNETİM" title="Duyurular" description="Aktif seller’lara uygulama içi duyurular gönderin." actions={<AnnouncementForm />} />
-      <div className="mt-8 overflow-hidden rounded-sheet border border-boundary/70 bg-raised shadow-surface">
+      <PageHeader caption="YÖNETİM" title="Duyurular" description="Aktif seller’lara uygulama içi duyurular gönderin." />
+      <section className="mb-8 max-w-2xl" aria-labelledby="new-announcement-heading">
+        <div className="mb-3">
+          <h2 id="new-announcement-heading" className="type-section text-foreground">Yeni duyuru</h2>
+          <p className="mt-1 type-row-secondary text-muted">Duyuruyu hazırlayın; yayınlandığında seller panelindeki zile düşer.</p>
+        </div>
+        <AnnouncementForm />
+      </section>
+      <div className="overflow-hidden rounded-sheet border border-boundary/70 bg-raised shadow-surface">
         {items ? (
           <ul className="divide-y divide-divider">
             {items.map((announcement) => (
