@@ -282,7 +282,7 @@ def get_unanswered_question_group_by_id(
     try:
         result = (
             get_supabase().table("unanswered_question_groups")
-            .select("*")
+            .select("id,canonical_question,status,answer_text,occurrence_count,first_seen_at,last_seen_at,version,answered_at,dismissed_at,dismiss_note,created_at,updated_at")
             .eq("seller_id", seller_id)
             .eq("id", group_id)
             .limit(1)
@@ -314,8 +314,7 @@ def get_unanswered_question_group_detail(
         occurrence_result = (
             get_supabase().table("unanswered_question_occurrences")
             .select(
-                "id,seller_id,group_id,customer_id,message_id,question_text,"
-                "category,suggested_field,metadata,occurred_at"
+                "id,customer_id,message_id,question_text,occurred_at"
             )
             .eq("seller_id", seller_id)
             .eq("group_id", group_id)
