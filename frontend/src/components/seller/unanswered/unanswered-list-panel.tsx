@@ -9,9 +9,8 @@ import type {
   UnansweredQuestionSummary,
   UnansweredView,
 } from "@/lib/seller/unanswered";
-import { fetchUnansweredList } from "@/lib/seller/unanswered-api";
+import { fetchUnansweredListV2 } from "@/lib/seller/unanswered-api";
 import {
-  hasAnotherUnansweredPage,
   mergeUnansweredPage,
   UNANSWERED_PAGE_SIZE,
   unansweredListEmptyCopy,
@@ -23,7 +22,6 @@ import {
 } from "@/lib/seller/freshness";
 import {
   cancelInflightLoadMore,
-  decideOffsetPageAdvance,
   ownsLoadMoreLifecycle,
 } from "@/lib/seller/offset-pagination";
 import type { UnansweredListBootstrap } from "@/lib/seller/unanswered-server";
@@ -39,15 +37,18 @@ import { UnansweredQuestionRow } from "./unanswered-question-row";
  * bootstrap down; this component only ever fetches FURTHER pages in
  * the browser via the session token. When the bootstrap changes (tab
  * switch, retry refresh), local pagination state is re-seeded from
- * the new first page — the offset resets, stale rows cannot survive,
- * and the backend ordering (last_seen_at DESC, id DESC) is preserved
- * verbatim.
+ * the new first page — the cursor resets, stale rows cannot survive,
+ * and the backend's keyset ordering (last_seen_at DESC, id DESC) is
+ * preserved verbatim.
  *
- * Pagination contract (inspected backend semantics): `toplam` is the
- * returned page length, not a global count. “Daha fazla göster” is
- * offered only while the backend keeps returning a full
- * UNANSWERED_PAGE_SIZE page; a short or empty page ends the queue.
- * New pages are deduped by group id.
+ * Pagination contract (GET /seller/unanswered-questions/v2,
+ * contracts/seller-lists-v2.json): the backend is authoritative —
+ * “Daha fazla göster” is offered exactly while `has_more` is true, and
+ * each page is fetched with the previous `next_cursor` (signed and
+ * bound to this seller + view). New pages are APPENDED to the loaded
+ * rows; a fixed limit never hides results. Rows whose last_seen_at
+ * moved across the cursor boundary are deduped by group id as a
+ * safety net.
  *
  * Failure discipline: an initial list failure renders a calm retry
  * surface and never fakes an empty queue; load-more failures keep the
@@ -65,13 +66,13 @@ export function UnansweredListPanel({
   const ready = bootstrap.state === "ready" ? bootstrap : null;
 
   const [rows, setRows] = React.useState<UnansweredQuestionSummary[]>(
-    ready?.page.questions ?? [],
+    ready?.page.items ?? [],
   );
-  const [nextOffset, setNextOffset] = React.useState(
-    ready ? ready.page.offset + ready.page.questions.length : 0,
+  const [nextCursor, setNextCursor] = React.useState<string | null>(
+    ready?.page.nextCursor ?? null,
   );
   const [moreAvailable, setMoreAvailable] = React.useState(
-    ready ? hasAnotherUnansweredPage(ready.page.questions.length) : false,
+    ready?.page.hasMore ?? false,
   );
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(
@@ -80,23 +81,24 @@ export function UnansweredListPanel({
   const inflightRef = React.useRef<AbortController | null>(null);
   const rowsRef = React.useRef(rows);
   rowsRef.current = rows;
+  const nextCursorRef = React.useRef(nextCursor);
+  nextCursorRef.current = nextCursor;
 
   // Re-seed from the server payload whenever it changes (view
-  // switches and refreshes all arrive as a new bootstrap).
+  // switches and refreshes all arrive as a new bootstrap — the cursor
+  // is part of the reset).
   React.useEffect(() => {
     // The bootstrap replacing the list context is the stale-request
     // boundary: abort any in-flight load-more NOW so a late response
-    // from the OLD context can never append rows, move the offset or
+    // from the OLD context can never append rows, move the cursor or
     // set an error against the fresh state, and release the
     // single-in-flight gate + loading flag for the new context.
     cancelInflightLoadMore(inflightRef);
     setIsLoadingMore(false);
     if (bootstrap.state === "ready") {
-      setRows(bootstrap.page.questions);
-      setNextOffset(bootstrap.page.offset + bootstrap.page.questions.length);
-      setMoreAvailable(
-        hasAnotherUnansweredPage(bootstrap.page.questions.length),
-      );
+      setRows(bootstrap.page.items);
+      setNextCursor(bootstrap.page.nextCursor);
+      setMoreAvailable(bootstrap.page.hasMore);
       setLoadMoreError(null);
     }
   }, [bootstrap]);
@@ -123,42 +125,27 @@ export function UnansweredListPanel({
         );
         return;
       }
-      let offset = nextOffset;
-      let working = rowsRef.current;
-      let autoContinues = 0;
-
-      while (true) {
-        const page = await fetchUnansweredList(accessToken, {
-          view,
-          limit: UNANSWERED_PAGE_SIZE,
-          offset,
-          signal: controller.signal,
-        });
-        if (controller.signal.aborted) return;
-
-        const merged = mergeUnansweredPage(working, page.questions);
-        const appendedCount = merged.length - working.length;
-        working = merged;
-        setRows(working);
-
-        const decision = decideOffsetPageAdvance({
-          incomingCount: page.questions.length,
-          appendedCount,
-          incomingOffset: page.offset,
-          pageSize: page.limit,
-          autoContinueCount: autoContinues,
-          moreRule: { kind: "page_size" },
-        });
-        offset = decision.nextOffset;
-        setNextOffset(offset);
-
-        if (decision.shouldAutoContinue) {
-          autoContinues += 1;
-          continue;
-        }
-        setMoreAvailable(decision.moreAvailable);
-        break;
+      const cursor = nextCursorRef.current;
+      if (cursor === null) {
+        // The backend said there was no next page; stop honestly.
+        setMoreAvailable(false);
+        return;
       }
+
+      const page = await fetchUnansweredListV2(accessToken, {
+        view,
+        limit: UNANSWERED_PAGE_SIZE,
+        cursor,
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+
+      // Append with an id-based dedupe safety net (rows whose
+      // last_seen_at moved across the cursor boundary can repeat).
+      const working = mergeUnansweredPage(rowsRef.current, page.items);
+      setRows(working);
+      setNextCursor(page.nextCursor);
+      setMoreAvailable(page.hasMore);
     } catch {
       if (controller.signal.aborted) return;
       setLoadMoreError(
@@ -183,15 +170,14 @@ export function UnansweredListPanel({
       check={async (signal) => {
         const accessToken = await getBrowserAccessToken();
         if (!accessToken) return false;
-        const page = await fetchUnansweredList(accessToken, {
+        const page = await fetchUnansweredListV2(accessToken, {
           view,
           limit: UNANSWERED_PAGE_SIZE,
-          offset: 0,
           signal,
         });
         return signaturesDiffer(
-          buildIdVersionSignature(ready?.page.questions ?? []),
-          buildIdVersionSignature(page.questions),
+          buildIdVersionSignature(ready?.page.items ?? []),
+          buildIdVersionSignature(page.items),
         );
       }}
     />

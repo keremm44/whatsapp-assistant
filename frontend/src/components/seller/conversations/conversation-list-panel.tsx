@@ -12,7 +12,7 @@ import type {
   ConversationListBootstrap,
 } from "@/lib/seller/conversations-server";
 import {
-  fetchConversationList,
+  fetchConversationListV2,
   type ConversationListItem,
 } from "@/lib/seller/conversations";
 import { SellerFreshnessNotice } from "@/components/seller/freshness/seller-freshness-banner";
@@ -23,7 +23,6 @@ import {
 } from "@/lib/seller/freshness";
 import {
   cancelInflightLoadMore,
-  decideOffsetPageAdvance,
   ownsLoadMoreLifecycle,
 } from "@/lib/seller/offset-pagination";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
@@ -46,18 +45,26 @@ import { ConversationRow } from "./conversation-row";
  *             are plain links, so the filter state lives in the URL
  *             and the server remains the data resolver.
  *   Rows    — backend order preserved verbatim; no client re-ranking.
- *   Footer  — "Daha fazla göster" offset pagination via the browser
+ *   Footer  — "Daha fazla göster" cursor pagination via the browser
  *             session. Appended pages are deduplicated by customer id
- *             so a row that shifted position between two offset pages
- *             never appears twice.
+ *             so a row that crossed the cursor boundary between two
+ *             pages never appears twice.
+ *
+ * Pagination contract (GET /seller/conversations/v2, contracts/
+ * seller-lists-v2.json): the backend is authoritative — “Daha fazla
+ * göster” is offered exactly while `has_more` is true, and each page
+ * is fetched with the previous `next_cursor` (signed and bound to
+ * this seller + filter set). New pages are APPENDED to the loaded
+ * rows; a fixed limit never hides results. The v2 contract carries no
+ * global total, so the header figure honestly counts loaded rows.
  *
  * Data flow: the server page resolves the first page and passes the
  * parsed bootstrap down; this component only ever fetches FURTHER
  * pages in the browser. When the server payload changes (filter
  * switch, router.refresh after a control handoff), local pagination
  * state is re-seeded from the new props — extended pages collapse
- * back to the fresh first page, which keeps the queue consistent
- * with the backend's ordering after a state change.
+ * back to the fresh first page (cursor included), which keeps the
+ * queue consistent with the backend's ordering after a state change.
  */
 export function ConversationListPanel({
   bootstrap,
@@ -72,44 +79,39 @@ export function ConversationListPanel({
   const ready = bootstrap.state === "ready" ? bootstrap : null;
 
   const [rows, setRows] = React.useState<ConversationListItem[]>(
-    ready?.page.conversations ?? [],
+    ready?.page.items ?? [],
   );
-  const [total, setTotal] = React.useState(ready?.page.total ?? 0);
-  const [nextOffset, setNextOffset] = React.useState(
-    ready ? ready.page.offset + ready.page.conversations.length : 0,
+  const [nextCursor, setNextCursor] = React.useState<string | null>(
+    ready?.page.nextCursor ?? null,
   );
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(null);
-  // Offset pages walk a live, re-ranked queue. Conversations expose a
-  // real global `toplam`, so "more" follows loaded < total; an empty
-  // page still ends the queue, and a page of only duplicates advances
-  // (capped) instead of getting stuck.
+  // The v2 contract is authoritative: "more" exists exactly while
+  // has_more is true. A row that crossed the cursor boundary between
+  // pages is dropped by the customer-id dedupe instead of duplicated.
   const [moreAvailable, setMoreAvailable] = React.useState(
-    ready ? ready.page.conversations.length < ready.page.total : false,
+    ready?.page.hasMore ?? false,
   );
   const inflightRef = React.useRef<AbortController | null>(null);
   const rowsRef = React.useRef(rows);
   rowsRef.current = rows;
+  const nextCursorRef = React.useRef(nextCursor);
+  nextCursorRef.current = nextCursor;
 
   // Re-seed from the server payload whenever it changes (filter
   // switch via URL, or router.refresh() after a handoff/conflict).
   React.useEffect(() => {
     // The bootstrap replacing the list context is the stale-request
     // boundary: abort any in-flight load-more NOW so a late response
-    // from the OLD context can never append rows, move the offset or
+    // from the OLD context can never append rows, move the cursor or
     // set an error against the fresh state, and release the
     // single-in-flight gate + loading flag for the new context.
     cancelInflightLoadMore(inflightRef);
     setIsLoadingMore(false);
     if (bootstrap.state === "ready") {
-      setRows(bootstrap.page.conversations);
-      setTotal(bootstrap.page.total);
-      setNextOffset(
-        bootstrap.page.offset + bootstrap.page.conversations.length,
-      );
-      setMoreAvailable(
-        bootstrap.page.conversations.length < bootstrap.page.total,
-      );
+      setRows(bootstrap.page.items);
+      setNextCursor(bootstrap.page.nextCursor);
+      setMoreAvailable(bootstrap.page.hasMore);
       setLoadMoreError(null);
     }
   }, [bootstrap]);
@@ -136,50 +138,28 @@ export function ConversationListPanel({
         );
         return;
       }
-      let offset = nextOffset;
-      let working = rowsRef.current;
-      let autoContinues = 0;
-      let latestTotal = total;
-
-      while (true) {
-        const page = await fetchConversationList(accessToken, {
-          attentionOnly,
-          offset,
-          signal: controller.signal,
-        });
-        if (controller.signal.aborted) return;
-
-        const seen = new Set(working.map((row) => row.customer.id));
-        const fresh = page.conversations.filter(
-          (row) => !seen.has(row.customer.id),
-        );
-        working = [...working, ...fresh];
-        latestTotal = page.total;
-        setRows(working);
-        setTotal(latestTotal);
-
-        const decision = decideOffsetPageAdvance({
-          incomingCount: page.conversations.length,
-          appendedCount: fresh.length,
-          incomingOffset: page.offset,
-          pageSize: page.limit,
-          autoContinueCount: autoContinues,
-          moreRule: {
-            kind: "global_total",
-            loadedCount: working.length,
-            total: latestTotal,
-          },
-        });
-        offset = decision.nextOffset;
-        setNextOffset(offset);
-
-        if (decision.shouldAutoContinue) {
-          autoContinues += 1;
-          continue;
-        }
-        setMoreAvailable(decision.moreAvailable);
-        break;
+      const cursor = nextCursorRef.current;
+      if (cursor === null) {
+        // The backend said there was no next page; stop honestly.
+        setMoreAvailable(false);
+        return;
       }
+
+      const page = await fetchConversationListV2(accessToken, {
+        attentionOnly,
+        cursor,
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+
+      // Append with a customer-id dedupe safety net (a row whose
+      // activity moved across the cursor boundary can repeat).
+      const working = rowsRef.current;
+      const seen = new Set(working.map((row) => row.customer.id));
+      const fresh = page.items.filter((row) => !seen.has(row.customer.id));
+      setRows([...working, ...fresh]);
+      setNextCursor(page.nextCursor);
+      setMoreAvailable(page.hasMore);
     } catch {
       if (controller.signal.aborted) return;
       setLoadMoreError(
@@ -208,9 +188,9 @@ export function ConversationListPanel({
             {ready ? (
               <span
                 className="type-meta type-figure text-muted-foreground"
-                aria-label={`Toplam ${total} konuşma`}
+                aria-label={`Yüklenen ${rows.length} konuşma`}
               >
-                {total}
+                {rows.length}
               </span>
             ) : null}
           </div>
@@ -247,16 +227,15 @@ export function ConversationListPanel({
         check={async (signal) => {
           const accessToken = await getBrowserAccessToken();
           if (!accessToken) return false;
-          const page = await fetchConversationList(accessToken, {
+          const page = await fetchConversationListV2(accessToken, {
             attentionOnly,
-            offset: 0,
             signal,
           });
           return signaturesDiffer(
             buildConversationListFreshnessSignature(
-              ready?.page.conversations ?? [],
+              ready?.page.items ?? [],
             ),
-            buildConversationListFreshnessSignature(page.conversations),
+            buildConversationListFreshnessSignature(page.items),
           );
         }}
       />

@@ -22,8 +22,10 @@ import type { ApiBlobPayload } from "@/lib/api/client";
 import {
   parseOrderDetailResponse,
   parseOrdersListResponse,
+  parseOrdersListV2Response,
   type OrderDetail,
   type OrderListPage,
+  type OrderListPageV2,
   type OrderView,
 } from "@/lib/seller/orders";
 
@@ -72,6 +74,53 @@ export const fetchOrderList = async (
     { signal: options.signal, cache: options.cache ?? "no-store" },
   );
   return parseOrdersListResponse(raw);
+};
+
+/**
+ * Fetch and parse `GET /seller/orders/v2` — the signed, seller-bound
+ * cursor (keyset) page. `cursor` is the previous page's `nextCursor`;
+ * omit it for the first page. The response is exactly
+ * {items, has_more, next_cursor}.
+ */
+export const fetchOrderListV2 = async (
+  accessToken: string,
+  options: {
+    view: OrderView;
+    externalOrderNumber?: string | null;
+    productId?: number | null;
+    limit?: number;
+    cursor?: string | null;
+    signal?: AbortSignal;
+    cache?: RequestCache;
+  },
+): Promise<OrderListPageV2> => {
+  const query = new URLSearchParams();
+  query.set("view", options.view);
+  if (
+    typeof options.externalOrderNumber === "string" &&
+    options.externalOrderNumber.length > 0
+  ) {
+    query.set("external_order_number", options.externalOrderNumber);
+  }
+  if (
+    typeof options.productId === "number" &&
+    Number.isInteger(options.productId) &&
+    options.productId > 0
+  ) {
+    query.set("product_id", String(options.productId));
+  }
+  if (typeof options.limit === "number") {
+    query.set("limit", String(options.limit));
+  }
+  if (options.cursor) {
+    query.set("cursor", options.cursor);
+  }
+  const raw = await apiFetchWithAccessToken<unknown>(
+    `/seller/orders/v2?${query.toString()}`,
+    accessToken,
+    { signal: options.signal, cache: options.cache ?? "no-store" },
+  );
+  return parseOrdersListV2Response(raw);
 };
 
 export type FetchOrderDetailOptions = {

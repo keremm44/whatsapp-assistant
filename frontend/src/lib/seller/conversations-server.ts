@@ -32,11 +32,11 @@ import {
   CONVERSATIONS_CONTRACT_ERROR_PREFIX,
   fetchConversationControl,
   fetchConversationDetail,
-  fetchConversationList,
+  fetchConversationListV2,
   type ConversationControlState,
   type ConversationControlView,
   type ConversationDetail,
-  type ConversationListPage,
+  type ConversationListPageV2,
 } from "@/lib/seller/conversations";
 
 /**
@@ -52,7 +52,7 @@ export type ConversationControlBootstrap =
 export type ConversationListBootstrap =
   | {
       state: "ready";
-      page: ConversationListPage;
+      page: ConversationListPageV2;
       /**
        * Server-side "now" captured at resolution time. Components use
        * it as the reference for relative timestamps so the SSR render
@@ -105,7 +105,7 @@ export const resolveConversationList = async (
   },
 ): Promise<ConversationListBootstrap> => {
   try {
-    const page = await fetchConversationList(accessToken, {
+    const page = await fetchConversationListV2(accessToken, {
       attentionOnly: options?.attentionOnly === true,
       controlState: options?.controlState,
       cache: "no-store",

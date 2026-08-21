@@ -26,6 +26,8 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_KEY
         sync: false
+      - key: PAGINATION_CURSOR_SECRET
+        sync: false
 
   - type: worker
     name: whatsapp-assistant-worker

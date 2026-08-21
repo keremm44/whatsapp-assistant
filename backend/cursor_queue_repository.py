@@ -388,12 +388,13 @@ def list_order_cursor_records(
     external_order_number: str | None,
     limit: int,
     position: dict[str, Any] | None,
+    columns: str | None = None,
 ) -> dict[str, Any]:
     def build_query() -> Any:
         query = (
             get_supabase()
             .table("orders")
-            .select("*")
+            .select(columns or "*")
             .eq("seller_id", seller_id)
         )
         if view == "action_required":
@@ -435,6 +436,7 @@ def list_return_cursor_records(
     external_order_number: str | None,
     limit: int,
     position: dict[str, Any] | None,
+    columns: str | None = None,
 ) -> dict[str, Any]:
     status_by_view = {
         "action_required": RETURN_STATUS_SELLER_REVIEW_REQUIRED,
@@ -447,7 +449,7 @@ def list_return_cursor_records(
         query = (
             get_supabase()
             .table("return_issue_requests")
-            .select("*")
+            .select(columns or "*")
             .eq("seller_id", seller_id)
         )
         target_status = status_by_view.get(view)
@@ -482,6 +484,7 @@ def list_unanswered_cursor_records(
     view: str,
     limit: int,
     position: dict[str, Any] | None,
+    columns: str | None = None,
 ) -> dict[str, Any]:
     status_by_view = {
         "action_required": UNANSWERED_STATUS_OPEN,
@@ -494,7 +497,7 @@ def list_unanswered_cursor_records(
         query = (
             get_supabase()
             .table("unanswered_question_groups")
-            .select("*")
+            .select(columns or "*")
             .eq("seller_id", seller_id)
         )
         target_status = status_by_view.get(view)

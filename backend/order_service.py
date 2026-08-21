@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from database import (
+    ORDER_DISPLAY_STATUS,
     ORDER_STATUS_COLLECTING,
     ORDER_STATUS_COMPLETE,
     ORDER_STATUS_SELLER_REVIEW_REQUIRED,
@@ -1323,6 +1324,38 @@ def get_order_with_fields(
         "order_unavailable",
         result.get("mesaj") or "Sipariş detayı okunamadı.",
     )
+
+
+def present_order_summary(order: dict[str, Any]) -> dict[str, Any]:
+    """Sipariş listesi için güvenli özet üretir (legacy + v2 listeler)."""
+    status_value = order.get("status")
+    display_status = ORDER_DISPLAY_STATUS.get(
+        status_value,
+        status_value or "Bilinmiyor",
+    )
+
+    return {
+        "id": order.get("id"),
+        "external_order_number": order.get("external_order_number"),
+        "product_id": order.get("product_id"),
+        "product_name_snapshot": order.get("product_name_snapshot"),
+        "customer_id": order.get("customer_id"),
+        "customer_phone_snapshot": order.get("customer_phone_snapshot"),
+        "status": status_value,
+        "display_status": display_status,
+        "image_message_id": order.get("image_message_id"),
+        "has_image": order.get("image_message_id") is not None,
+        "custom_text": order.get("custom_text"),
+        "review_reason_code": order.get("review_reason_code"),
+        "review_reason_note": order.get("review_reason_note"),
+        "version": order.get("version"),
+        "created_at": order.get("created_at"),
+        "updated_at": order.get("updated_at"),
+        "completed_at": order.get("completed_at"),
+        "seller_action_required": (
+            status_value == ORDER_STATUS_SELLER_REVIEW_REQUIRED
+        ),
+    }
 
 
 def list_seller_orders(

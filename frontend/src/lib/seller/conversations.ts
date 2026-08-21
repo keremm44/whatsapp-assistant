@@ -958,6 +958,49 @@ const parseOptionalControlStateFilter = (
   }
 };
 
+/* ------------------------------------------------------------------ */
+/* V2 cursor list page (GET /seller/conversations/v2 —                */
+/* contracts/seller-lists-v2.json). Response is EXACTLY               */
+/* {items, has_more, next_cursor}. Item shape is legacy-compatible    */
+/* (same fields the conversation-list parser reads), backed by the    */
+/* stable activity cursor read model (migration 033).                 */
+/* ------------------------------------------------------------------ */
+
+export type ConversationListPageV2 = {
+  items: ConversationListItem[];
+  hasMore: boolean;
+  nextCursor: string | null;
+};
+
+const parseConversationListPageV2 = (
+  raw: unknown,
+): ConversationListPageV2 => {
+  if (!isPlainObject(raw)) throw contractError("v2_response");
+  const itemsRaw = readKey(raw, "items");
+  if (!Array.isArray(itemsRaw)) throw contractError("v2_items");
+  const hasMore = readKey(raw, "has_more");
+  if (typeof hasMore !== "boolean") throw contractError("v2_has_more");
+  const nextCursorRaw = readKey(raw, "next_cursor");
+  if (nextCursorRaw !== null && typeof nextCursorRaw !== "string") {
+    throw contractError("v2_next_cursor");
+  }
+  if (!hasMore && nextCursorRaw !== null) {
+    throw contractError("v2_next_cursor_unexpected");
+  }
+  if (hasMore && (typeof nextCursorRaw !== "string" || nextCursorRaw === "")) {
+    throw contractError("v2_next_cursor_missing");
+  }
+  return {
+    items: itemsRaw.map(parseConversationListItem),
+    hasMore,
+    nextCursor: nextCursorRaw === null ? null : nextCursorRaw,
+  };
+};
+
+export const parseConversationListV2Response = (
+  raw: unknown,
+): ConversationListPageV2 => parseConversationListPageV2(raw);
+
 const parseConversationDetail = (raw: unknown): ConversationDetail => {
   if (!isPlainObject(raw)) throw contractError("response");
   const customer = parseCustomerDetail(readKey(raw, "customer"));
@@ -1096,6 +1139,49 @@ export const fetchConversationList = async (
     { signal: options?.signal, cache: options?.cache ?? "no-store" },
   );
   return parseConversationListPage(raw);
+};
+
+export type FetchConversationListV2Options = {
+  attentionOnly?: boolean;
+  /** Exact backend control-state filter; omitted means no filter. */
+  controlState?: ConversationControlState;
+  /** 1..100; when omitted the backend default (20) applies. */
+  limit?: number;
+  /** The previous page's `nextCursor`; omit for the first page. */
+  cursor?: string | null;
+  signal?: AbortSignal;
+  cache?: RequestCache;
+};
+
+/**
+ * Fetch and parse `GET /seller/conversations/v2` — the stable
+ * activity-cursor (keyset) page from the conversation read model.
+ * The response is exactly {items, has_more, next_cursor}.
+ */
+export const fetchConversationListV2 = async (
+  accessToken: string,
+  options?: FetchConversationListV2Options,
+): Promise<ConversationListPageV2> => {
+  const query = new URLSearchParams();
+  query.set(
+    "attention_only",
+    options?.attentionOnly === true ? "true" : "false",
+  );
+  if (options?.controlState !== undefined) {
+    query.set("control_state", options.controlState);
+  }
+  if (typeof options?.limit === "number") {
+    query.set("limit", String(options.limit));
+  }
+  if (options?.cursor) {
+    query.set("cursor", options.cursor);
+  }
+  const raw = await apiFetchWithAccessToken<unknown>(
+    `/seller/conversations/v2?${query.toString()}`,
+    accessToken,
+    { signal: options?.signal, cache: options?.cache ?? "no-store" },
+  );
+  return parseConversationListPageV2(raw);
 };
 
 export type FetchConversationDetailOptions = {

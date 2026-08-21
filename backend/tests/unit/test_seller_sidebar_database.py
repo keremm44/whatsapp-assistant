@@ -1,9 +1,21 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Iterator
+
+import pytest
 
 import database
-from database.seller_summary import get_seller_action_counts
+from database.seller_summary import get_seller_action_counts, seller_read_cache
+
+
+@pytest.fixture(autouse=True)
+def _fresh_action_counts_cache() -> Iterator[None]:
+    # The action-count read model sits behind a 10s in-process cache.
+    # Without a reset, one test's fake DB result would leak into the
+    # next test through the cache (cache invalidation scope).
+    seller_read_cache.invalidate_seller(11)
+    yield
+    seller_read_cache.invalidate_seller(11)
 
 
 class _FakeResult:
