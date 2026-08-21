@@ -16,6 +16,7 @@ from database import (
     get_return_issue_request_detail,
     get_return_issue_type_settings,
     list_orders,
+    list_return_issue_evidence,
     list_return_issue_requests,
     mark_return_issue_handled,
     mark_return_issue_review_required,
@@ -876,6 +877,28 @@ def list_seller_return_issue_requests(
             for row in requests
         ],
     }
+
+
+def list_seller_return_issue_evidence(
+    seller_id: int, request_id: int, *, limit: int = 24, offset: int = 0
+) -> dict[str, Any]:
+    # Verify ownership first. Evidence rows alone must never disclose whether
+    # another tenant has a request or how many attachments it contains.
+    detail = get_return_issue_request_detail(seller_id, request_id)
+    if detail.get("durum") != "başarılı":
+        return _map_database_error(
+            detail,
+            default_code="return_issue_evidence_unavailable",
+            default_message="Kanıtlar okunamadı.",
+        )
+    result = list_return_issue_evidence(seller_id, request_id, limit=limit, offset=offset)
+    if result.get("durum") != "başarılı":
+        return _map_database_error(
+            result,
+            default_code="return_issue_evidence_unavailable",
+            default_message="Kanıtlar okunamadı.",
+        )
+    return {"durum": "başarılı", "evidence": result["evidence"], "has_more": result["has_more"], "offset": offset, "limit": limit}
 
 
 def get_seller_return_issue_request_detail(

@@ -46,6 +46,7 @@ from order_service import (
 from return_issue_service import (
     get_seller_return_issue_request_detail,
     get_seller_return_issue_settings,
+    list_seller_return_issue_evidence,
     list_seller_return_issue_requests,
     mark_seller_return_issue_handled,
     update_seller_return_issue_setting,
@@ -1197,6 +1198,27 @@ def seller_return_issue_request_detail(
         "order": result.get("order"),
         "evidence": result.get("evidence") or [],
         "missing_fields": result.get("missing_fields") or [],
+    }
+
+
+@router.get("/seller/return-issue-requests/{request_id}/evidence")
+def seller_return_issue_evidence_page(
+    request_id: PositiveInt,
+    limit: int = Query(default=24, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=10_000),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Bounded evidence metadata page; media remains lazy via its proxy."""
+    result = list_seller_return_issue_evidence(
+        context.seller_id, request_id, limit=limit, offset=offset
+    )
+    if result.get("durum") != "başarılı":
+        _raise_from_return_issue_service(result, default_message="Kanıtlar okunamadı.")
+    return {
+        "evidence": result["evidence"],
+        "limit": result["limit"],
+        "offset": result["offset"],
+        "has_more": result["has_more"],
     }
 
 
