@@ -14,7 +14,7 @@ up the matching config file.
 For the worker service, set **Config File Path** to `backend/railway.worker.json`
 if Railway does not resolve it relative to the selected root directory. The API
 and frontend use the normal `railway.json` path for their respective root
- directories.
+directories.
 
 ## Required variables
 
@@ -42,8 +42,11 @@ from `backend/.env.example` only when enabling that integration.
 ### WhatsApp worker service
 
 Use the same database and WhatsApp variables as the API. Set
-`WHATSAPP_RUNTIME_ENABLED=true` only after migrations 036–041 are applied and
-verified. Keep `WHATSAPP_SEND_ENABLED=false` unless outbound credentials and
+`WHATSAPP_RUNTIME_ENABLED=true` only after the repository migration chain has
+exact parity with the target Supabase project (currently migrations 000–043).
+Never enable the worker merely because the database contains a later migration;
+an earlier missing version is still a deployment failure. Keep
+`WHATSAPP_SEND_ENABLED=false` unless outbound credentials and
 `WHATSAPP_GRAPH_API_VERSION` are configured.
 
 ### Frontend service
@@ -62,12 +65,18 @@ Railway provides `PORT`; do not hard-code it.
 
 ## Deploy checklist
 
-1. Apply and verify the Supabase migration chain through migration 041.
-2. Deploy the API and confirm `GET /health` returns HTTP 200.
-3. Configure the frontend public variables and deploy it.
-4. Replace the temporary domains in `CORS_ORIGINS` and
+1. From `backend/`, run `python -m scripts.check_migration_parity`. The command
+   must report exact parity with `public.schema_migrations` before deployment.
+2. If parity fails, apply every missing migration in ascending numeric order.
+   Do not skip an earlier migration even when a later version is already
+   present. For this branch the complete repository chain is 000–043.
+3. Run `python -m scripts.check_migration_parity` again and require
+   `Migration parity OK.` before starting or restarting production services.
+4. Deploy the API and confirm `GET /health` returns HTTP 200.
+5. Configure the frontend public variables and deploy it.
+6. Replace the temporary domains in `CORS_ORIGINS` and
    `NEXT_PUBLIC_API_BASE_URL` with the final domains.
-5. Deploy the worker separately and inspect its logs before enabling outbound
+7. Deploy the worker separately and inspect its logs before enabling outbound
    WhatsApp sending.
 
 The checked-in configs intentionally do not contain credentials or production
