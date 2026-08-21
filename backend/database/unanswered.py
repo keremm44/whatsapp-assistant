@@ -52,7 +52,7 @@ def save_unanswered_question(
     try:
         existing_result = (
             get_supabase().table("unanswered_questions")
-            .select("*")
+            .select("id,times_asked")
             .eq("seller_id", seller_id)
             .eq("normalized_question", normalized)
             .eq("is_resolved", False)
