@@ -16,7 +16,27 @@ python -m uvicorn main:app --reload
 
 ## Migration parity
 
-Her DB değişikliğinden önce `backend/migrations/` altındaki migration dosyalarını hedef Supabase projesindeki `public.schema_migrations` kaydıyla karşılaştır.
+Her DB değişikliğinden ve her production deployundan önce repo migration zinciri
+ile hedef Supabase projesindeki `public.schema_migrations` kaydının **birebir**
+eşleştiğini doğrula:
+
+```powershell
+cd backend
+python -m scripts.check_migration_parity
+```
+
+Bu kontrol yalnızca en yüksek migration numarasına bakmaz; arada atlanmış bir
+sürümü de hata sayar. Örneğin DB'de `040` ve `042` bulunup `041` yoksa parity
+başarısızdır. Daha yüksek bir migration'ın uygulanmış olması eksik eski sürümü
+geçerli hale getirmez.
+
+Sadece repo içindeki migration dosya zincirini kontrol etmek için:
+
+```powershell
+python -m scripts.check_migration_parity --local-only
+```
+
+Gerekirse DB kaydını ayrıca SQL ile incele:
 
 ```sql
 SELECT version, name
@@ -26,8 +46,11 @@ ORDER BY version;
 
 - Migration dosyaları üç haneli numara sırasıyla ilerlemelidir.
 - `schema_migrations` içinde kayıtlı bir sürümü yeniden uygulama.
-- Yalnızca eksik migrationları artan numara sırasıyla uygula.
+- Eksik migrationları **artan numara sırasıyla** uygula; aradaki sürümü atlama.
 - Repo ve hedef DB aynı sürüm zincirindeyse migration uygulama.
+- Bu branch için mevcut tam zincir `000`–`043`'tür.
+- Migration uygulamasından sonra `python -m scripts.check_migration_parity`
+  tekrar çalışmalı ve `Migration parity OK.` dönmelidir.
 
 ## Test sırası
 
