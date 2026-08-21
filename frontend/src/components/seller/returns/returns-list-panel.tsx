@@ -6,14 +6,13 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type { ReturnListBootstrap } from "@/lib/seller/returns-server";
-import { fetchReturnList } from "@/lib/seller/returns-api";
+import { fetchReturnListV2 } from "@/lib/seller/returns-api";
 import type {
   ReturnIssueType,
   ReturnRequestSummary,
   ReturnView,
 } from "@/lib/seller/returns";
 import {
-  hasAnotherReturnsPage,
   mergeReturnsPage,
   RETURN_PAGE_SIZE,
   returnListEmptyCopy,
@@ -25,7 +24,6 @@ import {
 } from "@/lib/seller/freshness";
 import {
   cancelInflightLoadMore,
-  decideOffsetPageAdvance,
   ownsLoadMoreLifecycle,
 } from "@/lib/seller/offset-pagination";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
@@ -41,13 +39,17 @@ import { ReturnRequestRow } from "./return-request-row";
  * fetches FURTHER pages in the browser via the session token. When the
  * bootstrap changes (tab switch, search/type change, retry refresh),
  * local pagination state is re-seeded from the new first page — the
- * offset resets, stale rows cannot survive, and the backend ordering
- * is preserved verbatim.
+ * cursor resets, stale rows cannot survive, and the backend's keyset
+ * ordering ((updated_at DESC, id DESC)) is preserved verbatim.
  *
- * Pagination contract: the backend `toplam` is a page length, not a
- * global count. “Daha fazla göster” is offered only while the backend
- * keeps returning a full RETURN_PAGE_SIZE page; a short or empty page
- * ends the queue. New pages are deduped by request id.
+ * Pagination contract (GET /seller/return-issue-requests/v2,
+ * contracts/seller-lists-v2.json): the backend is authoritative —
+ * “Daha fazla göster” is offered exactly while `has_more` is true, and
+ * each page is fetched with the previous `next_cursor` (signed and
+ * bound to this seller + filter set). New pages are APPENDED to the
+ * loaded rows; a fixed limit never hides results. Rows whose
+ * updated_at moved across the cursor boundary are deduped by request
+ * id as a safety net.
  *
  * Failure discipline: an initial list failure renders a calm retry
  * surface and never fakes an empty list; load-more failures keep the
@@ -69,13 +71,13 @@ export function ReturnsListPanel({
   const ready = bootstrap.state === "ready" ? bootstrap : null;
 
   const [rows, setRows] = React.useState<ReturnRequestSummary[]>(
-    ready?.page.requests ?? [],
+    ready?.page.items ?? [],
   );
-  const [nextOffset, setNextOffset] = React.useState(
-    ready ? ready.page.offset + ready.page.requests.length : 0,
+  const [nextCursor, setNextCursor] = React.useState<string | null>(
+    ready?.page.nextCursor ?? null,
   );
   const [moreAvailable, setMoreAvailable] = React.useState(
-    ready ? hasAnotherReturnsPage(ready.page.requests.length) : false,
+    ready?.page.hasMore ?? false,
   );
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(
@@ -84,24 +86,24 @@ export function ReturnsListPanel({
   const inflightRef = React.useRef<AbortController | null>(null);
   const rowsRef = React.useRef(rows);
   rowsRef.current = rows;
+  const nextCursorRef = React.useRef(nextCursor);
+  nextCursorRef.current = nextCursor;
 
   // Re-seed from the server payload whenever it changes (view /
   // search / issue-type switches and refreshes all arrive as a new
-  // bootstrap).
+  // bootstrap — the cursor is part of the reset).
   React.useEffect(() => {
     // The bootstrap replacing the list context is the stale-request
     // boundary: abort any in-flight load-more NOW so a late response
-    // from the OLD context can never append rows, move the offset or
+    // from the OLD context can never append rows, move the cursor or
     // set an error against the fresh state, and release the
     // single-in-flight gate + loading flag for the new context.
     cancelInflightLoadMore(inflightRef);
     setIsLoadingMore(false);
     if (bootstrap.state === "ready") {
-      setRows(bootstrap.page.requests);
-      setNextOffset(bootstrap.page.offset + bootstrap.page.requests.length);
-      setMoreAvailable(
-        hasAnotherReturnsPage(bootstrap.page.requests.length),
-      );
+      setRows(bootstrap.page.items);
+      setNextCursor(bootstrap.page.nextCursor);
+      setMoreAvailable(bootstrap.page.hasMore);
       setLoadMoreError(null);
     }
   }, [bootstrap]);
@@ -128,44 +130,29 @@ export function ReturnsListPanel({
         );
         return;
       }
-      let offset = nextOffset;
-      let working = rowsRef.current;
-      let autoContinues = 0;
-
-      while (true) {
-        const page = await fetchReturnList(accessToken, {
-          view,
-          externalOrderNumber: query,
-          issueType,
-          limit: RETURN_PAGE_SIZE,
-          offset,
-          signal: controller.signal,
-        });
-        if (controller.signal.aborted) return;
-
-        const merged = mergeReturnsPage(working, page.requests);
-        const appendedCount = merged.length - working.length;
-        working = merged;
-        setRows(working);
-
-        const decision = decideOffsetPageAdvance({
-          incomingCount: page.requests.length,
-          appendedCount,
-          incomingOffset: page.offset,
-          pageSize: page.limit,
-          autoContinueCount: autoContinues,
-          moreRule: { kind: "page_size" },
-        });
-        offset = decision.nextOffset;
-        setNextOffset(offset);
-
-        if (decision.shouldAutoContinue) {
-          autoContinues += 1;
-          continue;
-        }
-        setMoreAvailable(decision.moreAvailable);
-        break;
+      const cursor = nextCursorRef.current;
+      if (cursor === null) {
+        // The backend said there was no next page; stop honestly.
+        setMoreAvailable(false);
+        return;
       }
+
+      const page = await fetchReturnListV2(accessToken, {
+        view,
+        externalOrderNumber: query,
+        issueType,
+        limit: RETURN_PAGE_SIZE,
+        cursor,
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+
+      // Append with an id-based dedupe safety net (rows whose
+      // updated_at moved across the cursor boundary can repeat).
+      const working = mergeReturnsPage(rowsRef.current, page.items);
+      setRows(working);
+      setNextCursor(page.nextCursor);
+      setMoreAvailable(page.hasMore);
     } catch {
       if (controller.signal.aborted) return;
       setLoadMoreError(
@@ -190,17 +177,16 @@ export function ReturnsListPanel({
       check={async (signal) => {
         const accessToken = await getBrowserAccessToken();
         if (!accessToken) return false;
-        const page = await fetchReturnList(accessToken, {
+        const page = await fetchReturnListV2(accessToken, {
           view,
           externalOrderNumber: query,
           issueType,
           limit: RETURN_PAGE_SIZE,
-          offset: 0,
           signal,
         });
         return signaturesDiffer(
-          buildIdVersionSignature(ready?.page.requests ?? []),
-          buildIdVersionSignature(page.requests),
+          buildIdVersionSignature(ready?.page.items ?? []),
+          buildIdVersionSignature(page.items),
         );
       }}
     />

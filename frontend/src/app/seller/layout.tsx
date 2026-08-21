@@ -8,7 +8,7 @@ import {
 import { getAssistantStatusNotice } from "@/lib/seller/assistant-status";
 import {
   pickSellerDisplayName,
-  resolveSellerBootstrapFromSession,
+  resolveSellerBootstrap,
 } from "@/lib/seller/server-bootstrap";
 
 /**
@@ -69,13 +69,22 @@ export default async function SellerLayout({
   if (guard.kind === "show_unavailable") {
     return <AccessUnavailable contextLabel="Satıcı paneli" />;
   }
+  // `applySellerGuard` has already redirected non-seller states. Keep this
+  // explicit narrowing beside the server-only token so it can never reach
+  // the rendered shell from a non-authorized resolver state.
+  if (access.state !== "authorized") {
+    return <AccessUnavailable contextLabel="Satıcı paneli" />;
+  }
 
   // The guard only returns `allow` for an active seller session, so
   // a token exists by the time we get here. We never render the
   // seller shell unless the bootstrap is `ready`. A non-ready
   // bootstrap surfaces the AccessUnavailable retry UI — same
   // language, same retry mechanics, no signOut, no redirect.
-  const bootstrap = await resolveSellerBootstrapFromSession();
+  // Reuse the token already obtained and verified by resolveServerAccess.
+  // This avoids a second Supabase getSession() round-trip on every panel
+  // navigation while preserving /seller/me as the business-row authority.
+  const bootstrap = await resolveSellerBootstrap(access.accessToken);
   if (bootstrap.state !== "ready") {
     return <AccessUnavailable contextLabel="Mağaza profili" />;
   }

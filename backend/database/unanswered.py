@@ -52,7 +52,7 @@ def save_unanswered_question(
     try:
         existing_result = (
             get_supabase().table("unanswered_questions")
-            .select("*")
+            .select("id,times_asked")
             .eq("seller_id", seller_id)
             .eq("normalized_question", normalized)
             .eq("is_resolved", False)
@@ -282,7 +282,7 @@ def get_unanswered_question_group_by_id(
     try:
         result = (
             get_supabase().table("unanswered_question_groups")
-            .select("*")
+            .select("id,canonical_question,status,answer_text,occurrence_count,first_seen_at,last_seen_at,version,answered_at,dismissed_at,dismiss_note,created_at,updated_at")
             .eq("seller_id", seller_id)
             .eq("id", group_id)
             .limit(1)
@@ -314,8 +314,7 @@ def get_unanswered_question_group_detail(
         occurrence_result = (
             get_supabase().table("unanswered_question_occurrences")
             .select(
-                "id,seller_id,group_id,customer_id,message_id,question_text,"
-                "category,suggested_field,metadata,occurred_at"
+                "id,customer_id,message_id,question_text,occurred_at"
             )
             .eq("seller_id", seller_id)
             .eq("group_id", group_id)
@@ -354,16 +353,16 @@ def list_unanswered_question_groups(
         return {"durum": "doğrulama_hatası", "mesaj": "view değeri geçersiz."}
     if not _is_positive_int(limit) or limit > 100:
         return {"durum": "doğrulama_hatası", "mesaj": "limit 1 ile 100 arasında olmalıdır."}
-    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0 or offset > 10_000:
         return {
             "durum": "doğrulama_hatası",
-            "mesaj": "offset negatif olmayan tam sayı olmalıdır.",
+            "mesaj": "offset 0 ile 10.000 arasında tam sayı olmalıdır.",
         }
 
     try:
         query = (
             get_supabase().table("unanswered_question_groups")
-            .select("*")
+            .select("id,canonical_question,status,answer_text,occurrence_count,first_seen_at,last_seen_at,version")
             .eq("seller_id", seller_id)
             .order("last_seen_at", desc=True)
             .order("id", desc=True)

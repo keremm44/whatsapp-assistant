@@ -42,10 +42,18 @@ from order_service import (
     get_field_definition,
     get_order_with_fields,
     list_seller_orders,
+    present_order_summary,
+)
+from seller_list_v2_service import (
+    list_conversations_v2,
+    list_orders_v2,
+    list_returns_v2,
+    list_unanswered_v2,
 )
 from return_issue_service import (
     get_seller_return_issue_request_detail,
     get_seller_return_issue_settings,
+    list_seller_return_issue_evidence,
     list_seller_return_issue_requests,
     mark_seller_return_issue_handled,
     update_seller_return_issue_setting,
@@ -58,6 +66,7 @@ from unanswered_question_service import (
     set_seller_answer,
 )
 from seller_media_service import get_seller_message_media
+from seller_cache import seller_read_cache
 from seller_panel_service import (
     get_conversation_detail as get_seller_panel_conversation_detail,
     list_conversations as list_seller_panel_conversations,
@@ -574,7 +583,7 @@ def seller_conversations(
     ]
     | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Seller'ın konuşmalarını panel read modelinde listeler."""
@@ -588,6 +597,31 @@ def seller_conversations(
     if not result.get("ok"):
         _raise_from_seller_panel_service(result)
     return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/seller/conversations/v2")
+def seller_conversations_v2(
+    attention_only: bool = Query(default=False),
+    control_state: Literal[
+        "ASSISTANT_ACTIVE",
+        "SELLER_TAKEN_OVER",
+        "RETURN_REVIEW",
+        "ASSISTANT_PAUSED",
+    ]
+    | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    cursor: str | None = Query(default=None, max_length=2048),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller panel conversation list'ini stabil activity cursor ile listeler."""
+    result = list_conversations_v2(
+        context.seller_id,
+        attention_only=attention_only,
+        control_state=control_state,
+        limit=limit,
+        cursor=cursor,
+    )
+    return _seller_list_v2_public(result)
 
 
 @router.get("/seller/conversations/{customer_id}")
@@ -642,7 +676,7 @@ def seller_dashboard_tasks(
         pattern="^(return_review|order_review|unanswered_question)$",
     ),
     limit: int = Query(default=50, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Bugün ilgilenmeniz gerekenler iş kuyruğunu döndürür."""
@@ -700,6 +734,7 @@ def seller_mutate_conversation_control(
     )
     if not result.get("ok"):
         _raise_from_control_service(result)
+    seller_read_cache.invalidate_seller(context.seller_id)
     return {key: value for key, value in result.items() if key != "ok"}
 
 
@@ -823,36 +858,19 @@ def _raise_from_order_service(
     )
 
 
-def _present_order_summary(order: dict[str, Any]) -> dict[str, Any]:
-    """Sipariş listesi için güvenli özet üretir."""
-    status_value = order.get("status")
-    display_status = ORDER_DISPLAY_STATUS.get(
-        status_value,
-        status_value or "Bilinmiyor",
-    )
+def _raise_from_seller_list_v2_service(result: dict[str, Any]) -> None:
+    kind = result.get("kind")
+    status_code = {
+        "validation": status.HTTP_422_UNPROCESSABLE_CONTENT,
+        "unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
+    }.get(kind, status.HTTP_503_SERVICE_UNAVAILABLE)
+    raise HTTPException(status_code=status_code, detail=result["error"])
 
-    return {
-        "id": order.get("id"),
-        "external_order_number": order.get("external_order_number"),
-        "product_id": order.get("product_id"),
-        "product_name_snapshot": order.get("product_name_snapshot"),
-        "customer_id": order.get("customer_id"),
-        "customer_phone_snapshot": order.get("customer_phone_snapshot"),
-        "status": status_value,
-        "display_status": display_status,
-        "image_message_id": order.get("image_message_id"),
-        "has_image": order.get("image_message_id") is not None,
-        "custom_text": order.get("custom_text"),
-        "review_reason_code": order.get("review_reason_code"),
-        "review_reason_note": order.get("review_reason_note"),
-        "version": order.get("version"),
-        "created_at": order.get("created_at"),
-        "updated_at": order.get("updated_at"),
-        "completed_at": order.get("completed_at"),
-        "seller_action_required": (
-            status_value == ORDER_STATUS_SELLER_REVIEW_REQUIRED
-        ),
-    }
+
+def _seller_list_v2_public(result: dict[str, Any]) -> dict[str, Any]:
+    if not result.get("ok"):
+        _raise_from_seller_list_v2_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
 
 
 @router.get("/seller/orders")
@@ -864,7 +882,7 @@ def seller_orders(
     customer_id: int | None = Query(default=None, ge=1),
     external_order_number: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Satıcının siparişlerini tenant scope'unda listeler."""
@@ -892,10 +910,37 @@ def seller_orders(
         "limit": limit,
         "offset": offset,
         "orders": [
-            _present_order_summary(order)
+            present_order_summary(order)
             for order in result["orders"]
         ],
     }
+
+
+@router.get("/seller/orders/v2")
+def seller_orders_v2(
+    view: str = Query(default="all", pattern="^(action_required|collecting|all)$"),
+    status_filter: str | None = Query(default=None, alias="status"),
+    product_id: int | None = Query(default=None, ge=1),
+    image_missing: bool | None = Query(default=None),
+    customer_id: int | None = Query(default=None, ge=1),
+    external_order_number: str | None = Query(default=None, max_length=100),
+    limit: int = Query(default=20, ge=1, le=100),
+    cursor: str | None = Query(default=None, max_length=2048),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Satıcının siparişlerini (updated_at, id) keyset cursor ile listeler."""
+    result = list_orders_v2(
+        context.seller_id,
+        view=view,
+        status=status_filter,
+        product_id=product_id,
+        image_missing=image_missing,
+        customer_id=customer_id,
+        external_order_number=external_order_number,
+        limit=limit,
+        cursor=cursor,
+    )
+    return _seller_list_v2_public(result)
 
 
 @router.get("/seller/orders/{order_id}")
@@ -1145,7 +1190,7 @@ def seller_return_issue_requests(
     issue_type: str | None = Query(default=None, max_length=48),
     external_order_number: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Satıcının kalıcı iade/sorun taleplerini tenant scope'unda listeler."""
@@ -1174,6 +1219,32 @@ def seller_return_issue_requests(
     }
 
 
+@router.get("/seller/return-issue-requests/v2")
+def seller_return_issue_requests_v2(
+    view: str = Query(
+        default="all",
+        pattern="^(action_required|collecting|handled|all)$",
+    ),
+    customer_id: int | None = Query(default=None, ge=1),
+    issue_type: str | None = Query(default=None, max_length=48),
+    external_order_number: str | None = Query(default=None, max_length=100),
+    limit: int = Query(default=20, ge=1, le=100),
+    cursor: str | None = Query(default=None, max_length=2048),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """İade/sorun taleplerini (updated_at, id) keyset cursor ile listeler."""
+    result = list_returns_v2(
+        context.seller_id,
+        view=view,
+        customer_id=customer_id,
+        issue_type=issue_type,
+        external_order_number=external_order_number,
+        limit=limit,
+        cursor=cursor,
+    )
+    return _seller_list_v2_public(result)
+
+
 @router.get("/seller/return-issue-requests/{request_id}")
 def seller_return_issue_request_detail(
     request_id: PositiveInt,
@@ -1196,7 +1267,29 @@ def seller_return_issue_request_detail(
         "customer": result.get("customer"),
         "order": result.get("order"),
         "evidence": result.get("evidence") or [],
+        "evidence_has_more": result.get("evidence_has_more") is True,
         "missing_fields": result.get("missing_fields") or [],
+    }
+
+
+@router.get("/seller/return-issue-requests/{request_id}/evidence")
+def seller_return_issue_evidence_page(
+    request_id: PositiveInt,
+    limit: int = Query(default=24, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=10_000),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Bounded evidence metadata page; media remains lazy via its proxy."""
+    result = list_seller_return_issue_evidence(
+        context.seller_id, request_id, limit=limit, offset=offset
+    )
+    if result.get("durum") != "başarılı":
+        _raise_from_return_issue_service(result, default_message="Kanıtlar okunamadı.")
+    return {
+        "evidence": result["evidence"],
+        "limit": result["limit"],
+        "offset": result["offset"],
+        "has_more": result["has_more"],
     }
 
 
@@ -1222,6 +1315,7 @@ def seller_return_issue_request_action(
             result,
             default_message="İade/sorun talebi güncellenemedi.",
         )
+    seller_read_cache.invalidate_seller(context.seller_id)
 
     return {
         "action": body.action,
@@ -1345,7 +1439,7 @@ def seller_unanswered_questions(
         pattern="^(action_required|answered|dismissed|all)$",
     ),
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Seller'ın cevaplanamayan soru gruplarını tenant scope'unda listeler."""
@@ -1369,6 +1463,26 @@ def seller_unanswered_questions(
         "offset": offset,
         "questions": [present_group_summary(group) for group in result["groups"]],
     }
+
+
+@router.get("/seller/unanswered-questions/v2")
+def seller_unanswered_questions_v2(
+    view: str = Query(
+        default="all",
+        pattern="^(action_required|answered|dismissed|all)$",
+    ),
+    limit: int = Query(default=20, ge=1, le=100),
+    cursor: str | None = Query(default=None, max_length=2048),
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Cevaplanamayan soru gruplarını (last_seen_at, id) keyset cursor ile listeler."""
+    result = list_unanswered_v2(
+        context.seller_id,
+        view=view,
+        limit=limit,
+        cursor=cursor,
+    )
+    return _seller_list_v2_public(result)
 
 
 @router.get("/seller/unanswered-questions/{group_id}")
@@ -1426,6 +1540,7 @@ def seller_unanswered_question_action(
             result,
             default_message="Cevaplanamayan soru güncellenemedi.",
         )
+    seller_read_cache.invalidate_seller(context.seller_id)
 
     group = result["group"]
     if isinstance(group, dict) and "seller_action_required" not in group:
@@ -1472,7 +1587,7 @@ def seller_submit_feedback(
 @router.get("/seller/feedback")
 def seller_feedback_list(
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Seller'ın yalnız kendi feedback kayıtlarını en yeniden eskiye listeler."""
@@ -1504,7 +1619,7 @@ def admin_feedback_list(
     category: FeedbackCategory | None = Query(default=None),
     seller_id: int | None = Query(default=None, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     _: AuthContext = Depends(require_admin),
 ) -> dict[str, Any]:
     """Admin workflow kuyruğunu güvenli seller özeti ve filtrelerle listeler."""
@@ -1580,7 +1695,7 @@ def admin_publish_announcement(
 @router.get("/admin/announcements")
 def admin_announcement_list(
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     _: AuthContext = Depends(require_admin),
 ) -> dict[str, Any]:
     """Admin duyurularını hedef ve okundu sayılarıyla listeler."""
@@ -1605,7 +1720,7 @@ def admin_announcement_detail(
 @router.get("/seller/announcements")
 def seller_announcement_list(
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     context: AuthContext = Depends(require_seller),
 ) -> dict[str, Any]:
     """Seller'ın yalnız explicit hedeflendiği duyuruları tenant scope'unda listeler."""

@@ -85,10 +85,10 @@ Sorumluluklar:
 
 Önemli örnekler:
 
-- `protected_routes.py`: authenticated/protected uygulama endpointleri.
+- `protected_routes.py`: authenticated/protected uygulama endpointleri (içeride ayrıca seller list v2 cursor endpoint'leri: `GET /seller/{orders,return-issue-requests,unanswered-questions,conversations}/v2`).
 - `public_routes.py`: public surface.
 - `admin_seller_routes.py`: admin seller surface.
-- `cursor_queue_routes.py`: queue/cursor API surface.
+- `cursor_queue_routes.py`: queue/cursor API surface (mevcut `/seller/v2/*` iç yüzeyi; legacy).
 - `whatsapp_webhook/`: WhatsApp provider giriş surface'i.
 
 Route katmanı request validation, auth dependency ve HTTP response sınırıdır.
@@ -101,6 +101,7 @@ Route katmanı request validation, auth dependency ve HTTP response sınırıdı
 - `admin_seller_service.py`
 - `conversation_control_service.py`
 - `cursor_queue_service.py`
+- `seller_list_v2_service.py` (seller list v2: seller-bound imzalı cursor decode → keyset repository → legacy-eşdeğer presentation → next_cursor encode; contract: `contracts/seller-lists-v2.json`)
 - `chat_service/`
 
 `chat_service/` mesaj ve order konuşma akışının kritik alanıdır. Mevcut içerikte orkestrasyon, order helper/state, response ve return-flow sorumlulukları ayrı modüllere bölünmüştür.
@@ -255,6 +256,7 @@ Mevcut contract dosyaları:
 
 - `seller-conversations-unanswered-v1.json`
 - `seller-orders-returns-v1.json`
+- `seller-lists-v2.json` (seller list v2 cursor yüzeyi: 4 endpoint, imzalı seller-bound cursor contractı, `{items, has_more, next_cursor}` envelope)
 
 Bir endpoint/data model değişikliği bu contractlardan birini etkiliyorsa backend ve frontend tek başına güncellenmemelidir. Şunlar birlikte kontrol edilmelidir:
 

@@ -298,7 +298,8 @@ def get_order_by_id(seller_id: int, order_id: int) -> dict[str, Any]:
         return {"durum": "doğrulama_hatası", "mesaj": "order_id pozitif tam sayı olmalıdır."}
     try:
         result = (
-            get_supabase().table("orders").select("*")
+            get_supabase().table("orders")
+            .select("id,seller_id,customer_id,product_id,product_name_snapshot,external_order_number,customer_phone_snapshot,customer_note,image_message_id,custom_text,status,review_reason_code,review_reason_note,version,created_at,updated_at,completed_at,closed_at")
             .eq("id", order_id).eq("seller_id", seller_id).limit(1).execute()
         )
         if not result.data:
@@ -317,12 +318,14 @@ def get_order_detail(seller_id: int, order_id: int) -> dict[str, Any]:
     try:
         snapshots_result = (
             get_supabase().table("order_field_snapshots")
-            .select("*").eq("order_id", order_id).order("sort_order_snapshot").execute()
+            .select("id,source_definition_id,definition_version,field_key,label_snapshot,field_type_snapshot,is_required_snapshot,sort_order_snapshot,options_snapshot,validation_snapshot")
+            .eq("order_id", order_id).order("sort_order_snapshot").execute()
         )
         snapshots = snapshots_result.data or []
         values_result = (
             get_supabase().table("order_field_values")
-            .select("*").eq("order_id", order_id).execute()
+            .select("field_snapshot_id,value,source_message_id")
+            .eq("order_id", order_id).execute()
         )
         values_by_snapshot: dict[int, dict[str, Any]] = {}
         for value_row in values_result.data or []:
@@ -370,11 +373,13 @@ def list_orders(
         return {"durum": "doğrulama_hatası", "mesaj": "view değeri geçersiz."}
     if limit < 1 or limit > 100:
         return {"durum": "doğrulama_hatası", "mesaj": "limit 1 ile 100 arasında olmalıdır."}
-    if offset < 0:
-        return {"durum": "doğrulama_hatası", "mesaj": "offset negatif olamaz."}
+    if offset < 0 or offset > 10_000:
+        return {"durum": "doğrulama_hatası", "mesaj": "offset 0 ile 10.000 arasında olmalıdır."}
     try:
         query = (
-            get_supabase().table("orders").select("*").eq("seller_id", seller_id)
+            get_supabase().table("orders")
+            .select("id,seller_id,customer_id,product_id,product_name_snapshot,external_order_number,customer_phone_snapshot,image_message_id,custom_text,status,review_reason_code,review_reason_note,version,created_at,updated_at,completed_at")
+            .eq("seller_id", seller_id)
             .order("updated_at", desc=True).range(offset, offset + limit - 1)
         )
         if view == "action_required":

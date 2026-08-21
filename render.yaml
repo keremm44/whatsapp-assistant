@@ -26,3 +26,32 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_KEY
         sync: false
+      - key: PAGINATION_CURSOR_SECRET
+        sync: false
+
+  - type: worker
+    name: whatsapp-assistant-worker
+    runtime: python
+    plan: free
+    region: frankfurt
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m workers.whatsapp_worker
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_VERSION
+        value: 0.4.0
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ENABLE_DEV_ENDPOINTS
+        value: "false"
+      - key: WHATSAPP_RUNTIME_ENABLED
+        value: "true"
+      - key: WHATSAPP_SEND_ENABLED
+        value: "false"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false

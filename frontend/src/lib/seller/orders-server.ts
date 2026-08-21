@@ -19,10 +19,10 @@
  */
 
 import { ApiError } from "@/lib/api/client";
-import { fetchOrderList } from "@/lib/seller/orders-api";
+import { fetchOrderListV2 } from "@/lib/seller/orders-api";
 import {
   ORDERS_CONTRACT_ERROR_PREFIX,
-  type OrderListPage,
+  type OrderListPageV2,
   type OrderView,
 } from "@/lib/seller/orders";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -30,7 +30,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export type OrderListBootstrap =
   | {
       state: "ready";
-      page: OrderListPage;
+      page: OrderListPageV2;
     }
   | { state: "unavailable" }
   | { state: "auth_rejected" };
@@ -67,7 +67,7 @@ export const resolveOrderList = async (
   },
 ): Promise<OrderListBootstrap> => {
   try {
-    const page = await fetchOrderList(accessToken, {
+    const page = await fetchOrderListV2(accessToken, {
       view: options.view,
       externalOrderNumber: options.externalOrderNumber,
       productId: options.productId ?? null,

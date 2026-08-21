@@ -439,7 +439,7 @@ def _fetch_state_record(
     """State kaydını doğrudan veritabanından getirir."""
     result = (
         get_supabase().table("conversation_states")
-        .select("*")
+        .select("seller_id,customer_id,current_state,state_type,state_data,expires_at")
         .eq("seller_id", seller_id)
         .eq("customer_id", customer_id)
         .limit(1)

@@ -49,6 +49,32 @@ def get_return_issue_request_by_id(seller_id: int, request_id: int) -> dict[str,
         return {"durum": "hata", "mesaj": "İade/sorun talebi okunamadı."}
 
 
+def list_return_issue_evidence(
+    seller_id: int, request_id: int, *, limit: int = 24, offset: int = 0
+) -> dict[str, Any]:
+    """Read one bounded, tenant-scoped evidence page (metadata only)."""
+    if not _is_positive_int(seller_id) or not _is_positive_int(request_id):
+        return {"durum": "doğrulama_hatası", "mesaj": "Geçersiz kanıt isteği."}
+    if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 100:
+        return {"durum": "doğrulama_hatası", "mesaj": "limit 1 ile 100 arasında olmalıdır."}
+    if not isinstance(offset, int) or isinstance(offset, bool) or not 0 <= offset <= 10_000:
+        return {"durum": "doğrulama_hatası", "mesaj": "offset 0 ile 10.000 arasında olmalıdır."}
+    try:
+        # Fetch one look-ahead row; it avoids an expensive count while
+        # allowing the client to offer an honest “more evidence” action.
+        result = (
+            get_supabase().table("return_issue_request_evidence")
+            .select("id,seller_id,request_id,message_id,created_at")
+            .eq("seller_id", seller_id).eq("request_id", request_id)
+            .order("created_at").order("id").range(offset, offset + limit)
+            .execute()
+        )
+        rows = result.data or []
+        return {"durum": "başarılı", "evidence": rows[:limit], "has_more": len(rows) > limit}
+    except Exception:
+        return {"durum": "hata", "mesaj": "Kanıtlar okunamadı."}
+
+
 def get_return_issue_request_detail(seller_id: int, request_id: int) -> dict[str, Any]:
     import database
     request_result = database.get_return_issue_request_by_id(seller_id, request_id)
@@ -56,12 +82,9 @@ def get_return_issue_request_detail(seller_id: int, request_id: int) -> dict[str
         return request_result
     request_row = request_result["request"]
     try:
-        evidence_result = (
-            get_supabase().table("return_issue_request_evidence")
-            .select("id,seller_id,request_id,message_id,created_at")
-            .eq("seller_id", seller_id).eq("request_id", request_id)
-            .order("created_at").order("id").execute()
-        )
+        evidence_page = list_return_issue_evidence(seller_id, request_id)
+        if evidence_page.get("durum") != "başarılı":
+            return evidence_page
         customer_result = (
             get_supabase().table("customers")
             .select("id,seller_id,whatsapp_number,name")
@@ -82,7 +105,8 @@ def get_return_issue_request_detail(seller_id: int, request_id: int) -> dict[str
             "request": request_row,
             "customer": customer_result.data[0] if customer_result.data else None,
             "order": order_row,
-            "evidence": evidence_result.data,
+            "evidence": evidence_page["evidence"],
+            "evidence_has_more": evidence_page["has_more"],
         }
     except Exception:
         return {"durum": "hata", "mesaj": "İade/sorun talebi detayı okunamadı."}
@@ -110,8 +134,8 @@ def list_return_issue_requests(
         return {"durum": "doğrulama_hatası", "mesaj": "view değeri geçersiz."}
     if not _is_positive_int(limit) or limit > 100:
         return {"durum": "doğrulama_hatası", "mesaj": "limit 1 ile 100 arasında olmalıdır."}
-    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
-        return {"durum": "doğrulama_hatası", "mesaj": "offset negatif olmayan tam sayı olmalıdır."}
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0 or offset > 10_000:
+        return {"durum": "doğrulama_hatası", "mesaj": "offset 0 ile 10.000 arasında tam sayı olmalıdır."}
     if customer_id is not None and not _is_positive_int(customer_id):
         return {"durum": "doğrulama_hatası", "mesaj": "customer_id pozitif tam sayı olmalıdır."}
     if issue_type is not None and issue_type not in RETURN_ISSUE_TYPES:
@@ -141,7 +165,8 @@ def get_return_issue_type_settings(seller_id: int) -> dict[str, Any]:
         return {"durum": "doğrulama_hatası", "mesaj": "seller_id pozitif tam sayı olmalıdır."}
     try:
         result = (
-            get_supabase().table("return_issue_type_settings").select("*")
+            get_supabase().table("return_issue_type_settings")
+            .select("issue_type,image_requirement,version,updated_at")
             .eq("seller_id", seller_id).order("issue_type").execute()
         )
         return {"durum": "başarılı", "settings": result.data}

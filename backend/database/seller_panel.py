@@ -35,8 +35,8 @@ def get_seller_conversation_list(
         return {"durum": "doğrulama_hatası", "mesaj": "seller_id pozitif tam sayı olmalıdır."}
     if not _is_positive_int(limit) or limit > 100:
         return {"durum": "doğrulama_hatası", "mesaj": "limit 1 ile 100 arasında olmalıdır."}
-    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
-        return {"durum": "doğrulama_hatası", "mesaj": "offset negatif olmayan tam sayı olmalıdır."}
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0 or offset > 10_000:
+        return {"durum": "doğrulama_hatası", "mesaj": "offset 0 ile 10.000 arasında tam sayı olmalıdır."}
     if not isinstance(attention_only, bool):
         return {"durum": "doğrulama_hatası", "mesaj": "attention_only boolean olmalıdır."}
     if control_state is not None and control_state not in VALID_CONTROL_STATES:
@@ -136,8 +136,8 @@ def get_seller_dashboard_task_list(
         return {"durum": "doğrulama_hatası", "mesaj": "task_type değeri geçersiz."}
     if not _is_positive_int(limit) or limit > 100:
         return {"durum": "doğrulama_hatası", "mesaj": "limit 1 ile 100 arasında olmalıdır."}
-    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
-        return {"durum": "doğrulama_hatası", "mesaj": "offset negatif olmayan tam sayı olmalıdır."}
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0 or offset > 10_000:
+        return {"durum": "doğrulama_hatası", "mesaj": "offset 0 ile 10.000 arasında tam sayı olmalıdır."}
     try:
         result = get_supabase().rpc(
             "get_seller_dashboard_tasks",

@@ -25,18 +25,18 @@
 import { ApiError } from "@/lib/api/client";
 import {
   fetchUnansweredDetail,
-  fetchUnansweredList,
+  fetchUnansweredListV2,
 } from "@/lib/seller/unanswered-api";
 import {
   UNANSWERED_CONTRACT_ERROR_PREFIX,
-  type UnansweredListPage,
+  type UnansweredListPageV2,
   type UnansweredQuestionDetail,
   type UnansweredView,
 } from "@/lib/seller/unanswered";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type UnansweredListBootstrap =
-  | { state: "ready"; page: UnansweredListPage }
+  | { state: "ready"; page: UnansweredListPageV2 }
   | { state: "unavailable" }
   | { state: "auth_rejected" };
 
@@ -74,7 +74,7 @@ export const resolveUnansweredList = async (
   options: { view: UnansweredView },
 ): Promise<UnansweredListBootstrap> => {
   try {
-    const page = await fetchUnansweredList(accessToken, {
+    const page = await fetchUnansweredListV2(accessToken, {
       view: options.view,
       cache: "no-store",
     });

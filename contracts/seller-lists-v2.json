@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "description": "Seller list v2 cursor (keyset) pagination contract. Legacy offset endpointleri ve /seller/v2/* cursor queue'ları aynen korunur; bu yüzey tamamen ek (additive) bir contracttir. Response her zaman TAMAMEN {items, has_more, next_cursor} anahtarlarını içerir.",
+  "cursor_contract": {
+    "type": "opaque signed token (query param: cursor)",
+    "encoding": "base64url(JSON payload + HMAC-SHA256(payload)[:16]), padding'siz",
+    "payload": {
+      "v": "1 (cursor sürümü)",
+      "s": "seller_id (int) — token satıcıya imzalı olarak bağlıdır",
+      "q": "queue (str) — token endpoint'e bağlıdır",
+      "f": "filter fingerprint (sha256[:24]) — token filtre bağlamına bağlıdır",
+      "p": "position (object) — keyset konumu; endpoint'e göre (time, id) veya conversation read-model rank seti"
+    },
+    "max_length": 2048,
+    "secret": "PAGINATION_CURSOR_SECRET env var'ı (production'da tanımlı değilse encode/decode fail-closed)",
+    "fail_closed_cases": [
+      "başka satıcının token'ı (422 seller_list_v2_cursor_invalid)",
+      "başka queue/endpoint'ten token (422)",
+      "farklı filtre bağlamında token (422)",
+      "bozuk/tamper'lanmış/uzun token (422)",
+      "legacy /seller/orders cursor formatı (422)"
+    ]
+  },
+  "endpoints": {
+    "orders": {
+      "endpoint": "GET /seller/orders/v2",
+      "auth": "require_seller (Bearer, seller_id tenant scoped via AuthContext)",
+      "keyset_order": "(updated_at DESC, id DESC)",
+      "legacy_equivalent": "GET /seller/orders (offset, korunur)",
+      "request": {
+        "query": {
+          "view": "'all' (default) | 'action_required' | 'collecting'",
+          "status": "optional; legacy sipariş durumlarından biri (VALID_ORDER_STATUSES)",
+          "product_id": "optional int >= 1",
+          "image_missing": "optional bool",
+          "customer_id": "optional int >= 1",
+          "external_order_number": "optional str <= 100",
+          "limit": "1..100, default 20",
+          "cursor": "optional; önceki sayfanın next_cursor değeri"
+        }
+      },
+      "response": {
+        "success_example": {
+          "items": [
+            {
+              "id": 41,
+              "external_order_number": "TR123456",
+              "product_id": 3,
+              "product_name_snapshot": "Kişiye Özel Kupa",
+              "customer_id": 22,
+              "customer_phone_snapshot": "+905321112233",
+              "status": "COLLECTING",
+              "display_status": "Bilgi toplanıyor",
+              "image_message_id": 104,
+              "has_image": true,
+              "custom_text": "İyi ki doğdun Deniz",
+              "review_reason_code": null,
+              "review_reason_note": null,
+              "version": 4,
+              "created_at": "2026-08-10T12:00:00+00:00",
+              "updated_at": "2026-08-10T12:30:00+00:00",
+              "completed_at": null,
+              "seller_action_required": false
+            }
+          ],
+          "has_more": true,
+          "next_cursor": "eyJzIjoyMX0_signature_part"
+        },
+        "fields": {
+          "items": "list — item shape legacy /seller/orders order summary'siyle birebir aynı",
+          "has_more": "bool — daha fazla sayfa var mı",
+          "next_cursor": "string | null — has_more=false iken null; sonraki sayfa için query param"
+        },
+        "error_cases": {
+          "401": "Missing/invalid Bearer token",
+          "403": "Seller olmayan rol",
+          "422": "Geçersiz/abancı/filtre uyuşmayan/tamper'lanmış cursor (seller_list_v2_cursor_invalid) veya geçersiz filter değeri (seller_list_v2_validation_error)",
+          "503": "Database unavailable (seller_list_v2_orders_unavailable) veya next_cursor üretilemedi (seller_list_v2_page_unavailable)"
+        }
+      }
+    },
+    "returns": {
+      "endpoint": "GET /seller/return-issue-requests/v2",
+      "auth": "require_seller (Bearer, seller_id tenant scoped via AuthContext)",
+      "keyset_order": "(updated_at DESC, id DESC)",
+      "legacy_equivalent": "GET /seller/return-issue-requests (offset, korunur)",
+      "request": {
+        "query": {
+          "view": "'all' (default) | 'action_required' | 'collecting' | 'handled'",
+          "customer_id": "optional int >= 1",
+          "issue_type": "optional; canonical issue_type (RETURN_ISSUE_TYPES)",
+          "external_order_number": "optional str <= 100 (external_order_number_snapshot eşleşmesi)",
+          "limit": "1..100, default 20",
+          "cursor": "optional; önceki sayfanın next_cursor değeri"
+        }
+      },
+      "response": {
+        "success_example": {
+          "items": [
+            {
+              "id": 51,
+              "customer_id": 22,
+              "order_id": null,
+              "issue_type": "QUANTITY_LIMIT_REQUEST",
+              "external_order_number_snapshot": null,
+              "product_name_snapshot": "Kişiye Özel Kupa",
+              "reason_text": "50 adet istiyorum",
+              "requested_quantity": 50,
+              "min_quantity_snapshot": 100,
+              "max_quantity_snapshot": 500,
+              "quantity_limit_direction": "below_min",
+              "image_requirement_snapshot": "NOT_REQUESTED",
+              "status": "SELLER_REVIEW_REQUIRED",
+              "review_reason_code": "quantity_limit_request",
+              "review_note": "50 adet, minimum 100 sınırının altında.",
+              "review_required_at": "2026-08-10T13:01:00+00:00",
+              "handled_at": null,
+              "seller_note": null,
+              "version": 2,
+              "created_at": "2026-08-10T13:00:00+00:00",
+              "updated_at": "2026-08-10T13:01:00+00:00",
+              "customer_phone": "+905321112233",
+              "display_issue_type": "Adet sınırı talebi",
+              "seller_action_required": true
+            }
+          ],
+          "has_more": false,
+          "next_cursor": null
+        },
+        "fields": {
+          "items": "list — legacy return list item shape'i + customer_phone/display_issue_type/seller_action_required enrichment (legacy'le aynı)",
+          "has_more": "bool",
+          "next_cursor": "string | null"
+        },
+        "error_cases": {
+          "401": "Missing/invalid Bearer token",
+          "403": "Seller olmayan rol",
+          "422": "Geçersiz cursor (seller_list_v2_cursor_invalid) veya geçersiz issue_type (seller_list_v2_validation_error)",
+          "503": "Database unavailable (seller_list_v2_returns_unavailable)"
+        }
+      }
+    },
+    "unanswered": {
+      "endpoint": "GET /seller/unanswered-questions/v2",
+      "auth": "require_seller (Bearer, seller_id tenant scoped via AuthContext)",
+      "keyset_order": "(last_seen_at DESC, id DESC)",
+      "legacy_equivalent": "GET /seller/unanswered-questions (offset, korunur)",
+      "request": {
+        "query": {
+          "view": "'all' (default) | 'action_required' | 'answered' | 'dismissed'",
+          "limit": "1..100, default 20",
+          "cursor": "optional; önceki sayfanın next_cursor değeri"
+        }
+      },
+      "response": {
+        "success_example": {
+          "items": [
+            {
+              "id": 61,
+              "question": "Kargoya ne zaman verilir?",
+              "status": "OPEN",
+              "answer": null,
+              "occurrence_count": 2,
+              "first_seen_at": "2026-08-09T09:00:00+00:00",
+              "last_seen_at": "2026-08-10T11:58:00+00:00",
+              "version": 2,
+              "seller_action_required": true
+            }
+          ],
+          "has_more": false,
+          "next_cursor": null
+        },
+        "fields": {
+          "items": "list — legacy unanswered group summary shape'iyle birebir aynı",
+          "has_more": "bool",
+          "next_cursor": "string | null"
+        },
+        "error_cases": {
+          "401": "Missing/invalid Bearer token",
+          "403": "Seller olmayan rol",
+          "422": "Geçersiz cursor (seller_list_v2_cursor_invalid)",
+          "503": "Database unavailable (seller_list_v2_unanswered_unavailable)"
+        }
+      }
+    },
+    "conversations": {
+      "endpoint": "GET /seller/conversations/v2",
+      "auth": "require_seller (Bearer, seller_id tenant scoped via AuthContext)",
+      "keyset_order": "conversation cursor read model (migration 033: get_seller_conversation_list_cursor) — paused_rank DESC, attention_rank DESC, sort_at DESC, customer_id DESC",
+      "legacy_equivalent": "GET /seller/conversations (offset, korunur)",
+      "request": {
+        "query": {
+          "attention_only": "bool, default false",
+          "control_state": "optional; ASSISTANT_ACTIVE | SELLER_TAKEN_OVER | RETURN_REVIEW | ASSISTANT_PAUSED",
+          "limit": "1..100, default 20",
+          "cursor": "optional; önceki sayfanın next_cursor değeri"
+        }
+      },
+      "response": {
+        "success_example": {
+          "items": [
+            {
+              "customer": {
+                "id": 22,
+                "name": "Elif Yılmaz",
+                "whatsapp_number": "+905321112233",
+                "is_blocked": false,
+                "muted_until": null,
+                "is_muted": false,
+                "total_messages": 12,
+                "last_message_at": "2026-08-10T12:05:00+00:00"
+              },
+              "last_message": {
+                "id": 980,
+                "direction": "incoming",
+                "content": "Ürün kırık geldi",
+                "message_type": "text",
+                "was_auto_replied": false,
+                "media_available": false,
+                "created_at": "2026-08-10T12:05:00+00:00"
+              },
+              "conversation_state": {
+                "state": "AWAITING_SELLER",
+                "state_type": "informational",
+                "updated_at": "2026-08-10T12:05:00+00:00"
+              },
+              "control": {
+                "state": "RETURN_REVIEW",
+                "changed_at": "2026-08-10T12:05:30+00:00",
+                "changed_by_profile_id": 7,
+                "reason_code": "return_review_required",
+                "reason_note": "İade incelemesi gerekiyor.",
+                "resume_after_message_id": 980,
+                "version": 4
+              },
+              "active_order": {
+                "id": 18,
+                "customer_id": 22,
+                "status": "SELLER_REVIEW_REQUIRED",
+                "external_order_number": "TR123456",
+                "product_name_snapshot": "Kişiye Özel Kupa",
+                "version": 5,
+                "updated_at": "2026-08-10T12:04:00+00:00",
+                "seller_action_required": true
+              },
+              "active_return_issue": {
+                "id": 41,
+                "customer_id": 22,
+                "issue_type": "DAMAGED_ITEM",
+                "status": "SELLER_REVIEW_REQUIRED",
+                "version": 3,
+                "updated_at": "2026-08-10T12:05:00+00:00",
+                "seller_action_required": true
+              },
+              "open_unanswered": {
+                "id": 61,
+                "question": "Kargoya ne zaman verilir?",
+                "occurrence_count": 2,
+                "last_seen_at": "2026-08-10T11:58:00+00:00",
+                "version": 2,
+                "seller_action_required": true
+              },
+              "needs_attention": true,
+              "attention_reason": "return_review"
+            }
+          ],
+          "has_more": true,
+          "next_cursor": "eyJzIjoyMX0_signature_part"
+        },
+        "fields": {
+          "items": "list — legacy conversation list item shape'iyle uyumlu (frontend parser'ı aynı alanları okur)",
+          "has_more": "bool — read model RPC tarafından hesaplanır (limit+1 window)",
+          "next_cursor": "string | null — position: {paused_rank, attention_rank, sort_at, customer_id}"
+        },
+        "error_cases": {
+          "401": "Missing/invalid Bearer token",
+          "403": "Seller olmayan rol",
+          "422": "Geçersiz cursor (seller_list_v2_cursor_invalid) veya geçersiz control_state (seller_list_v2_validation_error)",
+          "503": "Read model RPC unavailable (seller_list_v2_conversations_unavailable)"
+        }
+      }
+    }
+  },
+  "frontend_rules": [
+    "Yeni sayfalar mevcut sonuçlara EKLENİR (append); sabit limitle sonuç gizlenmez",
+    "Filtre değişiminde cursor sıfırlanır (yeni ilk sayfa, cursor gönderilmez)",
+    "has_more=false iken 'Daha fazla göster' gösterilmez",
+    "next_cursor yalnızca aynı filtre bağlamıyla yeniden kullanılabilir"
+  ],
+  "backward_compatible": true
+}

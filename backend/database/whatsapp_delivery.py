@@ -328,6 +328,27 @@ def apply_whatsapp_delivery_status(
     return _delivery_rpc_response(result.data)
 
 
+def get_next_whatsapp_delivery_outbox_id() -> dict[str, Any]:
+    """Return one due outbox identifier; dispatch still performs the atomic claim."""
+    try:
+        result = get_supabase().rpc(
+            "next_whatsapp_delivery_outbox_id",
+            {},
+        ).execute()
+    except Exception:
+        return {"durum": "hata"}
+
+    payload = _extract_rpc_payload(result.data)
+    if payload is None or payload.get("status") != "success":
+        return {"durum": "hata"}
+    outbox_id = payload.get("outbox_id")
+    if outbox_id is None:
+        return {"durum": "boş"}
+    if not _is_positive_int(outbox_id):
+        return {"durum": "hata"}
+    return {"durum": "başarılı", "outbox_id": outbox_id}
+
+
 def get_whatsapp_delivery_context(outbox_id: int) -> dict[str, Any]:
     """Read the minimum secret-free data needed by a transport adapter."""
     if not _is_positive_int(outbox_id):

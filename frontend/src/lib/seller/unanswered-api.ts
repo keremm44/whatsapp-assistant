@@ -20,8 +20,10 @@ import {
   parseUnansweredActionResponse,
   parseUnansweredDetailResponse,
   parseUnansweredListResponse,
+  parseUnansweredListV2Response,
   type UnansweredActionResult,
   type UnansweredListPage,
+  type UnansweredListPageV2,
   type UnansweredQuestionDetail,
   type UnansweredView,
 } from "@/lib/seller/unanswered";
@@ -56,6 +58,38 @@ export const fetchUnansweredList = async (
     { signal: options.signal, cache: options.cache ?? "no-store" },
   );
   return parseUnansweredListResponse(raw);
+};
+
+/**
+ * Fetch and parse `GET /seller/unanswered-questions/v2` — the signed,
+ * seller-bound cursor (keyset) page. `cursor` is the previous page's
+ * `nextCursor`; omit it for the first page. The response is exactly
+ * {items, has_more, next_cursor}.
+ */
+export const fetchUnansweredListV2 = async (
+  accessToken: string,
+  options: {
+    view: UnansweredView;
+    limit?: number;
+    cursor?: string | null;
+    signal?: AbortSignal;
+    cache?: RequestCache;
+  },
+): Promise<UnansweredListPageV2> => {
+  const query = new URLSearchParams();
+  query.set("view", options.view);
+  if (typeof options.limit === "number") {
+    query.set("limit", String(options.limit));
+  }
+  if (options.cursor) {
+    query.set("cursor", options.cursor);
+  }
+  const raw = await apiFetchWithAccessToken<unknown>(
+    `/seller/unanswered-questions/v2?${query.toString()}`,
+    accessToken,
+    { signal: options.signal, cache: options.cache ?? "no-store" },
+  );
+  return parseUnansweredListV2Response(raw);
 };
 
 export type FetchUnansweredDetailOptions = {

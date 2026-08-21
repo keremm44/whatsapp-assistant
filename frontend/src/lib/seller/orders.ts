@@ -539,6 +539,46 @@ const parseOrderDetail = (raw: unknown): OrderDetail => {
 export const parseOrdersListResponse = (raw: unknown): OrderListPage =>
   parseOrderListPage(raw);
 
+/* ------------------------------------------------------------------ */
+/* V2 cursor list page (GET /seller/orders/v2 — contracts/             */
+/* seller-lists-v2.json). Response is EXACTLY {items, has_more,        */
+/* next_cursor}. Item shape is byte-identical to the legacy order      */
+/* summary, so rows keep rendering through the same parser.            */
+/* ------------------------------------------------------------------ */
+
+export type OrderListPageV2 = {
+  items: OrderSummary[];
+  hasMore: boolean;
+  nextCursor: string | null;
+};
+
+const parseOrderListPageV2 = (raw: unknown): OrderListPageV2 => {
+  if (!isPlainObject(raw)) throw contractError("v2_response");
+  const itemsRaw = readKey(raw, "items");
+  if (!Array.isArray(itemsRaw)) throw contractError("v2_items");
+  const hasMore = readKey(raw, "has_more");
+  if (typeof hasMore !== "boolean") throw contractError("v2_has_more");
+  const nextCursorRaw = readKey(raw, "next_cursor");
+  if (nextCursorRaw !== null && typeof nextCursorRaw !== "string") {
+    throw contractError("v2_next_cursor");
+  }
+  // Contract invariants: next_cursor is null IFF has_more is false.
+  if (!hasMore && nextCursorRaw !== null) {
+    throw contractError("v2_next_cursor_unexpected");
+  }
+  if (hasMore && (typeof nextCursorRaw !== "string" || nextCursorRaw === "")) {
+    throw contractError("v2_next_cursor_missing");
+  }
+  return {
+    items: itemsRaw.map(parseOrderSummary),
+    hasMore,
+    nextCursor: nextCursorRaw === null ? null : nextCursorRaw,
+  };
+};
+
+export const parseOrdersListV2Response = (raw: unknown): OrderListPageV2 =>
+  parseOrderListPageV2(raw);
+
 export const parseOrderDetailResponse = (raw: unknown): OrderDetail =>
   parseOrderDetail(raw);
 

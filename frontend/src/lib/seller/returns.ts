@@ -319,6 +319,8 @@ export type ReturnRequestDetail = {
   customer: ReturnCustomer | null;
   order: ReturnOrderRef | null;
   evidence: ReturnEvidenceItem[];
+  /** More metadata can be fetched in bounded pages; images stay lazy. */
+  evidenceHasMore: boolean;
   missingFields: ReturnMissingField[];
 };
 
@@ -530,6 +532,7 @@ const parseReturnDetail = (raw: unknown): ReturnRequestDetail => {
     customer: parseReturnCustomer(readKey(raw, "customer")),
     order: parseReturnOrderRef(readKey(raw, "order")),
     evidence: ((evidenceRaw ?? []) as unknown[]).map(parseReturnEvidenceItem),
+    evidenceHasMore: readKey(raw, "evidence_has_more") === true,
     missingFields: parseReturnMissingFields(readKey(raw, "missing_fields")),
   };
 };
@@ -597,9 +600,56 @@ const parseReturnIssueSettingUpdateResponse = (
 export const parseReturnListResponse = (raw: unknown): ReturnListPage =>
   parseReturnListPage(raw);
 
+/* ------------------------------------------------------------------ */
+/* V2 cursor list page (GET /seller/return-issue-requests/v2 —         */
+/* contracts/seller-lists-v2.json). Response is EXACTLY                */
+/* {items, has_more, next_cursor}. Item shape is the legacy return     */
+/* request summary (with customer_phone / display_issue_type /         */
+/* seller_action_required enrichment), so rows render unchanged.       */
+/* ------------------------------------------------------------------ */
+
+export type ReturnListPageV2 = {
+  items: ReturnRequestSummary[];
+  hasMore: boolean;
+  nextCursor: string | null;
+};
+
+const parseReturnListPageV2 = (raw: unknown): ReturnListPageV2 => {
+  if (!isPlainObject(raw)) throw contractError("v2_response");
+  const itemsRaw = readKey(raw, "items");
+  if (!Array.isArray(itemsRaw)) throw contractError("v2_items");
+  const hasMore = readKey(raw, "has_more");
+  if (typeof hasMore !== "boolean") throw contractError("v2_has_more");
+  const nextCursorRaw = readKey(raw, "next_cursor");
+  if (nextCursorRaw !== null && typeof nextCursorRaw !== "string") {
+    throw contractError("v2_next_cursor");
+  }
+  if (!hasMore && nextCursorRaw !== null) {
+    throw contractError("v2_next_cursor_unexpected");
+  }
+  if (hasMore && (typeof nextCursorRaw !== "string" || nextCursorRaw === "")) {
+    throw contractError("v2_next_cursor_missing");
+  }
+  return {
+    items: itemsRaw.map(parseReturnRequestSummary),
+    hasMore,
+    nextCursor: nextCursorRaw === null ? null : nextCursorRaw,
+  };
+};
+
+export const parseReturnListV2Response = (raw: unknown): ReturnListPageV2 =>
+  parseReturnListPageV2(raw);
+
 export const parseReturnDetailResponse = (
   raw: unknown,
 ): ReturnRequestDetail => parseReturnDetail(raw);
+
+export const parseReturnEvidencePageResponse = (raw: unknown): { evidence: ReturnEvidenceItem[]; hasMore: boolean } => {
+  if (!isPlainObject(raw) || !Array.isArray(readKey(raw, "evidence")) || typeof readKey(raw, "has_more") !== "boolean") {
+    throw contractError("evidence_page");
+  }
+  return { evidence: (readKey(raw, "evidence") as unknown[]).map(parseReturnEvidenceItem), hasMore: readKey(raw, "has_more") as boolean };
+};
 
 export const parseMarkReturnHandledResponse = (
   raw: unknown,

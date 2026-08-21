@@ -26,13 +26,16 @@ import type { ApiBlobPayload } from "@/lib/api/client";
 import {
   parseMarkReturnHandledResponse,
   parseReturnDetailResponse,
+  parseReturnEvidencePageResponse,
   parseReturnIssueSettingsList,
   parseReturnIssueSettingUpdate,
   parseReturnListResponse,
+  parseReturnListV2Response,
   type MarkReturnHandledResult,
   type ReturnIssueSetting,
   type ReturnIssueType,
   type ReturnListPage,
+  type ReturnListPageV2,
   type ReturnRequestDetail,
   type ReturnView,
 } from "@/lib/seller/returns";
@@ -80,6 +83,49 @@ export const fetchReturnList = async (
   return parseReturnListResponse(raw);
 };
 
+/**
+ * Fetch and parse `GET /seller/return-issue-requests/v2` — the signed,
+ * seller-bound cursor (keyset) page. `cursor` is the previous page's
+ * `nextCursor`; omit it for the first page. The response is exactly
+ * {items, has_more, next_cursor}.
+ */
+export const fetchReturnListV2 = async (
+  accessToken: string,
+  options: {
+    view: ReturnView;
+    externalOrderNumber?: string | null;
+    issueType?: ReturnIssueType | null;
+    limit?: number;
+    cursor?: string | null;
+    signal?: AbortSignal;
+    cache?: RequestCache;
+  },
+): Promise<ReturnListPageV2> => {
+  const query = new URLSearchParams();
+  query.set("view", options.view);
+  if (
+    typeof options.externalOrderNumber === "string" &&
+    options.externalOrderNumber.length > 0
+  ) {
+    query.set("external_order_number", options.externalOrderNumber);
+  }
+  if (typeof options.issueType === "string" && options.issueType.length > 0) {
+    query.set("issue_type", options.issueType);
+  }
+  if (typeof options.limit === "number") {
+    query.set("limit", String(options.limit));
+  }
+  if (options.cursor) {
+    query.set("cursor", options.cursor);
+  }
+  const raw = await apiFetchWithAccessToken<unknown>(
+    `/seller/return-issue-requests/v2?${query.toString()}`,
+    accessToken,
+    { signal: options.signal, cache: options.cache ?? "no-store" },
+  );
+  return parseReturnListV2Response(raw);
+};
+
 export type FetchReturnDetailOptions = {
   signal?: AbortSignal;
   cache?: RequestCache;
@@ -97,6 +143,20 @@ export const fetchReturnDetail = async (
     { signal: options?.signal, cache: options?.cache ?? "no-store" },
   );
   return parseReturnDetailResponse(raw);
+};
+
+export const fetchReturnEvidencePage = async (
+  accessToken: string,
+  requestId: number,
+  offset: number,
+  options?: { signal?: AbortSignal },
+): Promise<{ evidence: import("./returns").ReturnEvidenceItem[]; hasMore: boolean }> => {
+  const raw = await apiFetchWithAccessToken<unknown>(
+    `/seller/return-issue-requests/${requestId}/evidence?limit=24&offset=${offset}`,
+    accessToken,
+    { signal: options?.signal, cache: "no-store" },
+  );
+  return parseReturnEvidencePageResponse(raw);
 };
 
 export type MarkReturnHandledOptions = {

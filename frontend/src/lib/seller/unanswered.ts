@@ -351,6 +351,46 @@ const parseUnansweredActionResult = (
 export const parseUnansweredListResponse = (raw: unknown): UnansweredListPage =>
   parseUnansweredListPage(raw);
 
+/* ------------------------------------------------------------------ */
+/* V2 cursor list page (GET /seller/unanswered-questions/v2 —         */
+/* contracts/seller-lists-v2.json). Response is EXACTLY               */
+/* {items, has_more, next_cursor}. Item shape is the legacy group      */
+/* summary, so rows render unchanged.                                  */
+/* ------------------------------------------------------------------ */
+
+export type UnansweredListPageV2 = {
+  items: UnansweredQuestionSummary[];
+  hasMore: boolean;
+  nextCursor: string | null;
+};
+
+const parseUnansweredListPageV2 = (raw: unknown): UnansweredListPageV2 => {
+  if (!isPlainObject(raw)) throw contractError("v2_response");
+  const itemsRaw = readKey(raw, "items");
+  if (!Array.isArray(itemsRaw)) throw contractError("v2_items");
+  const hasMore = readKey(raw, "has_more");
+  if (typeof hasMore !== "boolean") throw contractError("v2_has_more");
+  const nextCursorRaw = readKey(raw, "next_cursor");
+  if (nextCursorRaw !== null && typeof nextCursorRaw !== "string") {
+    throw contractError("v2_next_cursor");
+  }
+  if (!hasMore && nextCursorRaw !== null) {
+    throw contractError("v2_next_cursor_unexpected");
+  }
+  if (hasMore && (typeof nextCursorRaw !== "string" || nextCursorRaw === "")) {
+    throw contractError("v2_next_cursor_missing");
+  }
+  return {
+    items: itemsRaw.map(parseUnansweredSummary),
+    hasMore,
+    nextCursor: nextCursorRaw === null ? null : nextCursorRaw,
+  };
+};
+
+export const parseUnansweredListV2Response = (
+  raw: unknown,
+): UnansweredListPageV2 => parseUnansweredListPageV2(raw);
+
 export const parseUnansweredDetailResponse = (
   raw: unknown,
 ): UnansweredQuestionDetail => parseUnansweredDetail(raw);

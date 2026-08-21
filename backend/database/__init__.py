@@ -14,6 +14,7 @@ from types import ModuleType
 from . import core
 from . import messaging
 from . import whatsapp_delivery
+from . import whatsapp_event_queue
 from . import conversations
 from . import notifications
 from . import unanswered
@@ -37,6 +38,7 @@ _MODULES = (
     core,
     messaging,
     whatsapp_delivery,
+    whatsapp_event_queue,
     conversations,
     notifications,
     unanswered,

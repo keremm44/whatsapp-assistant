@@ -25,6 +25,8 @@
  * Next.js redirect helpers it depends on are server-only.
  */
 
+import { cache } from "react";
+
 import type { Route } from "next";
 import { redirect } from "next/navigation";
 
@@ -46,7 +48,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  */
 export type ServerAccess =
   | { state: "unauthenticated" }
-  | { state: "authorized"; me: AuthMe }
+  | {
+      state: "authorized";
+      me: AuthMe;
+      /** Server-only token from the just-verified session. Never serialize it. */
+      accessToken: string;
+    }
   | { state: "application_rejected" }
   | { state: "unavailable" };
 
@@ -294,7 +301,7 @@ const classifyGetUserError = (error: unknown): SupabaseErrorClass => {
  * It NEVER calls Supabase signOut. The user is never silently
  * logged out by the resolver.
  */
-export const resolveServerAccess = async (): Promise<ServerAccess> => {
+const resolveServerAccessUncached = async (): Promise<ServerAccess> => {
   const supabase = await createSupabaseServerClient();
 
   // Step 1: verify the Supabase user.
@@ -378,8 +385,16 @@ export const resolveServerAccess = async (): Promise<ServerAccess> => {
     return { state: "unavailable" };
   }
 
-  return { state: "authorized", me };
+  return { state: "authorized", me, accessToken };
 };
+
+/**
+ * Request-scoped memoization: one RSC render must not repeat Supabase
+ * verification and /auth/me when multiple protected server components need
+ * the same authorization result. React clears this cache between requests;
+ * authorization is never shared across users or requests.
+ */
+export const resolveServerAccess = cache(resolveServerAccessUncached);
 
 /**
  * Helper: redirect a server component to a fixed path using Next's

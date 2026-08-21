@@ -31,7 +31,7 @@ def admin_seller_list(
     q: str | None = Query(default=None, max_length=160),
     system_status: AdminSellerSystemStatus | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=10_000),
     _: AuthContext = Depends(require_admin),
 ) -> dict[str, Any]:
     """Admin için minimal, salt-okunur seller directory listesini döndürür."""

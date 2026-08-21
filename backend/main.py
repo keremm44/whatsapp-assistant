@@ -18,7 +18,7 @@ from database import (
     get_seller_by_id,
     test_connection,
 )
-from observability import init_sentry
+from observability import RequestMetricsMiddleware, init_sentry
 from protected_routes import router as protected_router
 from public_abuse_protection import PublicApplicationAbuseProtectionMiddleware
 from public_routes import router as public_router
@@ -63,6 +63,7 @@ app = FastAPI(
 # bytes and burst attempts before FastAPI parses the JSON body. This middleware
 # is added before CORS so CORS remains the outer wrapper for browser responses.
 app.add_middleware(PublicApplicationAbuseProtectionMiddleware)
+app.add_middleware(RequestMetricsMiddleware)
 
 if settings.cors_origins:
     allow_all = "*" in settings.cors_origins

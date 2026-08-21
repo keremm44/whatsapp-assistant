@@ -15,7 +15,7 @@ import type {
   ReturnRequestDetail,
   ReturnView,
 } from "@/lib/seller/returns";
-import { postMarkReturnHandled } from "@/lib/seller/returns-api";
+import { fetchReturnEvidencePage, postMarkReturnHandled } from "@/lib/seller/returns-api";
 import {
   buildMarkHandledPayload,
   canMarkReturnHandled,
@@ -88,6 +88,10 @@ export function ReturnRequestDetail({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [wasConflict, setWasConflict] = React.useState(false);
+  const [evidence, setEvidence] = React.useState(detail.evidence);
+  const [evidenceHasMore, setEvidenceHasMore] = React.useState(detail.evidenceHasMore);
+  const [isLoadingEvidence, setIsLoadingEvidence] = React.useState(false);
+  const [evidenceError, setEvidenceError] = React.useState<string | null>(null);
   const [previewTarget, setPreviewTarget] = React.useState<{
     messageId: number;
     position: number;
@@ -140,6 +144,23 @@ export function ReturnRequestDetail({
       : null;
 
   const mayMarkHandled = canMarkReturnHandled(request);
+
+  const loadMoreEvidence = async () => {
+    if (isLoadingEvidence || !evidenceHasMore) return;
+    setEvidenceError(null);
+    setIsLoadingEvidence(true);
+    try {
+      const accessToken = await getBrowserAccessToken();
+      if (!accessToken) throw new Error("session");
+      const page = await fetchReturnEvidencePage(accessToken, request.id, evidence.length);
+      setEvidence((current) => [...current, ...page.evidence]);
+      setEvidenceHasMore(page.hasMore);
+    } catch {
+      setEvidenceError("Daha fazla kanıt şu anda yüklenemedi. Lütfen tekrar deneyin.");
+    } finally {
+      setIsLoadingEvidence(false);
+    }
+  };
 
   const onSubmitHandled = async () => {
     if (isSubmitting || inflightRef.current) return;
@@ -288,7 +309,7 @@ export function ReturnRequestDetail({
                 aria-label="Kanıt fotoğrafları"
                 className="flex flex-wrap gap-2"
               >
-                {detail.evidence.map((item, index) => (
+                {evidence.map((item, index) => (
                   <li key={item.id}>
                     <button
                       type="button"
@@ -310,7 +331,7 @@ export function ReturnRequestDetail({
                         className="text-muted-foreground"
                       />
                       <span>
-                        {detail.evidence.length > 1
+                        {evidence.length > 1
                           ? `Fotoğraf ${index + 1}`
                           : "Fotoğraf"}
                       </span>
@@ -323,6 +344,14 @@ export function ReturnRequestDetail({
                 {RETURN_PHOTO_PENDING_LABEL}
               </p>
             )}
+            {evidenceHasMore ? (
+              <div className="mt-3">
+                <Button type="button" variant="secondary" size="sm" onClick={loadMoreEvidence} disabled={isLoadingEvidence}>
+                  {isLoadingEvidence ? "Kanıtlar yükleniyor…" : "Daha fazla kanıt göster"}
+                </Button>
+              </div>
+            ) : null}
+            {evidenceError ? <p role="alert" className="mt-2 text-[13px] text-destructive">{evidenceError}</p> : null}
           </DetailSection>
         ) : null}
 

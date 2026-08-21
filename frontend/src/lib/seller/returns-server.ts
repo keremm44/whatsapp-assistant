@@ -21,18 +21,18 @@
  */
 
 import { ApiError } from "@/lib/api/client";
-import { fetchReturnDetail, fetchReturnList } from "@/lib/seller/returns-api";
+import { fetchReturnDetail, fetchReturnListV2 } from "@/lib/seller/returns-api";
 import {
   RETURNS_CONTRACT_ERROR_PREFIX,
   type ReturnIssueType,
-  type ReturnListPage,
+  type ReturnListPageV2,
   type ReturnRequestDetail,
   type ReturnView,
 } from "@/lib/seller/returns";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ReturnListBootstrap =
-  | { state: "ready"; page: ReturnListPage }
+  | { state: "ready"; page: ReturnListPageV2 }
   | { state: "unavailable" }
   | { state: "auth_rejected" };
 
@@ -74,7 +74,7 @@ export const resolveReturnList = async (
   },
 ): Promise<ReturnListBootstrap> => {
   try {
-    const page = await fetchReturnList(accessToken, {
+    const page = await fetchReturnListV2(accessToken, {
       view: options.view,
       externalOrderNumber: options.externalOrderNumber,
       issueType: options.issueType,

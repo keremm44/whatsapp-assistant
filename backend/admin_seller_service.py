@@ -126,10 +126,10 @@ def list_admin_sellers(
             "limit 1 ile 100 arasında olmalıdır.",
             kind="validation",
         )
-    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0 or offset > 10_000:
         return _failure(
             "admin_seller_directory_validation_error",
-            "offset negatif olamaz.",
+            "offset 0 ile 10.000 arasında olmalıdır.",
             kind="validation",
         )
 
