@@ -37,6 +37,8 @@ def _alert(
 
 def classify_whatsapp_operational_health(
     snapshot: dict[str, Any],
+    *,
+    require_worker_heartbeat: bool = False,
 ) -> list[OperationalAlert]:
     if snapshot.get("durum") != "başarılı":
         return [
@@ -49,7 +51,12 @@ def classify_whatsapp_operational_health(
 
     inbound = snapshot.get("inbound")
     outbox = snapshot.get("outbox")
-    if not isinstance(inbound, dict) or not isinstance(outbox, dict):
+    worker = snapshot.get("worker")
+    if (
+        not isinstance(inbound, dict)
+        or not isinstance(outbox, dict)
+        or not isinstance(worker, dict)
+    ):
         return [
             _alert(
                 "ops_health_invalid",
@@ -59,6 +66,17 @@ def classify_whatsapp_operational_health(
         ]
 
     alerts: list[OperationalAlert] = []
+    if require_worker_heartbeat and worker["recent_heartbeat_count"] <= 0:
+        alerts.append(
+            _alert(
+                "worker_heartbeat_missing",
+                "error",
+                "WhatsApp runtime açık ancak son iki dakikada worker heartbeat yok.",
+                recent_heartbeat_count=worker["recent_heartbeat_count"],
+                last_heartbeat_age_seconds=worker["last_heartbeat_age_seconds"],
+            )
+        )
+
     pending_count = inbound["due_pending_count"]
     pending_age = inbound["oldest_due_pending_seconds"]
     if pending_count >= _QUEUE_PENDING_WARN_COUNT or pending_age >= _QUEUE_PENDING_WARN_SECONDS:
@@ -160,10 +178,10 @@ def classify_whatsapp_operational_health(
                 failed_recent_15m=outbox["failed_recent_15m"],
             )
         )
-    if outbox["unknown_recent_15m"] > 0:
+    if outbox["unknown_total"] > 0:
         alerts.append(
             _alert(
-                "outbox_unknown_recent",
+                "outbox_unknown_outstanding",
                 "warning",
                 "WhatsApp outbound UNKNOWN teslimatlar manuel inceleme gerektiriyor.",
                 unknown_recent_15m=outbox["unknown_recent_15m"],
@@ -174,9 +192,14 @@ def classify_whatsapp_operational_health(
     return alerts
 
 
-def check_whatsapp_operational_health() -> dict[str, Any]:
+def check_whatsapp_operational_health(
+    *, require_worker_heartbeat: bool = False
+) -> dict[str, Any]:
     snapshot = get_whatsapp_operational_health()
-    alerts = classify_whatsapp_operational_health(snapshot)
+    alerts = classify_whatsapp_operational_health(
+        snapshot,
+        require_worker_heartbeat=require_worker_heartbeat,
+    )
     severity_rank = {"warning": 1, "error": 2}
     worst = max((severity_rank.get(item.severity, 0) for item in alerts), default=0)
     status = "critical" if worst >= 2 else "degraded" if worst == 1 else "healthy"
@@ -188,9 +211,13 @@ def check_whatsapp_operational_health() -> dict[str, Any]:
     }
 
 
-def report_whatsapp_operational_health() -> dict[str, Any]:
+def report_whatsapp_operational_health(
+    *, require_worker_heartbeat: bool = False
+) -> dict[str, Any]:
     """Read, classify and emit grouped operational alerts."""
-    result = check_whatsapp_operational_health()
+    result = check_whatsapp_operational_health(
+        require_worker_heartbeat=require_worker_heartbeat
+    )
     for alert in result["alerts"]:
         emit_operational_alert(
             alert.code,
