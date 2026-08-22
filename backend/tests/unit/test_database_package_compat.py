@@ -12,6 +12,7 @@ def test_database_package_preserves_legacy_import_surface() -> None:
         "get_seller_by_id",
         "get_or_create_customer",
         "save_message",
+        "persist_guarded_auto_reply",
         "resolve_whatsapp_channel",
         "ensure_whatsapp_delivery_outbox",
         "claim_whatsapp_delivery_outbox",
