@@ -95,6 +95,55 @@ def claim_next_whatsapp_event(worker_id: str) -> dict[str, Any]:
     return {"durum": "başarılı", "event": event}
 
 
+def renew_whatsapp_event_claim(
+    event_id: int,
+    *,
+    worker_id: str,
+    claim_version: int,
+) -> dict[str, Any]:
+    """Atomically refresh the exact queue lease or fail closed if it was lost."""
+    normalized_worker = worker_id.strip() if isinstance(worker_id, str) else ""
+    if (
+        not _is_positive_int(event_id)
+        or not normalized_worker
+        or len(normalized_worker) > _MAX_WORKER_ID_LENGTH
+        or not _is_positive_int(claim_version)
+    ):
+        return {"durum": "doğrulama_hatası"}
+
+    try:
+        result = get_supabase().rpc(
+            "renew_whatsapp_inbound_event_claim",
+            {
+                "event_id_value": event_id,
+                "worker_id_value": normalized_worker,
+                "claim_version_value": claim_version,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "reason_code": "claim_renew_failed"}
+
+    payload = _extract_rpc_payload(result.data)
+    if payload is None:
+        return {"durum": "hata", "reason_code": "claim_renew_invalid_response"}
+    if payload.get("status") == "success":
+        if (
+            payload.get("event_id") != event_id
+            or payload.get("claim_version") != claim_version
+        ):
+            return {"durum": "hata", "reason_code": "claim_renew_identity_mismatch"}
+        return {"durum": "başarılı"}
+    if payload.get("status") == "conflict":
+        return {
+            "durum": "çakışma",
+            "reason_code": str(payload.get("reason") or "claim_lost"),
+        }
+    return {
+        "durum": "hata",
+        "reason_code": str(payload.get("reason") or "claim_renew_failed"),
+    }
+
+
 def complete_whatsapp_event(
     event_id: int,
     *,
