@@ -26,6 +26,7 @@ from database import (
     increment_rule_hit_count,
     is_customer_muted,
     mute_customer,
+    persist_guarded_auto_reply as _database_persist_guarded_auto_reply,
     record_violation,
     save_message as _database_save_message,
     transition_conversation_control,
@@ -88,11 +89,54 @@ def save_message(
     ai_confidence: float | None = None,
     provider: str = "internal",
     provider_message_id: str | None = None,
+    source_message_id: int | None = None,
+    expected_control_version: int | None = None,
 ) -> dict[str, Any]:
-    """Preserve legacy persistence, except inside an explicit WhatsApp scope."""
+    """Preserve legacy persistence and guard auto-reply writes when requested.
+
+    Guarded outgoing writes are serialized in PostgreSQL with seller takeover
+    and resume operations. Calls that do not supply the guard pair keep the
+    historical persistence behavior for compatibility and non-auto-reply uses.
+    """
     whatsapp_scope = (
         current_outgoing_provider() == WHATSAPP_PENDING_OUTGOING_PROVIDER
     )
+
+    has_source_guard = source_message_id is not None
+    has_version_guard = expected_control_version is not None
+    if direction == "outgoing" and has_source_guard != has_version_guard:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "Otomatik yanıt guard bilgileri birlikte gönderilmelidir.",
+        }
+
+    if direction == "outgoing" and has_source_guard and has_version_guard:
+        guarded_provider = (
+            WHATSAPP_PENDING_OUTGOING_PROVIDER if whatsapp_scope else provider
+        )
+        if whatsapp_scope:
+            scoped_source_message_id = current_incoming_message_id()
+            if scoped_source_message_id != source_message_id:
+                return {
+                    "durum": "hata",
+                    "mesaj": "WhatsApp reply kaynak mesaj bağlamı doğrulanamadı.",
+                }
+
+        result = _database_persist_guarded_auto_reply(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            source_message_id=source_message_id,
+            expected_control_version=expected_control_version,
+            content=content,
+            message_type=message_type,
+            media_url=media_url,
+            ai_confidence=ai_confidence,
+            provider=guarded_provider,
+        )
+        outgoing_message_id = _message_id_from_result(result)
+        if whatsapp_scope and outgoing_message_id is not None:
+            record_outgoing_message_id(outgoing_message_id)
+        return result
 
     if direction == "outgoing" and whatsapp_scope:
         source_message_id = current_incoming_message_id()
