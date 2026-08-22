@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_migration_chain_is_contiguous_000_through_054() -> None:
+def test_migration_chain_is_contiguous_000_through_055() -> None:
     migrations = sorted(Path("migrations").glob("[0-9][0-9][0-9]_*.sql"))
     versions = [path.name[:3] for path in migrations]
-    assert versions == [f"{version:03d}" for version in range(55)]
+    assert versions == [f"{version:03d}" for version in range(56)]
 
 
 def test_023_024_025_files_match_live_names() -> None:
@@ -61,3 +61,13 @@ def test_054_owns_atomic_message_metric_persistence() -> None:
     assert "persist_message_with_customer_metrics" in sql
     assert "reconcile_customer_message_metrics" in sql
     assert "'054'" in sql
+
+
+def test_055_extends_claim_fencing_into_business_processing() -> None:
+    path = Path("migrations/055_renew_whatsapp_worker_claim.sql")
+    assert path.exists()
+    sql = path.read_text(encoding="utf-8").lower()
+    assert "renew_whatsapp_inbound_event_claim" in sql
+    assert "e.claim_version = claim_version_value" in sql
+    assert "set claimed_at = now()" in sql
+    assert "'055'" in sql
