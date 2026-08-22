@@ -8,69 +8,14 @@
 --   * changing a COMPLETE order reopens it as SELLER_REVIEW_REQUIRED so production
 --     cannot continue silently after customer-visible data changed.
 --   * AI token accounting stores counts only; no message/customer content is copied.
+--
+-- The pending change reuses the existing AWAITING_ORDER_CONFIRMATION state with a
+-- typed state_data marker. No new conversation-state enum is introduced.
 
 BEGIN;
 
 -- -----------------------------------------------------------------------------
--- 1. Conversation state: one explicit pending-change confirmation state.
--- -----------------------------------------------------------------------------
-ALTER TABLE public.conversation_states
-    DROP CONSTRAINT IF EXISTS conversation_states_current_state_check;
-ALTER TABLE public.conversation_states
-    ADD CONSTRAINT conversation_states_current_state_check
-        CHECK (
-            current_state IN (
-                'NORMAL',
-                'AWAITING_ORDER_CONFIRMATION',
-                'AWAITING_ORDER_PRODUCT',
-                'AWAITING_ORDER_NUMBER',
-                'AWAITING_IMAGE',
-                'AWAITING_CUSTOM_TEXT',
-                'AWAITING_ORDER_FIELD',
-                'AWAITING_ORDER_CHANGE_CONFIRMATION',
-                'AWAITING_SELLER'
-            )
-        );
-
-ALTER TABLE public.state_transitions
-    DROP CONSTRAINT IF EXISTS state_transitions_from_state_check;
-ALTER TABLE public.state_transitions
-    ADD CONSTRAINT state_transitions_from_state_check
-        CHECK (
-            from_state IS NULL OR
-            from_state IN (
-                'NORMAL',
-                'AWAITING_ORDER_CONFIRMATION',
-                'AWAITING_ORDER_PRODUCT',
-                'AWAITING_ORDER_NUMBER',
-                'AWAITING_IMAGE',
-                'AWAITING_CUSTOM_TEXT',
-                'AWAITING_ORDER_FIELD',
-                'AWAITING_ORDER_CHANGE_CONFIRMATION',
-                'AWAITING_SELLER'
-            )
-        );
-
-ALTER TABLE public.state_transitions
-    DROP CONSTRAINT IF EXISTS state_transitions_to_state_check;
-ALTER TABLE public.state_transitions
-    ADD CONSTRAINT state_transitions_to_state_check
-        CHECK (
-            to_state IN (
-                'NORMAL',
-                'AWAITING_ORDER_CONFIRMATION',
-                'AWAITING_ORDER_PRODUCT',
-                'AWAITING_ORDER_NUMBER',
-                'AWAITING_IMAGE',
-                'AWAITING_CUSTOM_TEXT',
-                'AWAITING_ORDER_FIELD',
-                'AWAITING_ORDER_CHANGE_CONFIRMATION',
-                'AWAITING_SELLER'
-            )
-        );
-
--- -----------------------------------------------------------------------------
--- 2. Source-aware, OCC-fenced confirmed custom-text change.
+-- 1. Source-aware, OCC-fenced confirmed custom-text change.
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.apply_confirmed_order_custom_text_change(
     target_seller_id BIGINT,
@@ -197,7 +142,7 @@ GRANT EXECUTE ON FUNCTION public.apply_confirmed_order_custom_text_change(
 ) TO service_role;
 
 -- -----------------------------------------------------------------------------
--- 3. Privacy-minimized per-conversation daily AI usage counters.
+-- 2. Privacy-minimized per-conversation daily AI usage counters.
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.conversation_ai_usage_daily (
     seller_id BIGINT NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
