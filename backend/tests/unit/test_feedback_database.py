@@ -114,6 +114,8 @@ def test_admin_feedback_update_sends_concurrency_and_field_presence(monkeypatch)
         admin_note=None,
         update_status=True,
         update_admin_note=False,
+        admin_reply=None,
+        update_admin_reply=False,
     )
 
     assert result["changed"] is True
@@ -127,6 +129,8 @@ def test_admin_feedback_update_sends_concurrency_and_field_presence(monkeypatch)
                 "status_value": "RESOLVED",
                 "update_admin_note": False,
                 "admin_note_value": None,
+                "update_admin_reply": False,
+                "admin_reply_value": None,
             },
         )
     ]
@@ -144,6 +148,8 @@ def test_feedback_stale_version_and_backend_failure_are_safe(monkeypatch) -> Non
         admin_note=None,
         update_status=True,
         update_admin_note=False,
+        admin_reply=None,
+        update_admin_reply=False,
     )
     assert result["durum"] == "conflict"
     assert result["current_version"] == 4

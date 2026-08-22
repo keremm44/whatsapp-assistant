@@ -18,7 +18,7 @@ from database import (
     get_seller_by_id,
     test_connection,
 )
-from observability import RequestMetricsMiddleware, init_sentry
+from observability import RequestMetricsMiddleware, configure_logging, init_sentry
 from protected_routes import router as protected_router
 from public_abuse_protection import PublicApplicationAbuseProtectionMiddleware
 from public_routes import router as public_router
@@ -27,10 +27,7 @@ from whatsapp_webhook.routes import router as whatsapp_webhook_router
 
 
 settings = get_settings()
-logging.basicConfig(
-    level=getattr(logging, settings.log_level, logging.INFO),
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-)
+configure_logging(settings)
 logger = logging.getLogger(__name__)
 init_sentry(settings)
 

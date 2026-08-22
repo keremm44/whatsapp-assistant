@@ -35,10 +35,11 @@ class AdminFeedbackUpdateRequest(StrictModel):
     expected_version: int = Field(gt=0)
     status: FeedbackStatus | None = None
     admin_note: str | None = Field(default=None, min_length=1, max_length=4000)
+    admin_reply: str | None = Field(default=None, min_length=1, max_length=4000)
 
     @model_validator(mode="after")
     def require_mutation(self) -> "AdminFeedbackUpdateRequest":
-        mutable = {"status", "admin_note"}
+        mutable = {"status", "admin_note", "admin_reply"}
         provided = mutable & self.model_fields_set
         if not provided:
             raise ValueError("En az bir feedback alanı gönderilmelidir.")
@@ -121,10 +122,16 @@ def _valid_feedback_row(row: Any, *, include_admin_note: bool) -> bool:
     ):
         return False
     admin_note = row.get("admin_note")
+    admin_reply = row.get("admin_reply")
+    admin_replied_at = row.get("admin_replied_at")
+    if (
+        admin_reply is not None and not _is_nonempty_string(admin_reply)
+    ) or (
+        admin_replied_at is not None and not _is_nonempty_string(admin_replied_at)
+    ) or ((admin_reply is None) != (admin_replied_at is None)):
+        return False
     return (
-        not include_admin_note
-        or admin_note is None
-        or _is_nonempty_string(admin_note)
+        (not include_admin_note or admin_note is None or _is_nonempty_string(admin_note))
     )
 
 
@@ -137,6 +144,8 @@ def _seller_feedback(row: Any) -> dict[str, Any] | None:
         "category": row["category"],
         "subject": row["subject"],
         "message": row["message"],
+        "admin_reply": row["admin_reply"],
+        "admin_replied_at": row["admin_replied_at"],
         "status": row["status"],
         "version": row["version"],
         "created_at": row["created_at"],
@@ -173,6 +182,8 @@ def _admin_feedback(row: Any) -> dict[str, Any] | None:
         "category": row["category"],
         "subject": row["subject"],
         "message": row["message"],
+        "admin_reply": row["admin_reply"],
+        "admin_replied_at": row["admin_replied_at"],
         "status": row["status"],
         "admin_note": row["admin_note"],
         "version": row["version"],
@@ -294,6 +305,7 @@ def update_admin_feedback(
 ) -> dict[str, Any]:
     update_status = "status" in request.model_fields_set
     update_admin_note = "admin_note" in request.model_fields_set
+    update_admin_reply = "admin_reply" in request.model_fields_set
     result = update_admin_feedback_record(
         feedback_id,
         request.expected_version,
@@ -301,6 +313,8 @@ def update_admin_feedback(
         admin_note=request.admin_note,
         update_status=update_status,
         update_admin_note=update_admin_note,
+        update_admin_reply=update_admin_reply,
+        admin_reply=request.admin_reply,
     )
     if result.get("durum") != "başarılı":
         return _map_database_failure(result)

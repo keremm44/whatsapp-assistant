@@ -1,0 +1,82 @@
+[
+  {"id":"greeting-01","message":"Merhaba","expected_intent":"greeting"},
+  {"id":"greeting-02","message":"Selam, kolay gelsin","expected_intent":"greeting"},
+  {"id":"greeting-03","message":"İyi akşamlar","expected_intent":"greeting"},
+
+  {"id":"price-01","message":"Bu ürün kaç lira?","expected_intent":"price_question"},
+  {"id":"price-02","message":"Fiyatı ne kadar acaba","expected_intent":"price_question"},
+  {"id":"price-03","message":"kupaların fiyatını öğrenebilir miyim","expected_intent":"price_question"},
+
+  {"id":"discount-01","message":"İndirim yapıyor musunuz?","expected_intent":"discount_request"},
+  {"id":"discount-02","message":"2 tane alsam indirim olur mu","expected_intent":"discount_request"},
+  {"id":"discount-03","message":"son fiyat nedir biraz düşer misiniz","expected_intent":"discount_request"},
+
+  {"id":"shipping-time-01","message":"Kaç günde kargoya verirsiniz?","expected_intent":"shipping_time"},
+  {"id":"shipping-time-02","message":"Ne zaman elime ulaşır","expected_intent":"shipping_time"},
+  {"id":"shipping-time-03","message":"bugün sipariş versem kargo ne zaman çıkar","expected_intent":"shipping_time"},
+
+  {"id":"shipping-company-01","message":"Hangi kargo firmasıyla gönderiyorsunuz?","expected_intent":"shipping_company"},
+  {"id":"shipping-company-02","message":"kargoyu aras mı getiriyor","expected_intent":"shipping_company"},
+  {"id":"shipping-company-03","message":"hangi kargo ile çalışıyorsunuz","expected_intent":"shipping_company"},
+
+  {"id":"international-01","message":"Almanya'ya gönderim var mı?","expected_intent":"international_shipping"},
+  {"id":"international-02","message":"yurt dışına kargo yapıyor musunuz","expected_intent":"international_shipping"},
+  {"id":"international-03","message":"Hollanda'ya sipariş verebilir miyim","expected_intent":"international_shipping"},
+
+  {"id":"microwave-01","message":"Mikrodalgaya girer mi?","expected_intent":"microwave_question"},
+  {"id":"microwave-02","message":"kupayı mikrodalgada kullanabilir miyim","expected_intent":"microwave_question"},
+
+  {"id":"dishwasher-01","message":"Bulaşık makinesinde yıkanır mı?","expected_intent":"dishwasher_question"},
+  {"id":"dishwasher-02","message":"makineye atsam baskı çıkar mı","expected_intent":"dishwasher_question"},
+
+  {"id":"material-01","message":"Ürün hangi malzemeden?","expected_intent":"material_question"},
+  {"id":"material-02","message":"seramik mi porselen mi","expected_intent":"material_question"},
+  {"id":"material-03","message":"malzemesi nedir","expected_intent":"material_question"},
+
+  {"id":"size-01","message":"Ölçüleri nedir?","expected_intent":"size_question"},
+  {"id":"size-02","message":"kaç cm bu ürün","expected_intent":"size_question"},
+  {"id":"size-03","message":"boyutu ne kadar","expected_intent":"size_question"},
+
+  {"id":"order-intent-01","message":"Sipariş vermek istiyorum","expected_intent":"order_intent"},
+  {"id":"order-intent-02","message":"Bundan bir tane satın alacağım","expected_intent":"order_intent"},
+  {"id":"order-intent-03","message":"nasıl sipariş oluşturabilirim","expected_intent":"order_intent"},
+
+  {"id":"confirm-yes-01","message":"Evet aldım","expected_intent":"order_confirmation_yes"},
+  {"id":"confirm-yes-02","message":"sipariş verdim","expected_intent":"order_confirmation_yes"},
+  {"id":"confirm-yes-03","message":"evet satın aldım","expected_intent":"order_confirmation_yes"},
+
+  {"id":"confirm-no-01","message":"Hayır henüz almadım","expected_intent":"order_confirmation_no"},
+  {"id":"confirm-no-02","message":"sipariş vermedim","expected_intent":"order_confirmation_no"},
+  {"id":"confirm-no-03","message":"yok daha satın almadım","expected_intent":"order_confirmation_no"},
+
+  {"id":"return-01","message":"Ürünü iade etmek istiyorum","expected_intent":"return_request","critical":true},
+  {"id":"return-02","message":"bunu geri göndermek istiyorum iade açabilir misiniz","expected_intent":"return_request","critical":true},
+  {"id":"return-03","message":"beden olmadı değişim yapmak istiyorum","expected_intent":"return_request","critical":true},
+  {"id":"return-04","message":"vazgeçtim ürünü geri vermek istiyorum","expected_intent":"return_request","critical":true},
+
+  {"id":"complaint-01","message":"Kupa kırık geldi","expected_intent":"complaint","critical":true},
+  {"id":"complaint-02","message":"yanlış ürün göndermişsiniz","expected_intent":"complaint","critical":true},
+  {"id":"complaint-03","message":"paketi açtım ürün hasarlı","expected_intent":"complaint","critical":true},
+  {"id":"complaint-04","message":"baskı yamuk ve çizilmiş geldi","expected_intent":"complaint","critical":true},
+
+  {"id":"image-01","message":"Ürünün fotoğrafını gönderebilir misiniz?","expected_intent":"image_question"},
+  {"id":"image-02","message":"daha net görseli var mı","expected_intent":"image_question"},
+  {"id":"image-03","message":"resmini atar mısınız","expected_intent":"image_question"},
+
+  {"id":"design-01","message":"Bana özel tasarım hazırlayabilir misiniz?","expected_intent":"design_request"},
+  {"id":"design-02","message":"bu görselin rengini değiştirip tasarlayabilir misiniz","expected_intent":"design_request"},
+  {"id":"design-03","message":"kendi logoma göre tasarım yapar mısınız","expected_intent":"design_request"},
+
+  {"id":"custom-text-01","message":"Üzerine isim yazdırabilir miyim?","expected_intent":"custom_text_question"},
+  {"id":"custom-text-02","message":"kupanın üstüne Ayşe yazabilir misiniz","expected_intent":"custom_text_question"},
+  {"id":"custom-text-03","message":"kişiye özel yazı ekleniyor mu","expected_intent":"custom_text_question"},
+
+  {"id":"off-topic-01","message":"Bugün hava nasıl?","expected_intent":"off_topic"},
+  {"id":"off-topic-02","message":"Galatasaray maçı kaç kaç bitti","expected_intent":"off_topic"},
+  {"id":"off-topic-03","message":"bana bir yemek tarifi verir misin","expected_intent":"off_topic"},
+
+  {"id":"unclear-01","message":"Bir şey soracağım","expected_intent":"unclear"},
+  {"id":"unclear-02","message":"oluyor mu","expected_intent":"unclear"},
+  {"id":"unclear-03","message":"peki ya o","expected_intent":"unclear"},
+  {"id":"unclear-04","message":"hmm tamam da nasıl yani","expected_intent":"unclear"}
+]

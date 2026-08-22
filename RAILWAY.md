@@ -1,0 +1,136 @@
+# Railway deployment
+
+This repository contains separate Railway configurations for the API,
+WhatsApp worker, and Next.js frontend. Create each Railway service from the
+same repository and set its **Root Directory** as shown below so Railway picks
+up the matching config file.
+
+| Service | Root Directory | Config file | Start |
+| --- | --- | --- | --- |
+| API | `/backend` | `railway.json` | FastAPI on `$PORT` |
+| WhatsApp worker | `/backend` | `railway.worker.json` | durable queue worker |
+| Frontend | `/frontend` | `railway.json` | Next.js on `$PORT` |
+
+For the worker service, set **Config File Path** to `backend/railway.worker.json`
+if Railway does not resolve it relative to the selected root directory. The API
+and frontend use the normal `railway.json` path for their respective root
+directories.
+
+## Required variables
+
+### API service
+
+Set these as Railway variables (secret values must be entered in Railway, not
+committed):
+
+- `APP_ENV=production`
+- `APP_VERSION=0.4.0`
+- `LOG_LEVEL=INFO` (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` only)
+- `SUPABASE_URL` (HTTPS Supabase project URL)
+- `SUPABASE_SERVICE_KEY`
+- `PAGINATION_CURSOR_SECRET`
+- `CORS_ORIGINS` with the public frontend URL
+- `MEDIA_ALLOWED_HOSTS` when seller media proxying is enabled
+- `GROQ_API_KEY` when AI classification is enabled
+- `GROQ_MODEL` pinned explicitly when changing the classifier model
+- `SENTRY_DSN` optionally
+
+Keep `ENABLE_DEV_ENDPOINTS=false`, `WHATSAPP_RUNTIME_ENABLED=false`, and
+`WHATSAPP_SEND_ENABLED=false` until the corresponding production integrations
+and migrations have been verified. Add the WhatsApp webhook/send variables
+from `backend/.env.example` only when enabling that integration.
+
+### WhatsApp worker service
+
+Use the same database and WhatsApp variables as the API. Set
+`WHATSAPP_RUNTIME_ENABLED=true` only after the repository migration chain has
+exact parity with the target Supabase project (currently migrations 000–057).
+Never enable the worker merely because the database contains a later migration;
+an earlier missing version is still a deployment failure.
+
+The worker now treats `WHATSAPP_RUNTIME_ENABLED` as a real kill switch: when it
+is false the worker exits before claiming inbound queue rows or polling the
+outbox. `WHATSAPP_SEND_ENABLED=true` is rejected by configuration unless
+`WHATSAPP_RUNTIME_ENABLED=true` as well. Keep outbound disabled until the Meta
+access token and an explicit `WHATSAPP_GRAPH_API_VERSION` are configured.
+
+Set the same `SENTRY_DSN`, `APP_ENV`, `APP_VERSION`, and `LOG_LEVEL` on the
+worker if operational alerts should be delivered to Sentry. The worker writes a
+privacy-safe heartbeat every 30 seconds, runs an aggregate queue/outbox health
+check every 60 seconds, and sends grouped PII-free operational alerts when
+thresholds are crossed.
+
+For dead-worker detection, configure a separate Railway Cron service or other
+external scheduler with `/backend` as its root and this command:
+
+```text
+python -m scripts.check_operational_health
+```
+
+The command exits `0` when healthy, `1` when degraded, and `2` when critical or
+when the health snapshot cannot be read. When `WHATSAPP_RUNTIME_ENABLED=true`,
+no heartbeat during the most recent two minutes is critical. The checker must
+use the same backend Supabase service credentials and may use the same
+`SENTRY_DSN`.
+
+### AI classifier predeploy gate
+
+Before enabling a new `GROQ_MODEL`, changing the classifier prompt, or deploying
+classifier behavior changes, run from `backend/` with the production-candidate
+model/key:
+
+```text
+python -m scripts.run_ai_eval --show-failures
+```
+
+The committed Turkish golden dataset includes normal commerce questions,
+colloquial variants, ambiguous messages, order confirmations, returns and
+complaints. The gate requires all of the following:
+
+- at least 40 eval cases,
+- exact intent accuracy >= 90%,
+- zero **wrong-but-safe** predictions (wrong intent that would be allowed into automatic handling),
+- zero misses on cases marked critical,
+- zero deterministic fallbacks during a live-model gate.
+
+The command exits `0` on pass, `2` on quality failure, and `3` when the live
+model is not configured. `--allow-fallback` is diagnostic only and must not be
+used as the production release gate.
+
+### Frontend service
+
+Set the public variables below. The API and Supabase URLs must be HTTPS in
+Railway:
+
+- `NEXT_PUBLIC_API_BASE_URL=https://<api-domain>`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SITE_URL=https://<frontend-domain>`
+
+Generate a public Railway domain for each service (or add a custom domain),
+then update `CORS_ORIGINS` and the frontend API URL with the final domains.
+Railway provides `PORT`; do not hard-code it.
+
+## Deploy checklist
+
+1. From `backend/`, run `python -m scripts.check_migration_parity`. The command
+   must report exact parity with `public.schema_migrations` before deployment.
+2. If parity fails, apply every missing migration in ascending numeric order.
+   Do not skip an earlier migration even when a later version is already
+   present. For this branch the complete repository chain is 000–057.
+3. Run `python -m scripts.check_migration_parity` again and require
+   `Migration parity OK.` before starting or restarting production services.
+4. Run `python -m scripts.run_ai_eval --show-failures` with the intended live
+   classifier model/key and require exit code `0`.
+5. Deploy the API and confirm `GET /health` returns HTTP 200.
+6. Configure the frontend public variables and deploy it.
+7. Replace the temporary domains in `CORS_ORIGINS` and
+   `NEXT_PUBLIC_API_BASE_URL` with the final domains.
+8. Deploy the worker with `WHATSAPP_RUNTIME_ENABLED=true` only after the prior
+   gates pass. Enable outbound separately after Meta credentials are verified.
+9. Configure the independent operational-health scheduler and verify one
+   `healthy` run after the first worker heartbeat before treating worker
+   monitoring as active.
+
+The checked-in configs intentionally do not contain credentials or production
+variable values.

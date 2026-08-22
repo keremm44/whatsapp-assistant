@@ -43,6 +43,8 @@ def test_create_announcement_adapter_passes_atomic_rpc_contract(monkeypatch) -> 
         3,
         title="Planlı bakım",
         message="Pazar günü bakım yapılacaktır.",
+        importance="IMPORTANT",
+        image_url="https://cdn.example.com/announcement.jpg",
         audience_type="SELECTED_SELLERS",
         seller_ids=[42, 51],
     )
@@ -58,6 +60,8 @@ def test_create_announcement_adapter_passes_atomic_rpc_contract(monkeypatch) -> 
                 "creator_profile_id": 3,
                 "title_value": "Planlı bakım",
                 "message_value": "Pazar günü bakım yapılacaktır.",
+                "importance_value": "IMPORTANT",
+                "image_url_value": "https://cdn.example.com/announcement.jpg",
                 "audience_type_value": "SELECTED_SELLERS",
                 "seller_ids_value": [42, 51],
             },
@@ -124,3 +128,18 @@ def test_announcement_adapter_never_leaks_database_exception(monkeypatch) -> Non
 
     assert result["durum"] == "hata"
     assert "secret database detail" not in result["mesaj"]
+
+
+def test_seller_unread_count_adapter_uses_authenticated_seller_scope(monkeypatch) -> None:
+    fake = FakeSupabase({"status": "success", "unread_count": 4})
+    monkeypatch.setattr(database, "get_supabase", lambda: fake)
+
+    result = database.get_seller_announcement_unread_count_record(42)
+
+    assert result == {"durum": "başarılı", "unread_count": 4}
+    assert fake.calls == [
+        (
+            "get_seller_announcements_unread_count",
+            {"target_seller_id": 42},
+        )
+    ]

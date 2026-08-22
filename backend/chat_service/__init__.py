@@ -26,12 +26,20 @@ def sohbet_isle(
     message_type: str = "text",
     media_url: str | None = None,
     outgoing_provider: str = transport_context.INTERNAL_OUTGOING_PROVIDER,
+    worker_event_id: int | None = None,
+    worker_id: str | None = None,
+    claim_version: int | None = None,
 ) -> dict[str, Any]:
     """Run the historical chat flow inside an explicit request-local transport scope."""
     normalized_provider = transport_context.normalize_outgoing_provider(
         outgoing_provider
     )
-    with transport_context.transport_scope(normalized_provider):
+    with transport_context.transport_scope(
+        normalized_provider,
+        worker_event_id=worker_event_id,
+        worker_id=worker_id,
+        claim_version=claim_version,
+    ):
         result = orchestrator.sohbet_isle(
             seller_id=seller_id,
             whatsapp_number=whatsapp_number,

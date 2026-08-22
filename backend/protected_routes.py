@@ -114,6 +114,7 @@ from announcement_service import (
     get_seller_announcement as get_seller_announcement_item,
     list_admin_announcements,
     list_seller_announcements,
+    get_seller_announcement_unread_count,
     mark_seller_announcement_read,
 )
 from database import (
@@ -1729,6 +1730,17 @@ def seller_announcement_list(
         limit=limit,
         offset=offset,
     )
+    if not result.get("ok"):
+        _raise_from_announcement_service(result)
+    return {key: value for key, value in result.items() if key != "ok"}
+
+
+@router.get("/seller/announcements/unread-count")
+def seller_announcement_unread_count(
+    context: AuthContext = Depends(require_seller),
+) -> dict[str, Any]:
+    """Seller zil rozeti için tenant-scoped gerçek okunmamış sayıyı döndürür."""
+    result = get_seller_announcement_unread_count(context.seller_id)
     if not result.get("ok"):
         _raise_from_announcement_service(result)
     return {key: value for key, value in result.items() if key != "ok"}

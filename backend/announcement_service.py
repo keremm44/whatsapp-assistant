@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -10,11 +11,13 @@ from database import (
     get_seller_announcement_record,
     list_admin_announcement_records,
     list_seller_announcement_records,
+    get_seller_announcement_unread_count_record,
     mark_seller_announcement_read_record,
 )
 
 
 AudienceType = Literal["ALL_SELLERS", "SELECTED_SELLERS"]
+ImportanceType = Literal["NORMAL", "IMPORTANT"]
 StrictSellerId = Annotated[int, Field(strict=True, gt=0)]
 
 
@@ -47,7 +50,23 @@ class AdminAnnouncementCreateRequest(BaseModel):
 
     title: str = Field(min_length=1, max_length=200)
     message: str = Field(min_length=1, max_length=4000)
+    importance: ImportanceType = "NORMAL"
+    image_url: str | None = Field(default=None, max_length=2048)
     audience: AnnouncementAudience
+
+    @model_validator(mode="after")
+    def validate_image_url(self) -> "AdminAnnouncementCreateRequest":
+        if self.image_url is None:
+            return self
+        parsed = urlsplit(self.image_url)
+        if (
+            parsed.scheme.lower() != "https"
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+        ):
+            raise ValueError("image_url geçerli bir HTTPS URL olmalıdır.")
+        return self
 
 
 def _failure(code: str, message: str, *, kind: str) -> dict[str, Any]:
@@ -64,6 +83,24 @@ def _is_positive_int(value: Any) -> bool:
 
 def _is_nonempty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value)
+
+
+def _is_optional_url(value: Any) -> bool:
+    if value is None:
+        return True
+    if not isinstance(value, str) or not value:
+        return False
+    try:
+        parsed = urlsplit(value)
+        hostname = parsed.hostname
+    except ValueError:
+        return False
+    return (
+        parsed.scheme.lower() == "https"
+        and bool(hostname)
+        and parsed.username is None
+        and parsed.password is None
+    )
 
 
 def _is_optional_string(value: Any) -> bool:
@@ -94,6 +131,11 @@ def _project_admin_announcement(
         return None
     if value.get("audience_type") not in {"ALL_SELLERS", "SELECTED_SELLERS"}:
         return None
+    if (
+        value.get("importance") not in {"NORMAL", "IMPORTANT"}
+        or not _is_optional_url(value.get("image_url"))
+    ):
+        return None
     if not _is_nonempty_string(value.get("title")) or not _is_nonempty_string(
         value.get("message")
     ):
@@ -122,6 +164,8 @@ def _project_admin_announcement(
         "title": value["title"],
         "message": value["message"],
         "audience_type": value["audience_type"],
+        "importance": value["importance"],
+        "image_url": value.get("image_url"),
         "created_by_profile_id": value["created_by_profile_id"],
         "target_count": target_count,
         "read_count": read_count,
@@ -156,6 +200,11 @@ def _project_seller_announcement(value: Any) -> dict[str, Any] | None:
         return None
     if value.get("audience_type") not in {"ALL_SELLERS", "SELECTED_SELLERS"}:
         return None
+    if (
+        value.get("importance") not in {"NORMAL", "IMPORTANT"}
+        or not _is_optional_url(value.get("image_url"))
+    ):
+        return None
     if not _is_nonempty_string(value.get("title")) or not _is_nonempty_string(
         value.get("message")
     ):
@@ -175,6 +224,8 @@ def _project_seller_announcement(value: Any) -> dict[str, Any] | None:
         "title": value["title"],
         "message": value["message"],
         "audience_type": value["audience_type"],
+        "importance": value["importance"],
+        "image_url": value.get("image_url"),
         "is_read": is_read,
         "read_at": read_at,
         "published_at": value["published_at"],
@@ -218,6 +269,8 @@ def create_announcement(
         creator_profile_id,
         title=request.title,
         message=request.message,
+        importance=request.importance,
+        image_url=request.image_url,
         audience_type=request.audience.type,
         seller_ids=request.audience.seller_ids,
     )
@@ -299,6 +352,13 @@ def list_seller_announcements(
         or not isinstance(raw_items, list)
     ):
         return _map_failure({"durum": "hata"})
+    unread_count = result.get("unread_count")
+    if (
+        not isinstance(unread_count, int)
+        or isinstance(unread_count, bool)
+        or unread_count < 0
+    ):
+        return _map_failure({"durum": "hata"})
     items = [_project_seller_announcement(item) for item in raw_items]
     if any(item is None for item in items):
         return _map_failure({"durum": "hata"})
@@ -308,6 +368,7 @@ def list_seller_announcements(
         "limit": limit,
         "offset": offset,
         "announcements": items,
+        "unread_count": unread_count,
     }
 
 
@@ -343,10 +404,34 @@ def mark_seller_announcement_read(
         or not _is_nonempty_string(result.get("read_at"))
     ):
         return _map_failure({"durum": "hata"})
+    unread_count = result.get("unread_count")
+    if (
+        not isinstance(unread_count, int)
+        or isinstance(unread_count, bool)
+        or unread_count < 0
+    ):
+        return _map_failure({"durum": "hata"})
     return {
         "ok": True,
         "announcement_id": announcement_id,
         "is_read": True,
         "read_at": result["read_at"],
         "changed": result["changed"],
+        "unread_count": unread_count,
     }
+
+
+def get_seller_announcement_unread_count(seller_id: int) -> dict[str, Any]:
+    if not _is_positive_int(seller_id):
+        return _map_failure({"durum": "bulunamadı"})
+    result = get_seller_announcement_unread_count_record(seller_id)
+    if result.get("durum") != "başarılı":
+        return _map_failure(result)
+    unread_count = result.get("unread_count")
+    if (
+        not isinstance(unread_count, int)
+        or isinstance(unread_count, bool)
+        or unread_count < 0
+    ):
+        return _map_failure({"durum": "hata"})
+    return {"ok": True, "unread_count": unread_count}

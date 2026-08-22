@@ -1,11 +1,10 @@
-/**
- * Seller Announcements — authenticated fetchers for the existing backend API.
- */
+/** Seller announcements — authenticated fetchers for the backend API. */
 
 import { apiFetchWithAccessToken } from "@/lib/api/authenticated";
 import {
   parseSellerAnnouncementListResponse,
   parseSellerAnnouncementReadResponse,
+  parseSellerAnnouncementUnreadCount,
   type SellerAnnouncementListPage,
   type SellerAnnouncementReadResult,
 } from "./announcements";
@@ -16,7 +15,6 @@ export type FetchSellerAnnouncementsOptions = {
   signal?: AbortSignal;
 };
 
-/** Fetch and parse `GET /seller/announcements`. */
 export const fetchSellerAnnouncementList = async (
   accessToken: string,
   options: FetchSellerAnnouncementsOptions = {},
@@ -24,20 +22,26 @@ export const fetchSellerAnnouncementList = async (
   const query = new URLSearchParams();
   query.set("limit", String(options.limit ?? 20));
   query.set("offset", String(options.offset ?? 0));
-
   const raw = await apiFetchWithAccessToken<unknown>(
     `/seller/announcements?${query.toString()}`,
     accessToken,
-    {
-      signal: options.signal,
-      cache: "no-store",
-    },
+    { signal: options.signal, cache: "no-store" },
   );
-
   return parseSellerAnnouncementListResponse(raw);
 };
 
-/** Mark exactly one targeted announcement read. Backend operation is idempotent. */
+export const fetchSellerAnnouncementUnreadCount = async (
+  accessToken: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<number> => {
+  const raw = await apiFetchWithAccessToken<unknown>(
+    "/seller/announcements/unread-count",
+    accessToken,
+    { signal: options.signal, cache: "no-store" },
+  );
+  return parseSellerAnnouncementUnreadCount(raw);
+};
+
 export const markSellerAnnouncementRead = async (
   accessToken: string,
   announcementId: number,
@@ -46,13 +50,8 @@ export const markSellerAnnouncementRead = async (
   const raw = await apiFetchWithAccessToken<unknown>(
     `/seller/announcements/${announcementId}/read`,
     accessToken,
-    {
-      method: "POST",
-      signal: options.signal,
-      cache: "no-store",
-    },
+    { method: "POST", signal: options.signal, cache: "no-store" },
   );
-
   const parsed = parseSellerAnnouncementReadResponse(raw);
   if (parsed.announcementId !== announcementId) {
     throw new Error("announcements_invalid_read_response_id_mismatch");

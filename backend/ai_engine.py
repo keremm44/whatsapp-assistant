@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 from typing import Any
 
 from dotenv import load_dotenv
 from openai import OpenAI
+
+from observability import emit_operational_alert
 
 
 load_dotenv()
@@ -16,33 +19,8 @@ logger = logging.getLogger(__name__)
 _classifier_client: OpenAI | None = None
 
 MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-
-
-def get_classifier_client() -> OpenAI | None:
-    """Niyet sınıflandırıcı istemcisini ihtiyaç anında oluşturur."""
-    global _classifier_client
-
-    if _classifier_client is not None:
-        return _classifier_client
-
-    api_key = os.getenv("GROQ_API_KEY")
-
-    if not api_key:
-        return None
-
-    _classifier_client = OpenAI(
-        api_key=api_key,
-        base_url="https://api.groq.com/openai/v1",
-    )
-    return _classifier_client
-
-
-def reset_classifier_client() -> None:
-    """Sınıflandırıcı istemci önbelleğini temizler."""
-    global _classifier_client
-    _classifier_client = None
-
 CONFIDENCE_THRESHOLD = 0.80
+MIN_CONFIDENCE_MARGIN = 0.15
 
 
 VALID_INTENTS = {
@@ -117,9 +95,11 @@ Dönüş formatı:
 
 Kurallar:
 
-- confidence 0 ile 1 arasında olmalı.
+- confidence 0 ile 1 arasında sonlu bir sayı olmalı.
 - Emin değilsen unclear seç.
 - Mesaj birden fazla anlam taşıyorsa en baskın niyeti seç.
+- Alternatif niyetleri en yüksek confidence önce olacak şekilde sırala.
+- Ana niyete yakın ikinci bir yorum varsa bunu alternatives alanına mutlaka koy.
 - "Evet", "aldım", "sipariş verdim" ifadeleri order_confirmation_yes.
 - "Hayır", "almadım", "henüz vermedim" ifadeleri order_confirmation_no.
 - Sipariş vermek isteyen mesajlar order_intent.
@@ -130,70 +110,92 @@ Kurallar:
 """
 
 
+def get_classifier_client() -> OpenAI | None:
+    """Niyet sınıflandırıcı istemcisini ihtiyaç anında oluşturur."""
+    global _classifier_client
+
+    if _classifier_client is not None:
+        return _classifier_client
+
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return None
+
+    _classifier_client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.groq.com/openai/v1",
+    )
+    return _classifier_client
+
+
+def reset_classifier_client() -> None:
+    """Sınıflandırıcı istemci önbelleğini temizler."""
+    global _classifier_client
+    _classifier_client = None
+
+
 def _safe_float(value: Any, default: float = 0.0) -> float:
+    if isinstance(value, bool):
+        return default
     try:
         number = float(value)
-        return max(0.0, min(number, 1.0))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return default
+    if not math.isfinite(number):
+        return default
+    return max(0.0, min(number, 1.0))
 
 
 def _normalize_result(data: dict[str, Any]) -> dict[str, Any]:
     intent = data.get("intent", "unclear")
-
     if intent not in VALID_INTENTS:
         intent = "unclear"
 
-    alternatives = data.get("alternatives")
+    raw_alternatives = data.get("alternatives")
+    if not isinstance(raw_alternatives, list):
+        raw_alternatives = []
 
-    if not isinstance(alternatives, list):
-        alternatives = []
-
-    normalized_alternatives = []
-
-    for item in alternatives[:3]:
+    # Do not trust provider ordering. Keep the highest confidence per distinct
+    # alternative and then sort before truncating, otherwise a high-confidence
+    # fourth item could be hidden behind low-confidence entries.
+    best_by_intent: dict[str, float] = {}
+    for item in raw_alternatives:
         if not isinstance(item, dict):
             continue
+        alternative_intent = item.get("intent")
+        if alternative_intent not in VALID_INTENTS or alternative_intent == intent:
+            continue
+        confidence = _safe_float(item.get("confidence"), 0.0)
+        if confidence > best_by_intent.get(alternative_intent, -1.0):
+            best_by_intent[alternative_intent] = confidence
 
-        alternative_intent = item.get("intent", "unclear")
-
-        if alternative_intent not in VALID_INTENTS:
-            alternative_intent = "unclear"
-
-        normalized_alternatives.append(
-            {
-                "intent": alternative_intent,
-                "confidence": _safe_float(
-                    item.get("confidence"),
-                    0.0,
-                ),
-            }
-        )
+    normalized_alternatives = [
+        {"intent": alternative_intent, "confidence": confidence}
+        for alternative_intent, confidence in sorted(
+            best_by_intent.items(),
+            key=lambda pair: pair[1],
+            reverse=True,
+        )[:3]
+    ]
 
     entities = data.get("entities")
-
     if not isinstance(entities, dict):
         entities = {}
 
+    reason = str(data.get("reason", ""))[:400]
     return {
         "durum": "başarılı",
         "intent": intent,
-        "confidence": _safe_float(
-            data.get("confidence"),
-            0.0,
-        ),
+        "confidence": _safe_float(data.get("confidence"), 0.0),
         "alternatives": normalized_alternatives,
         "entities": entities,
-        "reason": str(data.get("reason", "")),
+        "reason": reason,
         "fallback_used": False,
     }
 
 
 def keyword_based_classify(message: str) -> dict[str, Any]:
-    """
-    AI kullanılamadığında yalnızca çok net kalıpları sınıflandırır.
-    Belirsiz mesajlar unclear döner.
-    """
+    """AI yokken yalnız kesin kalıpları sınıflandır; diğer her şeyi unclear bırak."""
     normalized = " ".join(message.lower().strip().split())
 
     exact_patterns = {
@@ -261,11 +263,21 @@ def keyword_based_classify(message: str) -> dict[str, Any]:
     }
 
 
+def _degraded_fallback(
+    message: str,
+    *,
+    reason_code: str,
+    classifier_unavailable: bool = False,
+) -> dict[str, Any]:
+    result = keyword_based_classify(message)
+    result["classifier_degraded_reason"] = reason_code
+    if classifier_unavailable:
+        result["classifier_unavailable"] = True
+    return result
+
+
 def classify_intent(message: str) -> dict[str, Any]:
-    """
-    Müşteri mesajının niyetini sınıflandırır.
-    AI müşteriye cevap üretmez.
-    """
+    """Müşteri mesajının niyetini sınıflandırır; AI müşteriye cevap üretmez."""
     if not message or not message.strip():
         return {
             "durum": "başarılı",
@@ -278,24 +290,19 @@ def classify_intent(message: str) -> dict[str, Any]:
         }
 
     client = get_classifier_client()
-
     if client is None:
-        fallback = keyword_based_classify(message)
-        fallback["classifier_unavailable"] = True
-        return fallback
+        return _degraded_fallback(
+            message,
+            reason_code="classifier_unconfigured",
+            classifier_unavailable=True,
+        )
 
     try:
         response = client.chat.completions.create(
             model=MODEL,
             messages=[
-                {
-                    "role": "system",
-                    "content": CLASSIFIER_PROMPT,
-                },
-                {
-                    "role": "user",
-                    "content": message.strip(),
-                },
+                {"role": "system", "content": CLASSIFIER_PROMPT},
+                {"role": "user", "content": message.strip()},
             ],
             temperature=0,
             max_tokens=250,
@@ -304,57 +311,78 @@ def classify_intent(message: str) -> dict[str, Any]:
         )
 
         raw_content = response.choices[0].message.content
-
         if not raw_content:
-            return keyword_based_classify(message)
+            emit_operational_alert(
+                "classifier_invalid_response",
+                severity="warning",
+                message="Niyet sınıflandırıcı boş yanıt döndürdü; deterministic fallback kullanıldı.",
+            )
+            return _degraded_fallback(
+                message,
+                reason_code="classifier_empty_response",
+            )
 
         parsed = json.loads(raw_content)
-
         if not isinstance(parsed, dict):
-            return keyword_based_classify(message)
+            emit_operational_alert(
+                "classifier_invalid_response",
+                severity="warning",
+                message="Niyet sınıflandırıcı geçersiz şema döndürdü; deterministic fallback kullanıldı.",
+            )
+            return _degraded_fallback(
+                message,
+                reason_code="classifier_invalid_schema",
+            )
 
         result = _normalize_result(parsed)
-        result["kullanılan_token"] = (
-            response.usage.total_tokens
-            if response.usage
-            else 0
-        )
-
+        result["kullanılan_token"] = response.usage.total_tokens if response.usage else 0
         return result
 
     except Exception:
         logger.exception("Niyet sınıflandırıcı çağrısı başarısız oldu.")
-        fallback = keyword_based_classify(message)
-        fallback["classifier_unavailable"] = True
-        return fallback
+        emit_operational_alert(
+            "classifier_request_failed",
+            severity="warning",
+            message="Niyet sınıflandırıcı çağrısı başarısız oldu; deterministic fallback kullanıldı.",
+        )
+        return _degraded_fallback(
+            message,
+            reason_code="classifier_request_failed",
+            classifier_unavailable=True,
+        )
 
 
 def intent_is_safe(result: dict[str, Any]) -> bool:
-    """
-    Sınıflandırma sonucunun otomatik işleme uygun olup olmadığını belirler.
-    """
+    """Sınıflandırma sonucunun otomatik işleme uygun olup olmadığını belirler."""
     if result.get("durum") != "başarılı":
         return False
-
-    if result.get("intent") == "unclear":
+    if result.get("intent") not in VALID_INTENTS or result.get("intent") == "unclear":
         return False
 
     confidence = _safe_float(result.get("confidence"), 0.0)
-
     if confidence < CONFIDENCE_THRESHOLD:
         return False
 
     alternatives = result.get("alternatives") or []
+    if not isinstance(alternatives, list):
+        return False
 
-    if alternatives:
-        second_confidence = _safe_float(
-            alternatives[0].get("confidence"),
-            0.0,
+    strongest_alternative = 0.0
+    for item in alternatives:
+        if not isinstance(item, dict):
+            return False
+        alternative_intent = item.get("intent")
+        if alternative_intent not in VALID_INTENTS:
+            return False
+        if alternative_intent == result.get("intent"):
+            continue
+        strongest_alternative = max(
+            strongest_alternative,
+            _safe_float(item.get("confidence"), 0.0),
         )
 
-        if confidence - second_confidence < 0.15:
-            return False
-
+    if confidence - strongest_alternative < MIN_CONFIDENCE_MARGIN:
+        return False
     return True
 
 
@@ -379,10 +407,8 @@ def run_classifier_test() -> None:
     print("=" * 70)
     print("NİYET SINIFLANDIRICI TESTİ")
     print("=" * 70)
-
     for message in test_messages:
         result = classify_intent(message)
-
         print(f"\nMesaj: {message}")
         print(f"Intent: {result.get('intent')}")
         print(f"Confidence: {result.get('confidence')}")

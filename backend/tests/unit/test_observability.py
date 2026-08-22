@@ -20,6 +20,7 @@ def _settings(
         sentry_traces_sample_rate=traces_sample_rate,
         app_env="test",
         app_version="0.4.0-test",
+        log_level="INFO",
     )
 
 
@@ -127,6 +128,61 @@ def test_invalid_sentry_sampling_is_rejected(
             get_settings()
     finally:
         get_settings.cache_clear()
+
+
+def test_operational_alert_uses_fingerprint_and_cooldown(monkeypatch) -> None:
+    captures: list[tuple[str, str]] = []
+    scopes: list[Any] = []
+
+    class FakeScope:
+        def __init__(self) -> None:
+            self.tags: dict[str, str] = {}
+            self.extras: dict[str, Any] = {}
+            self.fingerprint: list[str] | None = None
+
+        def set_tag(self, key: str, value: str) -> None:
+            self.tags[key] = value
+
+        def set_extra(self, key: str, value: Any) -> None:
+            self.extras[key] = value
+
+    class ScopeContext:
+        def __enter__(self) -> FakeScope:
+            scope = FakeScope()
+            scopes.append(scope)
+            return scope
+
+        def __exit__(self, *args: Any) -> None:
+            return None
+
+    monkeypatch.setattr(observability.sentry_sdk, "new_scope", lambda: ScopeContext())
+    monkeypatch.setattr(
+        observability.sentry_sdk,
+        "capture_message",
+        lambda message, level: captures.append((message, level)),
+    )
+    observability.reset_operational_alert_cooldowns()
+
+    assert observability.emit_operational_alert(
+        "queue_backlog",
+        severity="warning",
+        message="backlog",
+        details={"count": 9, "unsafe": "x" * 300},
+        clock=lambda: 100.0,
+    ) is True
+    assert observability.emit_operational_alert(
+        "queue_backlog",
+        severity="warning",
+        message="backlog",
+        details={"count": 10},
+        clock=lambda: 101.0,
+    ) is False
+
+    assert captures == [("WhatsApp operational alert: queue_backlog", "warning")]
+    assert scopes[0].fingerprint == ["whatsapp-ops", "queue_backlog"]
+    assert scopes[0].tags["ops.alert_code"] == "queue_backlog"
+    assert scopes[0].extras["count"] == 9
+    assert len(scopes[0].extras["unsafe"]) == 128
 
 
 def test_sentry_initializes_before_fastapi_app_creation() -> None:

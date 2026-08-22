@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +19,21 @@ def run(command: list[str]) -> None:
     )
 
 
+def _assert_concurrency_stress_target() -> None:
+    app_env = os.getenv("APP_ENV", "").strip().lower()
+    target = os.getenv("WHATSAPP_STRESS_TARGET", "").strip()
+    if app_env == "production":
+        raise SystemExit(
+            "Concurrency stress production APP_ENV üzerinde çalıştırılamaz. "
+            "İzole staging/Supabase branch kullanın."
+        )
+    if target != "isolated-test-db":
+        raise SystemExit(
+            "Concurrency stress yalnız izole test DB üzerinde çalışır. "
+            "WHATSAPP_STRESS_TARGET=isolated-test-db zorunludur."
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="WhatsApp Asistan test paketlerini çalıştırır.",
@@ -30,7 +46,15 @@ def main() -> None:
     parser.add_argument(
         "--stress",
         action="store_true",
-        help="100 mesaj stres senaryosunu ayrıca çalıştır.",
+        help="Eski 100 mesaj seri stres senaryosunu ayrıca çalıştır.",
+    )
+    parser.add_argument(
+        "--concurrency-stress",
+        action="store_true",
+        help=(
+            "İzole Supabase üzerinde sentetik paralel yazı/queue/lease stres "
+            "senaryosunu çalıştır. Production hedefleri reddedilir."
+        ),
     )
     args = parser.parse_args()
 
@@ -53,6 +77,16 @@ def main() -> None:
                 sys.executable,
                 "-m",
                 "tests.integration.scenario_100_messages",
+            ]
+        )
+
+    if args.concurrency_stress:
+        _assert_concurrency_stress_target()
+        run(
+            [
+                sys.executable,
+                "-m",
+                "tests.integration.run_whatsapp_concurrency_stress",
             ]
         )
 

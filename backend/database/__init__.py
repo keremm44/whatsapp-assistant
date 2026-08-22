@@ -12,10 +12,15 @@ import sys
 from types import ModuleType
 
 from . import core
+from . import atomic_customer
+from . import atomic_message_persistence
 from . import messaging
+from . import guarded_outgoing
 from . import whatsapp_delivery
 from . import whatsapp_event_queue
+from . import operational_health
 from . import conversations
+from . import atomic_conversation_state
 from . import notifications
 from . import unanswered
 from . import rules
@@ -36,9 +41,14 @@ from . import announcements
 
 _MODULES = (
     core,
+    atomic_customer,
+    atomic_message_persistence,
     messaging,
+    guarded_outgoing,
     whatsapp_delivery,
     whatsapp_event_queue,
+    operational_health,
+    atomic_conversation_state,
     conversations,
     notifications,
     unanswered,
@@ -80,10 +90,10 @@ _SKIP_EXPORTS = {
 
 _EXPORT_TARGETS: dict[str, ModuleType] = {}
 
-# First definition wins. Core comes first for get_supabase/time helpers and the
-# canonical domain module comes before any compatibility wrapper with the same
-# name. Private helpers are retained because the old monolith exposed them to
-# tests/debug tooling as ordinary module attributes.
+# First definition wins. Core comes first for get_supabase/time helpers. Atomic
+# customer identity and message persistence facades precede legacy messaging,
+# and atomic flow-state precedes legacy conversations, so runtime callers keep
+# the historical import surface while using transactional database invariants.
 for _module in _MODULES:
     for _name, _value in vars(_module).items():
         if _name.startswith("__") or _name in _SKIP_EXPORTS:

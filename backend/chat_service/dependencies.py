@@ -6,7 +6,7 @@ monkeypatch surface while allowing orchestration code to live in focused files.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from ai_engine import classify_intent, intent_is_safe
 from database import (
@@ -14,53 +14,337 @@ from database import (
     CONTROL_STATE_ASSISTANT_PAUSED,
     CONTROL_STATE_RETURN_REVIEW,
     CONTROL_STATE_SELLER_TAKEN_OVER,
-    block_customer,
+    block_customer as _database_block_customer,
     check_message_duplicate as _database_check_message_duplicate,
     count_recent_violations,
-    create_seller_notification,
+    create_seller_notification as _database_create_seller_notification,
     get_active_rules,
     get_conversation_control,
-    get_or_create_customer,
+    get_or_create_customer as _database_get_or_create_customer,
     get_seller_by_id,
     get_state,
-    increment_rule_hit_count,
+    increment_rule_hit_count as _database_increment_rule_hit_count,
     is_customer_muted,
-    mute_customer,
-    record_violation,
+    mute_customer as _database_mute_customer,
+    persist_guarded_auto_reply as _database_persist_guarded_auto_reply,
+    record_violation as _database_record_violation,
     save_message as _database_save_message,
-    transition_conversation_control,
-    transition_state,
+    transition_conversation_control as _database_transition_conversation_control,
+    transition_state as _database_transition_state,
 )
+from database.whatsapp_event_queue import renew_whatsapp_event_claim
 from database.whatsapp_message_bridge import save_whatsapp_pending_outgoing_message
 from order_service import (
     build_product_selection_question as order_build_product_selection_question,
-    get_next_collection_step as order_get_next_collection_step,
-    get_or_create_order,
-    initialize_collection as order_initialize_collection,
+    get_next_collection_step as _order_get_next_collection_step,
+    get_or_create_order as _order_get_or_create_order,
+    get_order as _order_get_order,
+    initialize_collection as _order_initialize_collection,
     list_active_order_products as order_list_active_products,
     match_order_product_selection as order_match_product_selection,
     parse_collection_field_answer as order_parse_collection_field_answer,
-    record_field_value as order_record_field_value,
+    record_field_value as _order_record_field_value,
     resolve_new_order_product_decision as order_resolve_new_order_product,
-    set_order_product as order_set_order_product,
-    update_core as order_update_core,
-    update_core_from_message as order_update_core_from_message,
+    set_order_product as _order_set_order_product,
+    update_core as _order_update_core,
+    update_core_from_message as _order_update_core_from_message,
 )
-from quantity_limit_service import handle_quantity_message
+from quantity_limit_service import handle_quantity_message as _handle_quantity_message
 from return_issue_repository import get_active_collectable_return_issue_request
-from return_issue_service import process_customer_issue_message as return_issue_process_message
+from return_issue_chat_occ import process_customer_issue_message as _return_issue_process_message
 from unanswered_question_service import (
     find_saved_answer as unanswered_find_saved_answer,
-    record_question as unanswered_record_question,
+    record_question as _unanswered_record_question,
 )
 
 from .transport_context import (
     WHATSAPP_PENDING_OUTGOING_PROVIDER,
     current_incoming_message_id,
     current_outgoing_provider,
+    current_whatsapp_claim,
     record_incoming_message_id,
     record_outgoing_message_id,
 )
+
+
+def _lease_failure(result: dict[str, Any]) -> dict[str, Any]:
+    reason = str(result.get("reason_code") or "claim_verification_failed")
+    if result.get("durum") == "çakışma":
+        reason = "whatsapp_claim_lost"
+    return {
+        "durum": "hata",
+        "reason_code": reason,
+        "mesaj": "WhatsApp worker lease doğrulanamadı; stale mutation bastırıldı.",
+    }
+
+
+def _renew_before_mutation() -> dict[str, Any] | None:
+    """Refresh a queue lease immediately before one business-side mutation."""
+    claim = current_whatsapp_claim()
+    if claim is None:
+        return None
+    result = renew_whatsapp_event_claim(
+        claim.event_id,
+        worker_id=claim.worker_id,
+        claim_version=claim.claim_version,
+    )
+    if result.get("durum") == "başarılı":
+        return None
+    return _lease_failure(result)
+
+
+def _guarded_mutation(call: Callable[..., dict[str, Any]], *args: Any, **kwargs: Any) -> dict[str, Any]:
+    blocked = _renew_before_mutation()
+    if blocked is not None:
+        return blocked
+    return call(*args, **kwargs)
+
+
+def get_or_create_customer(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_database_get_or_create_customer, *args, **kwargs)
+
+
+def transition_state(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_database_transition_state, *args, **kwargs)
+
+
+def transition_conversation_control(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_database_transition_conversation_control, *args, **kwargs)
+
+
+def increment_rule_hit_count(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_database_increment_rule_hit_count, *args, **kwargs)
+
+
+def record_violation(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_database_record_violation, *args, **kwargs)
+
+
+def mute_customer(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_database_mute_customer, *args, **kwargs)
+
+
+def block_customer(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_database_block_customer, *args, **kwargs)
+
+
+def create_seller_notification(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_database_create_seller_notification, *args, **kwargs)
+
+
+def get_or_create_order(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_order_get_or_create_order, *args, **kwargs)
+
+
+def order_initialize_collection(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_order_initialize_collection, *args, **kwargs)
+
+
+def order_update_core(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_order_update_core, *args, **kwargs)
+
+
+def handle_quantity_message(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_handle_quantity_message, *args, **kwargs)
+
+
+def return_issue_process_message(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_return_issue_process_message, *args, **kwargs)
+
+
+def unanswered_record_question(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _guarded_mutation(_unanswered_record_question, *args, **kwargs)
+
+
+def _positive_version(value: Any) -> int | None:
+    if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+        return value
+    return None
+
+
+def _order_version_from_result(result: dict[str, Any]) -> int | None:
+    order = result.get("order")
+    if not isinstance(order, dict):
+        return None
+    return _positive_version(order.get("version"))
+
+
+def _order_occ_conflict(
+    message: str,
+    *,
+    order: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return {
+        "durum": "çakışma",
+        "order": order,
+        "mesaj": message,
+    }
+
+
+def order_get_next_collection_step(seller_id: int, order_id: int) -> dict[str, Any]:
+    return _order_get_next_collection_step(seller_id, order_id)
+
+
+def order_set_order_product(
+    seller_id: int,
+    customer_id: int,
+    order_id: int,
+    product_id: int,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """Bind chat product assignment to a current order read when needed."""
+    if expected_version is not None:
+        blocked = _renew_before_mutation()
+        if blocked is not None:
+            return blocked
+        return _order_set_order_product(
+            seller_id,
+            customer_id,
+            order_id,
+            product_id,
+            expected_version=expected_version,
+        )
+
+    current = _order_get_order(seller_id, order_id)
+    if current.get("durum") != "başarılı":
+        return current
+    order = current.get("order")
+    if not isinstance(order, dict):
+        return _order_occ_conflict("Sipariş sürümü doğrulanamadı.")
+    if order.get("customer_id") != customer_id:
+        return _order_occ_conflict("Sipariş müşteri kapsamı değişti.", order=order)
+    if order.get("status") != "COLLECTING":
+        return _order_occ_conflict("Sipariş artık bilgi toplama durumunda değil.", order=order)
+    if order.get("product_id") is not None:
+        return _order_occ_conflict("Sipariş ürünü başka bir işlemle değişti.", order=order)
+    version = _positive_version(order.get("version"))
+    if version is None:
+        return _order_occ_conflict("Sipariş sürümü doğrulanamadı.", order=order)
+
+    blocked = _renew_before_mutation()
+    if blocked is not None:
+        return blocked
+    return _order_set_order_product(
+        seller_id,
+        customer_id,
+        order_id,
+        product_id,
+        expected_version=version,
+    )
+
+
+def order_update_core_from_message(
+    seller_id: int,
+    customer_id: int,
+    order_id: int,
+    source_message_id: int,
+    *,
+    external_order_number: str | None = None,
+    customer_phone_snapshot: str | None = None,
+    customer_note: str | None = None,
+    image_message_id: int | None = None,
+    custom_text: str | None = None,
+    clear_custom_text: bool = False,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """Revalidate the chat collection step and thread its order version."""
+    if expected_version is None:
+        intended_step: str | None = None
+        if external_order_number is not None:
+            intended_step = "order_number"
+        elif image_message_id is not None:
+            intended_step = "image"
+        elif custom_text is not None or clear_custom_text:
+            intended_step = "custom_text"
+
+        if intended_step is None:
+            return {
+                "durum": "doğrulama_hatası",
+                "mesaj": "Chat order mutation için expected_version gereklidir.",
+            }
+
+        current_step = _order_get_next_collection_step(seller_id, order_id)
+        if current_step.get("durum") != "başarılı":
+            return current_step
+        order = current_step.get("order")
+        if current_step.get("step") != intended_step:
+            return _order_occ_conflict(
+                "Sipariş toplama adımı başka bir işlemle değişti.",
+                order=order if isinstance(order, dict) else None,
+            )
+        expected_version = _order_version_from_result(current_step)
+        if expected_version is None:
+            return _order_occ_conflict(
+                "Sipariş sürümü doğrulanamadı.",
+                order=order if isinstance(order, dict) else None,
+            )
+
+    blocked = _renew_before_mutation()
+    if blocked is not None:
+        return blocked
+    return _order_update_core_from_message(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        order_id=order_id,
+        source_message_id=source_message_id,
+        external_order_number=external_order_number,
+        customer_phone_snapshot=customer_phone_snapshot,
+        customer_note=customer_note,
+        image_message_id=image_message_id,
+        custom_text=custom_text,
+        clear_custom_text=clear_custom_text,
+        expected_version=expected_version,
+    )
+
+
+def order_record_field_value(
+    seller_id: int,
+    customer_id: int,
+    order_id: int,
+    field_snapshot_id: int,
+    field_type: str,
+    value: Any,
+    source_message_id: int,
+    *,
+    options: list[dict[str, Any]] | None = None,
+    validation_config: dict[str, Any] | None = None,
+    expected_version: int | None = None,
+) -> dict[str, Any]:
+    """Bind a dynamic-field answer to the step/version that authorized it."""
+    if expected_version is None:
+        current_step = _order_get_next_collection_step(seller_id, order_id)
+        if current_step.get("durum") != "başarılı":
+            return current_step
+        field = current_step.get("field")
+        current_field_id = field.get("id") if isinstance(field, dict) else None
+        order = current_step.get("order")
+        if current_step.get("step") != "dynamic_field" or current_field_id != field_snapshot_id:
+            return _order_occ_conflict(
+                "Sipariş alanı başka bir işlemle değişti.",
+                order=order if isinstance(order, dict) else None,
+            )
+        expected_version = _order_version_from_result(current_step)
+        if expected_version is None:
+            return _order_occ_conflict(
+                "Sipariş sürümü doğrulanamadı.",
+                order=order if isinstance(order, dict) else None,
+            )
+
+    blocked = _renew_before_mutation()
+    if blocked is not None:
+        return blocked
+    return _order_record_field_value(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        order_id=order_id,
+        field_snapshot_id=field_snapshot_id,
+        field_type=field_type,
+        value=value,
+        source_message_id=source_message_id,
+        options=options,
+        validation_config=validation_config,
+        expected_version=expected_version,
+    )
 
 
 def _message_id_from_result(result: dict[str, Any]) -> int | None:
@@ -88,11 +372,51 @@ def save_message(
     ai_confidence: float | None = None,
     provider: str = "internal",
     provider_message_id: str | None = None,
+    source_message_id: int | None = None,
+    expected_control_version: int | None = None,
 ) -> dict[str, Any]:
-    """Preserve legacy persistence, except inside an explicit WhatsApp scope."""
+    """Persist one chat message only while the queue lease is still current."""
     whatsapp_scope = (
         current_outgoing_provider() == WHATSAPP_PENDING_OUTGOING_PROVIDER
     )
+
+    has_source_guard = source_message_id is not None
+    has_version_guard = expected_control_version is not None
+    if direction == "outgoing" and has_source_guard != has_version_guard:
+        return {
+            "durum": "doğrulama_hatası",
+            "mesaj": "Otomatik yanıt guard bilgileri birlikte gönderilmelidir.",
+        }
+
+    if direction == "outgoing" and has_source_guard and has_version_guard:
+        guarded_provider = (
+            WHATSAPP_PENDING_OUTGOING_PROVIDER if whatsapp_scope else provider
+        )
+        if whatsapp_scope:
+            scoped_source_message_id = current_incoming_message_id()
+            if scoped_source_message_id != source_message_id:
+                return {
+                    "durum": "hata",
+                    "mesaj": "WhatsApp reply kaynak mesaj bağlamı doğrulanamadı.",
+                }
+        blocked = _renew_before_mutation()
+        if blocked is not None:
+            return blocked
+        result = _database_persist_guarded_auto_reply(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            source_message_id=source_message_id,
+            expected_control_version=expected_control_version,
+            content=content,
+            message_type=message_type,
+            media_url=media_url,
+            ai_confidence=ai_confidence,
+            provider=guarded_provider,
+        )
+        outgoing_message_id = _message_id_from_result(result)
+        if whatsapp_scope and outgoing_message_id is not None:
+            record_outgoing_message_id(outgoing_message_id)
+        return result
 
     if direction == "outgoing" and whatsapp_scope:
         source_message_id = current_incoming_message_id()
@@ -101,6 +425,9 @@ def save_message(
                 "durum": "hata",
                 "mesaj": "WhatsApp reply için kaynak inbound mesaj kimliği bulunamadı.",
             }
+        blocked = _renew_before_mutation()
+        if blocked is not None:
+            return blocked
         result = save_whatsapp_pending_outgoing_message(
             seller_id=seller_id,
             customer_id=customer_id,
@@ -116,6 +443,9 @@ def save_message(
             record_outgoing_message_id(outgoing_message_id)
         return result
 
+    blocked = _renew_before_mutation()
+    if blocked is not None:
+        return blocked
     result = _database_save_message(
         seller_id=seller_id,
         customer_id=customer_id,

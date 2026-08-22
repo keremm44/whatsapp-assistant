@@ -209,6 +209,21 @@ def test_not_found_and_unavailable_errors_map_without_leaking_details() -> None:
     _clear()
 
 
+def test_seller_unread_count_uses_authenticated_seller_scope() -> None:
+    _set_seller()
+    with patch(
+        "protected_routes.get_seller_announcement_unread_count",
+        return_value={"ok": True, "unread_count": 4},
+    ) as count_mock:
+        response = client.get("/seller/announcements/unread-count")
+
+    assert response.status_code == 200
+    assert response.json() == {"unread_count": 4}
+    count_mock.assert_called_once_with(42)
+    _clear()
+
+
+
 def test_seller_cannot_use_admin_announcement_routes() -> None:
     app.dependency_overrides[get_current_auth_context] = lambda: SELLER_CONTEXT
 
