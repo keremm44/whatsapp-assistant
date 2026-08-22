@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from . import dependencies as deps
+from . import transport_context
 from .content import ESCALATION_RESPONSE, OutgoingControlContext
 
 
@@ -97,6 +98,15 @@ def outgoing_response(
     control_context: OutgoingControlContext,
     ai_confidence: float | None = None,
 ) -> dict[str, Any]:
+    if transport_context.outgoing_suppressed_for_turn():
+        return stored_no_auto_reply(
+            customer_id=customer_id,
+            incoming_message_id=control_context["incoming_message_id"],
+            reason_code="turn_buffer_intermediate_message",
+            reason_text="Müşteri aynı turda mesaj göndermeye devam ettiği için ara cevap bastırıldı.",
+            turn_intermediate=True,
+        )
+
     # Keep the existing fail-fast read so expensive/legacy callers receive the
     # same early suppression semantics. The guarded DB write below is the final
     # authority and closes the check-then-insert race with seller takeover.
@@ -160,6 +170,15 @@ def escalate_question(
 ) -> dict[str, Any]:
     if source_message_id is None:
         return {"durum": "hata", "mesaj": "Cevaplanamayan soru için kaynak mesaj kimliği bulunamadı."}
+
+    if transport_context.outgoing_suppressed_for_turn():
+        return stored_no_auto_reply(
+            customer_id=customer_id,
+            incoming_message_id=source_message_id,
+            reason_code="turn_buffer_intermediate_message",
+            reason_text="Ara mesaj, müşteri turu tamamlanmadan satıcı incelemesine taşınmadı.",
+            turn_intermediate=True,
+        )
 
     question_result = deps.unanswered_record_question(
         seller_id=seller_id,
