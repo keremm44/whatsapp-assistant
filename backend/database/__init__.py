@@ -17,6 +17,7 @@ from . import guarded_outgoing
 from . import whatsapp_delivery
 from . import whatsapp_event_queue
 from . import conversations
+from . import atomic_conversation_state
 from . import notifications
 from . import unanswered
 from . import rules
@@ -41,6 +42,7 @@ _MODULES = (
     guarded_outgoing,
     whatsapp_delivery,
     whatsapp_event_queue,
+    atomic_conversation_state,
     conversations,
     notifications,
     unanswered,
@@ -82,10 +84,10 @@ _SKIP_EXPORTS = {
 
 _EXPORT_TARGETS: dict[str, ModuleType] = {}
 
-# First definition wins. Core comes first for get_supabase/time helpers and the
-# canonical domain module comes before any compatibility wrapper with the same
-# name. Private helpers are retained because the old monolith exposed them to
-# tests/debug tooling as ordinary module attributes.
+# First definition wins. Core comes first for get_supabase/time helpers. The
+# atomic flow-state facade intentionally precedes the legacy conversations
+# module so runtime get_state/transition_state use the transactional RPC while
+# the rest of the historical conversation-control surface stays compatible.
 for _module in _MODULES:
     for _name, _value in vars(_module).items():
         if _name.startswith("__") or _name in _SKIP_EXPORTS:
