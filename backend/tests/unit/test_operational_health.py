@@ -24,13 +24,41 @@ def _snapshot(**overrides: Any) -> dict[str, Any]:
         "unknown_recent_15m": 0,
         "suppressed_recent_15m": 0,
     }
+    worker = {
+        "recent_heartbeat_count": 1,
+        "last_heartbeat_age_seconds": 10,
+    }
     inbound.update(overrides.pop("inbound", {}))
     outbox.update(overrides.pop("outbox", {}))
-    return {"durum": "başarılı", "inbound": inbound, "outbox": outbox, **overrides}
+    worker.update(overrides.pop("worker", {}))
+    return {
+        "durum": "başarılı",
+        "inbound": inbound,
+        "outbox": outbox,
+        "worker": worker,
+        **overrides,
+    }
 
 
 def test_healthy_snapshot_has_no_alerts() -> None:
     assert ops.classify_whatsapp_operational_health(_snapshot()) == []
+
+
+def test_missing_required_worker_heartbeat_is_critical() -> None:
+    alerts = ops.classify_whatsapp_operational_health(
+        _snapshot(worker={"recent_heartbeat_count": 0, "last_heartbeat_age_seconds": 181}),
+        require_worker_heartbeat=True,
+    )
+    assert [alert.code for alert in alerts] == ["worker_heartbeat_missing"]
+    assert alerts[0].severity == "error"
+
+
+def test_missing_heartbeat_is_ignored_when_runtime_not_required() -> None:
+    alerts = ops.classify_whatsapp_operational_health(
+        _snapshot(worker={"recent_heartbeat_count": 0, "last_heartbeat_age_seconds": 0}),
+        require_worker_heartbeat=False,
+    )
+    assert alerts == []
 
 
 def test_processing_over_reclaim_window_is_critical() -> None:
@@ -53,8 +81,15 @@ def test_outbox_unknown_and_recent_failure_are_visible() -> None:
     )
     assert {alert.code for alert in alerts} == {
         "outbox_failures_recent",
-        "outbox_unknown_recent",
+        "outbox_unknown_outstanding",
     }
+
+
+def test_old_unknown_remains_visible_until_manually_resolved() -> None:
+    alerts = ops.classify_whatsapp_operational_health(
+        _snapshot(outbox={"unknown_recent_15m": 0, "unknown_total": 1})
+    )
+    assert [alert.code for alert in alerts] == ["outbox_unknown_outstanding"]
 
 
 def test_health_reader_failure_is_critical(monkeypatch) -> None:
