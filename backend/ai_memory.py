@@ -202,3 +202,52 @@ def persist_current_conversation_memory(
         worker_id=claim.get("worker_id"),
         claim_version=claim.get("claim_version"),
     )
+
+
+def record_current_conversation_ai_usage(
+    *,
+    prompt_tokens: int,
+    completion_tokens: int,
+    total_tokens: int,
+) -> dict[str, Any]:
+    """Best-effort token counters only; never persist prompt, response, or customer text."""
+    try:
+        from chat_service import transport_context
+        import database
+    except Exception:
+        return {"durum": "atlandı", "reason_code": "ai_usage_context_unavailable"}
+
+    current_message_id = _positive_int(transport_context.current_incoming_message_id())
+    prompt = _nonnegative_int(prompt_tokens)
+    completion = _nonnegative_int(completion_tokens)
+    total = _nonnegative_int(total_tokens)
+    if (
+        current_message_id is None
+        or prompt is None
+        or completion is None
+        or total is None
+        or prompt > total
+        or completion > total
+        or total > 1_000_000
+    ):
+        return {"durum": "atlandı", "reason_code": "ai_usage_invalid"}
+
+    try:
+        response = database.get_supabase().rpc(
+            "record_conversation_ai_usage",
+            {
+                "current_message_id_value": current_message_id,
+                "prompt_tokens_value": prompt,
+                "completion_tokens_value": completion,
+                "total_tokens_value": total,
+            },
+        ).execute()
+    except Exception:
+        return {"durum": "hata", "reason_code": "ai_usage_write_failed"}
+
+    payload = response.data
+    if isinstance(payload, list) and len(payload) == 1 and isinstance(payload[0], dict):
+        payload = payload[0]
+    if isinstance(payload, dict) and payload.get("status") == "success":
+        return {"durum": "başarılı"}
+    return {"durum": "hata", "reason_code": "ai_usage_invalid_response"}
