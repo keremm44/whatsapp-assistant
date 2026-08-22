@@ -54,16 +54,18 @@ def test_outbound_poll_migration_only_returns_due_pending_rows() -> None:
 
 def test_worker_claims_processes_and_completes_successfully(monkeypatch) -> None:
     calls: list[tuple[str, Any]] = []
+    runtime_calls: list[dict[str, Any]] = []
     monkeypatch.setattr(
         worker,
         "claim_next_whatsapp_event",
         lambda worker_id: {"durum": "başarılı", "event": _row()},
     )
-    monkeypatch.setattr(
-        worker,
-        "process_inbound_message",
-        lambda event: {"durum": "başarılı"},
-    )
+
+    def _process(event: Any, **kwargs: Any) -> dict[str, Any]:
+        runtime_calls.append(kwargs)
+        return {"durum": "başarılı"}
+
+    monkeypatch.setattr(worker, "process_inbound_message", _process)
     monkeypatch.setattr(
         worker,
         "complete_whatsapp_event",
@@ -72,6 +74,9 @@ def test_worker_claims_processes_and_completes_successfully(monkeypatch) -> None
     )
 
     assert worker.process_one("worker-a") is True
+    assert runtime_calls == [
+        {"worker_event_id": 17, "worker_id": "worker-a", "claim_version": 3}
+    ]
     assert calls == [
         (
             "complete",
@@ -97,7 +102,7 @@ def test_worker_schedules_retry_for_safe_inbound_processing_failure(monkeypatch)
     monkeypatch.setattr(
         worker,
         "process_inbound_message",
-        lambda event: {"durum": "hata", "reason_code": "whatsapp_database_unavailable"},
+        lambda event, **kwargs: {"durum": "hata", "reason_code": "whatsapp_database_unavailable"},
     )
     monkeypatch.setattr(
         worker,
@@ -125,7 +130,7 @@ def test_worker_marks_invalid_queued_payload_failed_with_same_lease(monkeypatch)
     monkeypatch.setattr(
         worker,
         "process_inbound_message",
-        lambda event: (_ for _ in ()).throw(AssertionError("must not run")),
+        lambda event, **kwargs: (_ for _ in ()).throw(AssertionError("must not run")),
     )
     monkeypatch.setattr(
         worker,
@@ -156,7 +161,7 @@ def test_worker_refuses_claim_without_fencing_token(monkeypatch) -> None:
     monkeypatch.setattr(
         worker,
         "process_inbound_message",
-        lambda event: (_ for _ in ()).throw(AssertionError("must not run")),
+        lambda event, **kwargs: (_ for _ in ()).throw(AssertionError("must not run")),
     )
     monkeypatch.setattr(
         worker,
@@ -177,7 +182,7 @@ def test_worker_logs_stale_completion_without_retrying_completion(monkeypatch, c
     monkeypatch.setattr(
         worker,
         "process_inbound_message",
-        lambda event: {"durum": "başarılı"},
+        lambda event, **kwargs: {"durum": "başarılı"},
     )
 
     def _complete(event_id: int, **kwargs: Any) -> dict[str, Any]:
