@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_migration_chain_is_contiguous_000_through_053() -> None:
+def test_migration_chain_is_contiguous_000_through_054() -> None:
     migrations = sorted(Path("migrations").glob("[0-9][0-9][0-9]_*.sql"))
     versions = [path.name[:3] for path in migrations]
-    assert versions == [f"{version:03d}" for version in range(54)]
+    assert versions == [f"{version:03d}" for version in range(55)]
 
 
 def test_023_024_025_files_match_live_names() -> None:
@@ -52,3 +52,12 @@ def test_035_only_hardens_quantity_function_search_paths() -> None:
     assert "'035'" in sql
     assert "'harden_quantity_function_search_paths'" in sql
     assert "'quantity_function_search_paths_v1'" in sql
+
+
+def test_054_owns_atomic_message_metric_persistence() -> None:
+    path = Path("migrations/054_atomically_maintain_customer_message_count.sql")
+    assert path.exists()
+    sql = path.read_text(encoding="utf-8").lower()
+    assert "persist_message_with_customer_metrics" in sql
+    assert "reconcile_customer_message_metrics" in sql
+    assert "'054'" in sql
