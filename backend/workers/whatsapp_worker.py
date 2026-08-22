@@ -25,33 +25,120 @@ def _event_from_row(row: dict[str, Any]) -> InboundMessageEvent | MessageStatusE
         return None
     if row.get("event_type") == "inbound_message":
         required = ("message_id", "sender_id", "message_type")
-        if not all(isinstance(payload.get(key), str) and payload[key] for key in required): return None
-        return InboundMessageEvent(phone_number_id, payload["message_id"], payload["sender_id"], payload.get("timestamp"), payload["message_type"], payload.get("text"), payload.get("contact_name"), payload.get("media_id"))
+        if not all(isinstance(payload.get(key), str) and payload[key] for key in required):
+            return None
+        return InboundMessageEvent(
+            phone_number_id,
+            payload["message_id"],
+            payload["sender_id"],
+            payload.get("timestamp"),
+            payload["message_type"],
+            payload.get("text"),
+            payload.get("contact_name"),
+            payload.get("media_id"),
+        )
     if row.get("event_type") == "message_status":
-        if not isinstance(payload.get("message_id"), str) or not isinstance(payload.get("status"), str): return None
+        if not isinstance(payload.get("message_id"), str) or not isinstance(payload.get("status"), str):
+            return None
         codes = payload.get("error_codes", [])
-        if not isinstance(codes, list) or not all(isinstance(code, str) for code in codes): return None
-        return MessageStatusEvent(phone_number_id, payload["message_id"], payload["status"], payload.get("timestamp"), payload.get("recipient_id"), tuple(codes))
+        if not isinstance(codes, list) or not all(isinstance(code, str) for code in codes):
+            return None
+        return MessageStatusEvent(
+            phone_number_id,
+            payload["message_id"],
+            payload["status"],
+            payload.get("timestamp"),
+            payload.get("recipient_id"),
+            tuple(codes),
+        )
     return None
+
+
+def _complete_claim(
+    *,
+    event_id: int,
+    worker_id: str,
+    claim_version: int,
+    outcome: str,
+    error_code: str | None = None,
+    retry_at: str | None = None,
+) -> dict[str, Any]:
+    result = complete_whatsapp_event(
+        event_id,
+        worker_id=worker_id,
+        claim_version=claim_version,
+        outcome=outcome,
+        error_code=error_code,
+        retry_at=retry_at,
+    )
+    if result.get("durum") == "çakışma":
+        logger.warning(
+            "WhatsApp inbox completion stale lease nedeniyle bastırıldı: event_id=%s reason=%s",
+            event_id,
+            result.get("reason_code"),
+        )
+    elif result.get("durum") != "başarılı":
+        logger.error("WhatsApp inbox completion başarısız: event_id=%s", event_id)
+    return result
 
 
 def process_one(worker_id: str) -> bool:
     claimed = claim_next_whatsapp_event(worker_id)
-    if claimed.get("durum") == "boş": return False
+    if claimed.get("durum") == "boş":
+        return False
     if claimed.get("durum") != "başarılı" or not isinstance(claimed.get("event"), dict):
         logger.error("WhatsApp inbox claim başarısız")
         return False
+
     row = claimed["event"]
     event_id = row.get("id")
-    event = _event_from_row(row)
-    if not isinstance(event_id, int) or event is None:
-        if isinstance(event_id, int): complete_whatsapp_event(event_id, outcome="FAILED", error_code="invalid_queued_event")
+    claim_version = row.get("claim_version")
+    if (
+        not isinstance(event_id, int)
+        or isinstance(event_id, bool)
+        or event_id <= 0
+        or not isinstance(claim_version, int)
+        or isinstance(claim_version, bool)
+        or claim_version <= 0
+    ):
+        logger.error("WhatsApp inbox claim fencing bilgisi geçersiz")
         return True
-    result = process_inbound_message(event) if isinstance(event, InboundMessageEvent) else process_status_event(event)
-    if result.get("durum") == "başarılı": complete_whatsapp_event(event_id, outcome="PROCESSED")
+
+    event = _event_from_row(row)
+    if event is None:
+        _complete_claim(
+            event_id=event_id,
+            worker_id=worker_id,
+            claim_version=claim_version,
+            outcome="FAILED",
+            error_code="invalid_queued_event",
+        )
+        return True
+
+    result = (
+        process_inbound_message(event)
+        if isinstance(event, InboundMessageEvent)
+        else process_status_event(event)
+    )
+    if result.get("durum") == "başarılı":
+        _complete_claim(
+            event_id=event_id,
+            worker_id=worker_id,
+            claim_version=claim_version,
+            outcome="PROCESSED",
+        )
     else:
-        retry_at = (datetime.now(timezone.utc) + timedelta(seconds=_RETRY_SECONDS)).isoformat()
-        complete_whatsapp_event(event_id, outcome="RETRY", error_code=str(result.get("reason_code") or "processing_failed")[:64], retry_at=retry_at)
+        retry_at = (
+            datetime.now(timezone.utc) + timedelta(seconds=_RETRY_SECONDS)
+        ).isoformat()
+        _complete_claim(
+            event_id=event_id,
+            worker_id=worker_id,
+            claim_version=claim_version,
+            outcome="RETRY",
+            error_code=str(result.get("reason_code") or "processing_failed")[:64],
+            retry_at=retry_at,
+        )
     return True
 
 
@@ -71,7 +158,10 @@ def process_one_outbound() -> bool:
 
     result = dispatch_whatsapp_outbox(outbox_id, current_settings=settings)
     if result.get("durum") == "hata":
-        logger.error("WhatsApp outbox dispatch başarısız: reason_code=%s", result.get("reason_code"))
+        logger.error(
+            "WhatsApp outbox dispatch başarısız: reason_code=%s",
+            result.get("reason_code"),
+        )
     return True
 
 
@@ -83,4 +173,6 @@ def main() -> None:
         if not inbound_worked and not outbound_worked:
             time.sleep(1)
 
-if __name__ == "__main__": main()
+
+if __name__ == "__main__":
+    main()
