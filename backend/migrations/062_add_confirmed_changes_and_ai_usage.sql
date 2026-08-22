@@ -4,7 +4,7 @@
 -- Business guarantees:
 --   * a previously recorded personalization text is never replaced from a mere
 --     correction utterance; a separate customer confirmation message is required.
---   * the confirmed write is source-message scoped and OCC/version fenced.
+--   * the confirmed write is source-message scoped, retry-idempotent and OCC/version fenced.
 --   * changing a COMPLETE order reopens it as SELLER_REVIEW_REQUIRED so production
 --     cannot continue silently after customer-visible data changed.
 --   * AI token accounting stores counts only; no message/customer content is copied.
@@ -70,6 +70,21 @@ BEGIN
         RETURN jsonb_build_object('status', 'not_found');
     END IF;
 
+    -- Crash/retry fence: the business write may have committed before the
+    -- conversation-state transition or outbound response. Replaying the exact
+    -- same incoming confirmation must therefore succeed even though version and
+    -- (for previously COMPLETE orders) status have already changed.
+    IF order_row.last_source_message_id = source_message_id
+       AND order_row.custom_text IS NOT DISTINCT FROM normalized_text THEN
+        RETURN jsonb_build_object(
+            'status', 'success',
+            'changed', FALSE,
+            'idempotent', TRUE,
+            'seller_review_required', order_row.status = 'SELLER_REVIEW_REQUIRED',
+            'order', public._order_presenter(order_row)
+        );
+    END IF;
+
     IF order_row.version <> expected_version THEN
         RETURN jsonb_build_object(
             'status', 'conflict',
@@ -90,7 +105,8 @@ BEGIN
         RETURN jsonb_build_object(
             'status', 'success',
             'changed', FALSE,
-            'seller_review_required', order_row.status = 'SELLER_REVIEW_REQUIRED',
+            'idempotent', FALSE,
+            'seller_review_required', FALSE,
             'order', public._order_presenter(order_row)
         );
     END IF;
@@ -114,6 +130,13 @@ BEGIN
                 'Müşteri kişiselleştirme yazısı değişikliğini açıkça onayladı.'
             ELSE review_reason_note
         END,
+        -- A previously COMPLETE order is no longer complete after production
+        -- data changes. Clearing the timestamp lets a later completion record
+        -- the actual post-change completion time instead of preserving stale time.
+        completed_at = CASE
+            WHEN previous_status = 'COMPLETE' THEN NULL
+            ELSE completed_at
+        END,
         last_source_message_id = source_message_id,
         updated_at = NOW(),
         version = version + 1
@@ -123,6 +146,7 @@ BEGIN
     RETURN jsonb_build_object(
         'status', 'success',
         'changed', TRUE,
+        'idempotent', FALSE,
         'previous_custom_text', previous_text,
         'new_custom_text', normalized_text,
         'seller_review_required', order_row.status = 'SELLER_REVIEW_REQUIRED',
@@ -221,7 +245,7 @@ INSERT INTO public.schema_migrations(version, name, checksum, applied_by)
 VALUES (
     '062',
     'add_confirmed_changes_and_ai_usage',
-    'confirmed_changes_ai_usage_v1',
+    'confirmed_changes_ai_usage_v2',
     CURRENT_USER
 )
 ON CONFLICT (version) DO NOTHING;
