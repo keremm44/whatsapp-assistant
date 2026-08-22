@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_migration_chain_is_contiguous_000_through_060() -> None:
+def test_migration_chain_is_contiguous_000_through_061() -> None:
     migrations = sorted(Path("migrations").glob("[0-9][0-9][0-9]_*.sql"))
     versions = [path.name[:3] for path in migrations]
-    assert versions == [f"{version:03d}" for version in range(61)]
+    assert versions == [f"{version:03d}" for version in range(62)]
 
 
 def test_023_024_025_files_match_live_names() -> None:
@@ -38,7 +38,6 @@ def test_035_only_hardens_quantity_function_search_paths() -> None:
     sql = Path("migrations/035_harden_quantity_function_search_paths.sql").read_text(
         encoding="utf-8"
     ).lower()
-
     assert sql.count("alter function public.") == 3
     assert "alter function public._return_issue_request_presenter" in sql
     assert "alter function public.create_or_get_return_issue_request" in sql
@@ -119,3 +118,20 @@ def test_060_adds_bounded_conversation_ai_memory() -> None:
     assert "advance_conversation_ai_memory" in sql
     assert "memory_incomplete" in sql
     assert "'060'" in sql
+
+
+def test_061_honors_seller_order_number_requirement() -> None:
+    path = Path("migrations/061_honor_order_number_requirement.sql")
+    assert path.exists()
+    sql = path.read_text(encoding="utf-8").lower()
+    assert "create or replace function public._recompute_order_completion" in sql
+    assert "order_config -> 'order_number_required'" in sql
+    assert "order_number_required boolean := true" in sql
+    assert "if order_number_required" in sql
+    assert "order_config -> 'image_required'" in sql
+    assert "order_config -> 'custom_text_required'" in sql
+    assert "set search_path = pg_catalog, public" in sql
+    assert "revoke execute on function public._recompute_order_completion" in sql
+    assert "grant execute on function public._recompute_order_completion" in sql
+    assert "to service_role" in sql
+    assert "'061'" in sql
