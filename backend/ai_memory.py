@@ -11,12 +11,23 @@ MAX_SINGLE_CONTEXT_MESSAGE_CHARS = 600
 
 _EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
 _LONG_NUMBER_RE = re.compile(r"(?<!\w)(?:\+?\d[\d\s().-]{5,}\d)(?!\w)")
+_ORDER_TOKEN = r"(?=[A-Z0-9_-]{3,100}\b)(?=[A-Z0-9_-]*\d)[A-Z0-9][A-Z0-9_-]{2,99}"
+_ORDER_NUMBER_AFTER_LABEL_RE = re.compile(
+    rf"\b(?:sipariş|siparis|order)\s*(?:(?:no|numara|numarası|numarasi)\s*)?[:#-]?\s*({_ORDER_TOKEN})\b",
+    re.IGNORECASE,
+)
+_ORDER_NUMBER_BEFORE_LABEL_RE = re.compile(
+    rf"\b({_ORDER_TOKEN})\s+(?:numaralı|numarali)\s+(?:sipariş|siparis|order)\b",
+    re.IGNORECASE,
+)
 
 
 def sanitize_memory_summary(value: str) -> str:
-    """Normalize and minimize obvious sensitive identifiers in AI-authored memory."""
+    """Normalize and minimize obvious sensitive/business identifiers in AI-authored memory."""
     normalized = " ".join(value.strip().split())
     normalized = _EMAIL_RE.sub("[e-posta]", normalized)
+    normalized = _ORDER_NUMBER_AFTER_LABEL_RE.sub("sipariş [numara]", normalized)
+    normalized = _ORDER_NUMBER_BEFORE_LABEL_RE.sub("[numara] numaralı sipariş", normalized)
     normalized = _LONG_NUMBER_RE.sub("[numara]", normalized)
     return normalized[:MAX_MEMORY_SUMMARY_CHARS]
 
@@ -47,8 +58,19 @@ def _message_context_item(row: Any) -> dict[str, str] | None:
         text = f"[{message_type}]"
     else:
         return None
+
+    if direction == "incoming":
+        role = "customer"
+    elif row.get("was_auto_replied") is True:
+        role = "assistant"
+    else:
+        # An outgoing row without the explicit auto-reply marker may have been
+        # written by the seller/human or another system path. Never invent an
+        # assistant author identity from direction alone.
+        role = "outgoing_unknown"
+
     return {
-        "role": "customer" if direction == "incoming" else "assistant",
+        "role": role,
         "type": message_type,
         "text": text,
     }
