@@ -9,7 +9,11 @@ from typing import Any
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from ai_memory import load_current_conversation_memory, persist_current_conversation_memory
+from ai_memory import (
+    load_current_conversation_memory,
+    persist_current_conversation_memory,
+    record_current_conversation_ai_usage,
+)
 from observability import emit_operational_alert
 
 
@@ -467,6 +471,16 @@ def _classifier_user_content(message: str, memory_state: dict[str, Any] | None) 
     )
 
 
+def _usage_count(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    try:
+        number = int(value or 0)
+    except (TypeError, ValueError, OverflowError):
+        return 0
+    return max(number, 0)
+
+
 def classify_intent(message: str) -> dict[str, Any]:
     if not message or not message.strip():
         return {
@@ -533,7 +547,29 @@ def classify_intent(message: str) -> dict[str, Any]:
             return _degraded_fallback(message, reason_code="classifier_invalid_schema")
 
         result = _normalize_result(parsed)
-        result["kullanılan_token"] = response.usage.total_tokens if response.usage else 0
+        usage = response.usage
+        prompt_tokens = _usage_count(getattr(usage, "prompt_tokens", 0)) if usage else 0
+        completion_tokens = _usage_count(getattr(usage, "completion_tokens", 0)) if usage else 0
+        total_tokens = _usage_count(getattr(usage, "total_tokens", 0)) if usage else 0
+        result["kullanılan_token"] = total_tokens
+        result["ai_usage"] = {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+        }
+        usage_result = record_current_conversation_ai_usage(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+        )
+        result["ai_usage_recorded"] = usage_result.get("durum") == "başarılı"
+        if usage_result.get("durum") == "hata":
+            emit_operational_alert(
+                "conversation_ai_usage_update_failed",
+                severity="warning",
+                message="AI token kullanım sayacı güncellenemedi; ana sohbet akışı devam etti.",
+                details={"reason_code": str(usage_result.get("reason_code") or "unknown")[:64]},
+            )
 
         memory_context_available = isinstance(memory_state, dict) and memory_state.get("status") == "success"
         if memory_context_available:
