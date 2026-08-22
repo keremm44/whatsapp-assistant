@@ -97,6 +97,9 @@ def outgoing_response(
     control_context: OutgoingControlContext,
     ai_confidence: float | None = None,
 ) -> dict[str, Any]:
+    # Keep the existing fail-fast read so expensive/legacy callers receive the
+    # same early suppression semantics. The guarded DB write below is the final
+    # authority and closes the check-then-insert race with seller takeover.
     is_allowed, reason_code, reason_text = validate_outgoing_control(
         seller_id=seller_id,
         customer_id=customer_id,
@@ -119,7 +122,22 @@ def outgoing_response(
         ai_confidence=ai_confidence,
         provider="internal",
         provider_message_id=None,
+        source_message_id=control_context["incoming_message_id"],
+        expected_control_version=control_context["starting_control_version"],
     )
+    if save_result.get("durum") == "bastırıldı":
+        return stored_no_auto_reply(
+            customer_id=customer_id,
+            incoming_message_id=control_context["incoming_message_id"],
+            reason_code=str(
+                save_result.get("reason_code")
+                or "outgoing_suppressed_control_unavailable"
+            ),
+            reason_text=str(
+                save_result.get("mesaj")
+                or "Konuşma kontrolü son yazma sınırında doğrulanamadı."
+            ),
+        )
     if save_result.get("durum") != "başarılı":
         return {"durum": "hata", "mesaj": "Cevap üretildi fakat giden mesaj kaydedilemedi."}
     return {
