@@ -22,6 +22,28 @@ _GREETING_ONLY = frozenset(
     }
 )
 
+# Explicit state-machine confirmations/cancellations are control actions, not
+# flat informational text. Delaying them can leave an order/change flow stuck
+# behind a later message, so they follow the same immediate path as questions.
+_CONFIRMATION_CONTROLS = frozenset(
+    {
+        "evet",
+        "hayır",
+        "hayir",
+        "onaylıyorum",
+        "onayliyorum",
+        "onaylamıyorum",
+        "onaylamiyorum",
+        "iptal",
+        "vazgeçtim",
+        "vazgectim",
+        "doğru",
+        "dogru",
+        "tamam",
+        "kabul",
+    }
+)
+
 # Common critical phrases are intentionally deterministic. They do not decide
 # the return outcome; they only prevent a known return/complaint turn from
 # waiting in the conversational debounce window.
@@ -65,7 +87,7 @@ def should_process_immediately(event: InboundMessageEvent) -> bool:
     normalized = _normalize_text(event.text)
     if not normalized:
         return True
-    if normalized in _GREETING_ONLY:
+    if normalized in _GREETING_ONLY or normalized in _CONFIRMATION_CONTROLS:
         return True
     if normalized.endswith("?") or "?" in normalized:
         return True
