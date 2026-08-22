@@ -193,7 +193,10 @@ const parseProduct = (raw: Record<string, unknown>): ProductSettings => ({
 const parseOrder = (raw: Record<string, unknown>): OrderSettings => ({
   minQuantity: readOptionalNullableInteger(raw, "min_quantity"),
   maxQuantity: readOptionalNullableInteger(raw, "max_quantity"),
-  orderNumberRequired: readOptionalNullableBoolean(raw, "order_number_required"),
+  // Missing/null is effectively TRUE in Python and SQL for legacy sellers;
+  // the settings UI must display that real behavior rather than no selection.
+  orderNumberRequired:
+    readOptionalNullableBoolean(raw, "order_number_required") ?? true,
   imageRequired: readOptionalNullableBoolean(raw, "image_required"),
   customTextRequired: readOptionalNullableBoolean(raw, "custom_text_required"),
 });
