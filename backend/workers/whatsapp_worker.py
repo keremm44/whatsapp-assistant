@@ -7,6 +7,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from database.operational_health import record_whatsapp_worker_heartbeat
 from database.whatsapp_event_queue import claim_next_whatsapp_event, complete_whatsapp_event
 from database.whatsapp_outbox_poll import (
     poll_whatsapp_delivery_outbox as get_next_whatsapp_delivery_outbox_id,
@@ -20,6 +21,7 @@ from whatsapp_webhook.runtime import process_inbound_message, process_status_eve
 
 logger = logging.getLogger(__name__)
 _RETRY_SECONDS = 60
+_WORKER_HEARTBEAT_INTERVAL_SECONDS = 30.0
 _OPERATIONAL_HEALTH_INTERVAL_SECONDS = 60.0
 
 
@@ -262,18 +264,34 @@ def process_one_outbound() -> bool:
     return True
 
 
+def _record_heartbeat(worker_id: str) -> bool:
+    result = record_whatsapp_worker_heartbeat(worker_id)
+    if result.get("durum") == "başarılı":
+        return True
+    emit_operational_alert(
+        "worker_heartbeat_write_failed",
+        severity="error",
+        message="WhatsApp worker heartbeat kaydını yazamadı.",
+    )
+    return False
+
+
 def main() -> None:
     settings = get_settings()
     configure_logging(settings)
     init_sentry(settings)
     worker_id = os.getenv("WHATSAPP_WORKER_ID", f"{socket.gethostname()}-{os.getpid()}")
+    last_heartbeat = 0.0
     last_health_check = 0.0
     logger.info("WhatsApp worker başladı: worker_id=%s", worker_id)
 
     while True:
         now = time.monotonic()
+        if now - last_heartbeat >= _WORKER_HEARTBEAT_INTERVAL_SECONDS:
+            _record_heartbeat(worker_id)
+            last_heartbeat = now
         if now - last_health_check >= _OPERATIONAL_HEALTH_INTERVAL_SECONDS:
-            report_whatsapp_operational_health()
+            report_whatsapp_operational_health(require_worker_heartbeat=True)
             last_health_check = now
 
         inbound_worked = process_one(worker_id)
