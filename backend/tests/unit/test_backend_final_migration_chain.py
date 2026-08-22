@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_migration_chain_is_contiguous_000_through_058() -> None:
+def test_migration_chain_is_contiguous_000_through_059() -> None:
     migrations = sorted(Path("migrations").glob("[0-9][0-9][0-9]_*.sql"))
     versions = [path.name[:3] for path in migrations]
-    assert versions == [f"{version:03d}" for version in range(59)]
+    assert versions == [f"{version:03d}" for version in range(60)]
 
 
 def test_023_024_025_files_match_live_names() -> None:
@@ -98,3 +98,13 @@ def test_058_adds_durable_turn_debounce() -> None:
     assert "_turn_debounce_seconds" in sql
     assert "turn_has_more" in sql
     assert "'058'" in sql
+
+
+def test_059_serializes_concurrent_same_sender_enqueue() -> None:
+    path = Path("migrations/059_serialize_whatsapp_turn_enqueue.sql")
+    assert path.exists()
+    sql = path.read_text(encoding="utf-8").lower()
+    assert "pg_advisory_xact_lock" in sql
+    assert "hashtextextended" in sql
+    assert "whatsapp-turn:" in sql
+    assert "'059'" in sql
