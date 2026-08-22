@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 import secrets
+import threading
 import time
-from typing import Callable
+from typing import Any, Callable
 
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -14,6 +15,17 @@ from settings import AppSettings
 
 logger = logging.getLogger(__name__)
 _REQUEST_ID_HEADER = b"x-request-id"
+_OPERATIONAL_ALERT_COOLDOWN_SECONDS = 300.0
+_operational_alert_last_sent: dict[str, float] = {}
+_operational_alert_lock = threading.Lock()
+
+
+def configure_logging(settings: AppSettings) -> None:
+    """Configure the same process log format for API, worker and ops checks."""
+    logging.basicConfig(
+        level=getattr(logging, settings.log_level, logging.INFO),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
 
 
 def init_sentry(settings: AppSettings) -> bool:
@@ -39,6 +51,65 @@ def init_sentry(settings: AppSettings) -> bool:
         settings.sentry_traces_sample_rate,
     )
     return True
+
+
+def emit_operational_alert(
+    code: str,
+    *,
+    severity: str,
+    message: str,
+    details: dict[str, Any] | None = None,
+    cooldown_seconds: float = _OPERATIONAL_ALERT_COOLDOWN_SECONDS,
+    clock: Callable[[], float] = time.monotonic,
+) -> bool:
+    """Log and group one PII-free operational alert with in-process cooldown."""
+    normalized_code = code.strip() if isinstance(code, str) else ""
+    normalized_severity = severity if severity in {"warning", "error"} else "warning"
+    if not normalized_code or len(normalized_code) > 96:
+        return False
+
+    safe_details: dict[str, int | float | bool | str | None] = {}
+    for key, value in (details or {}).items():
+        if (
+            isinstance(key, str)
+            and 1 <= len(key) <= 64
+            and isinstance(value, (int, float, bool, str, type(None)))
+        ):
+            safe_details[key] = value if not isinstance(value, str) else value[:128]
+
+    log_fn = logger.error if normalized_severity == "error" else logger.warning
+    log_fn(
+        "ops_alert code=%s severity=%s message=%s details=%r",
+        normalized_code,
+        normalized_severity,
+        message,
+        safe_details,
+    )
+
+    now = clock()
+    with _operational_alert_lock:
+        last_sent = _operational_alert_last_sent.get(normalized_code)
+        if last_sent is not None and now - last_sent < cooldown_seconds:
+            return False
+        _operational_alert_last_sent[normalized_code] = now
+
+    with sentry_sdk.push_scope() as scope:
+        scope.set_tag("ops.alert_code", normalized_code)
+        scope.set_tag("ops.severity", normalized_severity)
+        scope.fingerprint = ["whatsapp-ops", normalized_code]
+        for key, value in safe_details.items():
+            scope.set_extra(key, value)
+        sentry_sdk.capture_message(
+            f"WhatsApp operational alert: {normalized_code}",
+            level=normalized_severity,
+        )
+    return True
+
+
+def reset_operational_alert_cooldowns() -> None:
+    """Test helper; no production caller should need this."""
+    with _operational_alert_lock:
+        _operational_alert_last_sent.clear()
 
 
 def _request_id(scope: Scope) -> str:
