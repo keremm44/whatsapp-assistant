@@ -11,6 +11,8 @@ from database.whatsapp_event_queue import claim_next_whatsapp_event, complete_wh
 from database.whatsapp_outbox_poll import (
     poll_whatsapp_delivery_outbox as get_next_whatsapp_delivery_outbox_id,
 )
+from observability import configure_logging, emit_operational_alert, init_sentry
+from operational_health import report_whatsapp_operational_health
 from settings import get_settings
 from whatsapp_sender import dispatch_whatsapp_outbox
 from whatsapp_webhook.models import InboundMessageEvent, MessageStatusEvent
@@ -18,6 +20,7 @@ from whatsapp_webhook.runtime import process_inbound_message, process_status_eve
 
 logger = logging.getLogger(__name__)
 _RETRY_SECONDS = 60
+_OPERATIONAL_HEALTH_INTERVAL_SECONDS = 60.0
 
 
 def _event_from_row(row: dict[str, Any]) -> InboundMessageEvent | MessageStatusEvent | None:
@@ -74,13 +77,26 @@ def _complete_claim(
         retry_at=retry_at,
     )
     if result.get("durum") == "çakışma":
+        reason = str(result.get("reason_code") or "claim_conflict")
         logger.warning(
             "WhatsApp inbox completion stale lease nedeniyle bastırıldı: event_id=%s reason=%s",
             event_id,
-            result.get("reason_code"),
+            reason,
+        )
+        emit_operational_alert(
+            "worker_claim_lost",
+            severity="warning",
+            message="WhatsApp worker completion sırasında queue lease kaybetti.",
+            details={"event_id": event_id, "reason_code": reason},
         )
     elif result.get("durum") != "başarılı":
         logger.error("WhatsApp inbox completion başarısız: event_id=%s", event_id)
+        emit_operational_alert(
+            "worker_completion_failed",
+            severity="error",
+            message="WhatsApp worker queue completion kaydını tamamlayamadı.",
+            details={"event_id": event_id},
+        )
     return result
 
 
@@ -90,6 +106,11 @@ def process_one(worker_id: str) -> bool:
         return False
     if claimed.get("durum") != "başarılı" or not isinstance(claimed.get("event"), dict):
         logger.error("WhatsApp inbox claim başarısız")
+        emit_operational_alert(
+            "worker_claim_failed",
+            severity="error",
+            message="WhatsApp worker inbound event claim edemedi.",
+        )
         return False
 
     row = claimed["event"]
@@ -104,10 +125,21 @@ def process_one(worker_id: str) -> bool:
         or claim_version <= 0
     ):
         logger.error("WhatsApp inbox claim fencing bilgisi geçersiz")
+        emit_operational_alert(
+            "worker_claim_fencing_invalid",
+            severity="error",
+            message="WhatsApp worker geçersiz claim fencing bilgisi aldı.",
+        )
         return True
 
     event = _event_from_row(row)
     if event is None:
+        emit_operational_alert(
+            "worker_invalid_queued_event",
+            severity="warning",
+            message="WhatsApp worker geçersiz queue payload aldı.",
+            details={"event_id": event_id},
+        )
         _complete_claim(
             event_id=event_id,
             worker_id=worker_id,
@@ -135,6 +167,13 @@ def process_one(worker_id: str) -> bool:
             outcome="PROCESSED",
         )
     else:
+        reason = str(result.get("reason_code") or "processing_failed")[:64]
+        emit_operational_alert(
+            "worker_processing_retry",
+            severity="warning",
+            message="WhatsApp worker event işlemesini retry'a bıraktı.",
+            details={"event_id": event_id, "reason_code": reason},
+        )
         retry_at = (
             datetime.now(timezone.utc) + timedelta(seconds=_RETRY_SECONDS)
         ).isoformat()
@@ -143,7 +182,7 @@ def process_one(worker_id: str) -> bool:
             worker_id=worker_id,
             claim_version=claim_version,
             outcome="RETRY",
-            error_code=str(result.get("reason_code") or "processing_failed")[:64],
+            error_code=reason,
             retry_at=retry_at,
         )
     return True
@@ -163,11 +202,22 @@ def process_one_outbound() -> bool:
         or recovered_count < 0
     ):
         logger.error("WhatsApp stale outbox recovery sayacı geçersiz")
+        emit_operational_alert(
+            "outbox_recovery_invalid",
+            severity="error",
+            message="WhatsApp stale outbox recovery geçersiz sayaç döndürdü.",
+        )
         return False
     if recovered_count > 0:
         logger.warning(
             "WhatsApp stale SENDING kayıtları UNKNOWN durumuna alındı: count=%s",
             recovered_count,
+        )
+        emit_operational_alert(
+            "outbox_stale_recovered",
+            severity="warning",
+            message="WhatsApp stale SENDING kayıtları UNKNOWN durumuna alındı.",
+            details={"recovered_count": recovered_count},
         )
 
     if candidate.get("durum") == "boş":
@@ -175,20 +225,57 @@ def process_one_outbound() -> bool:
     outbox_id = candidate.get("outbox_id")
     if candidate.get("durum") != "başarılı" or not isinstance(outbox_id, int):
         logger.error("WhatsApp outbox discovery başarısız")
+        emit_operational_alert(
+            "outbox_discovery_failed",
+            severity="error",
+            message="WhatsApp worker outbound outbox adayı bulamadı.",
+        )
         return False
 
     result = dispatch_whatsapp_outbox(outbox_id, current_settings=settings)
     if result.get("durum") == "hata":
+        reason = str(result.get("reason_code") or "dispatch_failed")[:128]
         logger.error(
             "WhatsApp outbox dispatch başarısız: reason_code=%s",
-            result.get("reason_code"),
+            reason,
+        )
+        emit_operational_alert(
+            "outbox_dispatch_failed",
+            severity="error",
+            message="WhatsApp outbound dispatch başarısız oldu.",
+            details={"outbox_id": outbox_id, "reason_code": reason},
+        )
+    elif result.get("delivery_state") == "UNKNOWN":
+        emit_operational_alert(
+            "outbox_delivery_unknown",
+            severity="warning",
+            message="WhatsApp outbound teslimat sonucu belirsiz; manuel inceleme gerekli.",
+            details={"outbox_id": outbox_id},
+        )
+    elif result.get("retry_scheduled") is True:
+        emit_operational_alert(
+            "outbox_retry_scheduled",
+            severity="warning",
+            message="WhatsApp outbound gönderimi retry'a alındı.",
+            details={"outbox_id": outbox_id},
         )
     return True
 
 
 def main() -> None:
+    settings = get_settings()
+    configure_logging(settings)
+    init_sentry(settings)
     worker_id = os.getenv("WHATSAPP_WORKER_ID", f"{socket.gethostname()}-{os.getpid()}")
+    last_health_check = 0.0
+    logger.info("WhatsApp worker başladı: worker_id=%s", worker_id)
+
     while True:
+        now = time.monotonic()
+        if now - last_health_check >= _OPERATIONAL_HEALTH_INTERVAL_SECONDS:
+            report_whatsapp_operational_health()
+            last_health_check = now
+
         inbound_worked = process_one(worker_id)
         outbound_worked = process_one_outbound()
         if not inbound_worked and not outbound_worked:
