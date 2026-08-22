@@ -93,7 +93,7 @@ def emit_operational_alert(
             return False
         _operational_alert_last_sent[normalized_code] = now
 
-    with sentry_sdk.push_scope() as scope:
+    with sentry_sdk.new_scope() as scope:
         scope.set_tag("ops.alert_code", normalized_code)
         scope.set_tag("ops.severity", normalized_severity)
         scope.fingerprint = ["whatsapp-ops", normalized_code]
