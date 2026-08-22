@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -16,6 +17,21 @@ def run(command: list[str]) -> None:
         cwd=BACKEND_ROOT,
         check=True,
     )
+
+
+def _assert_concurrency_stress_target() -> None:
+    app_env = os.getenv("APP_ENV", "").strip().lower()
+    target = os.getenv("WHATSAPP_STRESS_TARGET", "").strip()
+    if app_env == "production":
+        raise SystemExit(
+            "Concurrency stress production APP_ENV üzerinde çalıştırılamaz. "
+            "İzole staging/Supabase branch kullanın."
+        )
+    if target != "isolated-test-db":
+        raise SystemExit(
+            "Concurrency stress yalnız izole test DB üzerinde çalışır. "
+            "WHATSAPP_STRESS_TARGET=isolated-test-db zorunludur."
+        )
 
 
 def main() -> None:
@@ -36,8 +52,8 @@ def main() -> None:
         "--concurrency-stress",
         action="store_true",
         help=(
-            "Canlı Supabase üzerinde sentetik paralel yazı/queue/lease stres "
-            "senaryosunu çalıştır. Safety-confirm ve test seller ID zorunludur."
+            "İzole Supabase üzerinde sentetik paralel yazı/queue/lease stres "
+            "senaryosunu çalıştır. Production hedefleri reddedilir."
         ),
     )
     args = parser.parse_args()
@@ -65,6 +81,7 @@ def main() -> None:
         )
 
     if args.concurrency_stress:
+        _assert_concurrency_stress_target()
         run(
             [
                 sys.executable,
