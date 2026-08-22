@@ -280,6 +280,12 @@ def main() -> None:
     settings = get_settings()
     configure_logging(settings)
     init_sentry(settings)
+    if not settings.whatsapp_runtime_enabled:
+        logger.warning(
+            "WhatsApp worker çalıştırılmadı: WHATSAPP_RUNTIME_ENABLED=false"
+        )
+        return
+
     worker_id = os.getenv("WHATSAPP_WORKER_ID", f"{socket.gethostname()}-{os.getpid()}")
     last_heartbeat = 0.0
     last_health_check = 0.0
