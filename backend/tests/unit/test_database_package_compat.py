@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import database
 import database.atomic_conversation_state as atomic_state_database
+import database.atomic_customer as atomic_customer_database
 import database.orders as order_database
 
 
@@ -59,6 +60,17 @@ def test_database_function_monkeypatch_reaches_owner_module(monkeypatch) -> None
 
     assert order_database.get_order_by_id(11, 22) == expected
     assert database.get_order_detail(11, 22) == expected
+
+
+def test_customer_identity_facade_is_owned_by_atomic_module(monkeypatch) -> None:
+    expected = {"durum": "mevcut", "customer": {"id": 14}}
+    monkeypatch.setattr(
+        database,
+        "get_or_create_customer",
+        lambda seller_id, whatsapp_number, name=None: expected,
+    )
+
+    assert atomic_customer_database.get_or_create_customer(2, "905551112233") == expected
 
 
 def test_flow_state_facade_is_owned_by_atomic_module(monkeypatch) -> None:
