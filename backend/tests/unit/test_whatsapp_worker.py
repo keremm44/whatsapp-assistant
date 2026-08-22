@@ -75,7 +75,12 @@ def test_worker_claims_processes_and_completes_successfully(monkeypatch) -> None
 
     assert worker.process_one("worker-a") is True
     assert runtime_calls == [
-        {"worker_event_id": 17, "worker_id": "worker-a", "claim_version": 3}
+        {
+            "worker_event_id": 17,
+            "worker_id": "worker-a",
+            "claim_version": 3,
+            "suppress_outgoing": False,
+        }
     ]
     assert calls == [
         (
@@ -90,6 +95,30 @@ def test_worker_claims_processes_and_completes_successfully(monkeypatch) -> None
             },
         )
     ]
+
+
+def test_worker_suppresses_reply_when_turn_has_more(monkeypatch) -> None:
+    row = _row()
+    row["turn_has_more"] = True
+    runtime_calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        worker,
+        "claim_next_whatsapp_event",
+        lambda worker_id: {"durum": "başarılı", "event": row},
+    )
+    monkeypatch.setattr(
+        worker,
+        "process_inbound_message",
+        lambda event, **kwargs: runtime_calls.append(kwargs) or {"durum": "başarılı"},
+    )
+    monkeypatch.setattr(
+        worker,
+        "complete_whatsapp_event",
+        lambda event_id, **kwargs: {"durum": "başarılı"},
+    )
+
+    assert worker.process_one("worker-a") is True
+    assert runtime_calls[0]["suppress_outgoing"] is True
 
 
 def test_worker_schedules_retry_for_safe_inbound_processing_failure(monkeypatch) -> None:
