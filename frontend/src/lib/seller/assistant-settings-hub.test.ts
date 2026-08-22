@@ -57,6 +57,7 @@ const settings = (overrides: {
   order: {
     minQuantity: null,
     maxQuantity: null,
+    orderNumberRequired: null,
     imageRequired: null,
     customTextRequired: null,
     ...overrides.order,
