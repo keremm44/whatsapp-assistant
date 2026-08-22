@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_migration_chain_is_contiguous_000_through_055() -> None:
+def test_migration_chain_is_contiguous_000_through_056() -> None:
     migrations = sorted(Path("migrations").glob("[0-9][0-9][0-9]_*.sql"))
     versions = [path.name[:3] for path in migrations]
-    assert versions == [f"{version:03d}" for version in range(56)]
+    assert versions == [f"{version:03d}" for version in range(57)]
 
 
 def test_023_024_025_files_match_live_names() -> None:
@@ -71,3 +71,12 @@ def test_055_extends_claim_fencing_into_business_processing() -> None:
     assert "e.claim_version = claim_version_value" in sql
     assert "set claimed_at = now()" in sql
     assert "'055'" in sql
+
+
+def test_056_adds_operational_health_snapshot() -> None:
+    path = Path("migrations/056_add_whatsapp_operational_health_snapshot.sql")
+    assert path.exists()
+    sql = path.read_text(encoding="utf-8").lower()
+    assert "get_whatsapp_operational_health" in sql
+    assert "unknown_recent_15m" in sql
+    assert "'056'" in sql
