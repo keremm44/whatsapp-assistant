@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
-from .common import extract_rpc_payload as _extract_rpc_payload
 from .common import is_positive_int as _is_positive_int
 
 
@@ -214,46 +213,30 @@ def get_customers_by_ids(
 
 
 def increment_customer_message_count(customer_id: int) -> dict[str, Any]:
-    """Legacy çağrılar için müşteri mesaj sayısını atomik olarak artırır."""
-    if not _is_positive_int(customer_id):
-        return {
-            "durum": "doğrulama_hatası",
-            "mesaj": "customer_id pozitif tam sayı olmalıdır.",
-        }
-
+    """Müşterinin toplam mesaj sayısını artırır."""
     try:
-        result = get_supabase().rpc(
-            "increment_customer_message_count_atomic",
-            {"target_customer_id": customer_id},
-        ).execute()
-    except Exception:
+        customer_result = get_customer_by_id(customer_id)
+        if customer_result.get("durum") != "başarılı":
+            return customer_result
+        customer = customer_result["customer"]
+        current_count = int(customer.get("total_messages") or 0)
+        result = (
+            get_supabase().table("customers")
+            .update(
+                {
+                    "total_messages": current_count + 1,
+                    "last_message_at": utc_iso(),
+                }
+            )
+            .eq("id", customer_id)
+            .execute()
+        )
         return {
-            "durum": "hata",
-            "mesaj": "Müşteri mesaj sayısı güvenli biçimde artırılamadı.",
+            "durum": "başarılı",
+            "customer": result.data[0] if result.data else None,
         }
-
-    payload = _extract_rpc_payload(result.data)
-    if payload is None:
-        return {
-            "durum": "hata",
-            "mesaj": "Müşteri mesaj sayacı geçersiz yanıt döndürdü.",
-        }
-    if payload.get("status") == "not_found":
-        return {"durum": "bulunamadı", "mesaj": "Müşteri bulunamadı."}
-    if payload.get("status") != "success":
-        return {
-            "durum": "hata",
-            "mesaj": "Müşteri mesaj sayısı artırılamadı.",
-        }
-
-    customer = payload.get("customer")
-    if not isinstance(customer, dict) or customer.get("id") != customer_id:
-        return {
-            "durum": "hata",
-            "mesaj": "Müşteri mesaj sayacı geçersiz kayıt döndürdü.",
-        }
-
-    return {"durum": "başarılı", "customer": customer}
+    except Exception as exc:
+        return {"durum": "hata", "mesaj": str(exc)}
 
 
 # =====================================================
@@ -297,7 +280,7 @@ def save_message(
     provider: str = "internal",
     provider_message_id: str | None = None,
 ) -> dict[str, Any]:
-    """Mesajı kaydeder; incoming müşteri metrikleri DB trigger'ında güncellenir."""
+    """Mesajı kaydeder ve duplicate mesajları engeller."""
     try:
         if provider_message_id:
             duplicate_result = check_message_duplicate(
@@ -329,6 +312,8 @@ def save_message(
             data["ai_confidence"] = ai_confidence
 
         result = get_supabase().table("messages").insert(data).execute()
+        if direction == "incoming":
+            increment_customer_message_count(customer_id)
         return {"durum": "başarılı", "message": result.data[0]}
     except Exception as exc:
         error_text = str(exc)
