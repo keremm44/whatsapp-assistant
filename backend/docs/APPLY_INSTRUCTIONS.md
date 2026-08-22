@@ -48,7 +48,7 @@ ORDER BY version;
 - `schema_migrations` içinde kayıtlı bir sürümü yeniden uygulama.
 - Eksik migrationları **artan numara sırasıyla** uygula; aradaki sürümü atlama.
 - Repo ve hedef DB aynı sürüm zincirindeyse migration uygulama.
-- Bu branch için mevcut tam zincir `000`–`056`'dır.
+- Bu branch için mevcut tam zincir `000`–`057`'dir.
 - Migration uygulamasından sonra `python -m scripts.check_migration_parity`
   tekrar çalışmalı ve `Migration parity OK.` dönmelidir.
 
@@ -88,26 +88,34 @@ python -m scripts.run_tests --concurrency-stress
 ## WhatsApp operasyon sağlık kontrolü
 
 Migration `056`, queue ve outbox için yalnız aggregate sayaç/yaş bilgisi döndüren
-backend-only `get_whatsapp_operational_health()` RPC'sini ekler. Payload, telefon,
-recipient, customer veya mesaj içeriği snapshot'a dahil edilmez.
+backend-only `get_whatsapp_operational_health()` RPC'sini ekler. Migration `057`
+ise privacy-safe worker heartbeat kaydını ve heartbeat metriklerini snapshot'a
+ekler. Payload, telefon, recipient, customer veya mesaj içeriği sağlık verisine
+dahil edilmez.
 
-Worker her 60 saniyede bu snapshot'ı okuyup aşağıdaki durumları sınıflandırır:
+Worker 30 saniyede bir heartbeat yazar ve her 60 saniyede snapshot'ı okuyup şu
+durumları sınıflandırır:
 
+- son iki dakikada worker heartbeat olmaması,
 - inbound/outbound backlog,
 - lease reclaim eşiğine yaklaşan veya takılan `PROCESSING`,
 - stale eşiğine yaklaşan veya aşan `SENDING`,
 - son 15 dakikadaki `FAILED` ve yüksek reclaim sayısı,
-- `UNKNOWN` outbound teslimatlar.
+- çözülmemiş `UNKNOWN` outbound teslimatlar.
 
-`SENTRY_DSN` ayarlıysa aynı worker process'i operasyon alarmlarını beş dakikalık
-code-bazlı cooldown ve sabit fingerprint ile Sentry'ye yollar. Telefon veya mesaj
-içeriği alarm payload'ına eklenmez.
+`SENTRY_DSN` ayarlıysa worker operasyon alarmlarını beş dakikalık code-bazlı
+cooldown ve sabit fingerprint ile Sentry'ye yollar. Telefon veya mesaj içeriği
+alarm payload'ına eklenmez.
 
 Worker tamamen durmuş olsa bile dışarıdan kontrol edebilmek için:
 
 ```powershell
 python -m scripts.check_operational_health
 ```
+
+`WHATSAPP_RUNTIME_ENABLED=true` olduğunda bu bağımsız kontrol son iki dakikada
+heartbeat yoksa `worker_heartbeat_missing` ile critical olur. Runtime kapalıysa
+heartbeat zorunluluğu aranmaz.
 
 Çıkış kodları:
 
@@ -116,9 +124,9 @@ python -m scripts.check_operational_health
 - `2`: critical veya snapshot okunamadı
 
 Bu komut Railway Cron, harici uptime/cron servisi veya başka bir scheduler ile
-periyodik çalıştırılabilir. Worker içi 60 saniyelik kontrol, worker process'inin
-kendisi öldüğünde doğal olarak çalışamayacağı için production'da bağımsız bir
-scheduler kullanılması önerilir.
+periyodik çalıştırılabilir. Worker process'inin kendisi öldüğünde worker içi
+health loop da duracağı için production'da bağımsız scheduler kullanılması
+önerilir.
 
 ## Canlı auth kontrolü
 
