@@ -30,7 +30,15 @@ def main() -> None:
     parser.add_argument(
         "--stress",
         action="store_true",
-        help="100 mesaj stres senaryosunu ayrıca çalıştır.",
+        help="Eski 100 mesaj seri stres senaryosunu ayrıca çalıştır.",
+    )
+    parser.add_argument(
+        "--concurrency-stress",
+        action="store_true",
+        help=(
+            "Canlı Supabase üzerinde sentetik paralel yazı/queue/lease stres "
+            "senaryosunu çalıştır. Safety-confirm ve test seller ID zorunludur."
+        ),
     )
     args = parser.parse_args()
 
@@ -53,6 +61,15 @@ def main() -> None:
                 sys.executable,
                 "-m",
                 "tests.integration.scenario_100_messages",
+            ]
+        )
+
+    if args.concurrency_stress:
+        run(
+            [
+                sys.executable,
+                "-m",
+                "tests.integration.scenario_whatsapp_concurrency",
             ]
         )
 
