@@ -48,6 +48,8 @@ _REVISION_PATTERNS = (
     ),
 )
 
+_MAX_UNHINTED_ORDER_SCAN = 100
+
 
 def _normalize_text(value: str) -> str:
     return " ".join(value.strip(" \t\r\n\"'“”‘’.,!? ").split())
@@ -95,45 +97,79 @@ def _order_number_hint(message: str) -> str | None:
     return match.group(1).strip() if match else None
 
 
+def _changeable_candidates(rows: Any) -> list[dict[str, Any]]:
+    if not isinstance(rows, list):
+        return []
+    return [
+        row
+        for row in rows
+        if isinstance(row, dict)
+        and row.get("status") in {"COLLECTING", "COMPLETE"}
+        and isinstance(row.get("custom_text"), str)
+        and row.get("custom_text").strip()
+    ]
+
+
 def build_custom_text_change_proposal(
     *,
     seller_id: int,
     customer_id: int,
     message: str,
 ) -> dict[str, Any]:
-    """Resolve an explicit correction against authoritative order data without mutating it."""
+    """Resolve an explicit correction against authoritative order data without mutating it.
+
+    An explicit order-number hint is resolved server-side with an exact filter, so an
+    older order cannot disappear behind pagination. Without a hint we inspect the
+    largest supported bounded page and fail closed when it is full; a partial view
+    must never be mistaken for a unique authoritative order.
+    """
     revision = parse_custom_text_revision(message)
     if revision is None:
         return {"status": "not_explicit"}
 
-    listed = list_seller_orders(
-        seller_id,
-        customer_id=customer_id,
-        limit=10,
-        offset=0,
-    )
+    hint = _order_number_hint(message)
+    if hint:
+        listed = list_seller_orders(
+            seller_id,
+            customer_id=customer_id,
+            external_order_number=hint,
+            limit=2,
+            offset=0,
+        )
+    else:
+        listed = list_seller_orders(
+            seller_id,
+            customer_id=customer_id,
+            limit=_MAX_UNHINTED_ORDER_SCAN,
+            offset=0,
+        )
+
     if listed.get("durum") != "başarılı":
         return {"status": "unavailable"}
 
     rows = [row for row in (listed.get("orders") or []) if isinstance(row, dict)]
-    candidates = [
-        row
-        for row in rows
-        if row.get("status") in {"COLLECTING", "COMPLETE"}
-        and isinstance(row.get("custom_text"), str)
-        and row.get("custom_text").strip()
-    ]
+    if not hint and len(rows) >= _MAX_UNHINTED_ORDER_SCAN:
+        return {
+            "status": "ambiguous_order",
+            "candidate_count": len(rows),
+            "scan_truncated": True,
+        }
 
-    hint = _order_number_hint(message)
+    candidates = _changeable_candidates(rows)
     if hint:
-        hinted = [
+        candidates = [
             row
             for row in candidates
             if isinstance(row.get("external_order_number"), str)
             and _casefold_tr(row["external_order_number"]) == _casefold_tr(hint)
         ]
-        if len(hinted) == 1:
-            candidates = hinted
+        if len(candidates) == 0:
+            return {"status": "order_not_found"}
+        if len(candidates) > 1:
+            return {
+                "status": "ambiguous_order",
+                "candidate_count": len(candidates),
+            }
 
     old_text = revision["old_text"]
     exact_old = [
@@ -231,6 +267,7 @@ def apply_confirmed_custom_text_change(
         return {
             "durum": "başarılı",
             "changed": payload.get("changed") is True,
+            "idempotent": payload.get("idempotent") is True,
             "seller_review_required": payload.get("seller_review_required") is True,
             "order": payload.get("order") if isinstance(payload.get("order"), dict) else None,
             "previous_custom_text": payload.get("previous_custom_text"),
