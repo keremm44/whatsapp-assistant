@@ -1,32 +1,9 @@
 /**
  * Server-side resolvers for the seller Conversations workbench.
- *
- * This module is the conversations-side companion of
- * `lib/seller/dashboard-tasks-server.ts`. It fetches the conversation
- * list and the selected conversation's workspace (detail + control)
- * for an already-authenticated active seller and reports small,
- * deliberate state machines:
- *
- *   ready        — backend returned parseable payloads.
- *   unavailable  — backend unreachable, 5xx, transient auth drift, or
- *                  a body that does not match the contract. The page
- *                  renders a calm retry surface; it must NOT pretend
- *                  the data is merely empty.
- *   not_found    — the requested conversation does not exist in this
- *                  seller's scope (HTTP 404).
- *   auth_rejected — backend said the access token is no longer
- *                  accepted (HTTP 401). Rare: the seller layout's auth
- *                  guard has already resolved the same token.
- *
- * This module is server-only. It does NOT call Supabase signOut. A
- * transient failure here never destroys a valid Supabase session,
- * consistent with the auth foundation's principle.
- *
- * This module does NOT check role / status. Auth is settled before
- * this is invoked by the seller layout's auth guard.
  */
 
 import { ApiError } from "@/lib/api/client";
+import { apiFetchWithAccessToken } from "@/lib/api/authenticated";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   CONVERSATIONS_CONTRACT_ERROR_PREFIX,
@@ -39,12 +16,22 @@ import {
   type ConversationListPageV2,
 } from "@/lib/seller/conversations";
 
-/**
- * The control area is deliberately decoupled from the message
- * history: if the control endpoint fails, the conversation timeline
- * must still render. Only the handoff control becomes unavailable
- * (and retryable in the client).
- */
+export type ConversationAiUsage = {
+  date: string | null;
+  callCount: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  updatedAt: string | null;
+};
+
+export type ConversationAiContext = {
+  summary: string | null;
+  memoryIncomplete: boolean;
+  summaryUpdatedAt: string | null;
+  usage: ConversationAiUsage | null;
+};
+
 export type ConversationControlBootstrap =
   | { state: "ready"; view: ConversationControlView }
   | { state: "unavailable" };
@@ -53,11 +40,6 @@ export type ConversationListBootstrap =
   | {
       state: "ready";
       page: ConversationListPageV2;
-      /**
-       * Server-side "now" captured at resolution time. Components use
-       * it as the reference for relative timestamps so the SSR render
-       * and the client hydration compute the identical phrase.
-       */
       renderedAt: number;
     }
   | { state: "unavailable" }
@@ -68,11 +50,80 @@ export type ConversationWorkspaceBootstrap =
       state: "ready";
       detail: ConversationDetail;
       control: ConversationControlBootstrap;
+      aiContext: ConversationAiContext | null;
       renderedAt: number;
     }
   | { state: "not_found" }
   | { state: "unavailable" }
   | { state: "auth_rejected" };
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const nullableString = (value: unknown): string | null | undefined => {
+  if (value === null) return null;
+  return typeof value === "string" ? value : undefined;
+};
+
+const nonNegativeInteger = (value: unknown): number | undefined =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  Number.isFinite(value) &&
+  value >= 0
+    ? value
+    : undefined;
+
+const parseAiContext = (raw: unknown): ConversationAiContext | null => {
+  if (!isPlainObject(raw) || !("ai_context" in raw)) return null;
+  const context = raw.ai_context;
+  if (!isPlainObject(context)) return null;
+
+  const summary = nullableString(context.summary);
+  const summaryUpdatedAt = nullableString(context.summary_updated_at);
+  if (
+    summary === undefined ||
+    summaryUpdatedAt === undefined ||
+    typeof context.memory_incomplete !== "boolean"
+  ) {
+    return null;
+  }
+
+  let usage: ConversationAiUsage | null = null;
+  if (context.usage !== null && context.usage !== undefined) {
+    if (!isPlainObject(context.usage)) return null;
+    const date = nullableString(context.usage.date);
+    const updatedAt = nullableString(context.usage.updated_at);
+    const callCount = nonNegativeInteger(context.usage.call_count);
+    const promptTokens = nonNegativeInteger(context.usage.prompt_tokens);
+    const completionTokens = nonNegativeInteger(context.usage.completion_tokens);
+    const totalTokens = nonNegativeInteger(context.usage.total_tokens);
+    if (
+      date === undefined ||
+      updatedAt === undefined ||
+      callCount === undefined ||
+      promptTokens === undefined ||
+      completionTokens === undefined ||
+      totalTokens === undefined
+    ) {
+      return null;
+    }
+    usage = {
+      date,
+      callCount,
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      updatedAt,
+    };
+  }
+
+  return {
+    summary,
+    memoryIncomplete: context.memory_incomplete,
+    summaryUpdatedAt,
+    usage,
+  };
+};
 
 const isAbortError = (error: unknown): boolean => {
   if (typeof error !== "object" || error === null) return false;
@@ -115,10 +166,8 @@ export const resolveConversationList = async (
     if (isContractError(error) || isNetworkError(error)) {
       return { state: "unavailable" };
     }
-    if (error instanceof ApiError) {
-      if (error.status === 401) {
-        return { state: "auth_rejected" };
-      }
+    if (error instanceof ApiError && error.status === 401) {
+      return { state: "auth_rejected" };
     }
     return { state: "unavailable" };
   }
@@ -134,11 +183,23 @@ const resolveControl = async (
     });
     return { state: "ready", view };
   } catch {
-    // ANY control failure (network, 5xx, 404 drift, contract error,
-    // even a 401 that arrived mid-request) degrades to a retryable
-    // control area. The message history must keep rendering, and a
-    // transient failure must never sign the seller out.
     return { state: "unavailable" };
+  }
+};
+
+const resolveAiContext = async (
+  accessToken: string,
+  customerId: number,
+): Promise<ConversationAiContext | null> => {
+  try {
+    const raw = await apiFetchWithAccessToken<unknown>(
+      `/seller/conversations/${customerId}?message_limit=1&control_history_limit=1`,
+      accessToken,
+      { cache: "no-store" },
+    );
+    return parseAiContext(raw);
+  } catch {
+    return null;
   }
 };
 
@@ -146,9 +207,7 @@ export const resolveConversationWorkspace = async (
   accessToken: string,
   customerId: number,
 ): Promise<ConversationWorkspaceBootstrap> => {
-  // Detail and control resolve in parallel but DECOUPLE: a control
-  // failure never takes the message history down with it.
-  const [detailResult, controlResult] = await Promise.all([
+  const [detailResult, controlResult, aiContext] = await Promise.all([
     fetchConversationDetail(accessToken, customerId, {
       cache: "no-store",
     }).then(
@@ -156,6 +215,7 @@ export const resolveConversationWorkspace = async (
       (error: unknown) => ({ ok: false as const, error }),
     ),
     resolveControl(accessToken, customerId),
+    resolveAiContext(accessToken, customerId),
   ]);
 
   if (!detailResult.ok) {
@@ -173,13 +233,10 @@ export const resolveConversationWorkspace = async (
     state: "ready",
     detail: detailResult.detail,
     control: controlResult,
+    aiContext,
     renderedAt: Date.now(),
   };
 };
-
-/* ------------------------------------------------------------------ */
-/* Session-aware variants (server cookie session -> access token)      */
-/* ------------------------------------------------------------------ */
 
 const resolveAccessTokenFromSession = async (): Promise<string | null> => {
   const supabase = await createSupabaseServerClient();
@@ -194,11 +251,6 @@ const resolveAccessTokenFromSession = async (): Promise<string | null> => {
   }
 };
 
-/**
- * List resolver gated on the current server session. Returns
- * `state: "unavailable"` if the session lookup itself fails; the
- * seller layout's auth guard has already settled role/status.
- */
 export const resolveConversationListFromSession = async (options?: {
   attentionOnly?: boolean;
   controlState?: ConversationControlState;
@@ -210,7 +262,6 @@ export const resolveConversationListFromSession = async (options?: {
   return resolveConversationList(accessToken, options);
 };
 
-/** Workspace resolver (detail + control) gated on the server session. */
 export const resolveConversationWorkspaceFromSession = async (
   customerId: number,
 ): Promise<ConversationWorkspaceBootstrap> => {
