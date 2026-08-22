@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from database.operational_health import get_whatsapp_operational_health
+from observability import emit_operational_alert
 
 
 @dataclass(frozen=True)
@@ -185,3 +186,16 @@ def check_whatsapp_operational_health() -> dict[str, Any]:
         "snapshot": snapshot,
         "alerts": alerts,
     }
+
+
+def report_whatsapp_operational_health() -> dict[str, Any]:
+    """Read, classify and emit grouped operational alerts."""
+    result = check_whatsapp_operational_health()
+    for alert in result["alerts"]:
+        emit_operational_alert(
+            alert.code,
+            severity=alert.severity,
+            message=alert.message,
+            details=alert.details,
+        )
+    return result
