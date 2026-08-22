@@ -22,7 +22,11 @@ def _pending_change_response(
     message_type: str,
     control_context: OutgoingControlContext,
 ) -> dict[str, Any] | None:
-    if state.get("current_state") != "AWAITING_ORDER_CHANGE_CONFIRMATION":
+    state_data = state.get("state_data") or {}
+    if (
+        state.get("current_state") != "AWAITING_ORDER_CONFIRMATION"
+        or state_data.get("pending_change_kind") != "custom_text"
+    ):
         return None
 
     classification = deps.classify_intent(user_message or "")
@@ -40,7 +44,6 @@ def _pending_change_response(
             control_context=control_context,
         )
 
-    state_data = state.get("state_data") or {}
     order_id = state_data.get("order_id")
     expected_version = state_data.get("order_version")
     old_text = state_data.get("old_text")
@@ -244,10 +247,11 @@ def _maybe_start_personalization_change_confirmation(
     transition_result = deps.transition_state(
         seller_id=seller_id,
         customer_id=customer_id,
-        to_state="AWAITING_ORDER_CHANGE_CONFIRMATION",
+        to_state="AWAITING_ORDER_CONFIRMATION",
         reason_code="user_action",
         trigger_message_id=source_message_id,
         state_data={
+            "pending_change_kind": "custom_text",
             "order_id": proposal["order_id"],
             "order_version": proposal["order_version"],
             "external_order_number": proposal.get("external_order_number"),
