@@ -43,11 +43,28 @@ from `backend/.env.example` only when enabling that integration.
 
 Use the same database and WhatsApp variables as the API. Set
 `WHATSAPP_RUNTIME_ENABLED=true` only after the repository migration chain has
-exact parity with the target Supabase project (currently migrations 000–055).
+exact parity with the target Supabase project (currently migrations 000–056).
 Never enable the worker merely because the database contains a later migration;
 an earlier missing version is still a deployment failure. Keep
 `WHATSAPP_SEND_ENABLED=false` unless outbound credentials and
 `WHATSAPP_GRAPH_API_VERSION` are configured.
+
+Set the same `SENTRY_DSN`, `APP_ENV`, `APP_VERSION`, and `LOG_LEVEL` on the
+worker if operational alerts should be delivered to Sentry. The worker runs an
+aggregate queue/outbox health check every 60 seconds and sends grouped,
+PII-free operational alerts when thresholds are crossed.
+
+For dead-worker detection, configure a separate Railway Cron service or other
+external scheduler with `/backend` as its root and this command:
+
+```text
+python -m scripts.check_operational_health
+```
+
+The command exits `0` when healthy, `1` when degraded, and `2` when critical or
+when the health snapshot cannot be read. It must use the same backend Supabase
+service credentials and may use the same `SENTRY_DSN`. This independent check is
+important because a worker process cannot report its own death.
 
 ### Frontend service
 
@@ -69,7 +86,7 @@ Railway provides `PORT`; do not hard-code it.
    must report exact parity with `public.schema_migrations` before deployment.
 2. If parity fails, apply every missing migration in ascending numeric order.
    Do not skip an earlier migration even when a later version is already
-   present. For this branch the complete repository chain is 000–055.
+   present. For this branch the complete repository chain is 000–056.
 3. Run `python -m scripts.check_migration_parity` again and require
    `Migration parity OK.` before starting or restarting production services.
 4. Deploy the API and confirm `GET /health` returns HTTP 200.
@@ -78,6 +95,8 @@ Railway provides `PORT`; do not hard-code it.
    `NEXT_PUBLIC_API_BASE_URL` with the final domains.
 7. Deploy the worker separately and inspect its logs before enabling outbound
    WhatsApp sending.
+8. Configure the independent operational-health scheduler and verify one
+   `healthy` run before treating worker monitoring as active.
 
 The checked-in configs intentionally do not contain credentials or production
 variable values.
