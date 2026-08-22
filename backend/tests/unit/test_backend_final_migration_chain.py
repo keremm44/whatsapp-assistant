@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_migration_chain_is_contiguous_000_through_061() -> None:
+def test_migration_chain_is_contiguous_000_through_062() -> None:
     migrations = sorted(Path("migrations").glob("[0-9][0-9][0-9]_*.sql"))
     versions = [path.name[:3] for path in migrations]
-    assert versions == [f"{version:03d}" for version in range(62)]
+    assert versions == [f"{version:03d}" for version in range(63)]
 
 
 def test_023_024_025_files_match_live_names() -> None:
@@ -135,3 +135,20 @@ def test_061_honors_seller_order_number_requirement() -> None:
     assert "grant execute on function public._recompute_order_completion" in sql
     assert "to service_role" in sql
     assert "'061'" in sql
+
+
+def test_062_adds_confirmed_change_and_privacy_minimized_ai_usage() -> None:
+    path = Path("migrations/062_add_confirmed_changes_and_ai_usage.sql")
+    assert path.exists()
+    sql = path.read_text(encoding="utf-8").lower()
+    assert "apply_confirmed_order_custom_text_change" in sql
+    assert "order_row.version <> expected_version" in sql
+    assert "source_message_id" in sql
+    assert "seller_review_required" in sql
+    assert "customer_confirmed_personalization_change" in sql
+    assert "conversation_ai_usage_daily" in sql
+    assert "record_conversation_ai_usage" in sql
+    assert "prompt_tokens" in sql and "completion_tokens" in sql and "total_tokens" in sql
+    assert "set search_path = pg_catalog, public" in sql
+    assert "to service_role" in sql
+    assert "message content" not in sql
