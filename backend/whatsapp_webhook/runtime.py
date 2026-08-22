@@ -277,7 +277,10 @@ def process_inbound_message(
     worker_event_id: int | None = None,
     worker_id: str | None = None,
     claim_version: int | None = None,
+    suppress_outgoing: bool = False,
 ) -> dict[str, Any]:
+    if not isinstance(suppress_outgoing, bool):
+        return _failure("whatsapp_turn_suppression_invalid")
     if not _claim_args_complete(
         worker_event_id=worker_event_id,
         worker_id=worker_id,
@@ -318,6 +321,7 @@ def process_inbound_message(
         worker_event_id=worker_claim.event_id if worker_claim is not None else None,
         worker_id=worker_claim.worker_id if worker_claim is not None else None,
         claim_version=worker_claim.claim_version if worker_claim is not None else None,
+        suppress_outgoing=suppress_outgoing,
     )
     if not isinstance(chat_result, dict):
         return _failure("whatsapp_chat_invalid_result")
