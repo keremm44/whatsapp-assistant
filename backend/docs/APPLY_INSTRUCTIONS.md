@@ -48,7 +48,7 @@ ORDER BY version;
 - `schema_migrations` içinde kayıtlı bir sürümü yeniden uygulama.
 - Eksik migrationları **artan numara sırasıyla** uygula; aradaki sürümü atlama.
 - Repo ve hedef DB aynı sürüm zincirindeyse migration uygulama.
-- Bu branch için mevcut tam zincir `000`–`046`'dır.
+- Bu branch için mevcut tam zincir `000`–`047`'dir.
 - Migration uygulamasından sonra `python -m scripts.check_migration_parity`
   tekrar çalışmalı ve `Migration parity OK.` dönmelidir.
 
