@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_migration_chain_is_contiguous_000_through_056() -> None:
+def test_migration_chain_is_contiguous_000_through_057() -> None:
     migrations = sorted(Path("migrations").glob("[0-9][0-9][0-9]_*.sql"))
     versions = [path.name[:3] for path in migrations]
-    assert versions == [f"{version:03d}" for version in range(57)]
+    assert versions == [f"{version:03d}" for version in range(58)]
 
 
 def test_023_024_025_files_match_live_names() -> None:
@@ -80,3 +80,12 @@ def test_056_adds_operational_health_snapshot() -> None:
     assert "get_whatsapp_operational_health" in sql
     assert "unknown_recent_15m" in sql
     assert "'056'" in sql
+
+
+def test_057_adds_durable_worker_heartbeat() -> None:
+    path = Path("migrations/057_add_whatsapp_worker_heartbeat.sql")
+    assert path.exists()
+    sql = path.read_text(encoding="utf-8").lower()
+    assert "record_whatsapp_worker_heartbeat" in sql
+    assert "recent_heartbeat_count" in sql
+    assert "'057'" in sql
