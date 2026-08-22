@@ -7,9 +7,10 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from database.whatsapp_delivery import get_next_whatsapp_delivery_outbox_id
 from database.whatsapp_event_queue import claim_next_whatsapp_event, complete_whatsapp_event
-from database.whatsapp_outbox_recovery import recover_stale_whatsapp_delivery_outbox
+from database.whatsapp_outbox_poll import (
+    poll_whatsapp_delivery_outbox as get_next_whatsapp_delivery_outbox_id,
+)
 from settings import get_settings
 from whatsapp_sender import dispatch_whatsapp_outbox
 from whatsapp_webhook.models import InboundMessageEvent, MessageStatusEvent
@@ -144,18 +145,18 @@ def process_one(worker_id: str) -> bool:
 
 
 def process_one_outbound() -> bool:
-    """Recover ambiguous stale sends, then dispatch one due outbox row."""
+    """Recover stale sends and discover one due outbox row in one DB poll."""
     settings = get_settings()
     if not settings.whatsapp_send_enabled:
         return False
 
-    recovery = recover_stale_whatsapp_delivery_outbox()
-    if recovery.get("durum") != "başarılı":
-        logger.error("WhatsApp stale outbox recovery başarısız")
-        return False
-
-    recovered_count = recovery.get("recovered_count")
-    if not isinstance(recovered_count, int) or isinstance(recovered_count, bool):
+    candidate = get_next_whatsapp_delivery_outbox_id()
+    recovered_count = candidate.get("recovered_stale_count", 0)
+    if (
+        not isinstance(recovered_count, int)
+        or isinstance(recovered_count, bool)
+        or recovered_count < 0
+    ):
         logger.error("WhatsApp stale outbox recovery sayacı geçersiz")
         return False
     if recovered_count > 0:
@@ -164,7 +165,6 @@ def process_one_outbound() -> bool:
             recovered_count,
         )
 
-    candidate = get_next_whatsapp_delivery_outbox_id()
     if candidate.get("durum") == "boş":
         return recovered_count > 0
     outbox_id = candidate.get("outbox_id")
