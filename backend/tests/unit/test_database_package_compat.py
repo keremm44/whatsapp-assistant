@@ -21,6 +21,7 @@ def test_database_package_preserves_legacy_import_surface() -> None:
         "ensure_whatsapp_delivery_outbox",
         "claim_whatsapp_delivery_outbox",
         "apply_whatsapp_delivery_status",
+        "renew_whatsapp_event_claim",
         "get_conversation_control",
         "transition_conversation_control",
         "get_state",
