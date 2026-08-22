@@ -117,10 +117,15 @@ def process_one(worker_id: str) -> bool:
         )
         return True
 
+    runtime_kwargs = {
+        "worker_event_id": event_id,
+        "worker_id": worker_id,
+        "claim_version": claim_version,
+    }
     result = (
-        process_inbound_message(event)
+        process_inbound_message(event, **runtime_kwargs)
         if isinstance(event, InboundMessageEvent)
-        else process_status_event(event)
+        else process_status_event(event, **runtime_kwargs)
     )
     if result.get("durum") == "başarılı":
         _complete_claim(
