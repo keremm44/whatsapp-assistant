@@ -44,6 +44,13 @@ def test_greeting_only_is_immediate_but_greeting_plus_information_can_buffer() -
     assert turn_timing(_event("Merhaba sipariş numaram 45892"))[0] == 4
 
 
+def test_confirmation_and_cancel_controls_are_immediate() -> None:
+    assert turn_timing(_event("onaylıyorum"))[0] == 0
+    assert turn_timing(_event("iptal"))[0] == 0
+    assert turn_timing(_event("evet"))[0] == 0
+    assert turn_timing(_event("hayır"))[0] == 0
+
+
 def test_common_return_or_damage_language_flushes_the_turn_immediately() -> None:
     assert turn_timing(_event("ürün kırık geldi"))[0] == 0
     assert turn_timing(_event("iade etmek istiyorum"))[0] == 0
