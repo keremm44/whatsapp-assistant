@@ -61,6 +61,30 @@ python -m scripts.run_tests --integration
 
 İkinci komut gerçek Supabase veritabanında geçici kayıtlar oluşturur ve senaryo sonlarında temizler.
 
+## Production-benzeri concurrency/failure stress testi
+
+Concurrency stress testi **production Supabase projesinde çalıştırılmaz**. Queue claim RPC'si global aday seçtiği için gerçek müşteri event'ini claim etme riski vardır. Bunun yerine migration parity'si production ile aynı olan izole bir Supabase branch/staging veritabanı kullanılır.
+
+Test; paralel customer identity oluşturma, atomik message metric yazımı, duplicate message/webhook idempotency, aynı-sender FIFO, farklı-sender paralelliği ve stale worker reclaim/claim fencing senaryolarını gerçek PostgreSQL transaction'ları üzerinde eşzamanlı çalıştırır.
+
+İzole hedefte aşağıdaki değişkenleri açıkça ayarla:
+
+```env
+APP_ENV=staging
+WHATSAPP_STRESS_TARGET=isolated-test-db
+WHATSAPP_CONCURRENCY_STRESS_CONFIRM=synthetic-only
+WHATSAPP_STRESS_SELLER_ID=<izole-test-seller-id>
+WHATSAPP_STRESS_MAX_WORKERS=12
+```
+
+Sonra:
+
+```powershell
+python -m scripts.run_tests --concurrency-stress
+```
+
+`WHATSAPP_STRESS_MAX_WORKERS` 2–32 aralığındadır. Harness her koşuda benzersiz bir run token üretir ve kendi sentetik kayıtlarını `finally` bloğunda temizler. `APP_ENV=production` veya `WHATSAPP_STRESS_TARGET=isolated-test-db` dışındaki hedefler runner tarafından reddedilir.
+
 ## Canlı auth kontrolü
 
 API çalışırken:
