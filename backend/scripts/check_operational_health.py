@@ -12,7 +12,9 @@ def main() -> int:
     configure_logging(settings)
     init_sentry(settings)
 
-    result = report_whatsapp_operational_health()
+    result = report_whatsapp_operational_health(
+        require_worker_heartbeat=settings.whatsapp_runtime_enabled
+    )
     print(
         json.dumps(
             {
