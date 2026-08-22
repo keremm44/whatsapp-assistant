@@ -93,6 +93,18 @@ def test_save_message_maps_database_duplicate_without_second_write(monkeypatch) 
     assert len(client.calls) == 1
 
 
+def test_save_message_duplicate_fails_closed_on_tenant_mismatch(monkeypatch) -> None:
+    message = _message()
+    message["customer_id"] = 999
+    client = _Client({"status": "duplicate", "message": message})
+    monkeypatch.setattr(message_db, "get_supabase", lambda: client)
+
+    result = message_db.save_message(2, 14, "incoming", "test", provider="whatsapp")
+
+    assert result["durum"] == "hata"
+    assert "message" not in result
+
+
 def test_save_message_rejects_invalid_identity_before_rpc(monkeypatch) -> None:
     def _unexpected() -> Any:
         raise AssertionError("database must not be called")
