@@ -2,7 +2,11 @@
 -- Remove trailing defaults from the fenced 6-argument overload so historical
 -- 4-argument calls resolve unambiguously to the fail-closed compatibility RPC.
 
-CREATE OR REPLACE FUNCTION public.complete_whatsapp_inbound_event(
+DROP FUNCTION IF EXISTS public.complete_whatsapp_inbound_event(
+    BIGINT, TEXT, BIGINT, TEXT, TEXT, TIMESTAMPTZ
+);
+
+CREATE FUNCTION public.complete_whatsapp_inbound_event(
     event_id_value BIGINT,
     worker_id_value TEXT,
     claim_version_value BIGINT,
