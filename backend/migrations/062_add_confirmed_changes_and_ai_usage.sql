@@ -14,9 +14,6 @@
 
 BEGIN;
 
--- -----------------------------------------------------------------------------
--- 1. Source-aware, OCC-fenced confirmed custom-text change.
--- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.apply_confirmed_order_custom_text_change(
     target_seller_id BIGINT,
     target_customer_id BIGINT,
@@ -141,9 +138,6 @@ GRANT EXECUTE ON FUNCTION public.apply_confirmed_order_custom_text_change(
     BIGINT, BIGINT, BIGINT, BIGINT, TEXT, BIGINT
 ) TO service_role;
 
--- -----------------------------------------------------------------------------
--- 2. Privacy-minimized per-conversation daily AI usage counters.
--- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.conversation_ai_usage_daily (
     seller_id BIGINT NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
     customer_id BIGINT NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
@@ -222,5 +216,14 @@ REVOKE ALL ON FUNCTION public.record_conversation_ai_usage(BIGINT, BIGINT, BIGIN
     FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_conversation_ai_usage(BIGINT, BIGINT, BIGINT, BIGINT)
     TO service_role;
+
+INSERT INTO public.schema_migrations(version, name, checksum, applied_by)
+VALUES (
+    '062',
+    'add_confirmed_changes_and_ai_usage',
+    'confirmed_changes_ai_usage_v1',
+    CURRENT_USER
+)
+ON CONFLICT (version) DO NOTHING;
 
 COMMIT;
