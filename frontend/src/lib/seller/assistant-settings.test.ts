@@ -96,6 +96,7 @@ const parsedProduct = (
 const parsedOrder = (overrides: Partial<OrderSettings> = {}): OrderSettings => ({
   minQuantity: 1,
   maxQuantity: 20,
+  orderNumberRequired: true,
   imageRequired: true,
   customTextRequired: true,
   ...overrides,
