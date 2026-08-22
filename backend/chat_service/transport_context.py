@@ -35,6 +35,10 @@ _whatsapp_claim: ContextVar[WhatsAppClaimContext | None] = ContextVar(
     "chat_whatsapp_claim",
     default=None,
 )
+_suppress_outgoing_for_turn: ContextVar[bool] = ContextVar(
+    "chat_suppress_outgoing_for_turn",
+    default=False,
+)
 
 
 def normalize_outgoing_provider(value: str) -> str:
@@ -86,8 +90,9 @@ def transport_scope(
     worker_event_id: int | None = None,
     worker_id: str | None = None,
     claim_version: int | None = None,
+    suppress_outgoing: bool = False,
 ) -> Iterator[None]:
-    """Keep transport and queue-lease state request-local and deterministic."""
+    """Keep transport, queue-lease and turn state request-local and deterministic."""
     normalized = normalize_outgoing_provider(outgoing_provider)
     claim = normalize_whatsapp_claim(
         worker_event_id=worker_event_id,
@@ -96,14 +101,20 @@ def transport_scope(
     )
     if claim is not None and normalized != WHATSAPP_PENDING_OUTGOING_PROVIDER:
         raise ValueError("Worker claim yalnız WhatsApp pending transport ile kullanılabilir.")
+    if not isinstance(suppress_outgoing, bool):
+        raise ValueError("Turn outgoing suppression boolean olmalıdır.")
+    if suppress_outgoing and normalized != WHATSAPP_PENDING_OUTGOING_PROVIDER:
+        raise ValueError("Turn outgoing suppression yalnız WhatsApp pending transport ile kullanılabilir.")
 
     provider_token = _outgoing_provider.set(normalized)
     incoming_token = _incoming_message_id.set(None)
     outgoing_token = _outgoing_message_id.set(None)
     claim_token = _whatsapp_claim.set(claim)
+    suppression_token = _suppress_outgoing_for_turn.set(suppress_outgoing)
     try:
         yield
     finally:
+        _suppress_outgoing_for_turn.reset(suppression_token)
         _whatsapp_claim.reset(claim_token)
         _outgoing_message_id.reset(outgoing_token)
         _incoming_message_id.reset(incoming_token)
@@ -124,6 +135,10 @@ def current_outgoing_message_id() -> int | None:
 
 def current_whatsapp_claim() -> WhatsAppClaimContext | None:
     return _whatsapp_claim.get()
+
+
+def outgoing_suppressed_for_turn() -> bool:
+    return _suppress_outgoing_for_turn.get()
 
 
 def record_incoming_message_id(message_id: int) -> None:
