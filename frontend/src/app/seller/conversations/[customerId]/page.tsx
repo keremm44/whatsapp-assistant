@@ -19,30 +19,6 @@ import {
   hasConversationContext,
 } from "@/lib/seller/conversations-format";
 
-/**
- * Konuşmalar — selected conversation route.
- *
- * Server Component. Resolves TWO things in parallel with the same
- * server session:
- *   - the conversation queue (so the desktop left column stays in
- *     place and the workbench never feels like an unrelated page),
- *   - the workspace bundle for the selected customer: the detail
- *     read model (`GET /seller/conversations/{id}`) plus the
- *     authoritative control presentation (`GET .../control`).
- *
- * Failure semantics:
- *   - The queue failing never takes the conversation down, and vice
- *     versa; each region renders its own calm state.
- *   - Control failure degrades the header to a retryable area while
- *     the message history keeps rendering.
- *   - Nothing here signs the seller out; a transient backend or
- *     network failure leaves the valid Supabase session untouched.
- *
- * The right rail renders ONLY when the conversation actually carries
- * work context (active order, active return/issue, or open
- * unanswered questions). Below xl the same rail content opens from
- * the conversation header's "Bağlam" trigger in a Sheet.
- */
 export default async function SellerConversationDetailPage({
   params,
   searchParams,
@@ -69,13 +45,16 @@ export default async function SellerConversationDetailPage({
   ]);
 
   const detail = workspace.state === "ready" ? workspace.detail : null;
-  const hasContext = detail !== null && hasConversationContext(detail);
+  const aiContext = workspace.state === "ready" ? workspace.aiContext : null;
+  const hasContext =
+    detail !== null && (hasConversationContext(detail) || aiContext !== null);
   const railNode = detail && hasContext ? (
     <ConversationContextRail
       order={detail.activeOrder}
       returnIssue={detail.activeReturnIssue}
       unanswered={detail.openUnanswered}
       controlHistory={detail.controlHistory}
+      aiContext={aiContext}
       renderedAt={workspace.state === "ready" ? workspace.renderedAt : Date.now()}
     />
   ) : null;
