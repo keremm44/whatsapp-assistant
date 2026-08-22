@@ -17,7 +17,6 @@ def utc_iso() -> str:
 
 VALID_NOTIFICATION_TYPES = {
     "new_order",
-    "order_review",
     "unanswered_question",
     "violation",
     "return_request",
