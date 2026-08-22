@@ -40,6 +40,7 @@ const currentOrder = (
 ): OrderSettings => ({
   minQuantity: 1,
   maxQuantity: 20,
+  orderNumberRequired: true,
   imageRequired: true,
   customTextRequired: false,
   ...overrides,
