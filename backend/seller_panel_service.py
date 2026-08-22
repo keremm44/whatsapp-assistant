@@ -239,7 +239,7 @@ def get_conversation_detail(
     active_return_issue = _enrich_active_return(result.get("active_return_issue"), customer_id)
     open_unanswered = _enrich_open_unanswered(result.get("open_unanswered") or [])
 
-    return {
+    payload: dict[str, Any] = {
         "ok": True,
         "customer": result["customer"],
         "conversation_state": result.get("conversation_state"),
@@ -250,8 +250,11 @@ def get_conversation_detail(
         "active_order": active_order,
         "active_return_issue": active_return_issue,
         "open_unanswered": open_unanswered,
-        "ai_context": _read_ai_context(seller_id, customer_id),
     }
+    ai_context = _read_ai_context(seller_id, customer_id)
+    if ai_context is not None:
+        payload["ai_context"] = ai_context
+    return payload
 
 
 def list_dashboard_tasks(
