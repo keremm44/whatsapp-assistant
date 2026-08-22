@@ -19,6 +19,7 @@ from . import guarded_outgoing
 from . import whatsapp_delivery
 from . import whatsapp_event_queue
 from . import operational_health
+from . import conversation_memory
 from . import conversations
 from . import atomic_conversation_state
 from . import notifications
@@ -48,6 +49,7 @@ _MODULES = (
     whatsapp_delivery,
     whatsapp_event_queue,
     operational_health,
+    conversation_memory,
     atomic_conversation_state,
     conversations,
     notifications,
