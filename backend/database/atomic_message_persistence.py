@@ -63,9 +63,13 @@ def save_message(
     status = payload.get("status")
     message = payload.get("message")
     if status == "duplicate":
+        if not isinstance(message, dict):
+            return {"durum": "hata", "mesaj": "Duplicate mesaj kaydı doğrulanamadı."}
+        if message.get("seller_id") != seller_id or message.get("customer_id") != customer_id:
+            return {"durum": "hata", "mesaj": "Duplicate mesaj tenant kimliği doğrulanamadı."}
         return {
             "durum": "duplicate",
-            "message": message if isinstance(message, dict) else None,
+            "message": message,
             "mesaj": "Mesaj daha önce işlendi.",
         }
     if status != "success" or not isinstance(message, dict):
