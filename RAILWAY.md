@@ -43,7 +43,7 @@ from `backend/.env.example` only when enabling that integration.
 
 Use the same database and WhatsApp variables as the API. Set
 `WHATSAPP_RUNTIME_ENABLED=true` only after the repository migration chain has
-exact parity with the target Supabase project (currently migrations 000–044).
+exact parity with the target Supabase project (currently migrations 000–045).
 Never enable the worker merely because the database contains a later migration;
 an earlier missing version is still a deployment failure. Keep
 `WHATSAPP_SEND_ENABLED=false` unless outbound credentials and
@@ -69,7 +69,7 @@ Railway provides `PORT`; do not hard-code it.
    must report exact parity with `public.schema_migrations` before deployment.
 2. If parity fails, apply every missing migration in ascending numeric order.
    Do not skip an earlier migration even when a later version is already
-   present. For this branch the complete repository chain is 000–044.
+   present. For this branch the complete repository chain is 000–045.
 3. Run `python -m scripts.check_migration_parity` again and require
    `Migration parity OK.` before starting or restarting production services.
 4. Deploy the API and confirm `GET /health` returns HTTP 200.
