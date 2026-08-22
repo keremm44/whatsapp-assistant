@@ -86,7 +86,7 @@ def main() -> None:
             [
                 sys.executable,
                 "-m",
-                "tests.integration.scenario_whatsapp_concurrency",
+                "tests.integration.run_whatsapp_concurrency_stress",
             ]
         )
 
