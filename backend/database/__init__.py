@@ -13,6 +13,7 @@ from types import ModuleType
 
 from . import core
 from . import atomic_customer
+from . import atomic_message_persistence
 from . import messaging
 from . import guarded_outgoing
 from . import whatsapp_delivery
@@ -40,6 +41,7 @@ from . import announcements
 _MODULES = (
     core,
     atomic_customer,
+    atomic_message_persistence,
     messaging,
     guarded_outgoing,
     whatsapp_delivery,
@@ -86,10 +88,10 @@ _SKIP_EXPORTS = {
 
 _EXPORT_TARGETS: dict[str, ModuleType] = {}
 
-# First definition wins. Core comes first for get_supabase/time helpers. The
-# atomic customer identity facade precedes legacy messaging, and the atomic
-# flow-state facade precedes legacy conversations, so runtime callers keep the
-# historical import surface while using transactional database invariants.
+# First definition wins. Core comes first for get_supabase/time helpers. Atomic
+# customer identity and message persistence facades precede legacy messaging,
+# and atomic flow-state precedes legacy conversations, so runtime callers keep
+# the historical import surface while using transactional database invariants.
 for _module in _MODULES:
     for _name, _value in vars(_module).items():
         if _name.startswith("__") or _name in _SKIP_EXPORTS:
