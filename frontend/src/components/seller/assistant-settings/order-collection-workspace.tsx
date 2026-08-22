@@ -40,6 +40,10 @@ import {
   SETTINGS_UNAVAILABLE_TITLE,
   SETTINGS_UNSPECIFIED_LABEL,
 } from "@/lib/seller/assistant-settings-format";
+import {
+  ORDER_NUMBER_REQUIRED_HELP,
+  ORDER_NUMBER_REQUIRED_LABEL,
+} from "@/lib/seller/order-collection-copy";
 import type { SellerSettingsBootstrap } from "@/lib/seller/assistant-settings-server";
 import { cn } from "@/lib/utils/cn";
 
@@ -156,6 +160,9 @@ function OrderSection({
   const [maxQuantity, setMaxQuantity] = React.useState(
     integerInputFromValue(current.maxQuantity),
   );
+  const [orderNumberRequired, setOrderNumberRequired] = React.useState(
+    current.orderNumberRequired,
+  );
   const [imageRequired, setImageRequired] = React.useState(current.imageRequired);
   const [customTextRequired, setCustomTextRequired] = React.useState(
     current.customTextRequired,
@@ -166,6 +173,7 @@ function OrderSection({
   const draft: OrderSettings = {
     minQuantity: minParsed.invalid ? current.minQuantity : minParsed.value,
     maxQuantity: maxParsed.invalid ? current.maxQuantity : maxParsed.value,
+    orderNumberRequired,
     imageRequired,
     customTextRequired,
   };
@@ -231,6 +239,21 @@ function OrderSection({
       </div>
       <div className="space-y-2">
         <BooleanSettingControl
+          legend={ORDER_NUMBER_REQUIRED_LABEL}
+          name="order-number-required"
+          value={orderNumberRequired}
+          help={ORDER_NUMBER_REQUIRED_HELP}
+          disabled={disabled}
+          onChange={setOrderNumberRequired}
+        />
+        {firstIssue(issues, "order_number_required") ? (
+          <FieldMessage tone="error">
+            {firstIssue(issues, "order_number_required")}
+          </FieldMessage>
+        ) : null}
+      </div>
+      <div className="space-y-2">
+        <BooleanSettingControl
           legend={ORDER_IMAGE_REQUIRED_LABEL}
           name="order-image-required"
           value={imageRequired}
@@ -287,6 +310,11 @@ function OrderSection({
               draft: draft.maxQuantity,
             },
             {
+              label: ORDER_NUMBER_REQUIRED_LABEL,
+              current: current.orderNumberRequired,
+              draft: draft.orderNumberRequired,
+            },
+            {
               label: ORDER_IMAGE_REQUIRED_LABEL,
               current: current.imageRequired,
               draft: draft.imageRequired,
@@ -306,18 +334,13 @@ function OrderSection({
 function ProductFieldsCrossLink() {
   return (
     <section aria-labelledby="product-fields-heading">
-      {/* Same contained work sheet as the editable sections, so the
-          page reads as one column of work areas. */}
       <div
         className={cn(
           "space-y-2 rounded-sheet bg-raised shadow-surface border border-boundary/60 px-4 py-5 md:px-6 md:py-6",
           SETTINGS_SHEET_MEASURE,
         )}
       >
-        <h2
-          id="product-fields-heading"
-          className="type-section text-foreground"
-        >
+        <h2 id="product-fields-heading" className="type-section text-foreground">
           {ORDER_PRODUCT_FIELDS_TITLE}
         </h2>
         <p className={cn("type-body text-muted", SETTINGS_FIELD_MEASURE_WIDE)}>
