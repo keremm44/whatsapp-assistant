@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_migration_chain_is_contiguous_000_through_062() -> None:
+def test_migration_chain_is_contiguous_000_through_063() -> None:
     migrations = sorted(Path("migrations").glob("[0-9][0-9][0-9]_*.sql"))
     versions = [path.name[:3] for path in migrations]
-    assert versions == [f"{version:03d}" for version in range(63)]
+    assert versions == [f"{version:03d}" for version in range(64)]
 
 
 def test_023_024_025_files_match_live_names() -> None:
@@ -143,7 +143,12 @@ def test_062_adds_confirmed_change_and_privacy_minimized_ai_usage() -> None:
     sql = path.read_text(encoding="utf-8").lower()
     assert "apply_confirmed_order_custom_text_change" in sql
     assert "order_row.version <> expected_version" in sql
-    assert "source_message_id" in sql
+    assert "order_row.last_source_message_id = source_message_id" in sql
+    assert sql.index("order_row.last_source_message_id = source_message_id") < sql.index(
+        "order_row.version <> expected_version"
+    )
+    assert "'idempotent', true" in sql
+    assert "completed_at = case" in sql
     assert "seller_review_required" in sql
     assert "customer_confirmed_personalization_change" in sql
     assert "conversation_ai_usage_daily" in sql
@@ -151,4 +156,21 @@ def test_062_adds_confirmed_change_and_privacy_minimized_ai_usage() -> None:
     assert "prompt_tokens" in sql and "completion_tokens" in sql and "total_tokens" in sql
     assert "set search_path = pg_catalog, public" in sql
     assert "to service_role" in sql
+    assert "confirmed_changes_ai_usage_v2" in sql
     assert "message content" not in sql
+
+
+def test_063_keeps_zero_debounce_events_final_and_immediate() -> None:
+    path = Path("migrations/063_harden_whatsapp_turn_finalization.sql")
+    assert path.exists()
+    sql = path.read_text(encoding="utf-8").lower()
+    assert "create or replace function public.claim_next_whatsapp_inbound_event" in sql
+    assert "_turn_debounce_seconds" in sql
+    assert "event_debounce_seconds > 0" in sql
+    assert "turn_has_more" in sql
+    assert "earlier.status in ('pending', 'processing')" in sql
+    assert "claim_version = claim_version + 1" in sql
+    assert "for update skip locked" in sql
+    assert "to service_role" in sql
+    assert "'063'" in sql
+    assert "whatsapp_turn_finalization_v1" in sql
