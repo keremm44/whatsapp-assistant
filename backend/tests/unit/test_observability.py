@@ -155,7 +155,7 @@ def test_operational_alert_uses_fingerprint_and_cooldown(monkeypatch) -> None:
         def __exit__(self, *args: Any) -> None:
             return None
 
-    monkeypatch.setattr(observability.sentry_sdk, "push_scope", lambda: ScopeContext())
+    monkeypatch.setattr(observability.sentry_sdk, "new_scope", lambda: ScopeContext())
     monkeypatch.setattr(
         observability.sentry_sdk,
         "capture_message",
