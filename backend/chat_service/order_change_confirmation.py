@@ -33,6 +33,10 @@ _CONFIRM_NO = {
     "yanlis",
 }
 
+_ORDER_PREFIX_RE = re.compile(
+    r"^\s*(?:sipariş|siparis|order)\s*(?:no|numara|numarası|numarasi)?\s*[:#-]?\s*[A-Za-z0-9_-]{3,100}\s*[,;:-]?\s*",
+    re.IGNORECASE,
+)
 _REVISION_PATTERNS = (
     re.compile(
         r"^[\s\"'“”‘’]*(?P<old>.{1,120}?)[\s\"'“”‘’]+(?:değil|degil)[\s\"'“”‘’]+(?P<new>.{1,120}?)[\s\"'“”‘’]+(?:olsun|olacak|yazılsın|yazilsin)[.!?\s]*$",
@@ -57,8 +61,9 @@ def parse_custom_text_revision(message: str) -> dict[str, Any] | None:
     """Parse only explicit old -> new personalization wording; never guess a new value."""
     if not isinstance(message, str) or not message.strip() or len(message) > 500:
         return None
+    candidate = _ORDER_PREFIX_RE.sub("", message.strip(), count=1).strip()
     for pattern in _REVISION_PATTERNS:
-        match = pattern.match(message.strip())
+        match = pattern.match(candidate)
         if match is None:
             continue
         old_text = _normalize_text(match.group("old"))
@@ -82,8 +87,11 @@ def confirmation_decision(message: str) -> str | None:
 
 
 def _order_number_hint(message: str) -> str | None:
-    # Explicit numeric/order tokens only; this is a disambiguation hint, not a source of truth.
-    match = re.search(r"(?:sipariş|siparis|order)\s*(?:no|numara|numarası|numarasi)?\s*[:#-]?\s*([A-Za-z0-9_-]{3,100})", message, re.IGNORECASE)
+    match = re.search(
+        r"(?:sipariş|siparis|order)\s*(?:no|numara|numarası|numarasi)?\s*[:#-]?\s*([A-Za-z0-9_-]{3,100})",
+        message,
+        re.IGNORECASE,
+    )
     return match.group(1).strip() if match else None
 
 
