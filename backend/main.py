@@ -10,9 +10,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from admin_seller_routes import router as admin_seller_router
+from announcements_routes import router as announcements_router
 from chat_service import sohbet_isle
 from conversations_routes import router as conversations_router
 from cursor_queue_routes import router as cursor_queue_router
+from feedback_routes import router as feedback_router
+from orders_routes import router as orders_router
+from returns_routes import router as returns_router
+from seller_core_routes import router as seller_core_router
+from unanswered_routes import router as unanswered_router
 from database import (
     create_seller,
     get_all_sellers,
@@ -75,7 +81,14 @@ if settings.cors_origins:
 
 app.include_router(public_router)
 app.include_router(protected_router)
+# Domain router'ları — protected_routes.py'nin yerini kademeli olarak alır
+app.include_router(seller_core_router)
 app.include_router(conversations_router)
+app.include_router(orders_router)
+app.include_router(returns_router)
+app.include_router(unanswered_router)
+app.include_router(feedback_router)
+app.include_router(announcements_router)
 app.include_router(admin_seller_router)
 app.include_router(cursor_queue_router)
 app.include_router(whatsapp_webhook_router)
