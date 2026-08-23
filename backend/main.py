@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from admin_seller_routes import router as admin_seller_router
 from chat_service import sohbet_isle
+from conversations_routes import router as conversations_router
 from cursor_queue_routes import router as cursor_queue_router
 from database import (
     create_seller,
@@ -74,6 +75,7 @@ if settings.cors_origins:
 
 app.include_router(public_router)
 app.include_router(protected_router)
+app.include_router(conversations_router)
 app.include_router(admin_seller_router)
 app.include_router(cursor_queue_router)
 app.include_router(whatsapp_webhook_router)

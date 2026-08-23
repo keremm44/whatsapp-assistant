@@ -18,6 +18,7 @@ import {
   UNANSWERED_NOT_A_RULE_NOTE,
 } from "@/lib/seller/unanswered-format";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
+import { useToast } from "@/lib/toast/use-toast";
 
 /**
  * The seller-authored answer form — the page's primary action wherever
@@ -66,6 +67,7 @@ export function UnansweredAnswerEditor({
   /** Optional “Vazgeç” affordance for the ANSWERED edit mode. */
   onCancel?: () => void;
 }) {
+  const toast = useToast();
   const [answer, setAnswer] = React.useState(initialAnswer);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
@@ -124,6 +126,7 @@ export function UnansweredAnswerEditor({
       //                        still mounted.
       const mode = gateModeForUnansweredSuccess(onSuccess());
       gateFinished = true;
+      toast.success("Cevap kaydedildi.");
       if (mode === "refresh") {
         gate.finish(token, { refresh: true });
       }

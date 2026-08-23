@@ -1,4 +1,5 @@
 export { Button, buttonVariants } from "./button";
+export { Toaster } from "./toaster";
 export { Input, type InputProps } from "./input";
 export { Label } from "./label";
 export { Separator } from "./separator";

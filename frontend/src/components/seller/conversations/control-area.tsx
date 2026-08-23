@@ -18,6 +18,7 @@ import {
   type ConversationHandoff,
 } from "@/lib/seller/conversations-format";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
+import { useToast } from "@/lib/toast/use-toast";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -54,6 +55,7 @@ export function ConversationControlArea({
   initialControl: ConversationControlBootstrap;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [control, setControl] = React.useState<ConversationControlBootstrap>(
     initialControl,
   );
@@ -182,6 +184,12 @@ export function ConversationControlArea({
           capabilities: result.capabilities,
         },
       });
+      // Başarı toast'u
+      toast.success(
+        handoff.action === "take_over"
+          ? "Konuşmayı devraldınız."
+          : "Konuşma asistana devredildi.",
+      );
       // Refresh the server regions so the queue row's attention
       // marker and ordering stay consistent with the new state.
       router.refresh();
