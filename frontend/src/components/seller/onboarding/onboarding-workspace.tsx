@@ -156,7 +156,7 @@ const StepCard = ({
 }) => (
   <div
     className={`rounded-xl border px-4 py-3 ${
-      active ? "border-primary/50 bg-primary/5" : "border-border/60 bg-card/45"
+      active ? "border-boundary bg-raised" : "border-border/60 bg-card/45"
     }`}
   >
     <div className="flex items-center gap-3">
@@ -275,7 +275,7 @@ export const OnboardingWorkspace = ({ bootstrap }: { bootstrap: OnboardingBootst
           </div>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-primary transition-[width]"
+              className="h-full rounded-full bg-foreground/60 transition-[width]"
               style={{ width: `${completedCount * 10}%` }}
             />
           </div>
