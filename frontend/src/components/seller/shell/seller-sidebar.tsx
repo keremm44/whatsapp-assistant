@@ -7,14 +7,9 @@ import { usePathname } from "next/navigation";
 
 import { sellerNavigation } from "@/config/navigation";
 import { isSellerItemActive } from "@/lib/routes/active-route";
-import {
-  countForSellerHref,
-  formatSidebarCount,
-} from "@/lib/seller/sidebar-summary";
 import { cn } from "@/lib/utils/cn";
 
 import { SellerIcon } from "./icon-map";
-import { useSellerSidebarSummary } from "./use-sidebar-summary";
 
 /** Desktop navigation spine — compact, authored and gently kinetic. */
 export function SellerSidebar() {
@@ -100,8 +95,6 @@ function SectionList({
   onNavigate?: () => void;
   flush?: boolean;
 }) {
-  const summary = useSellerSidebarSummary();
-
   return (
     <ul className="flex flex-col gap-1">
       {sections.map((section, index) => (
@@ -120,7 +113,6 @@ function SectionList({
                 icon={item.icon}
                 label={item.label}
                 isActive={isSellerItemActive(pathname, item.href)}
-                badgeCount={countForSellerHref(summary, item.href)}
                 onNavigate={onNavigate}
               />
             ))}
@@ -146,14 +138,12 @@ const NavRow = ({
   icon,
   label,
   isActive,
-  badgeCount,
   onNavigate,
 }: {
   href: Route;
   icon: React.ComponentProps<typeof SellerIcon>["name"];
   label: string;
   isActive: boolean;
-  badgeCount: number | null;
   onNavigate?: () => void;
 }) => {
   return (
@@ -187,15 +177,7 @@ const NavRow = ({
             )}
           />
         </span>
-        <span className="min-w-0 flex-1 truncate">{label}</span>
-        {badgeCount !== null && badgeCount > 0 ? (
-          <span
-            aria-label={`${badgeCount} açık iş`}
-            className="min-w-5 rounded-full bg-accent-muted px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums text-accent-text"
-          >
-            {formatSidebarCount(badgeCount)}
-          </span>
-        ) : null}
+        <span className="min-w-0 truncate">{label}</span>
       </Link>
     </li>
   );
