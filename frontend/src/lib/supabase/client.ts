@@ -7,11 +7,62 @@
  */
 
 import { createBrowserClient } from "@supabase/ssr";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 import { env } from "@/config/env";
 
+let browserClient: ReturnType<typeof createBrowserClient> | null = null;
+let messagesInsertChannel: RealtimeChannel | null = null;
+const messageInsertListeners = new Set<() => void>();
+
 export const createSupabaseBrowserClient = () => {
-  return createBrowserClient(env.supabaseUrl, env.supabaseAnonKey);
+  if (browserClient === null) {
+    browserClient = createBrowserClient(env.supabaseUrl, env.supabaseAnonKey);
+  }
+  return browserClient;
+};
+
+/**
+ * Subscribe to INSERT events on the canonical `messages` table.
+ *
+ * All seller conversation surfaces share one browser client + one Realtime
+ * channel. Components register lightweight listeners and release them on
+ * unmount; the underlying channel is removed when the last listener leaves.
+ */
+export const subscribeToMessageInserts = (listener: () => void): (() => void) => {
+  messageInsertListeners.add(listener);
+
+  if (messagesInsertChannel === null) {
+    const supabase = createSupabaseBrowserClient();
+    messagesInsertChannel = supabase
+      .channel("seller-conversations-messages")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        () => {
+          for (const currentListener of messageInsertListeners) {
+            currentListener();
+          }
+        },
+      )
+      .subscribe();
+  }
+
+  return () => {
+    messageInsertListeners.delete(listener);
+    if (messageInsertListeners.size > 0 || messagesInsertChannel === null) {
+      return;
+    }
+
+    const supabase = createSupabaseBrowserClient();
+    const channel = messagesInsertChannel;
+    messagesInsertChannel = null;
+    void supabase.removeChannel(channel);
+  };
 };
 
 /**
