@@ -206,7 +206,7 @@ export const OnboardingWorkspace = ({ bootstrap }: { bootstrap: OnboardingBootst
       <div className="rounded-2xl border border-border/70 bg-card/60 p-6">
         <h2 className="text-base font-semibold text-foreground">Kurulum bilgileri okunamadı</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Backend onboarding durumu şu anda doğrulanamadı. Mevcut ayarlar değiştirilmedi.
+          Kurulum durumu şu anda doğrulanamadı. Mevcut ayarlar değiştirilmedi.
         </p>
       </div>
     );
@@ -283,7 +283,10 @@ export const OnboardingWorkspace = ({ bootstrap }: { bootstrap: OnboardingBootst
 
         <div className="space-y-2">
           {status.steps.map((step) => {
-            const stepSchema = schema.steps[step.stepOrder - 1];
+            const stepSchema = schema.steps.find(
+              (candidate) => candidate.stepOrder === step.stepOrder,
+            );
+            if (!stepSchema) return null;
             return (
               <StepCard
                 key={step.id}
@@ -304,8 +307,7 @@ export const OnboardingWorkspace = ({ bootstrap }: { bootstrap: OnboardingBootst
             </p>
             <h2 className="mt-2 text-xl font-semibold text-foreground">10 adım tamamlandı</h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Kurulum verileri backend tarafından tamamlanmış olarak işaretlendi. Sistem durumu:
-              {` ${status.systemStatus}`}.
+              Kurulum verileri sunucu tarafından tamamlanmış olarak işaretlendi. Bundan sonraki erişim ve aktivasyon durumu hesap kurallarına göre belirlenir.
             </p>
           </div>
         ) : currentStep && currentSchema ? (
@@ -316,14 +318,14 @@ export const OnboardingWorkspace = ({ bootstrap }: { bootstrap: OnboardingBootst
               </p>
               <h2 className="mt-2 text-xl font-semibold text-foreground">{currentSchema.title}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Bu adımın alanları backend doğrulama sözleşmesinden oluşturulur. Kaydetme kararı ve sıra kontrolü backend’dedir.
+                Alanlar sunucunun doğrulama sözleşmesinden oluşturulur. Kaydetme kararı ve sıra kontrolü sunucudadır.
               </p>
             </div>
 
             {currentStep.status === "available" ? (
               <div className="rounded-xl border border-border/70 bg-background/35 p-4">
                 <p className="text-sm text-muted-foreground">
-                  Adım hazır. Başlattığınızda backend durumu “devam ediyor” olarak işaretler.
+                  Adım hazır. Başlattığınızda kurulum ilerlemesi kaydedilir.
                 </p>
                 <Button type="button" className="mt-3" disabled={busy} onClick={runStart}>
                   Adımı başlat
@@ -347,7 +349,7 @@ export const OnboardingWorkspace = ({ bootstrap }: { bootstrap: OnboardingBootst
 
             {fields.length === 0 ? (
               <p className="rounded-xl border border-border/70 bg-background/35 p-4 text-sm text-muted-foreground">
-                Bu adım kullanıcıdan ek alan istemiyor; backend’in zorunlu onayları varsa şema güncellendiğinde burada görünür.
+                Bu adım kullanıcıdan ek alan istemiyor. Sunucu sözleşmesinde yeni zorunlu alan oluşursa burada görünür.
               </p>
             ) : null}
 
@@ -368,7 +370,7 @@ export const OnboardingWorkspace = ({ bootstrap }: { bootstrap: OnboardingBootst
           </form>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Aktif onboarding adımı backend durumuyla eşleştirilemedi.
+            Aktif kurulum adımı mevcut kurulum sözleşmesiyle eşleştirilemedi.
           </p>
         )}
       </section>
