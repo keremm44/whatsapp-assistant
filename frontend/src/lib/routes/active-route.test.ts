@@ -100,6 +100,16 @@ test("/seller/order-collection keeps Asistan Ayarları active inside Diğer", ()
   );
 });
 
+test("/seller/onboarding lights Diğer and the Kurulum row only", () => {
+  assert.equal(activeMobileParent("/seller/onboarding"), "Diğer");
+  assert.equal(isSellerItemActive("/seller/onboarding", "/seller/onboarding"), true);
+  assert.equal(
+    isSellerItemActive("/seller/onboarding", "/seller/assistant-settings"),
+    false,
+  );
+  assert.equal(isSellerItemActive("/seller/onboarding", "/seller/settings"), false);
+});
+
 test("/seller/settings lights Diğer and the Ayarlar row only", () => {
   assert.equal(activeMobileParent("/seller/settings"), "Diğer");
   assert.equal(isSellerItemActive("/seller/settings", "/seller/settings"), true);
