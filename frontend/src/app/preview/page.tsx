@@ -10,6 +10,10 @@ import { PageContainer } from "@/components/shared/page-container";
 import { SellerShell } from "@/components/seller/shell/seller-shell";
 import { StatusChip } from "@/components/shared/status-chip";
 import { Surface } from "@/components/shared/surface";
+import { Badge } from "@/components/ui/badge";
+import { NativeSelect, Select, SelectItem } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tooltip } from "@/components/ui/tooltip";
 import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
 
 /**
@@ -201,7 +205,141 @@ export default function PreviewPage() {
           total={mockTasks.length}
           layout="inline"
         />
+
+        {/* ── Yeni UI bileşenleri showcase ─────────────────────── */}
+
+        <section className="space-y-3">
+          <SectionHeading
+            id="preview-badges"
+            title="Badge"
+            description="Genel amaçlı durum etiketleri — ton, boyut ve dot desteğiyle."
+          />
+          <Surface className="px-4 py-5 md:px-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge>Varsayılan</Badge>
+              <Badge tone="primary">Birincil</Badge>
+              <Badge tone="success">Tamamlandı</Badge>
+              <Badge tone="warning">Beklemede</Badge>
+              <Badge tone="destructive">Hata</Badge>
+              <Badge tone="info">Bilgi</Badge>
+              <Badge tone="attention">Dikkat</Badge>
+              <Badge tone="paused">Durduruldu</Badge>
+              <Badge tone="success" dot>3 yeni</Badge>
+              <Badge tone="info" size="lg">Büyük</Badge>
+              <Badge tone="warning" size="sm">Küçük</Badge>
+            </div>
+          </Surface>
+        </section>
+
+        <section className="space-y-3">
+          <SectionHeading
+            id="preview-select"
+            title="Select"
+            description="Design-token uyumlu dropdown — klavye navigasyonu ve ARIA desteğiyle."
+          />
+          <Surface className="px-4 py-5 md:px-5">
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-2">
+                <p className="type-meta text-muted-foreground">Controlled Select</p>
+                <SelectPreview />
+              </div>
+              <div className="space-y-2">
+                <p className="type-meta text-muted-foreground">NativeSelect</p>
+                <NativeSelect defaultValue="">
+                  <option value="" disabled>Seçin…</option>
+                  <option value="a">Seçenek A</option>
+                  <option value="b">Seçenek B</option>
+                  <option value="c">Seçenek C</option>
+                </NativeSelect>
+              </div>
+            </div>
+          </Surface>
+        </section>
+
+        <section className="space-y-3">
+          <SectionHeading
+            id="preview-tabs"
+            title="Tabs"
+            description="Projenin underline tab diliyle uyumlu sekme bileşeni."
+          />
+          <Surface className="px-4 py-5 md:px-5">
+            <TabsPreview />
+          </Surface>
+        </section>
+
+        <section className="space-y-3">
+          <SectionHeading
+            id="preview-tooltip"
+            title="Tooltip"
+            description="Hover ve focus ile açılan kısa açıklama balonu."
+          />
+          <Surface className="px-4 py-5 md:px-5">
+            <div className="flex flex-wrap items-center gap-6">
+              <Tooltip content="Bu bir üst tooltip'tir.">
+                <button
+                  type="button"
+                  className="rounded-control border border-boundary px-3 py-2 type-row-secondary text-foreground hover:bg-elevated"
+                >
+                  Üstte göster
+                </button>
+              </Tooltip>
+              <Tooltip content="Alt tarafta açılır." side="bottom">
+                <button
+                  type="button"
+                  className="rounded-control border border-boundary px-3 py-2 type-row-secondary text-foreground hover:bg-elevated"
+                >
+                  Altta göster
+                </button>
+              </Tooltip>
+              <Tooltip content="Sağda açılır." side="right">
+                <button
+                  type="button"
+                  className="rounded-control border border-boundary px-3 py-2 type-row-secondary text-foreground hover:bg-elevated"
+                >
+                  Sağda göster
+                </button>
+              </Tooltip>
+            </div>
+          </Surface>
+        </section>
+
       </PageContainer>
     </SellerShell>
+  );
+}
+
+/* ── Preview yardımcı bileşenler ──────────────────────────────────────── */
+
+function SelectPreview() {
+  const [value, setValue] = React.useState("");
+  return (
+    <Select value={value} onValueChange={setValue} placeholder="Seçin…">
+      <SelectItem value="a">Seçenek A</SelectItem>
+      <SelectItem value="b">Seçenek B</SelectItem>
+      <SelectItem value="c">Seçenek C — uzun bir metin örneği</SelectItem>
+      <SelectItem value="d" disabled>Devre dışı</SelectItem>
+    </Select>
+  );
+}
+
+function TabsPreview() {
+  return (
+    <Tabs defaultValue="all">
+      <TabsList aria-label="Demo sekmeler">
+        <TabsTrigger value="all">Tümü</TabsTrigger>
+        <TabsTrigger value="active">Aktif</TabsTrigger>
+        <TabsTrigger value="done">Tamamlanan</TabsTrigger>
+        <TabsTrigger value="disabled" disabled>Devre dışı</TabsTrigger>
+      </TabsList>
+      <TabsContent value="all">
+        <p className="type-row-secondary text-muted-foreground">Tüm öğeler burada görünür.</p>
+      </TabsContent>
+      <TabsContent value="active">
+        <p className="type-row-secondary text-muted-foreground">Yalnızca aktif öğeler görünür.</p>
+      </TabsContent>
+      <TabsContent value="done">
+        <p className="type-row-secondary text-muted-foreground">Tamamlanan öğeler burada.</p>
+      </TabsContent>
+    </Tabs>
   );
 }
