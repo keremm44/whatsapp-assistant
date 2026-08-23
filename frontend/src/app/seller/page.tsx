@@ -8,12 +8,15 @@ import { PriorityCard } from "@/components/seller/dashboard/priority-card";
 import { QuietSummary } from "@/components/seller/dashboard/quiet-summary";
 import { SecondaryRow } from "@/components/seller/dashboard/secondary-row";
 import { SectionHeading } from "@/components/seller/dashboard/section-heading";
+import { AnalyticsSection } from "@/components/seller/analytics/analytics-section";
 import { PageContainer } from "@/components/shared/page-container";
 
 import { DashboardFreshness } from "@/components/seller/dashboard/dashboard-freshness";
 import { resolveDashboardTasksFromSession } from "@/lib/seller/dashboard-tasks-server";
+import { resolveAnalyticsFromSession } from "@/lib/seller/analytics-server";
 import { buildDashboardFreshnessSignature } from "@/lib/seller/freshness";
 import type { DashboardTask } from "@/lib/seller/dashboard-tasks";
+import type { AnalyticsPeriod } from "@/lib/seller/analytics-api";
 
 const cardEnterDelay = (index: number) => Math.min(index, 4) * 50;
 
@@ -98,12 +101,26 @@ const cardEnterDelay = (index: number) => Math.min(index, 4) * 50;
  *   always uses the available horizontal space for the
  *   work the backend actually returned.
  */
-export default async function SellerOverviewPage() {
-  const bootstrap = await resolveDashboardTasksFromSession();
+export default async function SellerOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const rawPeriod = params.period;
+  const period: AnalyticsPeriod =
+    rawPeriod === "month" ? "month" : "week";
+
+  // Her iki fetch paralel çalışır — birbirini beklemez.
+  const [bootstrap, analyticsBootstrap] = await Promise.all([
+    resolveDashboardTasksFromSession(),
+    resolveAnalyticsFromSession(period),
+  ]);
 
   if (bootstrap.state !== "ready") {
     return (
       <PageContainer className="py-8 sm:py-10">
+        <AnalyticsSection bootstrap={analyticsBootstrap} period={period} />
         <DashboardHeader total={0} />
         <div className="mt-8">
           <AccessUnavailable compact contextLabel="İş listesi" />
@@ -126,6 +143,7 @@ export default async function SellerOverviewPage() {
 
   return (
     <PageContainer className="py-8 sm:py-10">
+      <AnalyticsSection bootstrap={analyticsBootstrap} period={period} />
       <DashboardHeader
         total={total}
         high={highTasks.length}

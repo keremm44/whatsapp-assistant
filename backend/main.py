@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from admin_seller_routes import router as admin_seller_router
+from analytics_routes import router as analytics_router
 from announcements_routes import router as announcements_router
 from chat_service import sohbet_isle
 from conversations_routes import router as conversations_router
@@ -83,6 +84,7 @@ app.include_router(public_router)
 app.include_router(protected_router)
 # Domain router'ları — protected_routes.py'nin yerini kademeli olarak alır
 app.include_router(seller_core_router)
+app.include_router(analytics_router)
 app.include_router(conversations_router)
 app.include_router(orders_router)
 app.include_router(returns_router)
