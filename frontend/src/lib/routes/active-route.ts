@@ -12,7 +12,7 @@
  *     /seller/order-collection light up /seller/assistant-settings
  *     because they are children of "Asistan Ayarları" in the sidebar IA
  *   - /seller/assistant-settings and its child routes plus
- *     /seller/settings all count as the "Diğer" mobile parent
+ *     /seller/onboarding and /seller/settings all count as the "Diğer" mobile parent
  *   - the "İşler" mobile parent covers orders / returns / paused / unanswered
  *   - the "Konuşmalar" mobile parent covers /seller/conversations
  */
@@ -36,6 +36,7 @@ const DIĞER_HREFS: readonly string[] = [
   "/seller/order-collection",
   "/seller/products",
   "/seller/rules",
+  "/seller/onboarding",
   "/seller/settings",
 ];
 const İŞLER_HREFS: readonly string[] = [

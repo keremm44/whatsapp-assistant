@@ -97,6 +97,11 @@ export const sellerNavigation: NavigationSection[] = [
     title: "Sistem",
     items: [
       {
+        label: "Kurulum",
+        href: "/seller/onboarding",
+        icon: "ClipboardList",
+      },
+      {
         label: "Ayarlar",
         href: "/seller/settings",
         icon: "Settings",
@@ -193,6 +198,11 @@ export const mobileBottomNav: MobileNavItem[] = [
         label: "Asistan Ayarları",
         href: "/seller/assistant-settings",
         icon: "Settings2",
+      },
+      {
+        label: "Kurulum",
+        href: "/seller/onboarding",
+        icon: "ClipboardList",
       },
       {
         label: "Ayarlar",
