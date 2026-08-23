@@ -26,18 +26,9 @@ import {
 import { cn } from "@/lib/utils/cn";
 
 import { SellerIcon } from "./icon-map";
-import { useSellerSidebarSummary } from "./sidebar-summary-provider";
+import { useSellerSidebarSummary } from "./use-sidebar-summary";
 
-const workCount = (summary: SellerSidebarSummary | null): number | null => {
-  if (!summary) return null;
-  return (
-    summary.returnsActionRequired +
-    summary.unansweredOpen +
-    summary.pausedOrTakenOver
-  );
-};
-
-const CountBadge = ({ count }: { count: number | null }) =>
+const WorkCountBadge = ({ count }: { count: number | null }) =>
   count !== null && count > 0 ? (
     <span
       aria-label={`${count} açık iş`}
@@ -47,10 +38,35 @@ const CountBadge = ({ count }: { count: number | null }) =>
     </span>
   ) : null;
 
+const totalWorkCount = (summary: SellerSidebarSummary | null): number | null =>
+  summary
+    ? summary.returnsActionRequired +
+      summary.unansweredOpen +
+      summary.pausedOrTakenOver
+    : null;
+
+/**
+ * Mobile bottom navigation.
+ *
+ * Visible only below the `md` breakpoint. Four primary destinations:
+ * Genel, Konuşmalar, İşler, Diğer. "İşler" and "Diğer" open a Sheet
+ * rather than navigating to a single URL.
+ *
+ * "Instrument": the bar is the SPINE material (the deepest step), so
+ * on mobile the navigation frame reads as the same object it is on
+ * desktop, and the work above it stays the brightest thing on screen.
+ * A strong top boundary separates it from the canvas.
+ *
+ * Active destination is expressed with a cyan top rule + a semibold
+ * label + a brighter interaction-cyan icon. There is deliberately no
+ * large active colour wash, and the state never relies on hue alone
+ * (rule + weight + ink level + aria-current). Safe-area behaviour is
+ * preserved.
+ */
 export function SellerMobileNav() {
   const pathname = usePathname();
   const active = activeMobileParent(pathname);
-  const { summary } = useSellerSidebarSummary();
+  const summary = useSellerSidebarSummary();
 
   return (
     <nav
@@ -61,7 +77,10 @@ export function SellerMobileNav() {
         {mobileBottomNav.map((item) => (
           <li key={item.label} className="contents">
             {item.href ? (
-              <MobileNavLink item={item} isActive={active === item.label} />
+              <MobileNavLink
+                item={item}
+                isActive={active === item.label}
+              />
             ) : (
               <MobileSheetTrigger
                 item={item}
@@ -73,12 +92,19 @@ export function SellerMobileNav() {
           </li>
         ))}
       </ul>
+      {/* Safe area spacer for iOS-style home indicator environments. */}
       <div aria-hidden="true" className="h-[env(safe-area-inset-bottom)]" />
     </nav>
   );
 }
 
-const MobileNavLink = ({ item, isActive }: { item: MobileNavItem; isActive: boolean }) => (
+const MobileNavLink = ({
+  item,
+  isActive,
+}: {
+  item: MobileNavItem;
+  isActive: boolean;
+}) => (
   <Link
     href={(item.href ?? "#") as Route}
     aria-current={isActive ? "page" : undefined}
@@ -90,7 +116,12 @@ const MobileNavLink = ({ item, isActive }: { item: MobileNavItem; isActive: bool
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
     )}
   >
-    {isActive ? <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] bg-primary" /> : null}
+    {isActive ? (
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-[2px] bg-primary"
+      />
+    ) : null}
     <SellerIcon
       name={item.icon}
       size={20}
@@ -114,7 +145,7 @@ const MobileSheetTrigger = ({
 }) => {
   const [open, setOpen] = React.useState(false);
   const sheetEntries = item.sheet ?? [];
-  const triggerCount = item.label === "İşler" ? workCount(summary) : null;
+  const triggerCount = item.label === "İşler" ? totalWorkCount(summary) : null;
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -128,7 +159,12 @@ const MobileSheetTrigger = ({
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
         )}
       >
-        {active ? <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] bg-primary" /> : null}
+        {active ? (
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-[2px] bg-primary"
+          />
+        ) : null}
         <span className="relative">
           <SellerIcon
             name={item.icon}
@@ -138,13 +174,16 @@ const MobileSheetTrigger = ({
           />
           {triggerCount !== null && triggerCount > 0 ? (
             <span className="absolute -right-4 -top-2">
-              <CountBadge count={triggerCount} />
+              <WorkCountBadge count={triggerCount} />
             </span>
           ) : null}
         </span>
         <span>{item.label}</span>
       </SheetTrigger>
-      <SheetContent side="bottom" className="max-h-[80vh] rounded-t-floating bg-overlay">
+      <SheetContent
+        side="bottom"
+        className="max-h-[80vh] rounded-t-floating bg-overlay"
+      >
         <SheetHeader>
           <SheetTitle>{item.label}</SheetTitle>
         </SheetHeader>
@@ -160,19 +199,28 @@ const MobileSheetTrigger = ({
                   aria-current={entryActive ? "page" : undefined}
                   className={cn(
                     "relative flex h-12 min-h-[44px] items-center gap-3 rounded-control pl-4 pr-3 text-[15px] leading-[22px] transition-colors",
+                    // Neutral material + cyan rail (below), never a
+                    // cyan-filled navigation row.
                     entryActive
                       ? "bg-selected font-semibold text-foreground"
                       : "text-foreground hover:bg-elevated",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
                   )}
                 >
-                  {entryActive ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] rounded-l-control bg-primary" /> : null}
+                  {entryActive ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-y-0 left-0 w-[3px] rounded-l-control bg-primary"
+                    />
+                  ) : null}
                   <SellerIcon
                     name={entry.icon}
-                    className={entryActive ? "text-primary" : "text-muted-foreground"}
+                    className={
+                      entryActive ? "text-primary" : "text-muted-foreground"
+                    }
                   />
                   <span className="min-w-0 flex-1 truncate">{entry.label}</span>
-                  <CountBadge count={count} />
+                  <WorkCountBadge count={count} />
                 </Link>
               </li>
             );
