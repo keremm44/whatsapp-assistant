@@ -18,31 +18,39 @@ import {
   isSellerItemActive,
   type MobileParent,
 } from "@/lib/routes/active-route";
+import {
+  countForSellerHref,
+  formatSidebarCount,
+  type SellerSidebarSummary,
+} from "@/lib/seller/sidebar-summary";
 import { cn } from "@/lib/utils/cn";
 
 import { SellerIcon } from "./icon-map";
+import { useSellerSidebarSummary } from "./sidebar-summary-provider";
 
-/**
- * Mobile bottom navigation.
- *
- * Visible only below the `md` breakpoint. Four primary destinations:
- * Genel, Konuşmalar, İşler, Diğer. "İşler" and "Diğer" open a Sheet
- * rather than navigating to a single URL.
- *
- * "Instrument": the bar is the SPINE material (the deepest step), so
- * on mobile the navigation frame reads as the same object it is on
- * desktop, and the work above it stays the brightest thing on screen.
- * A strong top boundary separates it from the canvas.
- *
- * Active destination is expressed with a cyan top rule + a semibold
- * label + a brighter interaction-cyan icon. There is deliberately no
- * large active colour wash, and the state never relies on hue alone
- * (rule + weight + ink level + aria-current). Safe-area behaviour is
- * preserved.
- */
+const workCount = (summary: SellerSidebarSummary | null): number | null => {
+  if (!summary) return null;
+  return (
+    summary.returnsActionRequired +
+    summary.unansweredOpen +
+    summary.pausedOrTakenOver
+  );
+};
+
+const CountBadge = ({ count }: { count: number | null }) =>
+  count !== null && count > 0 ? (
+    <span
+      aria-label={`${count} açık iş`}
+      className="min-w-5 rounded-full bg-accent-muted px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums text-accent-text"
+    >
+      {formatSidebarCount(count)}
+    </span>
+  ) : null;
+
 export function SellerMobileNav() {
   const pathname = usePathname();
   const active = activeMobileParent(pathname);
+  const { summary } = useSellerSidebarSummary();
 
   return (
     <nav
@@ -53,33 +61,24 @@ export function SellerMobileNav() {
         {mobileBottomNav.map((item) => (
           <li key={item.label} className="contents">
             {item.href ? (
-              <MobileNavLink
-                item={item}
-                isActive={active === item.label}
-              />
+              <MobileNavLink item={item} isActive={active === item.label} />
             ) : (
               <MobileSheetTrigger
                 item={item}
                 active={active === item.label}
                 pathname={pathname}
+                summary={summary}
               />
             )}
           </li>
         ))}
       </ul>
-      {/* Safe area spacer for iOS-style home indicator environments. */}
       <div aria-hidden="true" className="h-[env(safe-area-inset-bottom)]" />
     </nav>
   );
 }
 
-const MobileNavLink = ({
-  item,
-  isActive,
-}: {
-  item: MobileNavItem;
-  isActive: boolean;
-}) => (
+const MobileNavLink = ({ item, isActive }: { item: MobileNavItem; isActive: boolean }) => (
   <Link
     href={(item.href ?? "#") as Route}
     aria-current={isActive ? "page" : undefined}
@@ -91,12 +90,7 @@ const MobileNavLink = ({
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
     )}
   >
-    {isActive ? (
-      <span
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-[2px] bg-primary"
-      />
-    ) : null}
+    {isActive ? <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] bg-primary" /> : null}
     <SellerIcon
       name={item.icon}
       size={20}
@@ -111,13 +105,16 @@ const MobileSheetTrigger = ({
   item,
   active,
   pathname,
+  summary,
 }: {
   item: MobileNavItem;
   active: boolean;
   pathname: string | null;
+  summary: SellerSidebarSummary | null;
 }) => {
   const [open, setOpen] = React.useState(false);
   const sheetEntries = item.sheet ?? [];
+  const triggerCount = item.label === "İşler" ? workCount(summary) : null;
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -131,30 +128,30 @@ const MobileSheetTrigger = ({
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
         )}
       >
-        {active ? (
-          <span
-            aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-[2px] bg-primary"
+        {active ? <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] bg-primary" /> : null}
+        <span className="relative">
+          <SellerIcon
+            name={item.icon}
+            size={20}
+            strokeWidth={active ? 2 : 1.75}
+            className={active ? "text-primary" : "text-chrome-foreground/50"}
           />
-        ) : null}
-        <SellerIcon
-          name={item.icon}
-          size={20}
-          strokeWidth={active ? 2 : 1.75}
-          className={active ? "text-primary" : "text-chrome-foreground/50"}
-        />
+          {triggerCount !== null && triggerCount > 0 ? (
+            <span className="absolute -right-4 -top-2">
+              <CountBadge count={triggerCount} />
+            </span>
+          ) : null}
+        </span>
         <span>{item.label}</span>
       </SheetTrigger>
-      <SheetContent
-        side="bottom"
-        className="max-h-[80vh] rounded-t-floating bg-overlay"
-      >
+      <SheetContent side="bottom" className="max-h-[80vh] rounded-t-floating bg-overlay">
         <SheetHeader>
           <SheetTitle>{item.label}</SheetTitle>
         </SheetHeader>
         <ul className="mt-2 flex flex-col">
           {sheetEntries.map((entry) => {
             const entryActive = isSellerItemActive(pathname, entry.href);
+            const count = countForSellerHref(summary, entry.href);
             return (
               <li key={entry.href}>
                 <Link
@@ -163,27 +160,19 @@ const MobileSheetTrigger = ({
                   aria-current={entryActive ? "page" : undefined}
                   className={cn(
                     "relative flex h-12 min-h-[44px] items-center gap-3 rounded-control pl-4 pr-3 text-[15px] leading-[22px] transition-colors",
-                    // Neutral material + cyan rail (below), never a
-                    // cyan-filled navigation row.
                     entryActive
                       ? "bg-selected font-semibold text-foreground"
                       : "text-foreground hover:bg-elevated",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
                   )}
                 >
-                  {entryActive ? (
-                    <span
-                      aria-hidden="true"
-                      className="absolute inset-y-0 left-0 w-[3px] rounded-l-control bg-primary"
-                    />
-                  ) : null}
+                  {entryActive ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] rounded-l-control bg-primary" /> : null}
                   <SellerIcon
                     name={entry.icon}
-                    className={
-                      entryActive ? "text-primary" : "text-muted-foreground"
-                    }
+                    className={entryActive ? "text-primary" : "text-muted-foreground"}
                   />
-                  <span>{entry.label}</span>
+                  <span className="min-w-0 flex-1 truncate">{entry.label}</span>
+                  <CountBadge count={count} />
                 </Link>
               </li>
             );
