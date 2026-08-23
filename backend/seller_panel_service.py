@@ -52,7 +52,6 @@ def _enrich_active_order(order: dict[str, Any] | None, customer_id: int | None) 
     enriched: dict[str, Any] = {**order}
     if customer_id is not None and "customer_id" not in enriched:
         enriched["customer_id"] = customer_id
-    # seller_action_required normalize: mevcut convention ile uyumlu
     if "seller_action_required" not in enriched:
         enriched["seller_action_required"] = status == ORDER_STATUS_SELLER_REVIEW_REQUIRED
     return enriched
@@ -76,7 +75,6 @@ def _enrich_open_unanswered(entries: Any) -> Any:
     enriched_list: list[Any] = []
     for entry in entries:
         if isinstance(entry, dict):
-            # open_unanswered filtre zaten OPEN; frontend primary action için normalize
             if "seller_action_required" not in entry:
                 enriched_list.append({**entry, "seller_action_required": True})
             else:
@@ -91,19 +89,85 @@ def _enrich_conversation_entry(entry: dict[str, Any]) -> dict[str, Any]:
         return entry
     customer = entry.get("customer") if isinstance(entry.get("customer"), dict) else None
     customer_id = customer.get("id") if isinstance(customer, dict) and isinstance(customer.get("id"), int) else None
-    # defensive: try to preserve original but add enrichments
     enriched_entry = dict(entry)
     enriched_entry["active_order"] = _enrich_active_order(entry.get("active_order"), customer_id)
     enriched_entry["active_return_issue"] = _enrich_active_return(entry.get("active_return_issue"), customer_id)
     if "open_unanswered" in entry:
-        # conversation list has singular open_unanswered (object or None), detail has list
         val = entry.get("open_unanswered")
         if isinstance(val, list):
             enriched_entry["open_unanswered"] = _enrich_open_unanswered(val)
         elif isinstance(val, dict):
             enriched_entry["open_unanswered"] = {**val, "seller_action_required": True} if "seller_action_required" not in val else val
-        # else None stays None
     return enriched_entry
+
+
+def _read_ai_context(seller_id: int, customer_id: int) -> dict[str, Any] | None:
+    """Read advisory AI memory and today's counters; never make seller panel availability depend on them."""
+    try:
+        import database
+
+        memory_result = (
+            database.get_supabase()
+            .table("conversation_ai_memories")
+            .select("summary_text,memory_incomplete,updated_at")
+            .eq("seller_id", seller_id)
+            .eq("customer_id", customer_id)
+            .limit(1)
+            .execute()
+        )
+        usage_result = (
+            database.get_supabase()
+            .table("conversation_ai_usage_daily")
+            .select("usage_date,call_count,prompt_tokens,completion_tokens,total_tokens,updated_at")
+            .eq("seller_id", seller_id)
+            .eq("customer_id", customer_id)
+            .order("usage_date", desc=True)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        return None
+
+    memory_row = memory_result.data[0] if memory_result.data else None
+    usage_row = usage_result.data[0] if usage_result.data else None
+    if not isinstance(memory_row, dict) and not isinstance(usage_row, dict):
+        return None
+
+    summary = memory_row.get("summary_text") if isinstance(memory_row, dict) else None
+    if not isinstance(summary, str):
+        summary = ""
+    summary = " ".join(summary.strip().split())[:1200]
+
+    usage: dict[str, Any] | None = None
+    if isinstance(usage_row, dict):
+        numeric_fields = ("call_count", "prompt_tokens", "completion_tokens", "total_tokens")
+        if all(
+            isinstance(usage_row.get(field), int)
+            and not isinstance(usage_row.get(field), bool)
+            and usage_row.get(field) >= 0
+            for field in numeric_fields
+        ):
+            usage = {
+                "date": usage_row.get("usage_date"),
+                "call_count": usage_row["call_count"],
+                "prompt_tokens": usage_row["prompt_tokens"],
+                "completion_tokens": usage_row["completion_tokens"],
+                "total_tokens": usage_row["total_tokens"],
+                "updated_at": usage_row.get("updated_at"),
+            }
+
+    return {
+        "summary": summary or None,
+        "memory_incomplete": (
+            memory_row.get("memory_incomplete") is True
+            if isinstance(memory_row, dict)
+            else False
+        ),
+        "summary_updated_at": (
+            memory_row.get("updated_at") if isinstance(memory_row, dict) else None
+        ),
+        "usage": usage,
+    }
 
 
 def list_conversations(
@@ -175,7 +239,7 @@ def get_conversation_detail(
     active_return_issue = _enrich_active_return(result.get("active_return_issue"), customer_id)
     open_unanswered = _enrich_open_unanswered(result.get("open_unanswered") or [])
 
-    return {
+    payload: dict[str, Any] = {
         "ok": True,
         "customer": result["customer"],
         "conversation_state": result.get("conversation_state"),
@@ -187,6 +251,10 @@ def get_conversation_detail(
         "active_return_issue": active_return_issue,
         "open_unanswered": open_unanswered,
     }
+    ai_context = _read_ai_context(seller_id, customer_id)
+    if ai_context is not None:
+        payload["ai_context"] = ai_context
+    return payload
 
 
 def list_dashboard_tasks(

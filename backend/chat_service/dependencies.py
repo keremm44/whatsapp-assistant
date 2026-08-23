@@ -34,9 +34,9 @@ from database import (
 )
 from database.whatsapp_event_queue import renew_whatsapp_event_claim
 from database.whatsapp_message_bridge import save_whatsapp_pending_outgoing_message
+from order_collection_policy import get_next_collection_step as _order_get_next_collection_step
 from order_service import (
     build_product_selection_question as order_build_product_selection_question,
-    get_next_collection_step as _order_get_next_collection_step,
     get_or_create_order as _order_get_or_create_order,
     get_order as _order_get_order,
     initialize_collection as _order_initialize_collection,
@@ -352,11 +352,7 @@ def _message_id_from_result(result: dict[str, Any]) -> int | None:
     if not isinstance(message, dict):
         return None
     message_id = message.get("id")
-    if (
-        isinstance(message_id, int)
-        and not isinstance(message_id, bool)
-        and message_id > 0
-    ):
+    if isinstance(message_id, int) and not isinstance(message_id, bool) and message_id > 0:
         return message_id
     return None
 
@@ -376,9 +372,7 @@ def save_message(
     expected_control_version: int | None = None,
 ) -> dict[str, Any]:
     """Persist one chat message only while the queue lease is still current."""
-    whatsapp_scope = (
-        current_outgoing_provider() == WHATSAPP_PENDING_OUTGOING_PROVIDER
-    )
+    whatsapp_scope = current_outgoing_provider() == WHATSAPP_PENDING_OUTGOING_PROVIDER
 
     has_source_guard = source_message_id is not None
     has_version_guard = expected_control_version is not None
@@ -389,9 +383,7 @@ def save_message(
         }
 
     if direction == "outgoing" and has_source_guard and has_version_guard:
-        guarded_provider = (
-            WHATSAPP_PENDING_OUTGOING_PROVIDER if whatsapp_scope else provider
-        )
+        guarded_provider = WHATSAPP_PENDING_OUTGOING_PROVIDER if whatsapp_scope else provider
         if whatsapp_scope:
             scoped_source_message_id = current_incoming_message_id()
             if scoped_source_message_id != source_message_id:

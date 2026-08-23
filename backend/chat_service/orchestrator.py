@@ -4,11 +4,305 @@ from typing import Any
 
 from . import content
 from . import dependencies as deps
+from . import order_change_confirmation
 from . import order_helpers
 from . import order_state
 from . import responses
 from . import return_flow
 from .content import OutgoingControlContext
+
+
+def _pending_change_response(
+    *,
+    seller_id: int,
+    customer_id: int,
+    source_message_id: int,
+    state: dict[str, Any],
+    user_message: str,
+    message_type: str,
+    control_context: OutgoingControlContext,
+) -> dict[str, Any] | None:
+    state_data = state.get("state_data") or {}
+    if (
+        state.get("current_state") != "AWAITING_ORDER_CONFIRMATION"
+        or state_data.get("pending_change_kind") != "custom_text"
+    ):
+        return None
+
+    order_id = state_data.get("order_id")
+    expected_version = state_data.get("order_version")
+    old_text = state_data.get("old_text")
+    new_text = state_data.get("new_text")
+    external_order_number = state_data.get("external_order_number")
+    if (
+        not isinstance(order_id, int)
+        or isinstance(order_id, bool)
+        or order_id <= 0
+        or not isinstance(expected_version, int)
+        or isinstance(expected_version, bool)
+        or expected_version <= 0
+        or not isinstance(old_text, str)
+        or not old_text.strip()
+        or not isinstance(new_text, str)
+        or not new_text.strip()
+    ):
+        return responses.stored_no_auto_reply(
+            customer_id=customer_id,
+            incoming_message_id=source_message_id,
+            reason_code="order_change_confirmation_state_invalid",
+            reason_text="Bekleyen kişiselleştirme değişikliği güvenli biçimde doğrulanamadı.",
+            fail_closed=True,
+        )
+
+    # Exact confirmation/cancel words are deterministic state-machine controls.
+    # They do not need an AI call. Only an unrecognized message is classified so
+    # a critical return/complaint can still preempt the pending change flow.
+    decision = order_change_confirmation.confirmation_decision(user_message)
+    classification: dict[str, Any] | None = None
+    if decision is None:
+        classification = deps.classify_intent(user_message or "")
+        if (
+            deps.intent_is_safe(classification)
+            and classification.get("intent") in {"return_request", "complaint"}
+        ):
+            return return_flow.handle_return_review_intent(
+                seller_id=seller_id,
+                customer_id=customer_id,
+                user_message=user_message or "",
+                message_type=message_type,
+                incoming_message_id=source_message_id,
+                intent=str(classification["intent"]),
+                control_context=control_context,
+            )
+
+    ai_confidence = classification.get("confidence") if classification is not None else None
+
+    if decision == "no":
+        transition_result = deps.transition_state(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            to_state="NORMAL",
+            reason_code="user_action",
+            trigger_message_id=source_message_id,
+            state_data={},
+        )
+        if transition_result.get("durum") != "başarılı":
+            return order_helpers._order_flow_error(
+                customer_id=customer_id,
+                incoming_message_id=source_message_id,
+                reason_code="order_flow_transition_failed",
+                message="Değişiklik onayı güvenli biçimde kapatılamadı.",
+            )
+        return responses.outgoing_response(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            response_text="Değişikliği uygulamadım. Mevcut kişiselleştirme bilgisi aynı kaldı.",
+            source="state",
+            control_context=control_context,
+            ai_confidence=ai_confidence,
+        )
+
+    if decision == "yes":
+        applied = order_change_confirmation.apply_confirmed_custom_text_change(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            order_id=order_id,
+            source_message_id=source_message_id,
+            new_text=new_text,
+            expected_version=expected_version,
+        )
+        if applied.get("durum") != "başarılı":
+            return responses.stored_no_auto_reply(
+                customer_id=customer_id,
+                incoming_message_id=source_message_id,
+                reason_code=str(applied.get("reason_code") or "confirmed_change_failed"),
+                reason_text="Sipariş siz onaylarken değişti veya güncelleme güvenli biçimde yapılamadı; satıcı incelemesi gerekiyor.",
+                fail_closed=True,
+            )
+
+        transition_result = deps.transition_state(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            to_state="NORMAL",
+            reason_code="user_action",
+            trigger_message_id=source_message_id,
+            state_data={},
+        )
+        if transition_result.get("durum") != "başarılı":
+            return order_helpers._order_flow_error(
+                customer_id=customer_id,
+                incoming_message_id=source_message_id,
+                reason_code="order_flow_transition_failed",
+                message="Değişiklik kaydedildi fakat onay state'i güvenli biçimde kapatılamadı.",
+            )
+
+        if applied.get("seller_review_required") is True:
+            deps.create_seller_notification(
+                seller_id=seller_id,
+                customer_id=customer_id,
+                notification_type="system",
+                severity="warning",
+                title="Onaylanmış kişiselleştirme değişikliği",
+                message="Müşteri tamamlanmış siparişte kişiselleştirme yazısı değişikliğini onayladı.",
+                related_entity_type="order",
+                related_entity_id=order_id,
+                action_url=f"/seller/orders?order={order_id}",
+            )
+            response_text = (
+                f"Değişikliği onayladınız: “{old_text}” yerine “{new_text}”. "
+                "Bilgi kaydedildi ve üretim açısından satıcı incelemesine bırakıldı."
+            )
+        else:
+            response_text = f"Değişikliği onayladınız: “{old_text}” yerine “{new_text}” olarak kaydettim."
+
+        return responses.outgoing_response(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            response_text=response_text,
+            source="state",
+            control_context=control_context,
+            ai_confidence=ai_confidence,
+        )
+
+    order_label = (
+        f"Sipariş {external_order_number}: "
+        if isinstance(external_order_number, str) and external_order_number.strip()
+        else "Bu sipariş için "
+    )
+    return responses.outgoing_response(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        response_text=(
+            f"{order_label}“{old_text}” yerine “{new_text}” yazılmasını istediğinizi anladım. "
+            "Doğruysa “onaylıyorum”, vazgeçtiyseniz “iptal” yazabilirsiniz."
+        ),
+        source="state",
+        control_context=control_context,
+        ai_confidence=ai_confidence,
+    )
+
+
+def _maybe_start_personalization_change_confirmation(
+    *,
+    seller_id: int,
+    customer_id: int,
+    source_message_id: int,
+    user_message: str,
+    classification: dict[str, Any],
+    control_context: OutgoingControlContext,
+) -> dict[str, Any] | None:
+    turn = classification.get("turn")
+    if (
+        not deps.intent_is_safe(classification)
+        or classification.get("turn_understanding_valid") is not True
+        or not isinstance(turn, dict)
+        or turn.get("correction_requested") is not True
+    ):
+        return None
+
+    proposal = order_change_confirmation.build_custom_text_change_proposal(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        message=user_message,
+    )
+    status = proposal.get("status")
+    if status == "not_explicit":
+        return responses.outgoing_response(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            response_text=(
+                "Değiştirmek istediğiniz bilgiyi kesinleştirebilmem için eski ve yeni yazıyı birlikte belirtin. "
+                "Örneğin: “Elif değil Ayşe olsun.”"
+            ),
+            source="state",
+            control_context=control_context,
+            ai_confidence=classification.get("confidence"),
+        )
+    if status == "order_not_found":
+        return responses.outgoing_response(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            response_text=(
+                "Yazdığınız sipariş numarasıyla değiştirilebilir bir siparişi güvenli biçimde eşleştiremedim. "
+                "Sipariş numaranızı kontrol edip tekrar yazar mısınız?"
+            ),
+            source="state",
+            control_context=control_context,
+            ai_confidence=classification.get("confidence"),
+        )
+    if status == "ambiguous_order":
+        return responses.outgoing_response(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            response_text=(
+                "Birden fazla siparişinizle eşleşebilecek bir değişiklik görüyorum. "
+                "Yanlış siparişi değiştirmemek için sipariş numaranızı da yazar mısınız?"
+            ),
+            source="state",
+            control_context=control_context,
+            ai_confidence=classification.get("confidence"),
+        )
+    if status == "old_value_mismatch":
+        return responses.outgoing_response(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            response_text=(
+                "Belirttiğiniz eski yazı kayıtlı kişiselleştirme bilgisiyle güvenli biçimde eşleşmedi. "
+                "Sipariş numarasıyla birlikte “eski yazı değil yeni yazı olsun” şeklinde tekrar yazar mısınız?"
+            ),
+            source="state",
+            control_context=control_context,
+            ai_confidence=classification.get("confidence"),
+        )
+    if status != "proposal":
+        return responses.stored_no_auto_reply(
+            customer_id=customer_id,
+            incoming_message_id=source_message_id,
+            reason_code="order_change_proposal_unavailable",
+            reason_text="Kişiselleştirme değişikliği güvenli biçimde siparişle eşleştirilemedi.",
+            fail_closed=True,
+        )
+
+    transition_result = deps.transition_state(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        to_state="AWAITING_ORDER_CONFIRMATION",
+        reason_code="user_action",
+        trigger_message_id=source_message_id,
+        state_data={
+            "pending_change_kind": "custom_text",
+            "order_id": proposal["order_id"],
+            "order_version": proposal["order_version"],
+            "external_order_number": proposal.get("external_order_number"),
+            "old_text": proposal["old_text"],
+            "new_text": proposal["new_text"],
+        },
+        expires_in_hours=24,
+    )
+    if transition_result.get("durum") != "başarılı":
+        return order_helpers._order_flow_error(
+            customer_id=customer_id,
+            incoming_message_id=source_message_id,
+            reason_code="order_flow_transition_failed",
+            message="Kişiselleştirme değişikliği onay adımına güvenli biçimde alınamadı.",
+        )
+
+    order_label = (
+        f"Sipariş {proposal.get('external_order_number')}: "
+        if proposal.get("external_order_number")
+        else "Bu sipariş için "
+    )
+    return responses.outgoing_response(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        response_text=(
+            f"{order_label}“{proposal['old_text']}” yerine “{proposal['new_text']}” yazılmasını istediğinizi anladım. "
+            "Bu değişiklik üretim bilgisini etkileyebilir. Doğruysa “onaylıyorum” yazabilirsiniz."
+        ),
+        source="state",
+        control_context=control_context,
+        ai_confidence=classification.get("confidence"),
+    )
 
 
 def sohbet_isle(
@@ -172,6 +466,18 @@ def sohbet_isle(
         return state_result
     state = state_result["state"]
 
+    pending_change_response = _pending_change_response(
+        seller_id=seller_id,
+        customer_id=customer_id,
+        source_message_id=incoming_message_id,
+        state=state,
+        user_message=kullanici_mesaji or "",
+        message_type=message_type,
+        control_context=control_context,
+    )
+    if pending_change_response is not None:
+        return pending_change_response
+
     preclassified: dict[str, Any] | None = None
     current_flow_state = state.get("current_state", "NORMAL")
     if (
@@ -298,6 +604,18 @@ def sohbet_isle(
             intent=intent,
             control_context=control_context,
         )
+
+    if current_flow_state == "NORMAL":
+        change_response = _maybe_start_personalization_change_confirmation(
+            seller_id=seller_id,
+            customer_id=customer_id,
+            source_message_id=incoming_message_id,
+            user_message=kullanici_mesaji or "",
+            classification=classification,
+            control_context=control_context,
+        )
+        if change_response is not None:
+            return change_response
 
     if intent == "order_intent":
         transition_result = deps.transition_state(

@@ -24,6 +24,13 @@ VALID_NOTIFICATION_TYPES = {
     "system",
 }
 
+# App-level semantic aliases must be canonicalized before crossing the
+# persistence boundary. The database CHECK constraint is the final contract and
+# deliberately remains the six stable types above.
+_NOTIFICATION_TYPE_ALIASES = {
+    "order_review": "system",
+}
+
 VALID_NOTIFICATION_SEVERITIES = {
     "info",
     "warning",
@@ -44,7 +51,8 @@ def create_seller_notification(
     expires_at: str | None = None,
 ) -> dict[str, Any]:
     """Satıcı için kalıcı panel bildirimi oluşturur."""
-    if notification_type not in VALID_NOTIFICATION_TYPES:
+    canonical_type = _NOTIFICATION_TYPE_ALIASES.get(notification_type, notification_type)
+    if canonical_type not in VALID_NOTIFICATION_TYPES:
         return {
             "durum": "hata",
             "mesaj": f"Geçersiz bildirim tipi: {notification_type}",
@@ -58,7 +66,7 @@ def create_seller_notification(
     try:
         data: dict[str, Any] = {
             "seller_id": seller_id,
-            "type": notification_type,
+            "type": canonical_type,
             "severity": severity,
             "title": title,
             "message": message,

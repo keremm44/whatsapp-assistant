@@ -104,12 +104,18 @@ class ProductSettingsPatch(StrictModel):
 class OrderSettingsPatch(StrictModel):
     min_quantity: int | None = Field(default=None, ge=1, le=100000)
     max_quantity: int | None = Field(default=None, ge=1, le=100000)
+    order_number_required: bool | None = None
     image_required: bool | None = None
     custom_text_required: bool | None = None
 
     @model_validator(mode="after")
     def required_fields_cannot_be_cleared(self) -> "OrderSettingsPatch":
-        for field_name in ("min_quantity", "image_required", "custom_text_required"):
+        for field_name in (
+            "min_quantity",
+            "order_number_required",
+            "image_required",
+            "custom_text_required",
+        ):
             if field_name in self.model_fields_set and getattr(self, field_name) is None:
                 raise ValueError(f"{field_name} null olamaz.")
         return self

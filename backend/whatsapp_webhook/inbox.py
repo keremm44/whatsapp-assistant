@@ -5,12 +5,14 @@ from typing import Any, Iterable
 from database.whatsapp_event_queue import enqueue_whatsapp_event
 
 from .models import InboundMessageEvent, MessageStatusEvent, WhatsAppEvent
+from .turn_policy import turn_timing
 
 
 MAX_EVENTS_PER_WEBHOOK = 50
 
 
 def _inbound_payload(event: InboundMessageEvent) -> dict[str, Any]:
+    debounce_seconds, max_turn_seconds = turn_timing(event)
     return {
         "message_id": event.message_id,
         "sender_id": event.sender_id,
@@ -19,6 +21,8 @@ def _inbound_payload(event: InboundMessageEvent) -> dict[str, Any]:
         "text": event.text,
         "contact_name": event.contact_name,
         "media_id": event.media_id,
+        "_turn_debounce_seconds": debounce_seconds,
+        "_turn_max_seconds": max_turn_seconds,
     }
 
 

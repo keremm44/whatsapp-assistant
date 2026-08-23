@@ -29,6 +29,7 @@ def sohbet_isle(
     worker_event_id: int | None = None,
     worker_id: str | None = None,
     claim_version: int | None = None,
+    suppress_outgoing: bool = False,
 ) -> dict[str, Any]:
     """Run the historical chat flow inside an explicit request-local transport scope."""
     normalized_provider = transport_context.normalize_outgoing_provider(
@@ -39,6 +40,7 @@ def sohbet_isle(
         worker_event_id=worker_event_id,
         worker_id=worker_id,
         claim_version=claim_version,
+        suppress_outgoing=suppress_outgoing,
     ):
         result = orchestrator.sohbet_isle(
             seller_id=seller_id,
