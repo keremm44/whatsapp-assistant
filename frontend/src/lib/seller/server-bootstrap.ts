@@ -31,7 +31,7 @@
  */
 
 import { ApiError } from "@/lib/api/client";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 import {
   fetchSellerMe,
   SELLER_ME_CONTRACT_ERROR_PREFIX,
@@ -146,22 +146,7 @@ export const pickSellerDisplayName = (
  */
 export const resolveSellerBootstrapFromSession =
   async (): Promise<SellerBootstrap> => {
-    const supabase = await createSupabaseServerClient();
-
-    let accessToken: string | null;
-    try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        return { state: "unavailable" };
-      }
-      accessToken = data.session?.access_token ?? null;
-    } catch {
-      return { state: "unavailable" };
-    }
-
-    if (!accessToken) {
-      return { state: "unavailable" };
-    }
-
-    return resolveSellerBootstrap(accessToken);
+    const session = await resolveSession();
+    if (!session) return { state: "unavailable" };
+    return resolveSellerBootstrap(session.accessToken);
   };

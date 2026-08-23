@@ -4,7 +4,7 @@
 
 import { ApiError } from "@/lib/api/client";
 import { apiFetchWithAccessToken } from "@/lib/api/authenticated";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 import {
   CONVERSATIONS_CONTRACT_ERROR_PREFIX,
   fetchConversationControl,
@@ -238,36 +238,21 @@ export const resolveConversationWorkspace = async (
   };
 };
 
-const resolveAccessTokenFromSession = async (): Promise<string | null> => {
-  const supabase = await createSupabaseServerClient();
-  try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      return null;
-    }
-    return data.session?.access_token ?? null;
-  } catch {
-    return null;
-  }
-};
+
 
 export const resolveConversationListFromSession = async (options?: {
   attentionOnly?: boolean;
   controlState?: ConversationControlState;
 }): Promise<ConversationListBootstrap> => {
-  const accessToken = await resolveAccessTokenFromSession();
-  if (!accessToken) {
-    return { state: "unavailable" };
-  }
-  return resolveConversationList(accessToken, options);
+  const session = await resolveSession();
+  if (!session) return { state: "unavailable" };
+  return resolveConversationList(session.accessToken, options);
 };
 
 export const resolveConversationWorkspaceFromSession = async (
   customerId: number,
 ): Promise<ConversationWorkspaceBootstrap> => {
-  const accessToken = await resolveAccessTokenFromSession();
-  if (!accessToken) {
-    return { state: "unavailable" };
-  }
-  return resolveConversationWorkspace(accessToken, customerId);
+  const session = await resolveSession();
+  if (!session) return { state: "unavailable" };
+  return resolveConversationWorkspace(session.accessToken, customerId);
 };

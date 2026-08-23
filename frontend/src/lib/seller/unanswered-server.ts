@@ -33,7 +33,7 @@ import {
   type UnansweredQuestionDetail,
   type UnansweredView,
 } from "@/lib/seller/unanswered";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 
 export type UnansweredListBootstrap =
   | { state: "ready"; page: UnansweredListPageV2 }
@@ -111,18 +111,7 @@ export const resolveUnansweredDetail = async (
   }
 };
 
-const resolveAccessTokenFromSession = async (): Promise<string | null> => {
-  const supabase = await createSupabaseServerClient();
-  try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      return null;
-    }
-    return data.session?.access_token ?? null;
-  } catch {
-    return null;
-  }
-};
+
 
 /**
  * List resolver gated on the current server session. Returns
@@ -131,11 +120,9 @@ const resolveAccessTokenFromSession = async (): Promise<string | null> => {
 export const resolveUnansweredListFromSession = async (options: {
   view: UnansweredView;
 }): Promise<UnansweredListBootstrap> => {
-  const accessToken = await resolveAccessTokenFromSession();
-  if (!accessToken) {
-    return { state: "unavailable" };
-  }
-  return resolveUnansweredList(accessToken, options);
+  const session = await resolveSession();
+  if (!session) return { state: "unavailable" };
+  return resolveUnansweredList(session.accessToken, options);
 };
 
 /**
@@ -145,9 +132,7 @@ export const resolveUnansweredListFromSession = async (options: {
 export const resolveUnansweredDetailFromSession = async (
   groupId: number,
 ): Promise<UnansweredDetailBootstrap> => {
-  const accessToken = await resolveAccessTokenFromSession();
-  if (!accessToken) {
-    return { state: "unavailable" };
-  }
-  return resolveUnansweredDetail(accessToken, groupId);
+  const session = await resolveSession();
+  if (!session) return { state: "unavailable" };
+  return resolveUnansweredDetail(session.accessToken, groupId);
 };

@@ -10,7 +10,7 @@ import {
   type RuleView,
 } from "@/lib/seller/rules";
 import { activeQueryForView } from "@/lib/seller/rules-format";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 
 export type RulesListBootstrap =
   | { state: "ready"; page: RuleListPage }
@@ -66,11 +66,10 @@ export const resolveRuleList = async (
 export const resolveRuleListFromSession = async (
   view: RuleView,
 ): Promise<RulesListBootstrap> => {
-  const supabase = await createSupabaseServerClient();
   try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error || !data.session?.access_token) return { state: "unavailable" };
-    return resolveRuleList(data.session.access_token, view);
+    const session = await resolveSession();
+    if (!session) return { state: "unavailable" };
+    return resolveRuleList(session.accessToken, view);
   } catch {
     return { state: "unavailable" };
   }

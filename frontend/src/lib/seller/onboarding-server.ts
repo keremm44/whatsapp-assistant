@@ -8,7 +8,7 @@ import {
   type OnboardingSchema,
   type OnboardingStatus,
 } from "@/lib/seller/onboarding";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 
 export type OnboardingBootstrap =
   | { state: "ready"; schema: OnboardingSchema; status: OnboardingStatus }
@@ -41,11 +41,10 @@ export const resolveOnboarding = async (
 };
 
 export const resolveOnboardingFromSession = async (): Promise<OnboardingBootstrap> => {
-  const supabase = await createSupabaseServerClient();
   try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error || !data.session?.access_token) return { state: "unavailable" };
-    return resolveOnboarding(data.session.access_token);
+    const session = await resolveSession();
+    if (!session) return { state: "unavailable" };
+    return resolveOnboarding(session.accessToken);
   } catch {
     return { state: "unavailable" };
   }

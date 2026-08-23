@@ -11,7 +11,7 @@
  */
 
 import { ApiError } from "@/lib/api/client";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 import {
   fetchAnalyticsSummary,
   type AnalyticsMetrics,
@@ -27,17 +27,10 @@ export async function resolveAnalyticsFromSession(
   period: AnalyticsPeriod = "week",
 ): Promise<AnalyticsBootstrap> {
   try {
-    const supabase = await createSupabaseServerClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const session = await resolveSession();
+    if (!session) return { state: "auth_rejected" };
 
-    const accessToken = session?.access_token;
-    if (!accessToken) {
-      return { state: "auth_rejected" };
-    }
-
-    const data = await fetchAnalyticsSummary(accessToken, period);
+    const data = await fetchAnalyticsSummary(session.accessToken, period);
 
     return {
       state: "ready",

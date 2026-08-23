@@ -32,7 +32,7 @@ import { redirect } from "next/navigation";
 
 import { ApiError } from "@/lib/api/client";
 import { fetchAuthMe, type AuthMe } from "@/lib/auth/me";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 
 /**
  * The four explicit resolver states.
@@ -302,65 +302,31 @@ const classifyGetUserError = (error: unknown): SupabaseErrorClass => {
  * logged out by the resolver.
  */
 const resolveServerAccessUncached = async (): Promise<ServerAccess> => {
-  const supabase = await createSupabaseServerClient();
-
-  // Step 1: verify the Supabase user.
+  // Step 1+2: Supabase kullanıcı doğrulama + access token — tek çağrı.
   //
-  // getUser() normally RESOLVES with `{ data: { user: ... }, error }`
-  // — a rejected session is reported via `error`, not via throw.
-  // We must inspect `error` explicitly; treating `data.user === null`
-  // as the only signal would misclassify a Supabase outage as
-  // "unauthenticated" and trigger a signOut / redirect we never want.
-  let getUserResult: Awaited<
-    ReturnType<Awaited<ReturnType<typeof createSupabaseServerClient>>["auth"]["getUser"]>
-  >;
+  // resolveSession() React.cache() ile memoize edilmiştir: aynı RSC
+  // render ağacında birden fazla çağrılsa bile Supabase'e yalnızca
+  // bir kez gidilir. dashboard-tasks, analytics, conversations gibi
+  // tüm server resolver'lar aynı token'ı paylaşır.
+  let session: Awaited<ReturnType<typeof resolveSession>>;
   try {
-    getUserResult = await supabase.auth.getUser();
+    session = await resolveSession();
   } catch {
-    // Real thrown exception from the SDK (network, abort, etc.).
-    // Be conservative: this is almost never an "invalid session"
-    // case — it is a Supabase availability problem.
     return { state: "unavailable" };
   }
 
-  const { data, error: getUserError } = getUserResult;
-
-  if (getUserError) {
-    const kind = classifyGetUserError(getUserError);
-    if (kind === "unauthenticated") {
-      return { state: "unauthenticated" };
-    }
-    return { state: "unavailable" };
-  }
-
-  if (!data || !data.user) {
-    // No error and no user: there is genuinely no session.
+  if (!session) {
+    // null → oturum yok veya Supabase erişilemiyor.
+    // resolveSession içinde hata yutularak null döner; burada
+    // conservative olarak "unauthenticated" yerine "unavailable"
+    // diyemeyiz çünkü "oturum yok" durumu normal bir durumdur.
+    // Session resolver cookie yokluğunu null ile ifade eder.
     return { state: "unauthenticated" };
   }
 
-  // Step 2: read the access token from the live session.
-  let accessToken: string | null = null;
-  try {
-    const { data: sessionData, error: sessionError } =
-      await supabase.auth.getSession();
-    if (sessionError) {
-      // We already verified the user above, so a session lookup
-      // failure here is a real edge case. Treat as unavailable.
-      return { state: "unavailable" };
-    }
-    accessToken = sessionData.session?.access_token ?? null;
-  } catch {
-    return { state: "unavailable" };
-  }
+  const { accessToken } = session;
 
-  if (!accessToken) {
-    // User verified but no session token. This is a real edge case
-    // (e.g. concurrent signOut). Do NOT classify as unauthenticated;
-    // surface as unavailable so we don't sign the user out.
-    return { state: "unavailable" };
-  }
-
-  // Step 3: ask the backend for the application role / status.
+  // Step 3: backend'den uygulama rolü / durumu sorgula.
   let me: AuthMe;
   try {
     me = await fetchAuthMe(accessToken, { cache: "no-store" });
