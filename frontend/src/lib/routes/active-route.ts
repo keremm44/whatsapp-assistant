@@ -7,14 +7,11 @@
  *   - the mobile bottom navigation (seller-mobile-nav.tsx)
  *
  * The rules below match the approved information architecture:
- *   - /seller  lights up ONLY on the exact /seller path
- *   - /seller/products, /seller/rules, /seller/assistant-knowledge and
- *     /seller/order-collection light up /seller/assistant-settings
- *     because they are children of "Asistan Ayarları" in the sidebar IA
- *   - /seller/assistant-settings and its child routes plus
- *     /seller/settings all count as the "Diğer" mobile parent
- *   - the "İşler" mobile parent covers orders / returns / paused / unanswered
- *   - the "Konuşmalar" mobile parent covers /seller/conversations
+ *   - /seller lights up ONLY on the exact /seller path
+ *   - assistant child routes light up /seller/assistant-settings
+ *   - assistant settings, onboarding and settings count as "Diğer"
+ *   - "İşler" covers orders / returns / paused / unanswered
+ *   - "Konuşmalar" covers /seller/conversations
  */
 
 export type MobileParent = "Genel" | "Konuşmalar" | "İşler" | "Diğer";
@@ -22,9 +19,7 @@ export type MobileParent = "Genel" | "Konuşmalar" | "İşler" | "Diğer";
 const EXACT_GENEL = "/seller";
 
 const isPathnameActive = (pathname: string, href: string): boolean => {
-  if (href === EXACT_GENEL) {
-    return pathname === EXACT_GENEL;
-  }
+  if (href === EXACT_GENEL) return pathname === EXACT_GENEL;
   return pathname === href || pathname.startsWith(`${href}/`);
 };
 
@@ -36,6 +31,7 @@ const DIĞER_HREFS: readonly string[] = [
   "/seller/order-collection",
   "/seller/products",
   "/seller/rules",
+  "/seller/onboarding",
   "/seller/settings",
 ];
 const İŞLER_HREFS: readonly string[] = [
@@ -49,12 +45,6 @@ const KONUŞMALAR_HREFS: readonly string[] = ["/seller/conversations"];
 const belongsToPrefix = (pathname: string, href: string): boolean =>
   pathname === href || pathname.startsWith(`${href}/`);
 
-/**
- * Whether a given sidebar href should be the active sidebar destination
- * for the current pathname. Used by the desktop sidebar and the tablet
- * Sheet nav list. The `/seller/assistant-settings` entry stays active
- * for assistant child routes.
- */
 export const isSellerItemActive = (
   pathname: string | null,
   href: string,
@@ -74,10 +64,6 @@ export const isSellerItemActive = (
   return false;
 };
 
-/**
- * Which mobile bottom-nav parent (if any) should be active for the
- * current pathname.
- */
 export const activeMobileParent = (
   pathname: string | null,
 ): MobileParent | null => {
