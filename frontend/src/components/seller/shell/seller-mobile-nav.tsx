@@ -18,32 +18,9 @@ import {
   isSellerItemActive,
   type MobileParent,
 } from "@/lib/routes/active-route";
-import {
-  countForSellerHref,
-  formatSidebarCount,
-  type SellerSidebarSummary,
-} from "@/lib/seller/sidebar-summary";
 import { cn } from "@/lib/utils/cn";
 
 import { SellerIcon } from "./icon-map";
-import { useSellerSidebarSummary } from "./use-sidebar-summary";
-
-const WorkCountBadge = ({ count }: { count: number | null }) =>
-  count !== null && count > 0 ? (
-    <span
-      aria-label={`${count} açık iş`}
-      className="min-w-5 rounded-full bg-accent-muted px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums text-accent-text"
-    >
-      {formatSidebarCount(count)}
-    </span>
-  ) : null;
-
-const totalWorkCount = (summary: SellerSidebarSummary | null): number | null =>
-  summary
-    ? summary.returnsActionRequired +
-      summary.unansweredOpen +
-      summary.pausedOrTakenOver
-    : null;
 
 /**
  * Mobile bottom navigation.
@@ -66,7 +43,6 @@ const totalWorkCount = (summary: SellerSidebarSummary | null): number | null =>
 export function SellerMobileNav() {
   const pathname = usePathname();
   const active = activeMobileParent(pathname);
-  const summary = useSellerSidebarSummary();
 
   return (
     <nav
@@ -86,7 +62,6 @@ export function SellerMobileNav() {
                 item={item}
                 active={active === item.label}
                 pathname={pathname}
-                summary={summary}
               />
             )}
           </li>
@@ -136,16 +111,13 @@ const MobileSheetTrigger = ({
   item,
   active,
   pathname,
-  summary,
 }: {
   item: MobileNavItem;
   active: boolean;
   pathname: string | null;
-  summary: SellerSidebarSummary | null;
 }) => {
   const [open, setOpen] = React.useState(false);
   const sheetEntries = item.sheet ?? [];
-  const triggerCount = item.label === "İşler" ? totalWorkCount(summary) : null;
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -165,19 +137,12 @@ const MobileSheetTrigger = ({
             className="absolute inset-x-0 top-0 h-[2px] bg-primary"
           />
         ) : null}
-        <span className="relative">
-          <SellerIcon
-            name={item.icon}
-            size={20}
-            strokeWidth={active ? 2 : 1.75}
-            className={active ? "text-primary" : "text-chrome-foreground/50"}
-          />
-          {triggerCount !== null && triggerCount > 0 ? (
-            <span className="absolute -right-4 -top-2">
-              <WorkCountBadge count={triggerCount} />
-            </span>
-          ) : null}
-        </span>
+        <SellerIcon
+          name={item.icon}
+          size={20}
+          strokeWidth={active ? 2 : 1.75}
+          className={active ? "text-primary" : "text-chrome-foreground/50"}
+        />
         <span>{item.label}</span>
       </SheetTrigger>
       <SheetContent
@@ -190,7 +155,6 @@ const MobileSheetTrigger = ({
         <ul className="mt-2 flex flex-col">
           {sheetEntries.map((entry) => {
             const entryActive = isSellerItemActive(pathname, entry.href);
-            const count = countForSellerHref(summary, entry.href);
             return (
               <li key={entry.href}>
                 <Link
@@ -219,8 +183,7 @@ const MobileSheetTrigger = ({
                       entryActive ? "text-primary" : "text-muted-foreground"
                     }
                   />
-                  <span className="min-w-0 flex-1 truncate">{entry.label}</span>
-                  <WorkCountBadge count={count} />
+                  <span>{entry.label}</span>
                 </Link>
               </li>
             );
