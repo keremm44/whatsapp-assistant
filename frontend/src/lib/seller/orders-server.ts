@@ -25,7 +25,7 @@ import {
   type OrderListPageV2,
   type OrderView,
 } from "@/lib/seller/orders";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 
 export type OrderListBootstrap =
   | {
@@ -85,18 +85,7 @@ export const resolveOrderList = async (
   }
 };
 
-const resolveAccessTokenFromSession = async (): Promise<string | null> => {
-  const supabase = await createSupabaseServerClient();
-  try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      return null;
-    }
-    return data.session?.access_token ?? null;
-  } catch {
-    return null;
-  }
-};
+
 
 /**
  * List resolver gated on the current server session. Returns
@@ -107,9 +96,7 @@ export const resolveOrderListFromSession = async (options: {
   externalOrderNumber: string | null;
   productId?: number | null;
 }): Promise<OrderListBootstrap> => {
-  const accessToken = await resolveAccessTokenFromSession();
-  if (!accessToken) {
-    return { state: "unavailable" };
-  }
-  return resolveOrderList(accessToken, options);
+  const session = await resolveSession();
+  if (!session) return { state: "unavailable" };
+  return resolveOrderList(session.accessToken, options);
 };

@@ -19,7 +19,7 @@ import { fetchProductList } from "@/lib/seller/products-api";
 import { PRODUCTS_CONTRACT_ERROR_PREFIX } from "@/lib/seller/products";
 import { fetchRuleList } from "@/lib/seller/rules-api";
 import { RULES_CONTRACT_ERROR_PREFIX } from "@/lib/seller/rules";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 
 export type HubSource<T> =
   | { state: "ready"; data: T }
@@ -121,11 +121,10 @@ export const resolveAssistantSettingsHubFromSession =
       rules: { state: "unavailable" },
       settings: { state: "unavailable" },
     };
-    const supabase = await createSupabaseServerClient();
     try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session?.access_token) return unavailable;
-      return resolveAssistantSettingsHub(data.session.access_token);
+      const session = await resolveSession();
+      if (!session) return unavailable;
+      return resolveAssistantSettingsHub(session.accessToken);
     } catch {
       return unavailable;
     }

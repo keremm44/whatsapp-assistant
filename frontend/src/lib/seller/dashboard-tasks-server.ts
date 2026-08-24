@@ -22,7 +22,7 @@
  */
 
 import { ApiError } from "@/lib/api/client";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 import {
   fetchDashboardTasks,
   DASHBOARD_TASKS_CONTRACT_ERROR_PREFIX,
@@ -110,22 +110,7 @@ export const resolveDashboardTasks = async (
  */
 export const resolveDashboardTasksFromSession =
   async (): Promise<DashboardTasksBootstrap> => {
-    const supabase = await createSupabaseServerClient();
-
-    let accessToken: string | null;
-    try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        return { state: "unavailable" };
-      }
-      accessToken = data.session?.access_token ?? null;
-    } catch {
-      return { state: "unavailable" };
-    }
-
-    if (!accessToken) {
-      return { state: "unavailable" };
-    }
-
-    return resolveDashboardTasks(accessToken);
+    const session = await resolveSession();
+    if (!session) return { state: "unavailable" };
+    return resolveDashboardTasks(session.accessToken);
   };

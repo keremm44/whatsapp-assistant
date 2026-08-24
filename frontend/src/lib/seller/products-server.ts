@@ -18,7 +18,7 @@ import {
   type ProductFieldListPage,
   type ProductListPage,
 } from "@/lib/seller/products";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 
 export type ProductsListBootstrap =
   | { state: "ready"; page: ProductListPage }
@@ -97,28 +97,17 @@ export const resolveProductFields = async (
   }
 };
 
-const resolveAccessTokenFromSession = async (): Promise<string | null> => {
-  const supabase = await createSupabaseServerClient();
-  try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) return null;
-    return data.session?.access_token ?? null;
-  } catch {
-    return null;
-  }
-};
-
 export const resolveProductListFromSession =
   async (): Promise<ProductsListBootstrap> => {
-    const accessToken = await resolveAccessTokenFromSession();
-    if (!accessToken) return { state: "unavailable" };
-    return resolveProductList(accessToken);
+    const session = await resolveSession();
+    if (!session) return { state: "unavailable" };
+    return resolveProductList(session.accessToken);
   };
 
 export const resolveProductFieldsFromSession = async (
   productId: number,
 ): Promise<ProductFieldsBootstrap> => {
-  const accessToken = await resolveAccessTokenFromSession();
-  if (!accessToken) return { state: "unavailable" };
-  return resolveProductFields(accessToken, productId);
+  const session = await resolveSession();
+  if (!session) return { state: "unavailable" };
+  return resolveProductFields(session.accessToken, productId);
 };
