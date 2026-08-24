@@ -14,7 +14,7 @@ import {
   type SellerSettings,
 } from "@/lib/seller/assistant-settings";
 import { fetchSellerSettings } from "@/lib/seller/assistant-settings-api";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 
 export type SellerSettingsBootstrap =
   | { state: "ready"; settings: SellerSettings }
@@ -73,13 +73,10 @@ export const resolveSellerSettings = async (
 
 export const resolveSellerSettingsFromSession =
   async (): Promise<SellerSettingsBootstrap> => {
-    const supabase = await createSupabaseServerClient();
     try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session?.access_token) {
-        return { state: "unavailable" };
-      }
-      return resolveSellerSettings(data.session.access_token);
+      const session = await resolveSession();
+      if (!session) return { state: "unavailable" };
+      return resolveSellerSettings(session.accessToken);
     } catch {
       return { state: "unavailable" };
     }

@@ -29,7 +29,7 @@ import {
   type ReturnRequestDetail,
   type ReturnView,
 } from "@/lib/seller/returns";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 
 export type ReturnListBootstrap =
   | { state: "ready"; page: ReturnListPageV2 }
@@ -113,18 +113,7 @@ export const resolveReturnDetail = async (
   }
 };
 
-const resolveAccessTokenFromSession = async (): Promise<string | null> => {
-  const supabase = await createSupabaseServerClient();
-  try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      return null;
-    }
-    return data.session?.access_token ?? null;
-  } catch {
-    return null;
-  }
-};
+
 
 /**
  * List resolver gated on the current server session. Returns
@@ -135,11 +124,9 @@ export const resolveReturnListFromSession = async (options: {
   externalOrderNumber: string | null;
   issueType: ReturnIssueType | null;
 }): Promise<ReturnListBootstrap> => {
-  const accessToken = await resolveAccessTokenFromSession();
-  if (!accessToken) {
-    return { state: "unavailable" };
-  }
-  return resolveReturnList(accessToken, options);
+  const session = await resolveSession();
+  if (!session) return { state: "unavailable" };
+  return resolveReturnList(session.accessToken, options);
 };
 
 /**
@@ -149,9 +136,7 @@ export const resolveReturnListFromSession = async (options: {
 export const resolveReturnDetailFromSession = async (
   requestId: number,
 ): Promise<ReturnDetailBootstrap> => {
-  const accessToken = await resolveAccessTokenFromSession();
-  if (!accessToken) {
-    return { state: "unavailable" };
-  }
-  return resolveReturnDetail(accessToken, requestId);
+  const session = await resolveSession();
+  if (!session) return { state: "unavailable" };
+  return resolveReturnDetail(session.accessToken, requestId);
 };
