@@ -6,7 +6,14 @@ import sys
 from types import ModuleType
 from typing import Any
 
+from ai_quality_runtime import install_chat_classifier_quality
+
 from . import dependencies
+
+# Keep the historical dependency seam while installing the audited classifier
+# quality layer before orchestration modules capture/use those collaborators.
+install_chat_classifier_quality(dependencies)
+
 from . import content
 from . import responses
 from . import return_flow
