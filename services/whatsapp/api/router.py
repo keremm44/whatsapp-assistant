@@ -20,7 +20,7 @@ from api.seller.announcements import build_router as build_seller_announcements_
 from api.seller.conversations import ROUTE_PATHS as CONVERSATION_ROUTE_PATHS
 from api.seller.conversations import router as conversations_router
 from api.seller.dashboard import ROUTE_PATHS as DASHBOARD_ROUTE_PATHS
-from api.seller.dashboard import build_router as build_dashboard_router
+from api.seller.dashboard import router as dashboard_router
 from api.seller.feedback import ROUTE_PATHS as SELLER_FEEDBACK_ROUTE_PATHS
 from api.seller.feedback import build_router as build_seller_feedback_router
 from api.seller.onboarding import ROUTE_PATHS as ONBOARDING_ROUTE_PATHS
@@ -67,7 +67,7 @@ for source_router in (
     products_router,
     onboarding_router,
     conversations_router,
-    build_dashboard_router(legacy_protected_router),
+    dashboard_router,
     build_admin_applications_router(legacy_protected_router),
     build_admin_sellers_router(legacy_protected_router),
     build_orders_router(legacy_protected_router),
