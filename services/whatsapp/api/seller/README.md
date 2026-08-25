@@ -10,10 +10,10 @@ Current ownership modules:
 - `onboarding.py`: WhatsApp onboarding — native handlers extracted
 - `conversations.py`: conversation list/detail, media and ownership control — native handlers extracted
 - `dashboard.py`: dashboard tasks and sidebar summary — native handlers extracted
-- `orders.py`: orders and dynamic order-field definitions
+- `orders.py`: orders and dynamic order-field definitions — native handlers extracted
 - `returns.py`: return/issue requests and return settings — native handlers extracted
 - `unanswered.py`: unanswered-question work queue — native handlers extracted
 - `feedback.py`: seller feedback — native handlers extracted
 - `announcements.py`: seller announcements — native handlers extracted
 
-Domains not yet extracted continue to reuse their original legacy `APIRoute`/handler objects. Extracted domains are registered from their native routers, with focused unit tests patching the new module seams directly. The legacy account/settings/product/onboarding/conversation/dashboard/return/unanswered/feedback/announcement definitions remain temporarily in `protected_routes.py` only as compatibility copies; `api.router` does not use those legacy route objects anymore.
+All seller route ownership modules now provide native handlers. `protected_routes.py` remains only as a temporary compatibility/golden source for legacy tests while the final cleanup migrates those test harnesses and removes duplicate definitions. Production `api.router` no longer composes seller routes from legacy `APIRoute` objects.
