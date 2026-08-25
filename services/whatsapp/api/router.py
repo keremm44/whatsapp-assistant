@@ -8,13 +8,13 @@ from api.auth import build_router as build_auth_router
 from api.admin.announcements import ROUTE_PATHS as ADMIN_ANNOUNCEMENT_ROUTE_PATHS
 from api.admin.announcements import router as admin_announcements_router
 from api.admin.applications import ROUTE_PATHS as ADMIN_APPLICATION_ROUTE_PATHS
-from api.admin.applications import build_router as build_admin_applications_router
+from api.admin.applications import router as admin_applications_router
 from api.admin.feedback import ROUTE_PATHS as ADMIN_FEEDBACK_ROUTE_PATHS
 from api.admin.feedback import router as admin_feedback_router
 from api.admin.sellers import ROUTE_PATHS as ADMIN_SELLER_ROUTE_PATHS
-from api.admin.sellers import build_router as build_admin_sellers_router
+from api.admin.sellers import router as admin_sellers_router
 from api.seller.account import ROUTE_PATHS as SELLER_ACCOUNT_ROUTE_PATHS
-from api.seller.account import build_router as build_seller_account_router
+from api.seller.account import router as seller_account_router
 from api.seller.announcements import ROUTE_PATHS as SELLER_ANNOUNCEMENT_ROUTE_PATHS
 from api.seller.announcements import router as seller_announcements_router
 from api.seller.conversations import ROUTE_PATHS as CONVERSATION_ROUTE_PATHS
@@ -62,14 +62,14 @@ router = APIRouter()
 # domain implementations are extracted incrementally.
 for source_router in (
     build_auth_router(legacy_protected_router),
-    build_seller_account_router(legacy_protected_router),
+    seller_account_router,
     settings_router,
     products_router,
     onboarding_router,
     conversations_router,
     dashboard_router,
-    build_admin_applications_router(legacy_protected_router),
-    build_admin_sellers_router(legacy_protected_router),
+    admin_applications_router,
+    admin_sellers_router,
     build_orders_router(legacy_protected_router),
     build_returns_router(legacy_protected_router),
     build_unanswered_router(legacy_protected_router),
