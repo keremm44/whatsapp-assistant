@@ -29,6 +29,8 @@ from api.seller.products import ROUTE_PATHS as PRODUCT_ROUTE_PATHS
 from api.seller.products import router as products_router
 from api.seller.settings import ROUTE_PATHS as SETTINGS_ROUTE_PATHS
 from api.seller.settings import router as settings_router
+from api.seller.unanswered import ROUTE_PATHS as UNANSWERED_ROUTE_PATHS
+from api.seller.unanswered import router as unanswered_router
 from protected_routes import router as legacy_protected_router
 
 
@@ -46,6 +48,7 @@ EXTRACTED_PATHS = (
     | SELLER_ACCOUNT_ROUTE_PATHS
     | ADMIN_APPLICATION_ROUTE_PATHS
     | ADMIN_SELLER_ROUTE_PATHS
+    | UNANSWERED_ROUTE_PATHS
 )
 
 
@@ -119,6 +122,7 @@ def test_extracted_routes_use_domain_handler_objects() -> None:
         **_route_endpoints(seller_account_router),
         **_route_endpoints(admin_applications_router),
         **_route_endpoints(admin_sellers_router),
+        **_route_endpoints(unanswered_router),
     }
     composed_endpoints = _route_endpoints(api_router, include_paths=EXTRACTED_PATHS)
     legacy_endpoints = _route_endpoints(
