@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-import protected_routes
+import api.seller.returns as return_routes
 from main import app
 
 
@@ -27,7 +27,7 @@ def seller_context(seller_id: int = 11, profile_id: int = 7) -> Any:
 
 @pytest.fixture
 def client() -> TestClient:
-    app.dependency_overrides[protected_routes.require_seller] = lambda: seller_context()
+    app.dependency_overrides[return_routes.require_seller] = lambda: seller_context()
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -81,7 +81,7 @@ def test_return_issue_list_uses_authenticated_seller(
         captured.update(kwargs)
         return {"durum": "başarılı", "toplam": 1, "requests": [request_record()]}
 
-    monkeypatch.setattr(protected_routes, "list_seller_return_issue_requests", fake_list)
+    monkeypatch.setattr(return_routes, "list_seller_return_issue_requests", fake_list)
 
     response = client.get(
         "/seller/return-issue-requests?view=action_required&customer_id=22"
@@ -92,6 +92,44 @@ def test_return_issue_list_uses_authenticated_seller(
     assert captured["seller_id"] == 11
     assert captured["view"] == "action_required"
     assert response.json()["requests"][0]["id"] == 41
+
+
+def test_return_issue_v2_uses_native_service_and_preserves_envelope(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_list_v2(seller_id: int, **kwargs: Any) -> dict[str, Any]:
+        captured["seller_id"] = seller_id
+        captured.update(kwargs)
+        return {
+            "ok": True,
+            "items": [],
+            "has_more": False,
+            "next_cursor": None,
+        }
+
+    monkeypatch.setattr(return_routes, "list_returns_v2", fake_list_v2)
+    response = client.get(
+        "/seller/return-issue-requests/v2?view=handled&limit=5"
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [],
+        "has_more": False,
+        "next_cursor": None,
+    }
+    assert captured == {
+        "seller_id": 11,
+        "view": "handled",
+        "customer_id": None,
+        "issue_type": None,
+        "external_order_number": None,
+        "limit": 5,
+        "cursor": None,
+    }
 
 
 def test_return_issue_list_validation(client: TestClient) -> None:
@@ -115,7 +153,7 @@ def test_return_issue_list_order_number_search_contract(
             "requests": [request_record()],
         }
 
-    monkeypatch.setattr(protected_routes, "list_seller_return_issue_requests", fake_list)
+    monkeypatch.setattr(return_routes, "list_seller_return_issue_requests", fake_list)
 
     response = client.get(
         "/seller/return-issue-requests?external_order_number=TR-1001"
@@ -150,7 +188,7 @@ def test_return_issue_list_exposes_customer_phone(
             ],
         }
 
-    monkeypatch.setattr(protected_routes, "list_seller_return_issue_requests", fake_list)
+    monkeypatch.setattr(return_routes, "list_seller_return_issue_requests", fake_list)
 
     response = client.get("/seller/return-issue-requests")
 
@@ -165,7 +203,7 @@ def test_return_issue_list_service_unavailable_is_503(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        protected_routes,
+        return_routes,
         "list_seller_return_issue_requests",
         lambda *args, **kwargs: {
             "durum": "hata",
@@ -181,7 +219,7 @@ def test_return_issue_detail_success(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        protected_routes,
+        return_routes,
         "get_seller_return_issue_request_detail",
         lambda seller_id, request_id: {
             "durum": "başarılı",
@@ -202,12 +240,59 @@ def test_return_issue_detail_success(
     assert "media_url" not in body["evidence"][0]
 
 
+def test_return_issue_evidence_page_uses_native_service(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_evidence(
+        seller_id: int,
+        request_id: int,
+        *,
+        limit: int,
+        offset: int,
+    ) -> dict[str, Any]:
+        captured.update(
+            seller_id=seller_id,
+            request_id=request_id,
+            limit=limit,
+            offset=offset,
+        )
+        return {
+            "durum": "başarılı",
+            "evidence": [{"id": 8, "message_id": 103, "created_at": "now"}],
+            "limit": limit,
+            "offset": offset,
+            "has_more": False,
+        }
+
+    monkeypatch.setattr(
+        return_routes,
+        "list_seller_return_issue_evidence",
+        fake_evidence,
+    )
+
+    response = client.get(
+        "/seller/return-issue-requests/41/evidence?limit=2&offset=1"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["has_more"] is False
+    assert captured == {
+        "seller_id": 11,
+        "request_id": 41,
+        "limit": 2,
+        "offset": 1,
+    }
+
+
 def test_return_issue_detail_other_tenant_is_404(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        protected_routes,
+        return_routes,
         "get_seller_return_issue_request_detail",
         lambda *args: {
             "durum": "hata",
@@ -245,7 +330,7 @@ def test_mark_handled_uses_auth_profile_not_client_actor(
             "request": request_record(status="HANDLED", version=4),
         }
 
-    monkeypatch.setattr(protected_routes, "mark_seller_return_issue_handled", fake_mark)
+    monkeypatch.setattr(return_routes, "mark_seller_return_issue_handled", fake_mark)
 
     response = client.post(
         "/seller/return-issue-requests/41/actions",
@@ -298,7 +383,7 @@ def test_return_issue_action_stale_version_is_409(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        protected_routes,
+        return_routes,
         "mark_seller_return_issue_handled",
         lambda *args, **kwargs: {
             "durum": "hata",
@@ -335,7 +420,7 @@ def test_return_issue_settings_returns_all_canonical_rows(
         ]
     ]
     monkeypatch.setattr(
-        protected_routes,
+        return_routes,
         "get_seller_return_issue_settings",
         lambda seller_id: {"durum": "başarılı", "settings": settings},
     )
@@ -376,7 +461,7 @@ def test_return_issue_setting_patch_success(
             },
         }
 
-    monkeypatch.setattr(protected_routes, "update_seller_return_issue_setting", fake_update)
+    monkeypatch.setattr(return_routes, "update_seller_return_issue_setting", fake_update)
 
     response = client.patch(
         "/seller/return-issue-settings/DAMAGED_ITEM",
@@ -423,7 +508,7 @@ def test_return_issue_setting_patch_stale_is_409(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        protected_routes,
+        return_routes,
         "update_seller_return_issue_setting",
         lambda *args, **kwargs: {
             "durum": "hata",
