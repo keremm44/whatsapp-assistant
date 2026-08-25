@@ -1,10 +1,65 @@
 import "server-only";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { fetchAdminFeedback, fetchAdminFeedbackDetail, type AdminFeedback, type AdminFeedbackPage } from "./feedback-api";
-import type { AdminFeedbackCategory, AdminFeedbackStatus } from "./feedback-format";
-export type AdminFeedbackListBootstrap={state:"ready";page:AdminFeedbackPage}|{state:"unavailable"};
-export type AdminFeedbackDetailBootstrap={state:"ready";feedback:AdminFeedback}|{state:"not_found"}|{state:"unavailable"};
-const access=async()=>{try{const s=await createSupabaseServerClient();const x=await s.auth.getSession();return x.error?null:x.data.session?.access_token??null}catch{return null}};
-const code=(e:unknown)=>e&&typeof e==="object"&&"status" in e?(e as {status?:unknown}).status:0;
-export const resolveAdminFeedbackList=async(i:{status?:AdminFeedbackStatus;category?:AdminFeedbackCategory}):Promise<AdminFeedbackListBootstrap>=>{const t=await access();if(!t)return{state:"unavailable"};try{return{state:"ready",page:await fetchAdminFeedback(t,{...i,limit:30,offset:0})}}catch{return{state:"unavailable"}}};
-export const resolveAdminFeedbackDetail=async(id:number):Promise<AdminFeedbackDetailBootstrap>=>{const t=await access();if(!t)return{state:"unavailable"};try{return{state:"ready",feedback:await fetchAdminFeedbackDetail(t,id)}}catch(e){return code(e)===404?{state:"not_found"}:{state:"unavailable"}}};
+import { resolveSession } from "@/lib/supabase/session";
+import {
+  fetchAdminFeedback,
+  fetchAdminFeedbackDetail,
+  type AdminFeedback,
+  type AdminFeedbackPage,
+} from "./feedback-api";
+import type {
+  AdminFeedbackCategory,
+  AdminFeedbackStatus,
+} from "./feedback-format";
+
+export type AdminFeedbackListBootstrap =
+  | { state: "ready"; page: AdminFeedbackPage }
+  | { state: "unavailable" };
+
+export type AdminFeedbackDetailBootstrap =
+  | { state: "ready"; feedback: AdminFeedback }
+  | { state: "not_found" }
+  | { state: "unavailable" };
+
+const httpStatus = (e: unknown): number => {
+  if (e && typeof e === "object" && "status" in e) {
+    return (e as { status?: number }).status ?? 0;
+  }
+  return 0;
+};
+
+export const resolveAdminFeedbackList = async (input: {
+  status?: AdminFeedbackStatus;
+  category?: AdminFeedbackCategory;
+}): Promise<AdminFeedbackListBootstrap> => {
+  const session = await resolveSession();
+  if (!session) return { state: "unavailable" };
+  try {
+    return {
+      state: "ready",
+      page: await fetchAdminFeedback(session.accessToken, {
+        ...input,
+        limit: 30,
+        offset: 0,
+      }),
+    };
+  } catch {
+    return { state: "unavailable" };
+  }
+};
+
+export const resolveAdminFeedbackDetail = async (
+  id: number,
+): Promise<AdminFeedbackDetailBootstrap> => {
+  const session = await resolveSession();
+  if (!session) return { state: "unavailable" };
+  try {
+    return {
+      state: "ready",
+      feedback: await fetchAdminFeedbackDetail(session.accessToken, id),
+    };
+  } catch (e) {
+    return httpStatus(e) === 404
+      ? { state: "not_found" }
+      : { state: "unavailable" };
+  }
+};

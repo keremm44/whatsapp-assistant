@@ -1,1 +1,18 @@
-import"server-only";import{createSupabaseServerClient}from"@/lib/supabase/server";import{fetchAdminApplications,type AdminApplication}from"./applications-api";export const resolveAdminApplications=async(status?:AdminApplication["status"] )=>{try{const s=await createSupabaseServerClient();const x=await s.auth.getSession();if(!x.data.session?.access_token)return{state:"unavailable" as const};return{state:"ready" as const,data:await fetchAdminApplications(x.data.session.access_token,status)}}catch{return{state:"unavailable" as const}}};
+import "server-only";
+import { resolveSession } from "@/lib/supabase/session";
+import { fetchAdminApplications, type AdminApplication } from "./applications-api";
+
+export const resolveAdminApplications = async (
+  status?: AdminApplication["status"],
+) => {
+  try {
+    const session = await resolveSession();
+    if (!session) return { state: "unavailable" as const };
+    return {
+      state: "ready" as const,
+      data: await fetchAdminApplications(session.accessToken, status),
+    };
+  } catch {
+    return { state: "unavailable" as const };
+  }
+};

@@ -1,1 +1,80 @@
-"use client";import{useState,useTransition}from"react";import{useRouter}from"next/navigation";import{Button}from"@/components/ui/button";import{Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle}from"@/components/ui/dialog";import{getBrowserAccessToken}from"@/lib/supabase/client";import{activateAdminSeller,type AdminSeller}from"@/lib/admin/sellers-api";export function SellerActivation({seller}:{seller:AdminSeller}){const r=useRouter(),[open,setOpen]=useState(false),[pending,start]=useTransition(),[msg,setMsg]=useState<string|null>(null);if(!(seller.systemStatus==="admin_review_pending"&&seller.onboardingCompleted))return null;const activate=async()=>{setMsg(null);const t=await getBrowserAccessToken();if(!t){setMsg("Oturum bilgisi alınamadı.");return}try{await activateAdminSeller(t,seller.id);setOpen(false);start(()=>r.refresh())}catch{setMsg("Mağaza şu anda aktifleştirilemedi. Kurulum durumunu kontrol edip tekrar deneyin.")}};return <><Button type="button" size="md" onClick={()=>setOpen(true)}>Mağazayı aktifleştir</Button><Dialog open={open} onOpenChange={setOpen}><DialogContent><DialogHeader><DialogTitle>Mağaza aktivasyonu</DialogTitle><DialogDescription>Kurulumun tamamlandığını ve mağazanın aktif kullanıma geçeceğini onaylayın.</DialogDescription></DialogHeader>{msg?<p role="alert" className="type-row-secondary text-destructive">{msg}</p>:null}<div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={()=>setOpen(false)} disabled={pending}>İptal</Button><Button type="button" onClick={activate} disabled={pending}>{pending?"Aktifleştiriliyor…":"Mağazayı aktifleştir"}</Button></div></DialogContent></Dialog></>}
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { getBrowserAccessToken } from "@/lib/supabase/client";
+import { activateAdminSeller, type AdminSeller } from "@/lib/admin/sellers-api";
+import { useToast } from "@/lib/toast/use-toast";
+
+export function SellerActivation({ seller }: { seller: AdminSeller }) {
+  const r = useRouter();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<string | null>(null);
+
+  if (!(seller.systemStatus === "admin_review_pending" && seller.onboardingCompleted))
+    return null;
+
+  const activate = async () => {
+    setMsg(null);
+    const t = await getBrowserAccessToken();
+    if (!t) {
+      setMsg("Oturum bilgisi alınamadı.");
+      return;
+    }
+    try {
+      await activateAdminSeller(t, seller.id);
+      setOpen(false);
+      toast.success("Mağaza başarıyla aktifleştirildi.");
+      start(() => r.refresh());
+    } catch {
+      setMsg("Mağaza şu anda aktifleştirilemedi. Kurulum durumunu kontrol edip tekrar deneyin.");
+    }
+  };
+
+  return (
+    <>
+      <Button type="button" size="md" onClick={() => setOpen(true)}>
+        Mağazayı aktifleştir
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mağaza aktivasyonu</DialogTitle>
+            <DialogDescription>
+              Kurulumun tamamlandığını ve mağazanın aktif kullanıma geçeceğini onaylayın.
+            </DialogDescription>
+          </DialogHeader>
+          {msg ? (
+            <p role="alert" className="type-row-secondary text-destructive">
+              {msg}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setOpen(false)}
+              disabled={pending}
+            >
+              İptal
+            </Button>
+            <Button type="button" onClick={activate} disabled={pending}>
+              {pending ? "Aktifleştiriliyor…" : "Mağazayı aktifleştir"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

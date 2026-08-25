@@ -2,6 +2,7 @@ import * as React from "react";
 import { CircleAlert } from "lucide-react";
 
 import { PageContainer } from "@/components/shared/page-container";
+import { Toaster } from "@/components/ui/toaster";
 import type { AssistantStatusNotice } from "@/lib/seller/assistant-status";
 
 import { SellerMobileNav } from "./seller-mobile-nav";
@@ -96,6 +97,7 @@ export function SellerShell({
         </div>
       </div>
       <SellerMobileNav />
+      <Toaster />
     </div>
   );
 }

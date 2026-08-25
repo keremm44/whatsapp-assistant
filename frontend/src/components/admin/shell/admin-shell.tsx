@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { Toaster } from "@/components/ui/toaster";
 import { AdminSidebar } from "./admin-sidebar";
 import { AdminTopbar } from "./admin-topbar";
 
@@ -31,6 +32,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <main className="flex-1">{children}</main>
         </div>
       </div>
+      <Toaster />
     </div>
   );
 }

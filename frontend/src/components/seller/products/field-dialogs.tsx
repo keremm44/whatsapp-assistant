@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/lib/toast/use-toast";
 import { ApiError } from "@/lib/api/client";
 import {
   buildCreateFieldPayload,
@@ -60,6 +61,7 @@ export function FieldCreateDialog({
   nextSortOrder: number;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const { host, setHost } = usePortalHost();
   const [open, setOpen] = React.useState(false);
   const [label, setLabel] = React.useState("");
@@ -120,6 +122,7 @@ export function FieldCreateDialog({
       if (controller.signal.aborted) return;
       reset();
       setOpen(false);
+      toast.success("Alan eklendi.");
       router.refresh();
     } catch (caught) {
       if (controller.signal.aborted) return;

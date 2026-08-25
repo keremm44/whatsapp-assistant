@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveSession } from "@/lib/supabase/session";
 
 import {
   resolveAdminOverview,
@@ -17,11 +17,10 @@ const unavailable = (): AdminOverviewSnapshot => ({
 /** Server-side admin overview bootstrap, gated by the same session the admin
  * layout just verified. Backend endpoints remain the source of every count. */
 export const resolveAdminOverviewFromSession = async (): Promise<AdminOverviewSnapshot> => {
-  const supabase = await createSupabaseServerClient();
   try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error || !data.session?.access_token) return unavailable();
-    return resolveAdminOverview(data.session.access_token);
+    const session = await resolveSession();
+    if (!session) return unavailable();
+    return resolveAdminOverview(session.accessToken);
   } catch {
     return unavailable();
   }

@@ -26,6 +26,7 @@ import {
 } from "@/lib/seller/unanswered-format";
 import type { RecordMutationGate } from "@/components/shared/use-record-mutation-gate";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
+import { useToast } from "@/lib/toast/use-toast";
 
 /**
  * The deliberate dismiss flow — SECONDARY wherever the answer is the
@@ -109,6 +110,7 @@ function DismissDialogBody({
   onClose: () => void;
   portalContainer: Element | DocumentFragment | null;
 }) {
+  const toast = useToast();
   const [note, setNote] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
@@ -159,6 +161,7 @@ function DismissDialogBody({
       // unmounts with the workspace's navigation.
       const mode = gateModeForUnansweredSuccess(onSuccess());
       gateFinished = true;
+      toast.success("Soru geçici olarak kapatıldı.");
       if (mode === "refresh") {
         gate.finish(token, { refresh: true });
       }
