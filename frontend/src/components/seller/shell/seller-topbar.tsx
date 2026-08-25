@@ -20,20 +20,12 @@ import { SidebarSections } from "./seller-sidebar";
 const TOPBAR_OPEN_REGION = 72;
 const TOPBAR_DIRECTION_THRESHOLD = 10;
 
-/**
- * Topbar — a slim workspace rail that gets out of the way while reading.
- *
- * Downward scrolling past the opening region slides the rail above the
- * viewport; upward scrolling, returning near the top, route changes, or
- * keyboard focus reveal it. A small direction threshold filters trackpad
- * jitter so tiny reversals do not repeatedly toggle the rail. Movement is
- * transform-only, and reduced-motion users get an instant state change.
- */
 export function SellerTopbar({
   storeName,
+  activeProducts,
 }: {
-  /** Seller-facing store / business name returned by GET /seller/me. */
   storeName: string;
+  activeProducts: readonly string[];
 }) {
   const pathname = usePathname();
   const [isHidden, setIsHidden] = React.useState(false);
@@ -114,9 +106,6 @@ export function SellerTopbar({
       onFocusCapture={() => setIsHidden(false)}
       className={cn(
         "sticky top-0 border-b border-divider bg-canvas",
-        // Sheet overlay/content use z-20/z-30. While a topbar drawer owns
-        // focus the header steps below it; otherwise it keeps the normal
-        // z-50 scroll-content protection.
         isDrawerOpen ? "z-10" : "z-50",
         "transition-[transform,opacity,box-shadow] duration-200 ease-out will-change-transform motion-reduce:transition-none",
         isHidden
@@ -125,7 +114,7 @@ export function SellerTopbar({
       )}
     >
       <div className="flex h-14 items-center gap-2 px-4 sm:gap-3 sm:px-6">
-        <TabletNavSheet />
+        <TabletNavSheet activeProducts={activeProducts} />
         <p
           className="min-w-0 truncate type-row-primary text-foreground"
           title={storeName}
@@ -147,7 +136,11 @@ export function SellerTopbar({
   );
 }
 
-const TabletNavSheet = () => {
+const TabletNavSheet = ({
+  activeProducts,
+}: {
+  activeProducts: readonly string[];
+}) => {
   const [open, setOpen] = React.useState(false);
   const pathname = usePathname();
 
@@ -189,6 +182,7 @@ const TabletNavSheet = () => {
         >
           <SidebarSections
             pathname={pathname}
+            activeProducts={activeProducts}
             onNavigate={() => setOpen(false)}
           />
         </nav>
