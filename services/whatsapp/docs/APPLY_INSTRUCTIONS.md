@@ -2,14 +2,14 @@
 
 ## Ortam
 
-1. `backend/.env.example` dosyasını `backend/.env` olarak kopyala.
+1. `services/whatsapp/.env.example` dosyasını `services/whatsapp/.env` olarak kopyala.
 2. Supabase URL, service key ve gerekiyorsa sınıflandırıcı anahtarını doldur.
 3. `.env` dosyasını Git veya ZIP içine ekleme.
 
 ## Çalıştırma
 
 ```powershell
-cd C:\Projeler\whatsapp-asistan\backend
+cd C:\Projeler\whatsapp-asistan\services\whatsapp
 .\venv\Scripts\Activate.ps1
 python -m uvicorn main:app --reload
 ```
@@ -21,7 +21,7 @@ ile hedef Supabase projesindeki `public.schema_migrations` kaydının **birebir*
 eşleştiğini doğrula:
 
 ```powershell
-cd backend
+cd services/whatsapp
 python -m scripts.check_migration_parity
 ```
 
@@ -48,7 +48,7 @@ ORDER BY version;
 - `schema_migrations` içinde kayıtlı bir sürümü yeniden uygulama.
 - Eksik migrationları **artan numara sırasıyla** uygula; aradaki sürümü atlama.
 - Repo ve hedef DB aynı sürüm zincirindeyse migration uygulama.
-- Bu branch için mevcut tam zincir `000`–`057`'dir.
+- Mevcut tam repository zinciri `000`–`063`'tür.
 - Migration uygulamasından sonra `python -m scripts.check_migration_parity`
   tekrar çalışmalı ve `Migration parity OK.` dönmelidir.
 
