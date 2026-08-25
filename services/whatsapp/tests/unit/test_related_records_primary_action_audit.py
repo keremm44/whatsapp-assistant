@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+import api.seller.returns as return_routes
 import api.seller.unanswered as unanswered_routes
 import seller_panel_service
 import unanswered_question_service
@@ -352,11 +353,11 @@ def test_return_relationships_already_sufficient(monkeypatch) -> None:
     from fastapi.testclient import TestClient
     from main import app
     context = type("Ctx", (), {"auth_user_id": "a", "email": "e", "role": "seller", "profile_status": "active", "seller_id": 11, "profile": {"id": 7}, "claims": {}})()
-    app.dependency_overrides[protected_routes.require_seller] = lambda: context
+    app.dependency_overrides[return_routes.require_seller] = lambda: context
     client = TestClient(app)
 
     monkeypatch.setattr(
-        protected_routes,
+        return_routes,
         "list_seller_return_issue_requests",
         lambda seller_id, **kw: {
             "durum": "başarılı",
