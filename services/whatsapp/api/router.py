@@ -30,7 +30,7 @@ from api.seller.orders import build_router as build_orders_router
 from api.seller.products import ROUTE_PATHS as PRODUCT_ROUTE_PATHS
 from api.seller.products import router as products_router
 from api.seller.returns import ROUTE_PATHS as RETURN_ROUTE_PATHS
-from api.seller.returns import build_router as build_returns_router
+from api.seller.returns import router as returns_router
 from api.seller.settings import ROUTE_PATHS as SETTINGS_ROUTE_PATHS
 from api.seller.settings import router as settings_router
 from api.seller.unanswered import ROUTE_PATHS as UNANSWERED_ROUTE_PATHS
@@ -71,7 +71,7 @@ for source_router in (
     admin_applications_router,
     admin_sellers_router,
     build_orders_router(legacy_protected_router),
-    build_returns_router(legacy_protected_router),
+    returns_router,
     unanswered_router,
     seller_feedback_router,
     admin_feedback_router,
