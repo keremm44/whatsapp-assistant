@@ -38,6 +38,7 @@ from . import seller_panel
 from . import seller_summary
 from . import feedback
 from . import announcements
+from . import entitlements
 
 
 _MODULES = (
@@ -68,6 +69,7 @@ _MODULES = (
     seller_summary,
     feedback,
     announcements,
+    entitlements,
 )
 
 # Imported implementation helpers that were never part of the old module API.
