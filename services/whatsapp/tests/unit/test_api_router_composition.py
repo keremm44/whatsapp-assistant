@@ -25,6 +25,8 @@ from api.seller.feedback import ROUTE_PATHS as SELLER_FEEDBACK_ROUTE_PATHS
 from api.seller.feedback import router as seller_feedback_router
 from api.seller.onboarding import ROUTE_PATHS as ONBOARDING_ROUTE_PATHS
 from api.seller.onboarding import router as onboarding_router
+from api.seller.orders import ROUTE_PATHS as ORDER_ROUTE_PATHS
+from api.seller.orders import router as orders_router
 from api.seller.products import ROUTE_PATHS as PRODUCT_ROUTE_PATHS
 from api.seller.products import router as products_router
 from api.seller.returns import ROUTE_PATHS as RETURN_ROUTE_PATHS
@@ -50,6 +52,7 @@ EXTRACTED_PATHS = (
     | SELLER_ACCOUNT_ROUTE_PATHS
     | ADMIN_APPLICATION_ROUTE_PATHS
     | ADMIN_SELLER_ROUTE_PATHS
+    | ORDER_ROUTE_PATHS
     | RETURN_ROUTE_PATHS
     | UNANSWERED_ROUTE_PATHS
 )
@@ -125,6 +128,7 @@ def test_extracted_routes_use_domain_handler_objects() -> None:
         **_route_endpoints(seller_account_router),
         **_route_endpoints(admin_applications_router),
         **_route_endpoints(admin_sellers_router),
+        **_route_endpoints(orders_router),
         **_route_endpoints(returns_router),
         **_route_endpoints(unanswered_router),
     }
