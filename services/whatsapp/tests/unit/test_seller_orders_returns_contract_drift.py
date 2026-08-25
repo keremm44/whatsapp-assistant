@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-import protected_routes
-import return_issue_service
+import api.seller.orders as order_routes
+import api.seller.returns as return_routes
 
 
 CONTRACT_PATH = (
@@ -105,7 +105,7 @@ def test_orders_shared_contract_matches_backend_routes(
     context = SimpleNamespace(seller_id=11)
 
     monkeypatch.setattr(
-        protected_routes,
+        order_routes,
         "list_seller_orders",
         lambda *args, **kwargs: {
             "durum": "başarılı",
@@ -114,7 +114,7 @@ def test_orders_shared_contract_matches_backend_routes(
         },
     )
 
-    list_response = protected_routes.seller_orders(
+    list_response = order_routes.seller_orders(
         view="all",
         status_filter=None,
         product_id=None,
@@ -128,7 +128,7 @@ def test_orders_shared_contract_matches_backend_routes(
     assert list_response == contract["list_response"]
 
     monkeypatch.setattr(
-        protected_routes,
+        order_routes,
         "get_order_with_fields",
         lambda seller_id, order_id: {
             "durum": "başarılı",
@@ -137,42 +137,28 @@ def test_orders_shared_contract_matches_backend_routes(
         },
     )
 
-    detail_response = protected_routes.seller_order_detail(41, context=context)
+    detail_response = order_routes.seller_order_detail(41, context=context)
     assert detail_response == contract["detail_response"]
 
 
-def test_returns_shared_contract_matches_backend_service_and_routes(
+def test_returns_shared_contract_matches_backend_routes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     contract = _load_contract()["returns"]
     context = SimpleNamespace(seller_id=11)
 
+    list_payload = contract["list_response"]
     monkeypatch.setattr(
-        return_issue_service,
-        "list_return_issue_requests",
+        return_routes,
+        "list_seller_return_issue_requests",
         lambda *args, **kwargs: {
             "durum": "başarılı",
-            "toplam": 1,
-            "requests": [_quantity_request()],
-        },
-    )
-    monkeypatch.setattr(
-        return_issue_service,
-        "get_customers_by_ids",
-        lambda seller_id, customer_ids: {
-            "durum": "başarılı",
-            "customers": [
-                {
-                    "id": 22,
-                    "seller_id": 11,
-                    "whatsapp_number": "+905321112233",
-                    "name": "Elif Yılmaz",
-                }
-            ],
+            "toplam": list_payload["toplam"],
+            "requests": list_payload["requests"],
         },
     )
 
-    list_response = protected_routes.seller_return_issue_requests(
+    list_response = return_routes.seller_return_issue_requests(
         view="action_required",
         customer_id=None,
         issue_type=None,
@@ -181,27 +167,25 @@ def test_returns_shared_contract_matches_backend_service_and_routes(
         offset=0,
         context=context,
     )
-    assert list_response == contract["list_response"]
+    assert list_response == list_payload
 
+    detail_payload = contract["detail_response"]
     monkeypatch.setattr(
-        return_issue_service,
-        "get_return_issue_request_detail",
+        return_routes,
+        "get_seller_return_issue_request_detail",
         lambda seller_id, request_id: {
             "durum": "başarılı",
-            "request": _quantity_request(),
-            "customer": {
-                "id": 22,
-                "seller_id": 11,
-                "whatsapp_number": "+905321112233",
-                "name": "Elif Yılmaz",
-            },
-            "order": None,
-            "evidence": [],
+            "request": detail_payload["request"],
+            "customer": detail_payload["customer"],
+            "order": detail_payload["order"],
+            "evidence": detail_payload["evidence"],
+            "evidence_has_more": detail_payload.get("evidence_has_more", False),
+            "missing_fields": detail_payload.get("missing_fields", []),
         },
     )
 
-    detail_response = protected_routes.seller_return_issue_request_detail(
+    detail_response = return_routes.seller_return_issue_request_detail(
         51,
         context=context,
     )
-    assert detail_response == contract["detail_response"]
+    assert detail_response == detail_payload
