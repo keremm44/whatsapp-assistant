@@ -6,8 +6,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from api.router import router
 from auth_service import AuthContext, require_seller
-from protected_routes import router
 
 
 app = FastAPI()
@@ -57,7 +57,7 @@ def presented_result() -> dict:
 
 def test_get_control_uses_authenticated_seller_scope() -> None:
     with patch(
-        "protected_routes.read_conversation_control",
+        "api.seller.conversations.read_conversation_control",
         return_value=presented_result(),
     ) as mocked:
         response = client.get("/seller/conversations/22/control")
@@ -78,7 +78,7 @@ def test_control_endpoint_requires_authentication() -> None:
 def test_post_uses_profile_actor_and_trims_reason_note() -> None:
     result = {**presented_result(), "action": "take_over", "changed": True}
     with patch(
-        "protected_routes.mutate_conversation_control",
+        "api.seller.conversations.mutate_conversation_control",
         return_value=result,
     ) as mocked:
         response = client.post(
@@ -159,7 +159,7 @@ def test_post_validates_action_version_and_note(body: dict) -> None:
 
 def test_conflict_uses_safe_structured_contract() -> None:
     with patch(
-        "protected_routes.mutate_conversation_control",
+        "api.seller.conversations.mutate_conversation_control",
         return_value={
             "ok": False,
             "kind": "conflict",
@@ -180,7 +180,7 @@ def test_conflict_uses_safe_structured_contract() -> None:
 
 def test_not_found_does_not_reveal_other_tenant() -> None:
     with patch(
-        "protected_routes.read_conversation_control",
+        "api.seller.conversations.read_conversation_control",
         return_value={
             "ok": False,
             "kind": "not_found",
@@ -199,7 +199,7 @@ def test_not_found_does_not_reveal_other_tenant() -> None:
 def test_history_default_and_explicit_limit() -> None:
     result = {"ok": True, "customer_id": 22, "history": []}
     with patch(
-        "protected_routes.read_conversation_control_history",
+        "api.seller.conversations.read_conversation_control_history",
         return_value=result,
     ) as mocked:
         first = client.get("/seller/conversations/22/control-history")

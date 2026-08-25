@@ -12,8 +12,8 @@ from pydantic import ValidationError
 import chat_service
 import database
 import seller_settings_service as service
+from api.router import router
 from auth_service import AuthContext, require_seller
-from protected_routes import router
 from rule_security import RULE_MAX_IDENTICAL_CHAR_RUN
 from tests.unit.test_chat_conversation_control import ChatHarness, classification
 
@@ -290,7 +290,7 @@ def test_route_maps_invalid_rule_text_to_422_before_service() -> None:
     app.dependency_overrides[require_seller] = lambda: context
     client = TestClient(app)
 
-    with patch("protected_routes.create_seller_rule") as mocked:
+    with patch("api.seller.settings.create_seller_rule") as mocked:
         response = client.post(
             "/seller/rules",
             json={"trigger_text": "Kargo\u0000", "response_text": "Yarın çıkar"},

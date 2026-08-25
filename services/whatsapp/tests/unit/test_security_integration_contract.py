@@ -5,10 +5,11 @@ from typing import Any, Callable
 import pytest
 from fastapi.testclient import TestClient
 
+import api.admin.applications as application_routes
+import api.seller.orders as order_routes
 import api.seller.returns as return_routes
 import api.seller.unanswered as unanswered_routes
 import auth_service
-import protected_routes
 from auth_service import AuthContext
 from main import app
 
@@ -73,7 +74,7 @@ def test_seller_cannot_reach_admin_route_through_real_role_gate(
 ) -> None:
     _set_authenticated_context(_seller_context())
     monkeypatch.setattr(
-        protected_routes,
+        application_routes,
         "get_seller_applications",
         _must_not_run("get_seller_applications"),
     )
@@ -90,7 +91,7 @@ def test_admin_cannot_reach_seller_route_through_real_role_gate(
 ) -> None:
     _set_authenticated_context(_admin_context())
     monkeypatch.setattr(
-        protected_routes,
+        order_routes,
         "list_seller_orders",
         _must_not_run("list_seller_orders"),
     )

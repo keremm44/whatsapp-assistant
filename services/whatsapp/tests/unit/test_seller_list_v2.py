@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 import cursor_queue_repository as repository
 import seller_list_v2_service as service
+from api.router import router
 from auth_service import (
     AuthContext,
     get_current_auth_context,
@@ -19,7 +20,6 @@ from pagination import (
     decode_seller_list_cursor,
     encode_seller_list_cursor,
 )
-from protected_routes import router
 
 
 app = FastAPI()
@@ -313,7 +313,7 @@ def test_orders_v2_is_not_the_id_detail_route() -> None:
     # /seller/orders/v2 exact match; /seller/orders/{order_id} int bekler.
     # V2 route tam eşleşmeyle çalışıyorsa v2 envelope döner; detail route
     # olsaydı farklı shape / hata dönerdi.
-    with patch("protected_routes.list_orders_v2") as mocked:
+    with patch("api.seller.orders.list_orders_v2") as mocked:
         mocked.return_value = {
             "ok": True,
             "items": [],
