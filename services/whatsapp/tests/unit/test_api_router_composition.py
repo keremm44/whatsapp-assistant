@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections import Counter
 
 from api.router import PARTITIONED_PATHS, router as api_router
+from api.seller.onboarding import ROUTE_PATHS as ONBOARDING_ROUTE_PATHS
+from api.seller.onboarding import router as onboarding_router
 from api.seller.products import ROUTE_PATHS as PRODUCT_ROUTE_PATHS
 from api.seller.products import router as products_router
 from api.seller.settings import ROUTE_PATHS as SETTINGS_ROUTE_PATHS
@@ -10,7 +12,7 @@ from api.seller.settings import router as settings_router
 from protected_routes import router as legacy_protected_router
 
 
-EXTRACTED_PATHS = SETTINGS_ROUTE_PATHS | PRODUCT_ROUTE_PATHS
+EXTRACTED_PATHS = SETTINGS_ROUTE_PATHS | PRODUCT_ROUTE_PATHS | ONBOARDING_ROUTE_PATHS
 
 
 def _route_signatures(router) -> Counter[tuple[str, tuple[str, ...], int | None]]:
@@ -72,6 +74,7 @@ def test_extracted_routes_use_domain_handler_objects() -> None:
     native_endpoints = {
         **_route_endpoints(settings_router),
         **_route_endpoints(products_router),
+        **_route_endpoints(onboarding_router),
     }
     composed_endpoints = _route_endpoints(api_router, include_paths=EXTRACTED_PATHS)
     legacy_endpoints = _route_endpoints(
