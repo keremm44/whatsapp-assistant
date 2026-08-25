@@ -37,13 +37,13 @@
 
 Eklenen altyapı:
 
-- `backend/pagination.py`: `encode_seller_list_cursor` / `decode_seller_list_cursor`
+- `services/whatsapp/pagination.py`: `encode_seller_list_cursor` / `decode_seller_list_cursor`
   (payload `{v, s, q, f, p}`; prod'da `PAGINATION_CURSOR_SECRET` yoksa fail-closed).
-- `backend/seller_list_v2_service.py`: 4 endpoint'in service katmanı; güvenli
+- `services/whatsapp/seller_list_v2_service.py`: 4 endpoint'in service katmanı; güvenli
   projection'larla (`columns` parametresi, `select("*")` yok).
 - `contracts/seller-lists-v2.json`: v2 contract; frontend drift testi
   `seller-lists-v2-contract-drift.test.ts`.
-- `PAGINATION_CURSOR_SECRET` → `backend/.env.example` + `render.yaml` (web service).
+- `PAGINATION_CURSOR_SECRET` → `services/whatsapp/.env.example` + `render.yaml` (web service).
 - Ön-mevcut test kırıklıkları giderildi: migration chain testi (`000..041`)
   ve action-count cache'i test sızıntısı (autouse cache reset fixture'ı).
 
