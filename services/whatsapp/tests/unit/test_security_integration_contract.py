@@ -5,6 +5,7 @@ from typing import Any, Callable
 import pytest
 from fastapi.testclient import TestClient
 
+import api.seller.unanswered as unanswered_routes
 import auth_service
 import protected_routes
 from auth_service import AuthContext
@@ -185,7 +186,7 @@ def test_unanswered_mutation_is_scoped_to_authenticated_tenant(
             }
         raise AssertionError("Cross-tenant request unexpectedly used seller 11")
 
-    monkeypatch.setattr(protected_routes, "set_seller_answer", fake_set_answer)
+    monkeypatch.setattr(unanswered_routes, "set_seller_answer", fake_set_answer)
 
     response = client.post(
         "/seller/unanswered-questions/61/actions",
@@ -237,7 +238,7 @@ def test_unanswered_stale_version_maps_to_409_with_real_seller_gate(
     _set_authenticated_context(_seller_context(seller_id=11, profile_id=7))
 
     monkeypatch.setattr(
-        protected_routes,
+        unanswered_routes,
         "set_seller_answer",
         lambda *args, **kwargs: {
             "durum": "hata",

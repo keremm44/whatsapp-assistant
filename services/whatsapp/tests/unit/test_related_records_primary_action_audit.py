@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+import api.seller.unanswered as unanswered_routes
 import seller_panel_service
 import unanswered_question_service
 import protected_routes
@@ -283,11 +284,11 @@ def test_unanswered_detail_and_action_enrich_seller_action_required(monkeypatch)
     from fastapi.testclient import TestClient
     from main import app
     context = type("Ctx", (), {"auth_user_id": "a", "email": "e", "role": "seller", "profile_status": "active", "seller_id": 11, "profile": {"id": 7}, "claims": {}})()
-    app.dependency_overrides[protected_routes.require_seller] = lambda: context
+    app.dependency_overrides[unanswered_routes.require_seller] = lambda: context
     client = TestClient(app)
 
     monkeypatch.setattr(
-        protected_routes,
+        unanswered_routes,
         "get_seller_unanswered_question_detail",
         lambda seller_id, gid: {
             "durum": "başarılı",
@@ -317,7 +318,7 @@ def test_unanswered_detail_and_action_enrich_seller_action_required(monkeypatch)
     assert resp.json()["occurrences"][0]["customer_id"] == 22
 
     monkeypatch.setattr(
-        protected_routes,
+        unanswered_routes,
         "set_seller_answer",
         lambda *args, **kwargs: {
             "durum": "başarılı",
