@@ -6,12 +6,14 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from api.admin.feedback import router as admin_feedback_router
+from api.seller.feedback import router as seller_feedback_router
 from auth_service import AuthContext, require_admin, require_seller
-from protected_routes import router
 
 
 app = FastAPI()
-app.include_router(router)
+app.include_router(seller_feedback_router)
+app.include_router(admin_feedback_router)
 client = TestClient(app)
 
 SELLER_CONTEXT = AuthContext(
@@ -44,7 +46,7 @@ def auth_dependencies() -> None:
 
 def test_seller_creates_feedback_with_authenticated_scope() -> None:
     with patch(
-        "protected_routes.submit_feedback",
+        "api.seller.feedback.submit_feedback",
         return_value={
             "ok": True,
             "feedback": {
@@ -69,7 +71,7 @@ def test_seller_creates_feedback_with_authenticated_scope() -> None:
 
 
 def test_seller_create_rejects_invalid_or_empty_content() -> None:
-    with patch("protected_routes.submit_feedback") as mocked:
+    with patch("api.seller.feedback.submit_feedback") as mocked:
         invalid_category = client.post(
             "/seller/feedback",
             json={"category": "bug", "subject": "Konu", "message": "Mesaj"},
@@ -90,7 +92,7 @@ def test_seller_create_rejects_invalid_or_empty_content() -> None:
 
 
 def test_seller_cannot_set_workflow_or_tenant_fields() -> None:
-    with patch("protected_routes.submit_feedback") as mocked:
+    with patch("api.seller.feedback.submit_feedback") as mocked:
         response = client.post(
             "/seller/feedback",
             json={
@@ -109,7 +111,7 @@ def test_seller_cannot_set_workflow_or_tenant_fields() -> None:
 
 def test_seller_list_uses_auth_tenant_and_pagination() -> None:
     with patch(
-        "protected_routes.list_seller_feedback",
+        "api.seller.feedback.list_seller_feedback",
         return_value={
             "ok": True,
             "total": 1,
@@ -126,7 +128,7 @@ def test_seller_list_uses_auth_tenant_and_pagination() -> None:
 
 def test_seller_cannot_read_other_seller_feedback() -> None:
     with patch(
-        "protected_routes.get_seller_feedback_item",
+        "api.seller.feedback.get_seller_feedback_item",
         return_value={
             "ok": False,
             "kind": "not_found",
@@ -142,7 +144,7 @@ def test_seller_cannot_read_other_seller_feedback() -> None:
 
 def test_admin_list_passes_status_category_and_seller_filters() -> None:
     with patch(
-        "protected_routes.list_admin_feedback",
+        "api.admin.feedback.list_admin_feedback",
         return_value={
             "ok": True,
             "total": 0,
@@ -168,13 +170,13 @@ def test_admin_list_passes_status_category_and_seller_filters() -> None:
 
 def test_admin_detail_and_update_are_guarded_by_admin() -> None:
     with patch(
-        "protected_routes.get_admin_feedback_item",
+        "api.admin.feedback.get_admin_feedback_item",
         return_value={"ok": True, "feedback": {"id": 7, "seller": {"id": 42}}},
     ) as detail_mock:
         detail_response = client.get("/admin/feedback/7")
 
     with patch(
-        "protected_routes.update_admin_feedback_item",
+        "api.admin.feedback.update_admin_feedback_item",
         return_value={
             "ok": True,
             "changed": True,
@@ -199,7 +201,7 @@ def test_admin_detail_and_update_are_guarded_by_admin() -> None:
 
 def test_admin_stale_version_maps_to_409() -> None:
     with patch(
-        "protected_routes.update_admin_feedback_item",
+        "api.admin.feedback.update_admin_feedback_item",
         return_value={
             "ok": False,
             "kind": "conflict",
