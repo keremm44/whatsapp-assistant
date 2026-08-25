@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     region: frankfurt
-    rootDir: backend
+    rootDir: services/whatsapp
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health/ready
@@ -34,7 +34,7 @@ services:
     runtime: python
     plan: free
     region: frankfurt
-    rootDir: backend
+    rootDir: services/whatsapp
     buildCommand: pip install -r requirements.txt
     startCommand: python -m workers.whatsapp_worker
     autoDeployTrigger: checksPass
