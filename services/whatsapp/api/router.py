@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from protected_routes import router as legacy_protected_router
 from api.auth import ROUTE_PATHS as AUTH_ROUTE_PATHS
 from api.auth import router as auth_router
 from api.admin.announcements import ROUTE_PATHS as ADMIN_ANNOUNCEMENT_ROUTE_PATHS
@@ -26,7 +25,7 @@ from api.seller.feedback import router as seller_feedback_router
 from api.seller.onboarding import ROUTE_PATHS as ONBOARDING_ROUTE_PATHS
 from api.seller.onboarding import router as onboarding_router
 from api.seller.orders import ROUTE_PATHS as ORDER_ROUTE_PATHS
-from api.seller.orders import build_router as build_orders_router
+from api.seller.orders import router as orders_router
 from api.seller.products import ROUTE_PATHS as PRODUCT_ROUTE_PATHS
 from api.seller.products import router as products_router
 from api.seller.returns import ROUTE_PATHS as RETURN_ROUTE_PATHS
@@ -58,8 +57,6 @@ PARTITIONED_PATHS = frozenset().union(
 
 router = APIRouter()
 
-# Keep composition order aligned with the legacy protected route surface while
-# domain implementations are extracted incrementally.
 for source_router in (
     auth_router,
     seller_account_router,
@@ -70,7 +67,7 @@ for source_router in (
     dashboard_router,
     admin_applications_router,
     admin_sellers_router,
-    build_orders_router(legacy_protected_router),
+    orders_router,
     returns_router,
     unanswered_router,
     seller_feedback_router,
