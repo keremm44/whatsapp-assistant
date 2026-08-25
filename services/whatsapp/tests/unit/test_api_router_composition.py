@@ -35,26 +35,25 @@ from api.seller.settings import ROUTE_PATHS as SETTINGS_ROUTE_PATHS
 from api.seller.settings import router as settings_router
 from api.seller.unanswered import ROUTE_PATHS as UNANSWERED_ROUTE_PATHS
 from api.seller.unanswered import router as unanswered_router
-from protected_routes import router as legacy_protected_router
 
 
-EXTRACTED_PATHS = (
-    AUTH_ROUTE_PATHS
-    | SETTINGS_ROUTE_PATHS
-    | PRODUCT_ROUTE_PATHS
-    | ONBOARDING_ROUTE_PATHS
-    | CONVERSATION_ROUTE_PATHS
-    | DASHBOARD_ROUTE_PATHS
-    | SELLER_FEEDBACK_ROUTE_PATHS
-    | ADMIN_FEEDBACK_ROUTE_PATHS
-    | SELLER_ANNOUNCEMENT_ROUTE_PATHS
-    | ADMIN_ANNOUNCEMENT_ROUTE_PATHS
-    | SELLER_ACCOUNT_ROUTE_PATHS
-    | ADMIN_APPLICATION_ROUTE_PATHS
-    | ADMIN_SELLER_ROUTE_PATHS
-    | ORDER_ROUTE_PATHS
-    | RETURN_ROUTE_PATHS
-    | UNANSWERED_ROUTE_PATHS
+DOMAIN_ROUTERS = (
+    (AUTH_ROUTE_PATHS, auth_router),
+    (SELLER_ACCOUNT_ROUTE_PATHS, seller_account_router),
+    (SETTINGS_ROUTE_PATHS, settings_router),
+    (PRODUCT_ROUTE_PATHS, products_router),
+    (ONBOARDING_ROUTE_PATHS, onboarding_router),
+    (CONVERSATION_ROUTE_PATHS, conversations_router),
+    (DASHBOARD_ROUTE_PATHS, dashboard_router),
+    (ADMIN_APPLICATION_ROUTE_PATHS, admin_applications_router),
+    (ADMIN_SELLER_ROUTE_PATHS, admin_sellers_router),
+    (ORDER_ROUTE_PATHS, orders_router),
+    (RETURN_ROUTE_PATHS, returns_router),
+    (UNANSWERED_ROUTE_PATHS, unanswered_router),
+    (SELLER_FEEDBACK_ROUTE_PATHS, seller_feedback_router),
+    (ADMIN_FEEDBACK_ROUTE_PATHS, admin_feedback_router),
+    (ADMIN_ANNOUNCEMENT_ROUTE_PATHS, admin_announcements_router),
+    (SELLER_ANNOUNCEMENT_ROUTE_PATHS, seller_announcements_router),
 )
 
 
@@ -69,12 +68,7 @@ def _route_signatures(router) -> Counter[tuple[str, tuple[str, ...], int | None]
     return signatures
 
 
-def _route_endpoints(
-    router,
-    *,
-    include_paths: frozenset[str] | None = None,
-    exclude_paths: frozenset[str] | None = None,
-) -> dict[tuple[str, tuple[str, ...]], object]:
+def _route_endpoints(router) -> dict[tuple[str, tuple[str, ...]], object]:
     endpoints: dict[tuple[str, tuple[str, ...]], object] = {}
     for route in router.routes:
         path = getattr(route, "path", None)
@@ -82,67 +76,37 @@ def _route_endpoints(
         endpoint = getattr(route, "endpoint", None)
         if path is None or methods is None or endpoint is None:
             continue
-        if include_paths is not None and path not in include_paths:
-            continue
-        if exclude_paths is not None and path in exclude_paths:
-            continue
         endpoints[(path, tuple(sorted(methods)))] = endpoint
     return endpoints
 
 
-def test_composed_router_preserves_legacy_protected_route_surface() -> None:
-    assert _route_signatures(api_router) == _route_signatures(legacy_protected_router)
+def test_partitioned_paths_match_native_domain_ownership() -> None:
+    expected_paths = frozenset().union(*(paths for paths, _ in DOMAIN_ROUTERS))
+    assert PARTITIONED_PATHS == expected_paths
 
 
-def test_all_legacy_protected_paths_have_domain_ownership() -> None:
-    legacy_paths = {
-        route.path
-        for route in legacy_protected_router.routes
-        if getattr(route, "path", None) is not None
-    }
-    assert PARTITIONED_PATHS == legacy_paths
+def test_composed_router_is_exact_native_router_union() -> None:
+    expected_signatures: Counter[tuple[str, tuple[str, ...], int | None]] = Counter()
+    for _, domain_router in DOMAIN_ROUTERS:
+        expected_signatures.update(_route_signatures(domain_router))
+
+    assert _route_signatures(api_router) == expected_signatures
 
 
-def test_not_yet_extracted_routes_reuse_legacy_handler_objects() -> None:
-    assert _route_endpoints(
-        api_router,
-        exclude_paths=EXTRACTED_PATHS,
-    ) == _route_endpoints(
-        legacy_protected_router,
-        exclude_paths=EXTRACTED_PATHS,
-    )
+def test_composed_routes_use_native_handler_objects() -> None:
+    composed_endpoints = _route_endpoints(api_router)
+    native_endpoints: dict[tuple[str, tuple[str, ...]], object] = {}
 
-
-def test_extracted_routes_use_domain_handler_objects() -> None:
-    native_endpoints = {
-        **_route_endpoints(auth_router),
-        **_route_endpoints(settings_router),
-        **_route_endpoints(products_router),
-        **_route_endpoints(onboarding_router),
-        **_route_endpoints(conversations_router),
-        **_route_endpoints(dashboard_router),
-        **_route_endpoints(seller_feedback_router),
-        **_route_endpoints(admin_feedback_router),
-        **_route_endpoints(seller_announcements_router),
-        **_route_endpoints(admin_announcements_router),
-        **_route_endpoints(seller_account_router),
-        **_route_endpoints(admin_applications_router),
-        **_route_endpoints(admin_sellers_router),
-        **_route_endpoints(orders_router),
-        **_route_endpoints(returns_router),
-        **_route_endpoints(unanswered_router),
-    }
-    composed_endpoints = _route_endpoints(api_router, include_paths=EXTRACTED_PATHS)
-    legacy_endpoints = _route_endpoints(
-        legacy_protected_router,
-        include_paths=EXTRACTED_PATHS,
-    )
+    for paths, domain_router in DOMAIN_ROUTERS:
+        domain_endpoints = _route_endpoints(domain_router)
+        assert {path for path, _ in domain_endpoints} == set(paths)
+        for key, endpoint in domain_endpoints.items():
+            assert key not in native_endpoints
+            native_endpoints[key] = endpoint
 
     assert composed_endpoints == native_endpoints
-    assert set(native_endpoints) == set(legacy_endpoints)
     for key, endpoint in native_endpoints.items():
         assert composed_endpoints[key] is endpoint
-        assert legacy_endpoints[key] is not endpoint
 
 
 def test_composed_router_has_no_duplicate_method_path_pairs() -> None:
