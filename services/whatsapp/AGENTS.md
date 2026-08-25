@@ -20,8 +20,7 @@ Frontend'den gelen seller id, role veya state bilgisi tek başına yetki kanıt�
 
 - `main.py`: uygulama bootstrap, middleware ve üst seviye router wiring.
 - `api/router.py`: protected API route composition sınırı.
-- `api/seller/` ve `api/admin/`: protected endpointlerin domain ownership modülleri.
-- `protected_routes.py`: geçiş süresince mevcut handler implementasyonlarını ve doğrudan test/monkeypatch uyumluluğunu koruyan legacy compatibility kaynağı; yeni route ownership'i burada büyütme.
+- `api/auth.py`, `api/seller/` ve `api/admin/`: protected endpointlerin native domain ownership modülleri; yeni protected route ownership'i burada tutulur.
 - `public_routes.py`: public endpointler.
 - `admin_seller_routes.py` / service / repository: mevcut ayrı admin seller işlemleri.
 - `chat_service/`: mesaj orkestrasyonu, order state ve response akışı.
@@ -33,7 +32,7 @@ Frontend'den gelen seller id, role veya state bilgisi tek başına yetki kanıt�
 - `tests/integration/`: gerçek Supabase entegrasyon senaryoları.
 - `tests/live/`: çalışan servis/canlı auth kontrolleri.
 
-Protected route refactor'unda public path, HTTP method, status code, auth dependency, request modeli ve response sözleşmesi sessizce değiştirilemez. Route ownership'i taşınırken `tests/unit/test_api_router_composition.py` parity kontrolünü koru.
+Protected route değişikliğinde public path, HTTP method, status code, auth dependency, request modeli ve response sözleşmesi sessizce değiştirilemez. Route ownership'i değişirken `tests/unit/test_api_router_composition.py` kontrollerini ve ilgili contract testlerini koru. Test monkeypatch'leri production handler'ın sembolü lookup ettiği native `api.*` modülüne uygulanmalıdır.
 
 ## 3. Katman sınırları
 

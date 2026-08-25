@@ -9,12 +9,17 @@ Asistanın karar kaynağı satıcı kuralları, ürün bilgileri, şablonlar ve 
 services/
 └── whatsapp/
     ├── ai_engine.py
+    ├── api/
+    │   ├── router.py
+    │   ├── auth.py
+    │   ├── admin/
+    │   └── seller/
     ├── auth_service.py
     ├── chat_service/
     ├── database/
     ├── main.py
     ├── onboarding_service.py
-    ├── protected_routes.py
+    ├── public_routes.py
     ├── settings.py
     ├── migrations/
     ├── scripts/

@@ -2,7 +2,7 @@
 
 Bu dosya repository'nin yüksek seviyeli mimari haritasıdır. Ayrıntılı çalışma kuralları için kök `AGENTS.md`, `services/whatsapp/AGENTS.md` ve `frontend/AGENTS.md` dosyalarını kullan.
 
-> Geçiş notu: mevcut backend servisi repository içinde `services/whatsapp/` altına taşınmıştır. Bu aşamada kodun davranışı ve servis sınırları değiştirilmemiştir; platform/control-plane ve Trendyol servisleri henüz fiziksel olarak ayrıştırılmamıştır.
+> Geçiş notu: mevcut backend servisi repository içinde `services/whatsapp/` altına taşınmıştır. Bu aşamada platform/control-plane ve Trendyol servisleri henüz fiziksel olarak ayrıştırılmamıştır.
 
 ## 1. Kök yapı
 
@@ -18,7 +18,11 @@ whatsapp-assistant/
 │       ├── settings.py
 │       ├── ai_engine.py
 │       ├── auth_service.py
-│       ├── protected_routes.py
+│       ├── api/
+│       │   ├── router.py
+│       │   ├── auth.py
+│       │   ├── admin/
+│       │   └── seller/
 │       ├── public_routes.py
 │       ├── admin_seller_routes.py
 │       ├── admin_seller_service.py
@@ -88,9 +92,12 @@ Sorumluluklar:
 
 Önemli örnekler:
 
-- `protected_routes.py`: authenticated/protected uygulama endpointleri (içeride ayrıca seller list v2 cursor endpoint'leri: `GET /seller/{orders,return-issue-requests,unanswered-questions,conversations}/v2`).
+- `api/router.py`: authenticated/protected API composition sınırı.
+- `api/auth.py`: protected auth surface.
+- `api/seller/`: seller protected endpointlerinin native domain ownership modülleri; seller list v2 cursor endpointleri de ilgili domain modülünde bulunur.
+- `api/admin/`: admin protected endpointlerinin native domain ownership modülleri.
 - `public_routes.py`: public surface.
-- `admin_seller_routes.py`: admin seller surface.
+- `admin_seller_routes.py`: mevcut ayrı admin seller surface.
 - `cursor_queue_routes.py`: queue/cursor API surface (mevcut `/seller/v2/*` iç yüzeyi; legacy).
 - `whatsapp_webhook/`: WhatsApp provider giriş surface'i.
 
@@ -104,7 +111,7 @@ Route katmanı request validation, auth dependency ve HTTP response sınırıdı
 - `admin_seller_service.py`
 - `conversation_control_service.py`
 - `cursor_queue_service.py`
-- `seller_list_v2_service.py` (seller list v2: seller-bound imzalı cursor decode → keyset repository → legacy-eşdeğer presentation → next_cursor encode; contract: `contracts/seller-lists-v2.json`)
+- `seller_list_v2_service.py` (seller list v2: seller-bound imzalı cursor decode → keyset repository → compatibility presentation → next_cursor encode; contract: `contracts/seller-lists-v2.json`)
 - `chat_service/`
 
 `chat_service/` mesaj ve order konuşma akışının kritik alanıdır. Mevcut içerikte orkestrasyon, order helper/state, response ve return-flow sorumlulukları ayrı modüllere bölünmüştür.
@@ -384,10 +391,10 @@ Mevcut intent:
 | WhatsApp mesaj davranışı | `services/whatsapp/chat_service/`, `services/whatsapp/whatsapp_webhook/` |
 | Order state değişikliği | `services/whatsapp/chat_service/order_state.py`, order helper/database kodu |
 | Seller conversation kontrolü | `services/whatsapp/conversation_control_service.py` + ilgili database/frontend alanı |
-| Protected API | `services/whatsapp/protected_routes.py` + service/database + contract |
+| Protected API | `services/whatsapp/api/` + service/database + contract |
 | Seller panel ekranı | `frontend/src/app/seller/` + `frontend/src/components/seller/` |
 | Formatter/status label | `frontend/src/lib/` + ilgili test |
-| Auth/ownership | backend auth/protected route; frontend yalnızca UI/session consumer |
+| Auth/ownership | backend auth/native protected route; frontend yalnızca UI/session consumer |
 | DB schema | `services/whatsapp/migrations/` + database consumer + test |
 | Request/response shape | backend producer + `contracts/` + frontend consumer |
 | CI | `.github/workflows/ci.yml` |
