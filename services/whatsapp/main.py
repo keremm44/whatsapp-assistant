@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from admin_seller_routes import router as admin_seller_router
+from api.router import router as protected_router
 from chat_service import sohbet_isle
 from cursor_queue_routes import router as cursor_queue_router
 from database import (
@@ -19,7 +20,6 @@ from database import (
     test_connection,
 )
 from observability import RequestMetricsMiddleware, configure_logging, init_sentry
-from protected_routes import router as protected_router
 from public_abuse_protection import PublicApplicationAbuseProtectionMiddleware
 from public_routes import router as public_router
 from settings import AppSettings, get_settings

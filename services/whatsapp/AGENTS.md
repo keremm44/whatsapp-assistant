@@ -1,6 +1,6 @@
 # Backend Agent Talimatları
 
-Bu dosya `backend/` altındaki tüm çalışmalar için kök `AGENTS.md` kurallarını daraltır.
+Bu dosya `services/whatsapp/` altındaki tüm çalışmalar için kök `AGENTS.md` kurallarını daraltır.
 
 ## 1. Backend rolü
 
@@ -18,10 +18,12 @@ Frontend'den gelen seller id, role veya state bilgisi tek başına yetki kanıt�
 
 ## 2. Temel alanlar
 
-- `main.py`: uygulama bootstrap, middleware ve router wiring.
-- `protected_routes.py`: korunan uygulama endpointleri.
+- `main.py`: uygulama bootstrap, middleware ve üst seviye router wiring.
+- `api/router.py`: protected API route composition sınırı.
+- `api/seller/` ve `api/admin/`: protected endpointlerin domain ownership modülleri.
+- `protected_routes.py`: geçiş süresince mevcut handler implementasyonlarını ve doğrudan test/monkeypatch uyumluluğunu koruyan legacy compatibility kaynağı; yeni route ownership'i burada büyütme.
 - `public_routes.py`: public endpointler.
-- `admin_seller_routes.py` / service / repository: admin seller işlemleri.
+- `admin_seller_routes.py` / service / repository: mevcut ayrı admin seller işlemleri.
 - `chat_service/`: mesaj orkestrasyonu, order state ve response akışı.
 - `ai_engine.py`: sınıflandırma/AI yardımcıları; business authority değildir.
 - `database/`: Supabase erişim fonksiyonları ve domain odaklı persistence.
@@ -30,6 +32,8 @@ Frontend'den gelen seller id, role veya state bilgisi tek başına yetki kanıt�
 - `tests/unit/`: izole testler.
 - `tests/integration/`: gerçek Supabase entegrasyon senaryoları.
 - `tests/live/`: çalışan servis/canlı auth kontrolleri.
+
+Protected route refactor'unda public path, HTTP method, status code, auth dependency, request modeli ve response sözleşmesi sessizce değiştirilemez. Route ownership'i taşınırken `tests/unit/test_api_router_composition.py` parity kontrolünü koru.
 
 ## 3. Katman sınırları
 
@@ -84,7 +88,7 @@ Bkz. `docs/APPLY_INSTRUCTIONS.md`.
 
 Protected seller response veya request modeli değişiyorsa:
 
-- `../contracts/` altındaki ilgili JSON contract'ı kontrol et.
+- Repo kökündeki `contracts/` altındaki ilgili JSON contract'ı kontrol et.
 - Frontend consumer'ları kontrol et.
 - Field rename/remove yerine mümkünse backward-compatible geçiş tasarla.
 - Null/optional semantics testte açık olsun.
