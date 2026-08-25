@@ -1,20 +1,12 @@
 /**
- * Conceptual information architecture for the seller panel.
- *
- * The route architecture is wider than the sidebar information architecture:
- * /seller/products, /seller/rules, /seller/assistant-knowledge and
- * /seller/order-collection live under the "Asistan Ayarları" parent
- * in the sidebar. See `childOf` on the relevant items.
- *
- * Every entry below is implemented as a route in this step; deeper detail
- * pages (e.g. a single order, a single conversation, a single rule editor)
- * are introduced in later steps.
+ * Seller navigation is product-owned. The shell composes only products the
+ * backend says are active for the current seller. Unknown/future product keys
+ * are ignored until this frontend actually has routes for them.
  */
 
 export type NavigationItem = {
   label: string;
   href: string;
-  /** Resolved at render time via the controlled icon map in SellerSidebar. */
   icon:
     | "LayoutDashboard"
     | "MessagesSquare"
@@ -28,11 +20,6 @@ export type NavigationItem = {
     | "BookOpen"
     | "ClipboardList"
     | "Settings";
-  /**
-   * Sidebar parent for routes that are not promoted to a top-level item.
-   * When set, the parent's destination is treated as the active destination
-   * for the purposes of the sidebar highlight.
-   */
   childOf?: string;
 };
 
@@ -41,13 +28,22 @@ export type NavigationSection = {
   items: NavigationItem[];
 };
 
-/**
- * Canonical desktop sidebar destinations, in display order.
- * The `childOf` field is used by the sidebar to keep "Asistan Ayarları"
- * highlighted on assistant child routes without adding extra entries
- * to the visible navigation.
- */
-export const sellerNavigation: NavigationSection[] = [
+export type MobileNavItem = {
+  label: string;
+  icon: NavigationItem["icon"];
+  href?: string;
+  sheet?: NavigationItem[];
+};
+
+export type SellerProductNavigation = {
+  productKey: string;
+  label: string;
+  sections: NavigationSection[];
+  mobile: MobileNavItem[];
+};
+
+/** Current WhatsApp-owned seller routes. */
+export const whatsappNavigation: NavigationSection[] = [
   {
     title: "İşler",
     items: [
@@ -111,9 +107,12 @@ export const sellerNavigation: NavigationSection[] = [
 ];
 
 /**
- * Sub-routes that are NOT sidebar items but should be linked from
- * "Asistan Ayarları" and should keep the parent highlighted.
+ * Compatibility export for non-shell consumers. The canonical ownership name
+ * is now `whatsappNavigation`; this alias can be retired after all consumers
+ * become product-aware.
  */
+export const sellerNavigation = whatsappNavigation;
+
 export const assistantSubRoutes: NavigationItem[] = [
   {
     label: "Ürünler",
@@ -141,19 +140,7 @@ export const assistantSubRoutes: NavigationItem[] = [
   },
 ];
 
-/**
- * Mobile bottom-nav destinations. The "İşler" and "Diğer" entries open a
- * Sheet rather than navigating to a single URL.
- */
-export type MobileNavItem = {
-  label: string;
-  icon: NavigationItem["icon"];
-  href?: string;
-  /** When set, the item opens a sheet with the listed destinations. */
-  sheet?: NavigationItem[];
-};
-
-export const mobileBottomNav: MobileNavItem[] = [
+export const whatsappMobileBottomNav: MobileNavItem[] = [
   {
     label: "Genel",
     icon: "LayoutDashboard",
@@ -212,3 +199,36 @@ export const mobileBottomNav: MobileNavItem[] = [
     ],
   },
 ];
+
+export const mobileBottomNav = whatsappMobileBottomNav;
+
+/**
+ * Registry of product navigation that is actually implemented in this build.
+ * Trendyol is intentionally not registered until its routes exist; an active
+ * but unknown entitlement must never create dead links.
+ */
+export const sellerProductNavigationRegistry: SellerProductNavigation[] = [
+  {
+    productKey: "whatsapp",
+    label: "WhatsApp",
+    sections: whatsappNavigation,
+    mobile: whatsappMobileBottomNav,
+  },
+];
+
+export const getSellerProductNavigation = (
+  activeProducts: readonly string[],
+): SellerProductNavigation[] => {
+  const active = new Set(activeProducts);
+  return sellerProductNavigationRegistry.filter((product) =>
+    active.has(product.productKey),
+  );
+};
+
+export const getMobileBottomNav = (
+  activeProducts: readonly string[],
+): MobileNavItem[] => {
+  const productNavigation = getSellerProductNavigation(activeProducts);
+  if (productNavigation.length !== 1) return [];
+  return productNavigation[0]?.mobile ?? [];
+};

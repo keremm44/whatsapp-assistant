@@ -10,53 +10,16 @@ import {
   pickSellerDisplayName,
   resolveSellerBootstrap,
 } from "@/lib/seller/server-bootstrap";
+import { resolveSellerEntitlements } from "@/lib/seller/server-entitlements";
 
 /**
  * Seller panel layout (async Server Component).
  *
- * Every request to /seller/* passes through this layout first. The
- * server-side `resolveServerAccess` is the single source of truth for
- * "is this user an active seller with a valid sellerId?". The matrix
- * it enforces:
- *
- *   unauthenticated      -> redirect to /giris
- *   authorized seller     -> render <SellerShell> with the children
- *   authorized admin      -> redirect to /admin
- *   application_rejected  -> redirect to /giris
- *   unavailable           -> render the neutral AccessUnavailable UI
- *
- * After the auth guard resolves with `allow`, the layout performs a
- * second server-side fetch: `resolveSellerBootstrapFromSession()`,
- * which calls `GET /seller/me` to obtain the seller's business
- * identity (store name, etc.). The seller shell is rendered ONLY
- * when the bootstrap is `ready`:
- *
- *   ready              -> render <SellerShell> with the real store
- *                        name (or the approved "Mağaza" display
- *                        fallback when the real store name is null
- *                        or empty in the backend payload)
- *   unavailable        -> render <AccessUnavailable> with the
- *                        "Mağaza profili" context label. This
- *                        covers network failure, 5xx, malformed
- *                        contract, missing session token after the
- *                        auth guard, and any other transient
- *                        /seller/me failure.
- *   auth_rejected      -> same as `unavailable` (the auth foundation
- *                        has already validated the session for
- *                        /auth/me; a 401 on /seller/me is treated
- *                        as recoverable, not destructive)
- *
- * Crucially, a non-ready bootstrap does NOT render the seller shell
- * with a fake "Mağaza" label. Rendering the normal seller
- * experience when the business row is unknown would be a falsely
- * healthy shell. Instead the user sees a calm retry surface
- * consistent with the existing AccessUnavailable language.
- *
- * A transient bootstrap failure never destroys a valid Supabase
- * session: this module does not import the Supabase signOut API and
- * the auth foundation's `/auth/me` has already resolved the session
- * as `authorized`. The retry button re-runs the server layout,
- * which re-runs both the auth guard and the bootstrap resolver.
+ * Auth, seller identity and product entitlements are resolved by the backend
+ * before the shell renders. Navigation is therefore a projection of backend
+ * package state rather than a client-side package guess. Transient bootstrap
+ * or entitlement failures render the neutral retry surface and never destroy
+ * the valid Supabase session.
  */
 export default async function SellerLayout({
   children,
@@ -69,38 +32,33 @@ export default async function SellerLayout({
   if (guard.kind === "show_unavailable") {
     return <AccessUnavailable contextLabel="Satıcı paneli" />;
   }
-  // `applySellerGuard` has already redirected non-seller states. Keep this
-  // explicit narrowing beside the server-only token so it can never reach
-  // the rendered shell from a non-authorized resolver state.
   if (access.state !== "authorized") {
     return <AccessUnavailable contextLabel="Satıcı paneli" />;
   }
 
-  // The guard only returns `allow` for an active seller session, so
-  // a token exists by the time we get here. We never render the
-  // seller shell unless the bootstrap is `ready`. A non-ready
-  // bootstrap surfaces the AccessUnavailable retry UI — same
-  // language, same retry mechanics, no signOut, no redirect.
-  // Reuse the token already obtained and verified by resolveServerAccess.
-  // This avoids a second Supabase getSession() round-trip on every panel
-  // navigation while preserving /seller/me as the business-row authority.
   const bootstrap = await resolveSellerBootstrap(access.accessToken);
   if (bootstrap.state !== "ready") {
     return <AccessUnavailable contextLabel="Mağaza profili" />;
   }
 
-  const storeName = pickSellerDisplayName(bootstrap);
+  const entitlementBootstrap = await resolveSellerEntitlements(
+    access.accessToken,
+  );
+  if (entitlementBootstrap.state !== "ready") {
+    return <AccessUnavailable contextLabel="Ürün paketleri" />;
+  }
 
-  // Global assistant status: computed from the SAME /seller/me access
-  // block the bootstrap just resolved (no duplicate fetch, no duplicate
-  // model). Null in the normal operational state — the shell then
-  // renders no status chrome at all.
+  const storeName = pickSellerDisplayName(bootstrap);
   const assistantNotice = getAssistantStatusNotice(
     bootstrap.identity.access,
   );
 
   return (
-    <SellerShell storeName={storeName} assistantNotice={assistantNotice}>
+    <SellerShell
+      storeName={storeName}
+      activeProducts={entitlementBootstrap.entitlements.products}
+      assistantNotice={assistantNotice}
+    >
       {children}
     </SellerShell>
   );

@@ -5,17 +5,23 @@ import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { sellerNavigation } from "@/config/navigation";
+import {
+  getSellerProductNavigation,
+  type NavigationSection,
+  type SellerProductNavigation,
+} from "@/config/navigation";
 import { isSellerItemActive } from "@/lib/routes/active-route";
 import { cn } from "@/lib/utils/cn";
 
 import { SellerIcon } from "./icon-map";
 
-/** Desktop navigation spine — compact, authored and gently kinetic. */
-export function SellerSidebar() {
+export function SellerSidebar({
+  activeProducts,
+}: {
+  activeProducts: readonly string[];
+}) {
   const pathname = usePathname();
-  const workSections = sellerNavigation.slice(0, -1);
-  const systemSection = sellerNavigation[sellerNavigation.length - 1];
+  const products = getSellerProductNavigation(activeProducts);
 
   return (
     <aside
@@ -24,22 +30,16 @@ export function SellerSidebar() {
     >
       <BrandPlate />
 
-      <nav
-        aria-label="Çalışma alanları"
-        className="scrollbar-quiet flex-1 overflow-y-auto px-3 py-4"
-      >
-        <SectionList sections={workSections} pathname={pathname} />
-      </nav>
-
-      {systemSection ? (
-        <div className="border-t border-boundary/40 px-3 py-3">
-          <SectionList
-            sections={[systemSection]}
-            pathname={pathname}
-            flush
-          />
-        </div>
-      ) : null}
+      {products.length === 1 ? (
+        <SingleProductNavigation product={products[0]} pathname={pathname} />
+      ) : (
+        <nav
+          aria-label="Çalışma alanları"
+          className="scrollbar-quiet flex-1 overflow-y-auto px-3 py-4"
+        >
+          <ProductList products={products} pathname={pathname} />
+        </nav>
+      )}
     </aside>
   );
 }
@@ -68,19 +68,87 @@ const BrandPlate = () => (
   </div>
 );
 
+function SingleProductNavigation({
+  product,
+  pathname,
+}: {
+  product: SellerProductNavigation;
+  pathname: string | null;
+}) {
+  const workSections = product.sections.slice(0, -1);
+  const systemSection = product.sections[product.sections.length - 1];
+
+  return (
+    <>
+      <nav
+        aria-label="Çalışma alanları"
+        className="scrollbar-quiet flex-1 overflow-y-auto px-3 py-4"
+      >
+        <SectionList sections={workSections} pathname={pathname} />
+      </nav>
+      {systemSection ? (
+        <div className="border-t border-boundary/40 px-3 py-3">
+          <SectionList sections={[systemSection]} pathname={pathname} flush />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 export function SidebarSections({
+  pathname,
+  activeProducts,
+  onNavigate,
+}: {
+  pathname: string | null;
+  activeProducts: readonly string[];
+  onNavigate?: () => void;
+}) {
+  const products = getSellerProductNavigation(activeProducts);
+  if (products.length === 1) {
+    return (
+      <SectionList
+        sections={products[0]?.sections ?? []}
+        pathname={pathname}
+        onNavigate={onNavigate}
+      />
+    );
+  }
+
+  return (
+    <ProductList
+      products={products}
+      pathname={pathname}
+      onNavigate={onNavigate}
+    />
+  );
+}
+
+function ProductList({
+  products,
   pathname,
   onNavigate,
 }: {
+  products: readonly SellerProductNavigation[];
   pathname: string | null;
   onNavigate?: () => void;
 }) {
   return (
-    <SectionList
-      sections={sellerNavigation}
-      pathname={pathname}
-      onNavigate={onNavigate}
-    />
+    <div className="flex flex-col gap-6">
+      {products.map((product) => (
+        <section key={product.productKey} aria-label={`${product.label} menüsü`}>
+          <p className="mb-2 px-3 type-eyebrow text-chrome-foreground/55">
+            {product.label.toLocaleUpperCase("tr-TR")}
+          </p>
+          <SectionList
+            sections={product.sections}
+            pathname={pathname}
+            onNavigate={onNavigate}
+            flush
+          />
+        </section>
+      ))}
+    </div>
   );
 }
 
@@ -90,7 +158,7 @@ function SectionList({
   onNavigate,
   flush = false,
 }: {
-  sections: typeof sellerNavigation;
+  sections: readonly NavigationSection[];
   pathname: string | null;
   onNavigate?: () => void;
   flush?: boolean;
@@ -102,6 +170,7 @@ function SectionList({
           key={section.title}
           className={cn(
             !flush && index > 0 && "mt-5 border-t border-boundary/30 pt-5",
+            flush && index > 0 && "mt-4 border-t border-boundary/30 pt-4",
           )}
         >
           <SectionLabel title={section.title} />

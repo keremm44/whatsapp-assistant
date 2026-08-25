@@ -12,7 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { mobileBottomNav, type MobileNavItem } from "@/config/navigation";
+import { getMobileBottomNav, type MobileNavItem } from "@/config/navigation";
 import {
   activeMobileParent,
   isSellerItemActive,
@@ -22,27 +22,16 @@ import { cn } from "@/lib/utils/cn";
 
 import { SellerIcon } from "./icon-map";
 
-/**
- * Mobile bottom navigation.
- *
- * Visible only below the `md` breakpoint. Four primary destinations:
- * Genel, Konuşmalar, İşler, Diğer. "İşler" and "Diğer" open a Sheet
- * rather than navigating to a single URL.
- *
- * "Instrument": the bar is the SPINE material (the deepest step), so
- * on mobile the navigation frame reads as the same object it is on
- * desktop, and the work above it stays the brightest thing on screen.
- * A strong top boundary separates it from the canvas.
- *
- * Active destination is expressed with a cyan top rule + a semibold
- * label + a brighter interaction-cyan icon. There is deliberately no
- * large active colour wash, and the state never relies on hue alone
- * (rule + weight + ink level + aria-current). Safe-area behaviour is
- * preserved.
- */
-export function SellerMobileNav() {
+export function SellerMobileNav({
+  activeProducts,
+}: {
+  activeProducts: readonly string[];
+}) {
   const pathname = usePathname();
   const active = activeMobileParent(pathname);
+  const items = getMobileBottomNav(activeProducts);
+
+  if (items.length === 0) return null;
 
   return (
     <nav
@@ -50,13 +39,10 @@ export function SellerMobileNav() {
       className="fixed inset-x-0 bottom-0 z-20 border-t border-boundary bg-chrome md:hidden"
     >
       <ul className="grid grid-cols-4">
-        {mobileBottomNav.map((item) => (
+        {items.map((item) => (
           <li key={item.label} className="contents">
             {item.href ? (
-              <MobileNavLink
-                item={item}
-                isActive={active === item.label}
-              />
+              <MobileNavLink item={item} isActive={active === item.label} />
             ) : (
               <MobileSheetTrigger
                 item={item}
@@ -67,7 +53,6 @@ export function SellerMobileNav() {
           </li>
         ))}
       </ul>
-      {/* Safe area spacer for iOS-style home indicator environments. */}
       <div aria-hidden="true" className="h-[env(safe-area-inset-bottom)]" />
     </nav>
   );
@@ -163,8 +148,6 @@ const MobileSheetTrigger = ({
                   aria-current={entryActive ? "page" : undefined}
                   className={cn(
                     "relative flex h-12 min-h-[44px] items-center gap-3 rounded-control pl-4 pr-3 text-[15px] leading-[22px] transition-colors",
-                    // Neutral material + cyan rail (below), never a
-                    // cyan-filled navigation row.
                     entryActive
                       ? "bg-selected font-semibold text-foreground"
                       : "text-foreground hover:bg-elevated",
