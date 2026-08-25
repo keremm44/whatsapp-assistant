@@ -1,12 +1,12 @@
 # Seller route partitions
 
-Seller-facing protected endpoints are split into explicit route-ownership modules while the existing `protected_routes.py` handler implementations remain compatible during the transition.
+Seller-facing protected endpoints are split into explicit route-ownership modules while `protected_routes.py` is dismantled incrementally.
 
 Current ownership modules:
 
 - `account.py`: seller identity/access surface
-- `settings.py`: assistant/business settings and seller rules
-- `products.py`: seller products
+- `settings.py`: assistant/business settings and seller rules — native handlers extracted
+- `products.py`: seller products — native handlers extracted
 - `onboarding.py`: WhatsApp onboarding
 - `conversations.py`: conversation list/detail, media and ownership control
 - `dashboard.py`: dashboard tasks and sidebar summary
@@ -16,4 +16,4 @@ Current ownership modules:
 - `feedback.py`: seller feedback
 - `announcements.py`: seller announcements
 
-The modules currently reuse the original `APIRoute`/handler objects. This preserves auth dependencies, request models, response metadata and existing test seams while the monolithic handler file is dismantled in later focused steps.
+Domains not yet extracted continue to reuse their original legacy `APIRoute`/handler objects. Extracted domains are registered from their native routers, with focused unit tests patching the new module seams directly. The legacy settings/product definitions remain temporarily in `protected_routes.py` only as compatibility copies; `api.router` does not use those legacy route objects anymore.

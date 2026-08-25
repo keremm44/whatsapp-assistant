@@ -28,11 +28,11 @@ from api.seller.onboarding import build_router as build_onboarding_router
 from api.seller.orders import ROUTE_PATHS as ORDER_ROUTE_PATHS
 from api.seller.orders import build_router as build_orders_router
 from api.seller.products import ROUTE_PATHS as PRODUCT_ROUTE_PATHS
-from api.seller.products import build_router as build_products_router
+from api.seller.products import router as products_router
 from api.seller.returns import ROUTE_PATHS as RETURN_ROUTE_PATHS
 from api.seller.returns import build_router as build_returns_router
 from api.seller.settings import ROUTE_PATHS as SETTINGS_ROUTE_PATHS
-from api.seller.settings import build_router as build_settings_router
+from api.seller.settings import router as settings_router
 from api.seller.unanswered import ROUTE_PATHS as UNANSWERED_ROUTE_PATHS
 from api.seller.unanswered import build_router as build_unanswered_router
 
@@ -56,25 +56,26 @@ PARTITIONED_PATHS = frozenset().union(
     UNANSWERED_ROUTE_PATHS,
 )
 
-_ROUTE_BUILDERS = (
-    build_auth_router,
-    build_seller_account_router,
-    build_settings_router,
-    build_products_router,
-    build_onboarding_router,
-    build_conversations_router,
-    build_dashboard_router,
-    build_admin_applications_router,
-    build_admin_sellers_router,
-    build_orders_router,
-    build_returns_router,
-    build_unanswered_router,
-    build_seller_feedback_router,
-    build_admin_feedback_router,
-    build_admin_announcements_router,
-    build_seller_announcements_router,
-)
-
 router = APIRouter()
-for build_router in _ROUTE_BUILDERS:
-    router.routes.extend(build_router(legacy_protected_router).routes)
+
+# Keep composition order aligned with the legacy protected route surface while
+# domain implementations are extracted incrementally.
+for source_router in (
+    build_auth_router(legacy_protected_router),
+    build_seller_account_router(legacy_protected_router),
+    settings_router,
+    products_router,
+    build_onboarding_router(legacy_protected_router),
+    build_conversations_router(legacy_protected_router),
+    build_dashboard_router(legacy_protected_router),
+    build_admin_applications_router(legacy_protected_router),
+    build_admin_sellers_router(legacy_protected_router),
+    build_orders_router(legacy_protected_router),
+    build_returns_router(legacy_protected_router),
+    build_unanswered_router(legacy_protected_router),
+    build_seller_feedback_router(legacy_protected_router),
+    build_admin_feedback_router(legacy_protected_router),
+    build_admin_announcements_router(legacy_protected_router),
+    build_seller_announcements_router(legacy_protected_router),
+):
+    router.routes.extend(source_router.routes)

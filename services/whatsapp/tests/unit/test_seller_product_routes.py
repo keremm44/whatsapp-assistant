@@ -5,8 +5,8 @@ from unittest.mock import patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from api.seller.products import router
 from auth_service import AuthContext, require_seller
-from protected_routes import router
 
 app = FastAPI()
 app.include_router(router)
@@ -33,7 +33,7 @@ def teardown_function() -> None:
 
 def test_get_products_passes_include_inactive() -> None:
     with patch(
-        "protected_routes.list_seller_products",
+        "api.seller.products.list_seller_products",
         return_value={"ok": True, "products": [], "total": 0},
     ) as mocked:
         response = client.get("/seller/products?include_inactive=true")
@@ -45,7 +45,7 @@ def test_get_products_passes_include_inactive() -> None:
 
 def test_create_product_returns_201() -> None:
     with patch(
-        "protected_routes.create_seller_product",
+        "api.seller.products.create_seller_product",
         return_value={
             "ok": True,
             "changed": True,
@@ -59,7 +59,7 @@ def test_create_product_returns_201() -> None:
 
 
 def test_create_product_rejects_untrusted_fields() -> None:
-    with patch("protected_routes.create_seller_product") as mocked:
+    with patch("api.seller.products.create_seller_product") as mocked:
         response = client.post(
             "/seller/products",
             json={"name": "Kupa", "seller_id": 9, "version": 99},
@@ -71,7 +71,7 @@ def test_create_product_rejects_untrusted_fields() -> None:
 
 def test_patch_product_uses_version_and_seller_scope() -> None:
     with patch(
-        "protected_routes.update_seller_product",
+        "api.seller.products.update_seller_product",
         return_value={
             "ok": True,
             "changed": True,
@@ -89,7 +89,7 @@ def test_patch_product_uses_version_and_seller_scope() -> None:
 
 def test_patch_product_maps_conflict() -> None:
     with patch(
-        "protected_routes.update_seller_product",
+        "api.seller.products.update_seller_product",
         return_value={
             "ok": False,
             "kind": "conflict",
@@ -105,7 +105,7 @@ def test_patch_product_maps_conflict() -> None:
 
 
 def test_patch_product_rejects_empty_patch() -> None:
-    with patch("protected_routes.update_seller_product") as mocked:
+    with patch("api.seller.products.update_seller_product") as mocked:
         response = client.patch(
             "/seller/products/7",
             json={"expected_version": 2},
