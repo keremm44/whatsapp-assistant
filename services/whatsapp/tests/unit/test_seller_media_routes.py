@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-import protected_routes
+from api.seller import conversations as seller_conversation_routes
 from main import app
 
 
@@ -31,7 +31,7 @@ def seller_context(seller_id: int = 11) -> Any:
 
 @pytest.fixture
 def client() -> TestClient:
-    app.dependency_overrides[protected_routes.require_seller] = (
+    app.dependency_overrides[seller_conversation_routes.require_seller] = (
         lambda: seller_context()
     )
     yield TestClient(app)
@@ -48,7 +48,11 @@ def install_media_service(
         captured.append({"seller_id": seller_id, "message_id": message_id})
         return result
 
-    monkeypatch.setattr(protected_routes, "get_seller_message_media", fake_media)
+    monkeypatch.setattr(
+        seller_conversation_routes,
+        "get_seller_message_media",
+        fake_media,
+    )
     return captured
 
 
