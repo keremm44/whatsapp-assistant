@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: backend
+        working-directory: services/whatsapp
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: services/whatsapp/requirements.txt
 
       - name: Install dependencies
         run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
