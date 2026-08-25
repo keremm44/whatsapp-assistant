@@ -5,8 +5,8 @@ from unittest.mock import patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from api.router import router
 from auth_service import AuthContext, get_current_auth_context, require_admin, require_seller
-from protected_routes import router
 
 
 app = FastAPI()
@@ -76,7 +76,7 @@ def test_seller_me_uses_token_seller_id() -> None:
     set_seller_dependencies()
 
     with patch(
-        "protected_routes.get_seller_by_id",
+        "api.seller.account.get_seller_by_id",
         return_value={
             "durum": "başarılı",
             "satıcı": {
@@ -101,7 +101,7 @@ def test_seller_onboarding() -> None:
     set_seller_dependencies()
 
     with patch(
-        "protected_routes.get_onboarding_status",
+        "api.seller.onboarding.get_onboarding_status",
         return_value={
             "durum": "başarılı",
             "seller_id": 42,
@@ -136,7 +136,7 @@ def test_start_onboarding_step() -> None:
     set_seller_dependencies()
 
     with patch(
-        "protected_routes.start_onboarding_step",
+        "api.seller.onboarding.start_onboarding_step",
         return_value={
             "durum": "başarılı",
             "step": {
@@ -161,7 +161,7 @@ def test_complete_onboarding_step() -> None:
     set_seller_dependencies()
 
     with patch(
-        "protected_routes.complete_onboarding_step",
+        "api.seller.onboarding.complete_onboarding_step",
         return_value={
             "durum": "başarılı",
             "seller_id": 42,
@@ -198,7 +198,7 @@ def test_onboarding_validation_error_returns_422() -> None:
     set_seller_dependencies()
 
     with patch(
-        "protected_routes.complete_onboarding_step",
+        "api.seller.onboarding.complete_onboarding_step",
         return_value={
             "durum": "doğrulama_hatası",
             "mesaj": "Onboarding verisi doğrulanamadı.",
@@ -227,7 +227,7 @@ def test_locked_step_returns_409() -> None:
     set_seller_dependencies()
 
     with patch(
-        "protected_routes.start_onboarding_step",
+        "api.seller.onboarding.start_onboarding_step",
         return_value={
             "durum": "kilitli",
             "mesaj": "Önceki adım tamamlanmalı.",
@@ -244,7 +244,7 @@ def test_admin_applications() -> None:
     set_admin_dependencies()
 
     with patch(
-        "protected_routes.get_seller_applications",
+        "api.admin.applications.get_seller_applications",
         return_value={
             "durum": "başarılı",
             "toplam": 1,
@@ -274,7 +274,7 @@ def test_admin_activation() -> None:
     set_admin_dependencies()
 
     with patch(
-        "protected_routes.activate_seller",
+        "api.admin.sellers.activate_seller",
         return_value={
             "durum": "başarılı",
             "seller": {
@@ -314,7 +314,7 @@ def test_admin_activation_rejects_false() -> None:
 
 def test_complete_invite() -> None:
     with patch(
-        "protected_routes.complete_invited_profile_from_access_token",
+        "api.auth.complete_invited_profile_from_access_token",
         return_value={
             "durum": "başarılı",
             "profile": {
@@ -360,7 +360,7 @@ def run_all_tests() -> None:
         test()
         print(f"BAŞARILI: {test.__name__}")
 
-    print("\nTÜM PROTECTED ROUTES TESTLERİ BAŞARILI")
+    print("\nTÜM NATIVE PROTECTED ROUTE TESTLERİ BAŞARILI")
 
 
 if __name__ == "__main__":
