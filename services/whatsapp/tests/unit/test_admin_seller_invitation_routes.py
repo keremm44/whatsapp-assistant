@@ -5,8 +5,8 @@ from unittest.mock import patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from api.admin.applications import router
 from auth_service import AuthContext, get_current_auth_context, require_admin
-from protected_routes import router
 
 
 app = FastAPI()
@@ -42,10 +42,38 @@ def _clear() -> None:
     app.dependency_overrides.clear()
 
 
+def test_admin_lists_applications_with_filters() -> None:
+    _set_admin()
+    with patch(
+        "api.admin.applications.get_seller_applications",
+        return_value={
+            "durum": "başarılı",
+            "toplam": 1,
+            "applications": [{"id": 9, "status": "pending"}],
+        },
+    ) as mocked:
+        response = client.get("/admin/applications?status=pending&limit=50")
+
+    assert response.status_code == 200
+    assert response.json()["toplam"] == 1
+    mocked.assert_called_once_with(status="pending", limit=50)
+    _clear()
+
+
+def test_admin_application_list_validates_limit_before_database_call() -> None:
+    _set_admin()
+    with patch("api.admin.applications.get_seller_applications") as mocked:
+        response = client.get("/admin/applications?limit=0")
+
+    assert response.status_code == 422
+    mocked.assert_not_called()
+    _clear()
+
+
 def test_admin_can_invite_application() -> None:
     _set_admin()
     with patch(
-        "protected_routes.invite_seller_from_application",
+        "api.admin.applications.invite_seller_from_application",
         return_value={
             "ok": True,
             "status": "invited",
@@ -80,7 +108,7 @@ def test_admin_can_invite_application() -> None:
 def test_admin_invite_maps_conflict_to_409() -> None:
     _set_admin()
     with patch(
-        "protected_routes.invite_seller_from_application",
+        "api.admin.applications.invite_seller_from_application",
         return_value={
             "ok": False,
             "kind": "conflict",
@@ -100,7 +128,7 @@ def test_admin_invite_maps_conflict_to_409() -> None:
 def test_admin_invite_maps_partial_failure_to_503() -> None:
     _set_admin()
     with patch(
-        "protected_routes.invite_seller_from_application",
+        "api.admin.applications.invite_seller_from_application",
         return_value={
             "ok": False,
             "kind": "partial_failure",
@@ -119,7 +147,7 @@ def test_admin_invite_maps_partial_failure_to_503() -> None:
 
 def test_admin_invite_rejects_invalid_body_before_service() -> None:
     _set_admin()
-    with patch("protected_routes.invite_seller_from_application") as mocked:
+    with patch("api.admin.applications.invite_seller_from_application") as mocked:
         response = client.post(
             "/admin/applications/7/invite",
             json={"email": "not-an-email", "seller_id": 999},
@@ -130,10 +158,12 @@ def test_admin_invite_rejects_invalid_body_before_service() -> None:
     _clear()
 
 
-def test_seller_cannot_call_admin_invite_endpoint() -> None:
+def test_seller_cannot_call_admin_application_routes() -> None:
     app.dependency_overrides[get_current_auth_context] = lambda: SELLER_CONTEXT
 
-    response = client.post("/admin/applications/7/invite", json={})
+    list_response = client.get("/admin/applications")
+    invite_response = client.post("/admin/applications/7/invite", json={})
 
-    assert response.status_code == 403
+    assert list_response.status_code == 403
+    assert invite_response.status_code == 403
     _clear()

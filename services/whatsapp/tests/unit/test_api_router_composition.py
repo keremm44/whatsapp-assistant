@@ -4,9 +4,15 @@ from collections import Counter
 
 from api.admin.announcements import ROUTE_PATHS as ADMIN_ANNOUNCEMENT_ROUTE_PATHS
 from api.admin.announcements import router as admin_announcements_router
+from api.admin.applications import ROUTE_PATHS as ADMIN_APPLICATION_ROUTE_PATHS
+from api.admin.applications import router as admin_applications_router
 from api.admin.feedback import ROUTE_PATHS as ADMIN_FEEDBACK_ROUTE_PATHS
 from api.admin.feedback import router as admin_feedback_router
+from api.admin.sellers import ROUTE_PATHS as ADMIN_SELLER_ROUTE_PATHS
+from api.admin.sellers import router as admin_sellers_router
 from api.router import PARTITIONED_PATHS, router as api_router
+from api.seller.account import ROUTE_PATHS as SELLER_ACCOUNT_ROUTE_PATHS
+from api.seller.account import router as seller_account_router
 from api.seller.announcements import ROUTE_PATHS as SELLER_ANNOUNCEMENT_ROUTE_PATHS
 from api.seller.announcements import router as seller_announcements_router
 from api.seller.conversations import ROUTE_PATHS as CONVERSATION_ROUTE_PATHS
@@ -34,6 +40,9 @@ EXTRACTED_PATHS = (
     | ADMIN_FEEDBACK_ROUTE_PATHS
     | SELLER_ANNOUNCEMENT_ROUTE_PATHS
     | ADMIN_ANNOUNCEMENT_ROUTE_PATHS
+    | SELLER_ACCOUNT_ROUTE_PATHS
+    | ADMIN_APPLICATION_ROUTE_PATHS
+    | ADMIN_SELLER_ROUTE_PATHS
 )
 
 
@@ -103,6 +112,9 @@ def test_extracted_routes_use_domain_handler_objects() -> None:
         **_route_endpoints(admin_feedback_router),
         **_route_endpoints(seller_announcements_router),
         **_route_endpoints(admin_announcements_router),
+        **_route_endpoints(seller_account_router),
+        **_route_endpoints(admin_applications_router),
+        **_route_endpoints(admin_sellers_router),
     }
     composed_endpoints = _route_endpoints(api_router, include_paths=EXTRACTED_PATHS)
     legacy_endpoints = _route_endpoints(
