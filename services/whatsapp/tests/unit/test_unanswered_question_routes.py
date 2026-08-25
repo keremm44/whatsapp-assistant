@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-import protected_routes
+import api.seller.unanswered as unanswered_routes
 from main import app
 
 
@@ -49,7 +49,7 @@ def group_record(*, status: str = "OPEN", version: int = 3) -> dict[str, Any]:
 
 @pytest.fixture
 def client() -> TestClient:
-    app.dependency_overrides[protected_routes.require_seller] = lambda: seller_context()
+    app.dependency_overrides[unanswered_routes.require_seller] = lambda: seller_context()
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -70,7 +70,7 @@ def test_unanswered_list_uses_auth_seller_and_view(
         captured.update(kwargs)
         return {"durum": "başarılı", "toplam": 1, "groups": [group_record()]}
 
-    monkeypatch.setattr(protected_routes, "list_seller_unanswered_questions", fake_list)
+    monkeypatch.setattr(unanswered_routes, "list_seller_unanswered_questions", fake_list)
     response = client.get(
         "/seller/unanswered-questions?view=action_required&limit=20&offset=0"
     )
@@ -85,6 +85,39 @@ def test_unanswered_list_uses_auth_seller_and_view(
     assert body["questions"][0]["question"] == "Bulaşık makinesinde yıkanır mı?"
 
 
+def test_unanswered_v2_uses_native_service_and_preserves_envelope(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_list_v2(seller_id: int, **kwargs: Any) -> dict[str, Any]:
+        captured["seller_id"] = seller_id
+        captured.update(kwargs)
+        return {
+            "ok": True,
+            "items": [],
+            "has_more": False,
+            "next_cursor": None,
+        }
+
+    monkeypatch.setattr(unanswered_routes, "list_unanswered_v2", fake_list_v2)
+    response = client.get("/seller/unanswered-questions/v2?view=answered&limit=5")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [],
+        "has_more": False,
+        "next_cursor": None,
+    }
+    assert captured == {
+        "seller_id": 11,
+        "view": "answered",
+        "limit": 5,
+        "cursor": None,
+    }
+
+
 def test_unanswered_list_validates_view_and_pagination(client: TestClient) -> None:
     assert client.get("/seller/unanswered-questions?view=x").status_code == 422
     assert client.get("/seller/unanswered-questions?limit=101").status_code == 422
@@ -96,7 +129,7 @@ def test_unanswered_list_unavailable_is_503(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        protected_routes,
+        unanswered_routes,
         "list_seller_unanswered_questions",
         lambda *args, **kwargs: {"durum": "hata", "kind": "unavailable"},
     )
@@ -108,7 +141,7 @@ def test_unanswered_detail_success(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        protected_routes,
+        unanswered_routes,
         "get_seller_unanswered_question_detail",
         lambda seller_id, group_id: {
             "durum": "başarılı",
@@ -136,7 +169,7 @@ def test_unanswered_detail_cross_tenant_is_404(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        protected_routes,
+        unanswered_routes,
         "get_seller_unanswered_question_detail",
         lambda *args: {"durum": "hata", "kind": "not_found"},
     )
@@ -169,7 +202,7 @@ def test_set_answer_uses_auth_profile_and_no_client_identity(
             "group": group_record(status="ANSWERED", version=4),
         }
 
-    monkeypatch.setattr(protected_routes, "set_seller_answer", fake_set)
+    monkeypatch.setattr(unanswered_routes, "set_seller_answer", fake_set)
     response = client.post(
         "/seller/unanswered-questions/41/actions",
         json={
@@ -212,7 +245,7 @@ def test_dismiss_success(
         }
 
     monkeypatch.setattr(
-        protected_routes,
+        unanswered_routes,
         "dismiss_seller_unanswered_question",
         fake_dismiss,
     )
@@ -279,7 +312,7 @@ def test_stale_action_is_409(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        protected_routes,
+        unanswered_routes,
         "set_seller_answer",
         lambda *args, **kwargs: {"durum": "hata", "kind": "conflict"},
     )
