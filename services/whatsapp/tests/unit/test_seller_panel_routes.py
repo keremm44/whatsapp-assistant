@@ -6,8 +6,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from api.router import router
 from auth_service import AuthContext, require_seller
-from protected_routes import router
 
 
 app = FastAPI()
@@ -42,7 +42,7 @@ def test_conversation_list_uses_authenticated_seller_scope() -> None:
         "conversations": [{"customer": {"id": 22}}],
     }
     with patch(
-        "protected_routes.list_seller_panel_conversations",
+        "api.seller.conversations.list_seller_panel_conversations",
         return_value=result,
     ) as mocked:
         response = client.get("/seller/conversations?attention_only=true")
@@ -69,7 +69,7 @@ def test_conversation_list_passes_paused_control_state() -> None:
         "conversations": [{"customer": {"id": 22}}],
     }
     with patch(
-        "protected_routes.list_seller_panel_conversations",
+        "api.seller.conversations.list_seller_panel_conversations",
         return_value=result,
     ) as mocked:
         response = client.get(
@@ -121,7 +121,7 @@ def test_conversation_detail_passes_cursor_and_limits() -> None:
         "open_unanswered": [],
     }
     with patch(
-        "protected_routes.get_seller_panel_conversation_detail",
+        "api.seller.conversations.get_seller_panel_conversation_detail",
         return_value=result,
     ) as mocked:
         response = client.get(
@@ -141,7 +141,7 @@ def test_conversation_detail_passes_cursor_and_limits() -> None:
 
 def test_conversation_detail_not_found_is_404_and_safe() -> None:
     with patch(
-        "protected_routes.get_seller_panel_conversation_detail",
+        "api.seller.conversations.get_seller_panel_conversation_detail",
         return_value={
             "ok": False,
             "kind": "not_found",
@@ -160,7 +160,7 @@ def test_conversation_detail_not_found_is_404_and_safe() -> None:
 
 def test_conversation_detail_does_not_shadow_control_route() -> None:
     with patch(
-        "protected_routes.read_conversation_control",
+        "api.seller.conversations.read_conversation_control",
         return_value={
             "ok": True,
             "customer_id": 22,
@@ -198,7 +198,7 @@ def test_dashboard_tasks_uses_type_alias_and_seller_scope() -> None:
         "tasks": [{"id": "return_review:9", "type": "return_review"}],
     }
     with patch(
-        "protected_routes.list_seller_panel_dashboard_tasks",
+        "api.seller.dashboard.list_seller_panel_dashboard_tasks",
         return_value=result,
     ) as mocked:
         response = client.get(
