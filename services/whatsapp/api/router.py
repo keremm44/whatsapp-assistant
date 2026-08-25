@@ -12,8 +12,10 @@ from api.seller.settings import build_router as build_settings_router
 _PARTITIONED_PATHS = SETTINGS_ROUTE_PATHS | PRODUCT_ROUTE_PATHS
 
 router = APIRouter()
-router.include_router(build_settings_router(legacy_protected_router))
-router.include_router(build_products_router(legacy_protected_router))
+settings_router = build_settings_router(legacy_protected_router)
+products_router = build_products_router(legacy_protected_router)
+router.routes.extend(settings_router.routes)
+router.routes.extend(products_router.routes)
 
 # Keep every not-yet-migrated protected route behavior-identical while route
 # ownership is moved domain by domain. The legacy module remains the handler
