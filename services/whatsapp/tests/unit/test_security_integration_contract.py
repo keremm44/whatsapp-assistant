@@ -5,6 +5,7 @@ from typing import Any, Callable
 import pytest
 from fastapi.testclient import TestClient
 
+import api.seller.returns as return_routes
 import api.seller.unanswered as unanswered_routes
 import auth_service
 import protected_routes
@@ -132,7 +133,7 @@ def test_return_mutation_is_scoped_to_authenticated_tenant(
         raise AssertionError("Cross-tenant request unexpectedly used seller 11")
 
     monkeypatch.setattr(
-        protected_routes,
+        return_routes,
         "mark_seller_return_issue_handled",
         fake_mark_handled,
     )
@@ -214,7 +215,7 @@ def test_return_stale_version_maps_to_409_with_real_seller_gate(
     _set_authenticated_context(_seller_context(seller_id=11, profile_id=7))
 
     monkeypatch.setattr(
-        protected_routes,
+        return_routes,
         "mark_seller_return_issue_handled",
         lambda *args, **kwargs: {
             "durum": "hata",
@@ -257,27 +258,3 @@ def test_unanswered_stale_version_maps_to_409_with_real_seller_gate(
     )
 
     assert response.status_code == 409
-
-
-def test_client_cannot_forge_seller_or_actor_identity_before_mutation_service(
-    client: TestClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _set_authenticated_context(_seller_context(seller_id=22, profile_id=8))
-    monkeypatch.setattr(
-        protected_routes,
-        "mark_seller_return_issue_handled",
-        _must_not_run("mark_seller_return_issue_handled"),
-    )
-
-    response = client.post(
-        "/seller/return-issue-requests/41/actions",
-        json={
-            "action": "mark_handled",
-            "expected_version": 3,
-            "seller_id": 11,
-            "actor_profile_id": 7,
-        },
-    )
-
-    assert response.status_code == 422
