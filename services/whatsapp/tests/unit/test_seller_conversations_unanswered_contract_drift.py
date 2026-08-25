@@ -14,7 +14,7 @@ import unanswered_question_service
 
 
 CONTRACT_PATH = (
-    Path(__file__).resolve().parents[3]
+    Path(__file__).resolve().parents[4]
     / "contracts"
     / "seller-conversations-unanswered-v1.json"
 )

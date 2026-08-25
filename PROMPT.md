@@ -12,7 +12,7 @@ Kod yazmadan önce sırasıyla:
 
 1. Kök `AGENTS.md` dosyasını oku.
 2. `PROJECT_STRUCTURE.md` dosyasını oku.
-3. Görev backend ile ilgiliyse `backend/AGENTS.md` dosyasını oku.
+3. Görev WhatsApp backend ile ilgiliyse `services/whatsapp/AGENTS.md` dosyasını oku.
 4. Görev frontend ile ilgiliyse `frontend/AGENTS.md` dosyasını oku.
 5. Görevle doğrudan ilişkili mevcut kodu ve testleri incele.
 6. API/schema/state/route isimlerini tahmin etme; repository içinden doğrula.
@@ -46,10 +46,10 @@ Sonra en küçük güvenli değişikliği uygula.
 
 Önce değişikliğin dar testini çalıştır.
 
-Backend değiştiyse mümkün olduğunda:
+WhatsApp backend değiştiyse mümkün olduğunda:
 
 ```powershell
-cd backend
+cd services/whatsapp
 python -m pytest -q
 ```
 

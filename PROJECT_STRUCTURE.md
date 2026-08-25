@@ -1,6 +1,8 @@
 # WhatsApp Asistan — Project Structure
 
-Bu dosya repository'nin yüksek seviyeli mimari haritasıdır. Ayrıntılı çalışma kuralları için kök `AGENTS.md`, `backend/AGENTS.md` ve `frontend/AGENTS.md` dosyalarını kullan.
+Bu dosya repository'nin yüksek seviyeli mimari haritasıdır. Ayrıntılı çalışma kuralları için kök `AGENTS.md`, `services/whatsapp/AGENTS.md` ve `frontend/AGENTS.md` dosyalarını kullan.
+
+> Geçiş notu: mevcut backend servisi repository içinde `services/whatsapp/` altına taşınmıştır. Bu aşamada kodun davranışı ve servis sınırları değiştirilmemiştir; platform/control-plane ve Trendyol servisleri henüz fiziksel olarak ayrıştırılmamıştır.
 
 ## 1. Kök yapı
 
@@ -9,34 +11,35 @@ whatsapp-assistant/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml
-├── backend/
-│   ├── AGENTS.md
-│   ├── main.py
-│   ├── settings.py
-│   ├── ai_engine.py
-│   ├── auth_service.py
-│   ├── protected_routes.py
-│   ├── public_routes.py
-│   ├── admin_seller_routes.py
-│   ├── admin_seller_service.py
-│   ├── admin_seller_repository.py
-│   ├── conversation_control_service.py
-│   ├── cursor_queue_routes.py
-│   ├── cursor_queue_service.py
-│   ├── cursor_queue_repository.py
-│   ├── chat_service/
-│   ├── database/
-│   ├── whatsapp_webhook/
-│   ├── migrations/
-│   ├── scripts/
-│   ├── docs/
-│   ├── tests/
-│   │   ├── unit/
-│   │   ├── integration/
-│   │   └── live/
-│   ├── .env.example
-│   ├── pytest.ini
-│   └── requirements.txt
+├── services/
+│   └── whatsapp/
+│       ├── AGENTS.md
+│       ├── main.py
+│       ├── settings.py
+│       ├── ai_engine.py
+│       ├── auth_service.py
+│       ├── protected_routes.py
+│       ├── public_routes.py
+│       ├── admin_seller_routes.py
+│       ├── admin_seller_service.py
+│       ├── admin_seller_repository.py
+│       ├── conversation_control_service.py
+│       ├── cursor_queue_routes.py
+│       ├── cursor_queue_service.py
+│       ├── cursor_queue_repository.py
+│       ├── chat_service/
+│       ├── database/
+│       ├── whatsapp_webhook/
+│       ├── migrations/
+│       ├── scripts/
+│       ├── docs/
+│       ├── tests/
+│       │   ├── unit/
+│       │   ├── integration/
+│       │   └── live/
+│       ├── .env.example
+│       ├── pytest.ini
+│       └── requirements.txt
 ├── contracts/
 │   ├── seller-conversations-unanswered-v1.json
 │   └── seller-orders-returns-v1.json
@@ -63,13 +66,13 @@ whatsapp-assistant/
 
 Bu harita önemli sorumluluk sınırlarını gösterir; tüm dosyaların eksiksiz envanteri değildir.
 
-## 2. Backend mimarisi
+## 2. WhatsApp backend mimarisi
 
-Backend FastAPI + Supabase tabanlıdır.
+Mevcut WhatsApp servisi FastAPI + Supabase tabanlıdır ve `services/whatsapp/` altında çalışır.
 
 ### Uygulama girişi
 
-`backend/main.py`
+`services/whatsapp/main.py`
 
 Sorumluluklar:
 
@@ -109,7 +112,7 @@ Route katmanı request validation, auth dependency ve HTTP response sınırıdı
 Örnek alt yapı:
 
 ```text
-backend/chat_service/
+services/whatsapp/chat_service/
 ├── __init__.py
 ├── content.py
 ├── dependencies.py
@@ -123,13 +126,13 @@ backend/chat_service/
 
 ### AI / classification
 
-`backend/ai_engine.py`
+`services/whatsapp/ai_engine.py`
 
 Niyet sınıflandırması ve AI yardımcıları burada bulunabilir; ancak classifier business state'in kaynak-of-truth'u değildir. Satıcı kuralları, ürün bilgileri, şablonlar ve state machine karar önceliğini korur.
 
 ### Database katmanı
 
-`backend/database/`
+`services/whatsapp/database/`
 
 Domain odaklı Supabase read/write fonksiyonları burada tutulur. Mevcut yapı conversation, order, return, seller settings, rules, notifications ve benzeri alanları ayrı modüllere böler.
 
@@ -147,9 +150,9 @@ Her özellik birebir bu katman sayısını kullanmak zorunda değildir; ancak UI
 
 ### Migrationlar
 
-`backend/migrations/`
+`services/whatsapp/migrations/`
 
-Schema history'nin kaynak-of-truth'udur.
+Schema history'nin mevcut kaynak-of-truth'udur.
 
 Kurallar:
 
@@ -157,12 +160,12 @@ Kurallar:
 - uygulanmış migrationı değiştirmeme,
 - canlı DB öncesi `public.schema_migrations` parity kontrolü.
 
-Ayrıntı: `backend/docs/APPLY_INSTRUCTIONS.md`.
+Ayrıntı: `services/whatsapp/docs/APPLY_INSTRUCTIONS.md`.
 
 ### Backend testleri
 
 ```text
-backend/tests/
+services/whatsapp/tests/
 ├── unit/         # izole testler
 ├── integration/  # gerçek Supabase entegrasyonu
 └── live/         # çalışan API/canlı auth kontrolleri
@@ -171,7 +174,7 @@ backend/tests/
 Temel CI testi:
 
 ```powershell
-cd backend
+cd services/whatsapp
 python -m pytest -q
 ```
 
@@ -261,7 +264,7 @@ Mevcut contract dosyaları:
 Bir endpoint/data model değişikliği bu contractlardan birini etkiliyorsa backend ve frontend tek başına güncellenmemelidir. Şunlar birlikte kontrol edilmelidir:
 
 ```text
-backend producer
+WhatsApp backend producer
     <-> contracts/*.json
     <-> frontend consumer/type/helper
 ```
@@ -289,7 +292,7 @@ Frontend guard güvenlik sınırı olarak tek başına yeterli değildir.
 
 Kaynak örnek:
 
-`backend/.env.example`
+`services/whatsapp/.env.example`
 
 Önemli sınır:
 
@@ -329,7 +332,7 @@ PR/push `main` için:
 
 ```text
 WhatsApp/provider
-  -> backend/whatsapp_webhook/
+  -> services/whatsapp/whatsapp_webhook/
   -> chat service/orchestration
   -> seller rules + product/state context
   -> database
@@ -378,14 +381,14 @@ Mevcut intent:
 
 | İstenen değişiklik | İlk bakılacak alan |
 |---|---|
-| WhatsApp mesaj davranışı | `backend/chat_service/`, `backend/whatsapp_webhook/` |
-| Order state değişikliği | `backend/chat_service/order_state.py`, order helper/database kodu |
-| Seller conversation kontrolü | `backend/conversation_control_service.py` + ilgili database/frontend alanı |
-| Protected API | `backend/protected_routes.py` + service/database + contract |
+| WhatsApp mesaj davranışı | `services/whatsapp/chat_service/`, `services/whatsapp/whatsapp_webhook/` |
+| Order state değişikliği | `services/whatsapp/chat_service/order_state.py`, order helper/database kodu |
+| Seller conversation kontrolü | `services/whatsapp/conversation_control_service.py` + ilgili database/frontend alanı |
+| Protected API | `services/whatsapp/protected_routes.py` + service/database + contract |
 | Seller panel ekranı | `frontend/src/app/seller/` + `frontend/src/components/seller/` |
 | Formatter/status label | `frontend/src/lib/` + ilgili test |
 | Auth/ownership | backend auth/protected route; frontend yalnızca UI/session consumer |
-| DB schema | `backend/migrations/` + database consumer + test |
+| DB schema | `services/whatsapp/migrations/` + database consumer + test |
 | Request/response shape | backend producer + `contracts/` + frontend consumer |
 | CI | `.github/workflows/ci.yml` |
 | Deployment | `render.yaml` |
@@ -397,7 +400,7 @@ Mevcut intent:
 1. Çalışan kod ve testler.
 2. İlgili `AGENTS.md` kuralları.
 3. `contracts/` veri sözleşmeleri.
-4. `backend/docs/APPLY_INSTRUCTIONS.md` gibi operasyonel dokümanlar.
+4. `services/whatsapp/docs/APPLY_INSTRUCTIONS.md` gibi operasyonel dokümanlar.
 5. `PROJECT_STRUCTURE.md` yüksek seviyeli harita.
 6. `README.md` genel kurulum/kullanım bilgisi.
 

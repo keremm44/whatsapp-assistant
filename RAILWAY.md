@@ -7,11 +7,11 @@ up the matching config file.
 
 | Service | Root Directory | Config file | Start |
 | --- | --- | --- | --- |
-| API | `/backend` | `railway.json` | FastAPI on `$PORT` |
-| WhatsApp worker | `/backend` | `railway.worker.json` | durable queue worker |
+| API | `/services/whatsapp` | `railway.json` | FastAPI on `$PORT` |
+| WhatsApp worker | `/services/whatsapp` | `railway.worker.json` | durable queue worker |
 | Frontend | `/frontend` | `railway.json` | Next.js on `$PORT` |
 
-For the worker service, set **Config File Path** to `backend/railway.worker.json`
+For the worker service, set **Config File Path** to `services/whatsapp/railway.worker.json`
 if Railway does not resolve it relative to the selected root directory. The API
 and frontend use the normal `railway.json` path for their respective root
 directories.
@@ -38,7 +38,7 @@ committed):
 Keep `ENABLE_DEV_ENDPOINTS=false`, `WHATSAPP_RUNTIME_ENABLED=false`, and
 `WHATSAPP_SEND_ENABLED=false` until the corresponding production integrations
 and migrations have been verified. Add the WhatsApp webhook/send variables
-from `backend/.env.example` only when enabling that integration.
+from `services/whatsapp/.env.example` only when enabling that integration.
 
 ### WhatsApp worker service
 
@@ -61,7 +61,7 @@ check every 60 seconds, and sends grouped PII-free operational alerts when
 thresholds are crossed.
 
 For dead-worker detection, configure a separate Railway Cron service or other
-external scheduler with `/backend` as its root and this command:
+external scheduler with `/services/whatsapp` as its root and this command:
 
 ```text
 python -m scripts.check_operational_health
@@ -76,7 +76,7 @@ use the same backend Supabase service credentials and may use the same
 ### AI classifier predeploy gate
 
 Before enabling a new `GROQ_MODEL`, changing the classifier prompt, or deploying
-classifier behavior changes, run from `backend/` with the production-candidate
+classifier behavior changes, run from `services/whatsapp/` with the production-candidate
 model/key:
 
 ```text
@@ -113,7 +113,7 @@ Railway provides `PORT`; do not hard-code it.
 
 ## Deploy checklist
 
-1. From `backend/`, run `python -m scripts.check_migration_parity`. The command
+1. From `services/whatsapp/`, run `python -m scripts.check_migration_parity`. The command
    must report exact parity with `public.schema_migrations` before deployment.
 2. If parity fails, apply every missing migration in ascending numeric order.
    Do not skip an earlier migration even when a later version is already

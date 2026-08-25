@@ -101,7 +101,7 @@ variables, so component files should never hardcode hex values.
 
 ## Backend safety
 
-This folder never modifies the backend, migrations, or environment
-templates under `../backend/`. All business data flows through the
+This folder never modifies the WhatsApp backend, migrations, or environment
+templates under `../services/whatsapp/`. All business data flows through the
 documented FastAPI endpoints; the frontend only manages the Supabase
 user session and forwards the access token as a Bearer header.

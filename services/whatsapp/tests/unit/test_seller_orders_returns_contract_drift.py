@@ -12,7 +12,7 @@ import return_issue_service
 
 
 CONTRACT_PATH = (
-    Path(__file__).resolve().parents[3]
+    Path(__file__).resolve().parents[4]
     / "contracts"
     / "seller-orders-returns-v1.json"
 )

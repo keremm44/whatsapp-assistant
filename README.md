@@ -6,24 +6,25 @@ Asistanın karar kaynağı satıcı kuralları, ürün bilgileri, şablonlar ve 
 ## Proje yapısı
 
 ```text
-backend/
-├── ai_engine.py
-├── auth_service.py
-├── chat_service.py
-├── database.py
-├── main.py
-├── onboarding_service.py
-├── protected_routes.py
-├── settings.py
-├── migrations/
-├── scripts/
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── live/
-├── .env.example
-├── pytest.ini
-└── requirements.txt
+services/
+└── whatsapp/
+    ├── ai_engine.py
+    ├── auth_service.py
+    ├── chat_service/
+    ├── database/
+    ├── main.py
+    ├── onboarding_service.py
+    ├── protected_routes.py
+    ├── settings.py
+    ├── migrations/
+    ├── scripts/
+    ├── tests/
+    │   ├── unit/
+    │   ├── integration/
+    │   └── live/
+    ├── .env.example
+    ├── pytest.ini
+    └── requirements.txt
 frontend/
 ├── public/
 └── src/
@@ -32,7 +33,7 @@ frontend/
 ## Backend kurulumu
 
 ```powershell
-cd backend
+cd services/whatsapp
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
@@ -41,12 +42,12 @@ Copy-Item .env.example .env
 
 `.env` içine Supabase ve sınıflandırıcı anahtarlarını gir. `SUPABASE_SERVICE_KEY` yalnızca backend ortamında tutulmalıdır.
 
-Migrationlar `backend/migrations/` altındaki üç haneli numara sırasıyla uygulanır. Hangi migrationların daha önce uygulandığı için kaynak `public.schema_migrations` tablosudur; tabloda kayıtlı sürümleri yeniden çalıştırma, yalnızca eksik sürümleri artan numara sırasıyla uygula. Her DB değişikliğinden önce repo migration zinciri ile hedef Supabase projesindeki `schema_migrations` kaydını karşılaştır.
+Migrationlar `services/whatsapp/migrations/` altındaki üç haneli numara sırasıyla uygulanır. Hangi migrationların daha önce uygulandığı için kaynak `public.schema_migrations` tablosudur; tabloda kayıtlı sürümleri yeniden çalıştırma, yalnızca eksik sürümleri artan numara sırasıyla uygula. Her DB değişikliğinden önce repo migration zinciri ile hedef Supabase projesindeki `schema_migrations` kaydını karşılaştır.
 
 ## API çalıştırma
 
 ```powershell
-cd backend
+cd services/whatsapp
 .\venv\Scripts\Activate.ps1
 python -m uvicorn main:app --reload
 ```
