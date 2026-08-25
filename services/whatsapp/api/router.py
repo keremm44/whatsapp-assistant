@@ -20,6 +20,8 @@ from api.seller.conversations import ROUTE_PATHS as CONVERSATION_ROUTE_PATHS
 from api.seller.conversations import router as conversations_router
 from api.seller.dashboard import ROUTE_PATHS as DASHBOARD_ROUTE_PATHS
 from api.seller.dashboard import router as dashboard_router
+from api.seller.entitlements import ROUTE_PATHS as ENTITLEMENT_ROUTE_PATHS
+from api.seller.entitlements import router as entitlements_router
 from api.seller.feedback import ROUTE_PATHS as SELLER_FEEDBACK_ROUTE_PATHS
 from api.seller.feedback import router as seller_feedback_router
 from api.seller.onboarding import ROUTE_PATHS as ONBOARDING_ROUTE_PATHS
@@ -46,6 +48,7 @@ PARTITIONED_PATHS = frozenset().union(
     SELLER_ANNOUNCEMENT_ROUTE_PATHS,
     CONVERSATION_ROUTE_PATHS,
     DASHBOARD_ROUTE_PATHS,
+    ENTITLEMENT_ROUTE_PATHS,
     SELLER_FEEDBACK_ROUTE_PATHS,
     ONBOARDING_ROUTE_PATHS,
     ORDER_ROUTE_PATHS,
@@ -60,6 +63,7 @@ router = APIRouter()
 for source_router in (
     auth_router,
     seller_account_router,
+    entitlements_router,
     settings_router,
     products_router,
     onboarding_router,
