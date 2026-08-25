@@ -9,7 +9,7 @@ Her görevde önce:
 1. Bu `AGENTS.md` dosyasını oku.
 2. `PROJECT_STRUCTURE.md` dosyasından ilgili katmanı ve kaynak-of-truth dosyalarını belirle.
 3. Çalışacağın alanın kendi `AGENTS.md` dosyasını oku:
-   - Backend: `backend/AGENTS.md`
+   - WhatsApp backend: `services/whatsapp/AGENTS.md`
    - Frontend: `frontend/AGENTS.md`
 4. Değişiklik yapmadan önce ilgili mevcut kodu ve testleri incele.
 5. İstenen davranışın mevcut API contract, auth, veri modeli veya state machine ile çelişip çelişmediğini kontrol et.
@@ -41,14 +41,14 @@ Tahmin ederek yeni mimari, endpoint, tablo, alan, durum kodu veya business rule 
 
 Database değişikliği gerekiyorsa:
 
-1. `backend/migrations/` zincirini incele.
+1. `services/whatsapp/migrations/` zincirini incele.
 2. Mevcut migration dosyasını geriye dönük olarak değiştirme; yeni migration oluştur.
 3. Migration numarası mevcut üç haneli sıralamanın devamı olmalı.
 4. Uygulanmış migrationı yeniden çalıştırma.
 5. Gerçek Supabase üzerinde işlem gerekiyorsa önce `public.schema_migrations` parity kontrolü yapılmalı.
 6. Destructive migration, veri silme veya geri dönüşü zor DDL açıkça istenmedikçe uygulanmamalı.
 
-Ek ayrıntı: `backend/docs/APPLY_INSTRUCTIONS.md`.
+Ek ayrıntı: `services/whatsapp/docs/APPLY_INSTRUCTIONS.md`.
 
 ## 5. API ve contract değişiklikleri
 
@@ -67,7 +67,7 @@ Değişen alan için mümkün olan en dar testi önce çalıştır; ardından il
 
 ### Backend
 
-`backend/` içinde:
+`services/whatsapp/` içinde:
 
 ```powershell
 python -m pytest -q
