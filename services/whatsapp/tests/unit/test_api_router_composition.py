@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from api.router import router as api_router
-from api.seller.products import ROUTE_PATHS as PRODUCT_ROUTE_PATHS
-from api.seller.settings import ROUTE_PATHS as SETTINGS_ROUTE_PATHS
+from api.router import PARTITIONED_PATHS, router as api_router
 from protected_routes import router as legacy_protected_router
 
 
@@ -19,25 +17,33 @@ def _route_signatures(router) -> Counter[tuple[str, tuple[str, ...], int | None]
     return signatures
 
 
+def _route_endpoints(router) -> dict[tuple[str, tuple[str, ...]], object]:
+    endpoints: dict[tuple[str, tuple[str, ...]], object] = {}
+    for route in router.routes:
+        path = getattr(route, "path", None)
+        methods = getattr(route, "methods", None)
+        endpoint = getattr(route, "endpoint", None)
+        if path is None or methods is None or endpoint is None:
+            continue
+        endpoints[(path, tuple(sorted(methods)))] = endpoint
+    return endpoints
+
+
 def test_composed_router_preserves_legacy_protected_route_surface() -> None:
     assert _route_signatures(api_router) == _route_signatures(legacy_protected_router)
 
 
-def test_first_seller_partitions_are_owned_once() -> None:
-    partitioned_paths = SETTINGS_ROUTE_PATHS | PRODUCT_ROUTE_PATHS
+def test_all_legacy_protected_paths_have_domain_ownership() -> None:
+    legacy_paths = {
+        route.path
+        for route in legacy_protected_router.routes
+        if getattr(route, "path", None) is not None
+    }
+    assert PARTITIONED_PATHS == legacy_paths
 
-    for path in partitioned_paths:
-        matching_routes = [
-            route
-            for route in api_router.routes
-            if getattr(route, "path", None) == path
-        ]
-        legacy_matching_routes = [
-            route
-            for route in legacy_protected_router.routes
-            if getattr(route, "path", None) == path
-        ]
-        assert len(matching_routes) == len(legacy_matching_routes)
+
+def test_composed_router_reuses_existing_handler_objects() -> None:
+    assert _route_endpoints(api_router) == _route_endpoints(legacy_protected_router)
 
 
 def test_composed_router_has_no_duplicate_method_path_pairs() -> None:
