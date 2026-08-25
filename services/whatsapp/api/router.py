@@ -34,7 +34,7 @@ from api.seller.returns import build_router as build_returns_router
 from api.seller.settings import ROUTE_PATHS as SETTINGS_ROUTE_PATHS
 from api.seller.settings import router as settings_router
 from api.seller.unanswered import ROUTE_PATHS as UNANSWERED_ROUTE_PATHS
-from api.seller.unanswered import build_router as build_unanswered_router
+from api.seller.unanswered import router as unanswered_router
 
 
 PARTITIONED_PATHS = frozenset().union(
@@ -72,7 +72,7 @@ for source_router in (
     admin_sellers_router,
     build_orders_router(legacy_protected_router),
     build_returns_router(legacy_protected_router),
-    build_unanswered_router(legacy_protected_router),
+    unanswered_router,
     seller_feedback_router,
     admin_feedback_router,
     admin_announcements_router,
