@@ -10,6 +10,8 @@ from api.admin.feedback import ROUTE_PATHS as ADMIN_FEEDBACK_ROUTE_PATHS
 from api.admin.feedback import router as admin_feedback_router
 from api.admin.sellers import ROUTE_PATHS as ADMIN_SELLER_ROUTE_PATHS
 from api.admin.sellers import router as admin_sellers_router
+from api.auth import ROUTE_PATHS as AUTH_ROUTE_PATHS
+from api.auth import router as auth_router
 from api.router import PARTITIONED_PATHS, router as api_router
 from api.seller.account import ROUTE_PATHS as SELLER_ACCOUNT_ROUTE_PATHS
 from api.seller.account import router as seller_account_router
@@ -31,7 +33,8 @@ from protected_routes import router as legacy_protected_router
 
 
 EXTRACTED_PATHS = (
-    SETTINGS_ROUTE_PATHS
+    AUTH_ROUTE_PATHS
+    | SETTINGS_ROUTE_PATHS
     | PRODUCT_ROUTE_PATHS
     | ONBOARDING_ROUTE_PATHS
     | CONVERSATION_ROUTE_PATHS
@@ -103,6 +106,7 @@ def test_not_yet_extracted_routes_reuse_legacy_handler_objects() -> None:
 
 def test_extracted_routes_use_domain_handler_objects() -> None:
     native_endpoints = {
+        **_route_endpoints(auth_router),
         **_route_endpoints(settings_router),
         **_route_endpoints(products_router),
         **_route_endpoints(onboarding_router),
