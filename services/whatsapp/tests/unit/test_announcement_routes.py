@@ -5,12 +5,14 @@ from unittest.mock import patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from api.admin.announcements import router as admin_announcements_router
+from api.seller.announcements import router as seller_announcements_router
 from auth_service import AuthContext, get_current_auth_context, require_admin, require_seller
-from protected_routes import router
 
 
 app = FastAPI()
-app.include_router(router)
+app.include_router(admin_announcements_router)
+app.include_router(seller_announcements_router)
 client = TestClient(app)
 
 ADMIN_CONTEXT = AuthContext(
@@ -49,7 +51,7 @@ def _clear() -> None:
 def test_admin_can_publish_to_all_without_seller_ids() -> None:
     _set_admin()
     with patch(
-        "protected_routes.publish_announcement",
+        "api.admin.announcements.publish_announcement",
         return_value={
             "ok": True,
             "announcement": {
@@ -80,7 +82,7 @@ def test_admin_can_publish_to_all_without_seller_ids() -> None:
 
 def test_admin_publish_selected_rejects_duplicate_ids_before_service() -> None:
     _set_admin()
-    with patch("protected_routes.publish_announcement") as mocked:
+    with patch("api.admin.announcements.publish_announcement") as mocked:
         response = client.post(
             "/admin/announcements",
             json={
@@ -101,10 +103,10 @@ def test_admin_publish_selected_rejects_duplicate_ids_before_service() -> None:
 def test_admin_list_and_detail_routes_are_protected_and_paginated() -> None:
     _set_admin()
     with patch(
-        "protected_routes.list_admin_announcements",
+        "api.admin.announcements.list_admin_announcements",
         return_value={"ok": True, "total": 0, "limit": 10, "offset": 20, "announcements": []},
     ) as list_mock, patch(
-        "protected_routes.get_admin_announcement_item",
+        "api.admin.announcements.get_admin_announcement_item",
         return_value={"ok": True, "announcement": {"id": 8, "targets": []}},
     ) as detail_mock:
         list_response = client.get("/admin/announcements?limit=10&offset=20")
@@ -120,13 +122,13 @@ def test_admin_list_and_detail_routes_are_protected_and_paginated() -> None:
 def test_seller_list_detail_and_read_use_authenticated_seller_scope() -> None:
     _set_seller()
     with patch(
-        "protected_routes.list_seller_announcements",
+        "api.seller.announcements.list_seller_announcements",
         return_value={"ok": True, "total": 0, "limit": 5, "offset": 0, "announcements": []},
     ) as list_mock, patch(
-        "protected_routes.get_seller_announcement_item",
+        "api.seller.announcements.get_seller_announcement_item",
         return_value={"ok": True, "announcement": {"id": 8}},
     ) as detail_mock, patch(
-        "protected_routes.mark_seller_announcement_read",
+        "api.seller.announcements.mark_seller_announcement_read",
         return_value={
             "ok": True,
             "announcement_id": 8,
@@ -151,7 +153,7 @@ def test_seller_list_detail_and_read_use_authenticated_seller_scope() -> None:
 def test_publish_domain_validation_maps_to_422() -> None:
     _set_admin()
     with patch(
-        "protected_routes.publish_announcement",
+        "api.admin.announcements.publish_announcement",
         return_value={
             "ok": False,
             "kind": "validation",
@@ -181,7 +183,7 @@ def test_publish_domain_validation_maps_to_422() -> None:
 def test_not_found_and_unavailable_errors_map_without_leaking_details() -> None:
     _set_seller()
     with patch(
-        "protected_routes.get_seller_announcement_item",
+        "api.seller.announcements.get_seller_announcement_item",
         return_value={
             "ok": False,
             "kind": "not_found",
@@ -190,7 +192,7 @@ def test_not_found_and_unavailable_errors_map_without_leaking_details() -> None:
     ):
         not_found = client.get("/seller/announcements/999")
     with patch(
-        "protected_routes.mark_seller_announcement_read",
+        "api.seller.announcements.mark_seller_announcement_read",
         return_value={
             "ok": False,
             "kind": "unavailable",
@@ -212,7 +214,7 @@ def test_not_found_and_unavailable_errors_map_without_leaking_details() -> None:
 def test_seller_unread_count_uses_authenticated_seller_scope() -> None:
     _set_seller()
     with patch(
-        "protected_routes.get_seller_announcement_unread_count",
+        "api.seller.announcements.get_seller_announcement_unread_count",
         return_value={"ok": True, "unread_count": 4},
     ) as count_mock:
         response = client.get("/seller/announcements/unread-count")
@@ -221,7 +223,6 @@ def test_seller_unread_count_uses_authenticated_seller_scope() -> None:
     assert response.json() == {"unread_count": 4}
     count_mock.assert_called_once_with(42)
     _clear()
-
 
 
 def test_seller_cannot_use_admin_announcement_routes() -> None:
