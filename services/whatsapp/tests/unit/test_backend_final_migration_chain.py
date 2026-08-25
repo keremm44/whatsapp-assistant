@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_migration_chain_is_contiguous_000_through_063() -> None:
+def test_migration_chain_is_contiguous_000_through_064() -> None:
     migrations = sorted(Path("migrations").glob("[0-9][0-9][0-9]_*.sql"))
     versions = [path.name[:3] for path in migrations]
-    assert versions == [f"{version:03d}" for version in range(64)]
+    assert versions == [f"{version:03d}" for version in range(65)]
 
 
 def test_023_024_025_files_match_live_names() -> None:
@@ -174,3 +174,18 @@ def test_063_keeps_zero_debounce_events_final_and_immediate() -> None:
     assert "to service_role" in sql
     assert "'063'" in sql
     assert "whatsapp_turn_finalization_v1" in sql
+
+
+def test_064_adds_backend_only_seller_entitlements_and_whatsapp_backfill() -> None:
+    path = Path("migrations/064_add_seller_entitlements.sql")
+    assert path.exists()
+    sql = path.read_text(encoding="utf-8").lower()
+    assert "create table if not exists public.seller_entitlements" in sql
+    assert "unique (seller_id, product_key)" in sql
+    assert "alter table public.seller_entitlements enable row level security" in sql
+    assert "from public, anon, authenticated" in sql
+    assert "grant all privileges on table public.seller_entitlements to service_role" in sql
+    assert "select id, 'whatsapp', 'active'" in sql
+    assert "on conflict (seller_id, product_key) do nothing" in sql
+    assert "'064'" in sql
+    assert "seller_entitlements_v1" in sql
