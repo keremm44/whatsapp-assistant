@@ -21,6 +21,8 @@ from api.seller.conversations import ROUTE_PATHS as CONVERSATION_ROUTE_PATHS
 from api.seller.conversations import router as conversations_router
 from api.seller.dashboard import ROUTE_PATHS as DASHBOARD_ROUTE_PATHS
 from api.seller.dashboard import router as dashboard_router
+from api.seller.entitlements import ROUTE_PATHS as ENTITLEMENT_ROUTE_PATHS
+from api.seller.entitlements import router as entitlements_router
 from api.seller.feedback import ROUTE_PATHS as SELLER_FEEDBACK_ROUTE_PATHS
 from api.seller.feedback import router as seller_feedback_router
 from api.seller.onboarding import ROUTE_PATHS as ONBOARDING_ROUTE_PATHS
@@ -40,6 +42,7 @@ from api.seller.unanswered import router as unanswered_router
 DOMAIN_ROUTERS = (
     (AUTH_ROUTE_PATHS, auth_router),
     (SELLER_ACCOUNT_ROUTE_PATHS, seller_account_router),
+    (ENTITLEMENT_ROUTE_PATHS, entitlements_router),
     (SETTINGS_ROUTE_PATHS, settings_router),
     (PRODUCT_ROUTE_PATHS, products_router),
     (ONBOARDING_ROUTE_PATHS, onboarding_router),
