@@ -91,7 +91,7 @@ const normalTasks = mockTasks.filter((task) => task.priority === "normal");
 
 export default function PreviewPage() {
   return (
-    <SellerShell storeName="Örnek Mağaza">
+    <SellerShell storeName="Örnek Mağaza" activeProducts={["whatsapp"]}>
       <PageContainer className="py-8 sm:py-10">
         {/* Preview notice — honest about the harness, never part of the
             product surface. */}
@@ -111,7 +111,6 @@ export default function PreviewPage() {
           normal={normalTasks.length}
         />
 
-        {/* High priority — bounded cards that lift on hover. */}
         <section aria-labelledby="preview-high" className="mt-6 space-y-5">
           <SectionHeading
             id="preview-high"
@@ -131,7 +130,6 @@ export default function PreviewPage() {
           </ul>
         </section>
 
-        {/* Normal priority — quieter cards in two columns on desktop. */}
         <section aria-labelledby="preview-normal" className="mt-10 space-y-5">
           <SectionHeading
             id="preview-normal"
@@ -154,8 +152,6 @@ export default function PreviewPage() {
           </ul>
         </section>
 
-        {/* Bordered divided sheet — the list treatment that stays a
-            single sheet (normal-priority list beside the cards). */}
         <section aria-labelledby="preview-list" className="mt-10 space-y-5">
           <SectionHeading
             id="preview-list"
@@ -171,7 +167,6 @@ export default function PreviewPage() {
           </Surface>
         </section>
 
-        {/* Status chips — the full soft-fill tone set. */}
         <section aria-labelledby="preview-chips" className="mt-10 space-y-5">
           <SectionHeading
             id="preview-chips"
