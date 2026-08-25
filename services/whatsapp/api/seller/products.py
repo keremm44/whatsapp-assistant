@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from protected_routes import router as legacy_protected_router
-
 
 ROUTE_PATHS = frozenset(
     {
@@ -12,8 +10,10 @@ ROUTE_PATHS = frozenset(
     }
 )
 
-router = APIRouter()
 
-for route in legacy_protected_router.routes:
-    if getattr(route, "path", None) in ROUTE_PATHS:
-        router.routes.append(route)
+def build_router(source_router: APIRouter) -> APIRouter:
+    router = APIRouter()
+    for route in source_router.routes:
+        if getattr(route, "path", None) in ROUTE_PATHS:
+            router.routes.append(route)
+    return router
