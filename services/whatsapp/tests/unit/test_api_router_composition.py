@@ -5,6 +5,8 @@ from collections import Counter
 from api.router import PARTITIONED_PATHS, router as api_router
 from api.seller.conversations import ROUTE_PATHS as CONVERSATION_ROUTE_PATHS
 from api.seller.conversations import router as conversations_router
+from api.seller.dashboard import ROUTE_PATHS as DASHBOARD_ROUTE_PATHS
+from api.seller.dashboard import router as dashboard_router
 from api.seller.onboarding import ROUTE_PATHS as ONBOARDING_ROUTE_PATHS
 from api.seller.onboarding import router as onboarding_router
 from api.seller.products import ROUTE_PATHS as PRODUCT_ROUTE_PATHS
@@ -19,6 +21,7 @@ EXTRACTED_PATHS = (
     | PRODUCT_ROUTE_PATHS
     | ONBOARDING_ROUTE_PATHS
     | CONVERSATION_ROUTE_PATHS
+    | DASHBOARD_ROUTE_PATHS
 )
 
 
@@ -83,6 +86,7 @@ def test_extracted_routes_use_domain_handler_objects() -> None:
         **_route_endpoints(products_router),
         **_route_endpoints(onboarding_router),
         **_route_endpoints(conversations_router),
+        **_route_endpoints(dashboard_router),
     }
     composed_endpoints = _route_endpoints(api_router, include_paths=EXTRACTED_PATHS)
     legacy_endpoints = _route_endpoints(
