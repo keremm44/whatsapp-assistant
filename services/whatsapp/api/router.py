@@ -3,24 +3,78 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from protected_routes import router as legacy_protected_router
+from api.auth import ROUTE_PATHS as AUTH_ROUTE_PATHS
+from api.auth import build_router as build_auth_router
+from api.admin.announcements import ROUTE_PATHS as ADMIN_ANNOUNCEMENT_ROUTE_PATHS
+from api.admin.announcements import build_router as build_admin_announcements_router
+from api.admin.applications import ROUTE_PATHS as ADMIN_APPLICATION_ROUTE_PATHS
+from api.admin.applications import build_router as build_admin_applications_router
+from api.admin.feedback import ROUTE_PATHS as ADMIN_FEEDBACK_ROUTE_PATHS
+from api.admin.feedback import build_router as build_admin_feedback_router
+from api.admin.sellers import ROUTE_PATHS as ADMIN_SELLER_ROUTE_PATHS
+from api.admin.sellers import build_router as build_admin_sellers_router
+from api.seller.account import ROUTE_PATHS as SELLER_ACCOUNT_ROUTE_PATHS
+from api.seller.account import build_router as build_seller_account_router
+from api.seller.announcements import ROUTE_PATHS as SELLER_ANNOUNCEMENT_ROUTE_PATHS
+from api.seller.announcements import build_router as build_seller_announcements_router
+from api.seller.conversations import ROUTE_PATHS as CONVERSATION_ROUTE_PATHS
+from api.seller.conversations import build_router as build_conversations_router
+from api.seller.dashboard import ROUTE_PATHS as DASHBOARD_ROUTE_PATHS
+from api.seller.dashboard import build_router as build_dashboard_router
+from api.seller.feedback import ROUTE_PATHS as SELLER_FEEDBACK_ROUTE_PATHS
+from api.seller.feedback import build_router as build_seller_feedback_router
+from api.seller.onboarding import ROUTE_PATHS as ONBOARDING_ROUTE_PATHS
+from api.seller.onboarding import build_router as build_onboarding_router
+from api.seller.orders import ROUTE_PATHS as ORDER_ROUTE_PATHS
+from api.seller.orders import build_router as build_orders_router
 from api.seller.products import ROUTE_PATHS as PRODUCT_ROUTE_PATHS
 from api.seller.products import build_router as build_products_router
+from api.seller.returns import ROUTE_PATHS as RETURN_ROUTE_PATHS
+from api.seller.returns import build_router as build_returns_router
 from api.seller.settings import ROUTE_PATHS as SETTINGS_ROUTE_PATHS
 from api.seller.settings import build_router as build_settings_router
+from api.seller.unanswered import ROUTE_PATHS as UNANSWERED_ROUTE_PATHS
+from api.seller.unanswered import build_router as build_unanswered_router
 
 
-_PARTITIONED_PATHS = SETTINGS_ROUTE_PATHS | PRODUCT_ROUTE_PATHS
+PARTITIONED_PATHS = frozenset().union(
+    AUTH_ROUTE_PATHS,
+    ADMIN_ANNOUNCEMENT_ROUTE_PATHS,
+    ADMIN_APPLICATION_ROUTE_PATHS,
+    ADMIN_FEEDBACK_ROUTE_PATHS,
+    ADMIN_SELLER_ROUTE_PATHS,
+    SELLER_ACCOUNT_ROUTE_PATHS,
+    SELLER_ANNOUNCEMENT_ROUTE_PATHS,
+    CONVERSATION_ROUTE_PATHS,
+    DASHBOARD_ROUTE_PATHS,
+    SELLER_FEEDBACK_ROUTE_PATHS,
+    ONBOARDING_ROUTE_PATHS,
+    ORDER_ROUTE_PATHS,
+    PRODUCT_ROUTE_PATHS,
+    RETURN_ROUTE_PATHS,
+    SETTINGS_ROUTE_PATHS,
+    UNANSWERED_ROUTE_PATHS,
+)
+
+_ROUTE_BUILDERS = (
+    build_auth_router,
+    build_seller_account_router,
+    build_settings_router,
+    build_products_router,
+    build_onboarding_router,
+    build_conversations_router,
+    build_dashboard_router,
+    build_admin_applications_router,
+    build_admin_sellers_router,
+    build_orders_router,
+    build_returns_router,
+    build_unanswered_router,
+    build_seller_feedback_router,
+    build_admin_feedback_router,
+    build_admin_announcements_router,
+    build_seller_announcements_router,
+)
 
 router = APIRouter()
-settings_router = build_settings_router(legacy_protected_router)
-products_router = build_products_router(legacy_protected_router)
-router.routes.extend(settings_router.routes)
-router.routes.extend(products_router.routes)
-
-# Keep every not-yet-migrated protected route behavior-identical while route
-# ownership is moved domain by domain. The legacy module remains the handler
-# source during this transition; later steps can move handler implementations
-# without changing the public route surface.
-for route in legacy_protected_router.routes:
-    if getattr(route, "path", None) not in _PARTITIONED_PATHS:
-        router.routes.append(route)
+for build_router in _ROUTE_BUILDERS:
+    router.routes.extend(build_router(legacy_protected_router).routes)
