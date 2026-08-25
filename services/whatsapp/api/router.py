@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from protected_routes import router as legacy_protected_router
 from api.auth import ROUTE_PATHS as AUTH_ROUTE_PATHS
-from api.auth import build_router as build_auth_router
+from api.auth import router as auth_router
 from api.admin.announcements import ROUTE_PATHS as ADMIN_ANNOUNCEMENT_ROUTE_PATHS
 from api.admin.announcements import router as admin_announcements_router
 from api.admin.applications import ROUTE_PATHS as ADMIN_APPLICATION_ROUTE_PATHS
@@ -61,7 +61,7 @@ router = APIRouter()
 # Keep composition order aligned with the legacy protected route surface while
 # domain implementations are extracted incrementally.
 for source_router in (
-    build_auth_router(legacy_protected_router),
+    auth_router,
     seller_account_router,
     settings_router,
     products_router,
