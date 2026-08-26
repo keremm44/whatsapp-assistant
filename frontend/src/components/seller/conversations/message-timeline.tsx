@@ -19,57 +19,12 @@ import {
   isActiveTimelineLoad,
   reconcileConversationTimeline,
 } from "@/lib/seller/conversations-timeline";
-import { getBrowserAccessToken } from "@/lib/supabase/client";
+import {
+  getBrowserAccessToken,
+  subscribeToMessageInserts,
+} from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Message timeline — the operational work record of the selected
- * conversation.
- *
- * This direction deliberately does NOT imitate WhatsApp: no
- * wallpaper, no tails, no avatars, no delivery/read receipts, no
- * presence. What remains is a correspondence transcript of flat
- * blocks with a modest radius, kept left/right so the direction of
- * each entry is unambiguous.
- *
- * On dark material the two sides are separated by DEPTH rather than
- * by two competing tints:
- *
- *   incoming  → the customer's side, left, a SUNKEN block (below the
- *               work sheet) with a structural cue on its leading
- *               edge. It reads as received material.
- *   outgoing  → the outgoing side, right, a NEUTRAL raised block.
- *               Cyan is a signal, not a material, so the bubble is
- *               never cyan-filled; only the `Asistan yanıtı` label
- *               keeps the cyan accent. The two sides are separated
- *               by DEPTH (sunken vs raised), not by two tints.
- *               The backend stores no seller-authored send
- *               path, so an outgoing block is NEVER labelled
- *               "Satıcı". When `was_auto_replied` is true the
- *               backend proves assistant authorship, and ONLY then
- *               the "Asistan yanıtı" overline appears. Other
- *               outgoing messages remain neutral in authorship.
- *
- * What is deliberately absent (no backend contract exists for it):
- * read receipts, double ticks, delivery states, typing indicators,
- * online presence — and media thumbnails, because the read model
- * exposes `media_available`, never a media URL.
- *
- * Older messages: the "Daha eski mesajları yükle" control at the top
- * pages backwards with the real `before_message_id` cursor. When a
- * page is prepended, the scroll offset is restored by the exact
- * pixel delta so the visible window does not jump. After a new
- * server bootstrap commits (customer switch, overlap refresh, or
- * disconnected reset), a layout effect aborts any in-flight
- * older-page request and advances a load generation so a stale
- * response cannot prepend onto the newly reconciled timeline.
- * Speculative renders never abort or bump generation.
- *
- * Relative timestamps use a stable per-message (or per-fetched-page)
- * anchor: server-delivered messages keep the frozen route `renderedAt`,
- * each browser-fetched older page gets one fetch timestamp, and those
- * anchors never move when another page is loaded.
- */
 export function MessageTimeline({
   customerId,
   initialMessages,
@@ -96,7 +51,10 @@ export function MessageTimeline({
     }
     return initial;
   });
+
   const inflightRef = React.useRef<AbortController | null>(null);
+  const realtimeInflightRef = React.useRef<AbortController | null>(null);
+  const realtimePendingRef = React.useRef(false);
   const loadGenerationRef = React.useRef(0);
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const pendingScrollAdjustRef = React.useRef<number | null>(null);
@@ -108,11 +66,6 @@ export function MessageTimeline({
   const messagePageRef = React.useRef(messagePage);
   messagePageRef.current = messagePage;
 
-  // Committed bootstrap lifecycle. Must not run during a speculative
-  // render: aborting / bumping generation there would cancel work that
-  // still belongs to the currently committed screen. useLayoutEffect
-  // runs only after this bootstrap commits and before paint, so a
-  // stale older-page continuation cannot land on the new tree.
   React.useLayoutEffect(() => {
     loadGenerationRef.current += 1;
     inflightRef.current?.abort();
@@ -152,21 +105,90 @@ export function MessageTimeline({
   React.useEffect(() => {
     return () => {
       inflightRef.current?.abort();
+      realtimeInflightRef.current?.abort();
     };
   }, []);
 
-  // On a conversation switch, land on the newest message (bottom).
-  // The height containment only exists from md up; on mobile the
-  // page scrolls naturally and the container is not scrollable, so
-  // this is a harmless no-op there.
+  React.useEffect(() => {
+    let active = true;
+
+    const refreshLatest = async (): Promise<void> => {
+      if (!active) return;
+      if (realtimeInflightRef.current !== null) {
+        realtimePendingRef.current = true;
+        return;
+      }
+
+      const controller = new AbortController();
+      realtimeInflightRef.current = controller;
+      try {
+        const accessToken = await getBrowserAccessToken();
+        if (!active || controller.signal.aborted || !accessToken) return;
+
+        const page = await fetchConversationDetail(accessToken, customerId, {
+          signal: controller.signal,
+        });
+        if (!active || controller.signal.aborted) return;
+
+        const fetchedAt = Date.now();
+        const result = reconcileConversationTimeline({
+          previousCustomerId: customerId,
+          nextCustomerId: customerId,
+          previousMessages: messagesRef.current,
+          nextMessages: page.messages,
+          previousMessagePage: messagePageRef.current,
+          nextMessagePage: page.messagePage,
+        });
+
+        setMessages(result.messages);
+        setMessagePage(result.messagePage);
+        setTimestampAnchors((previous) =>
+          assignMessageTimestampAnchors({
+            previousCustomerId: customerId,
+            nextCustomerId: customerId,
+            previousAnchors: previous,
+            messageIds: result.messages.map((message) => message.id),
+            serverMessageIds: new Set(page.messages.map((message) => message.id)),
+            serverRenderedAt: fetchedAt,
+            fetchRenderedAt: fetchedAt,
+          }),
+        );
+        if (result.didReset) {
+          pendingResetScrollRef.current = true;
+        }
+      } catch {
+        // Realtime is an enhancement. Keep the last valid timeline if the
+        // authenticated refresh fails transiently.
+      } finally {
+        if (realtimeInflightRef.current === controller) {
+          realtimeInflightRef.current = null;
+        }
+        if (active && realtimePendingRef.current) {
+          realtimePendingRef.current = false;
+          void refreshLatest();
+        }
+      }
+    };
+
+    const unsubscribe = subscribeToMessageInserts(() => {
+      void refreshLatest();
+    });
+
+    return () => {
+      active = false;
+      realtimePendingRef.current = false;
+      realtimeInflightRef.current?.abort();
+      realtimeInflightRef.current = null;
+      unsubscribe();
+    };
+  }, [customerId]);
+
   React.useLayoutEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
     container.scrollTop = container.scrollHeight;
   }, [customerId]);
 
-  // Restore the reading position after older messages are prepended,
-  // or land on newest after a disconnected-window reset.
   React.useLayoutEffect(() => {
     const container = scrollRef.current;
     if (pendingResetScrollRef.current) {
@@ -232,8 +254,6 @@ export function MessageTimeline({
         }),
       );
       setMessagePage(page.messagePage);
-      // Flag the layout effect above to compensate the scroll offset
-      // by the exact pixel height of the prepended page.
       pendingScrollAdjustRef.current = 1;
     } catch {
       if (!isCurrent()) return;
@@ -310,10 +330,6 @@ export function MessageTimeline({
   );
 }
 
-/**
- * One correspondence block. Compact and record-like, not a
- * consumer-chat clone: no avatar, no receipts, no decorative tails.
- */
 function MessageBubble({
   message,
   renderedAt,
@@ -341,17 +357,12 @@ function MessageBubble({
       >
         <div
           className={cn(
-            // Flat correspondence block: modest radius, no shadow,
-            // no tail.
             "rounded-[5px] px-3.5 py-2.5 text-foreground",
             isIncoming
               ? "border-l-2 border-boundary bg-sunken"
-              // Neutral material — NOT a cyan bubble.
               : "bg-selected",
           )}
         >
-          {/* Evidence-gated authorship: rendered ONLY when the backend
-              proves the assistant wrote this message. */}
           {!isIncoming && message.wasAutoReplied ? (
             <p className="pb-0.5 type-meta font-semibold text-primary">
               Asistan yanıtı
